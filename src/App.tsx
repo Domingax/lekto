@@ -1,11 +1,8 @@
-import { Button } from '@/shared/ui'
+import { RouterProvider } from 'react-router-dom'
+import { router } from './app/router'
 
 function App() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Button>letko</Button>
-    </div>
-  )
+  return <RouterProvider router={router} />
 }
 
 export default App
