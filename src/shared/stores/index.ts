@@ -1,2 +1,1 @@
-// Zustand stores (populated per epic)
-export {}
+export { useVaultStore } from './use-vault-store'
