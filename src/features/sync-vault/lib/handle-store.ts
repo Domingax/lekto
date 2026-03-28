@@ -16,8 +16,8 @@ export async function storeVaultHandle(handle: FileSystemDirectoryHandle): Promi
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite')
     tx.objectStore(STORE_NAME).put(handle, VAULT_HANDLE_KEY)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
+    tx.oncomplete = () => { db.close(); resolve() }
+    tx.onerror = () => { db.close(); reject(tx.error) }
   })
 }
 
@@ -27,9 +27,11 @@ export async function loadVaultHandle(): Promise<FileSystemDirectoryHandle | nul
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly')
       const req = tx.objectStore(STORE_NAME).get(VAULT_HANDLE_KEY)
-      req.onsuccess = () =>
+      req.onsuccess = () => {
+        db.close()
         resolve((req.result as FileSystemDirectoryHandle | undefined) ?? null)
-      req.onerror = () => reject(req.error)
+      }
+      req.onerror = () => { db.close(); reject(req.error) }
     })
   } catch {
     return null
@@ -42,8 +44,8 @@ export async function clearVaultHandle(): Promise<void> {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite')
       tx.objectStore(STORE_NAME).delete(VAULT_HANDLE_KEY)
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror = () => { db.close(); reject(tx.error) }
     })
   } catch {
     // IDB unavailable — nothing to clear

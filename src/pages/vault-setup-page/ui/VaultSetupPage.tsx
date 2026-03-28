@@ -60,6 +60,7 @@ export function VaultSetupPage() {
   }
 
   async function handleConfirm() {
+    if (flowState === 'creating') return
     setError(null)
     setFlowState('creating')
     let result

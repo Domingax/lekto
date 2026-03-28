@@ -19,6 +19,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/library',
+    loader: () => {
+      const { vaultPath } = useVaultStore.getState()
+      if (!vaultPath) return redirect('/vault-setup')
+      return null
+    },
     element: <LibraryPage />,
   },
 ])

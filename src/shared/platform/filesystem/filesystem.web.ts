@@ -113,7 +113,12 @@ export function createWebFilesystemAdapter(): FilesystemAdapter {
         await resolveFile(path)
         return ok(true)
       } catch {
-        return ok(false)
+        try {
+          await resolveDir(path)
+          return ok(true)
+        } catch {
+          return ok(false)
+        }
       }
     },
   }
