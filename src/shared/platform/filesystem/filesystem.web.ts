@@ -2,7 +2,16 @@ import { ok, err } from 'neverthrow'
 import type { FilesystemAdapter } from './filesystem.interface'
 import type { AsyncResult } from '../../lib/types'
 
+// Native folder root set by sync-vault when user picks a folder via showDirectoryPicker.
+// Falls back to OPFS when null (Firefox/Safari, or OPFS default on Chrome/Edge).
+let _nativeRoot: FileSystemDirectoryHandle | null = null
+
+export function setWebFilesystemRoot(handle: FileSystemDirectoryHandle | null): void {
+  _nativeRoot = handle
+}
+
 function getRoot(): Promise<FileSystemDirectoryHandle> {
+  if (_nativeRoot) return Promise.resolve(_nativeRoot)
   return navigator.storage.getDirectory()
 }
 
