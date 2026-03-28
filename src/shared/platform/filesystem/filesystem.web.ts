@@ -58,13 +58,15 @@ export function createWebFilesystemAdapter(): FilesystemAdapter {
     },
 
     async writeFile(path: string, data: string): AsyncResult<void> {
+      let writable: FileSystemWritableFileStream | undefined
       try {
         const fileHandle = await resolveFile(path, true)
-        const writable = await fileHandle.createWritable()
+        writable = await fileHandle.createWritable()
         await writable.write(data)
         await writable.close()
         return ok(undefined)
       } catch {
+        await writable?.abort()
         return err(`Failed to write file: ${path}`)
       }
     },

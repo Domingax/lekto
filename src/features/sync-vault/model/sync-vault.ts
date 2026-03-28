@@ -20,6 +20,8 @@ export async function isVaultConfigured(): Promise<boolean> {
 
 export async function initVault(path: string): AsyncResult<void> {
   try {
+    if (path === WEB_OPFS_PATH) setFilesystemRoot(null)
+
     const mkdirResult = await filesystemAdapter.mkdir('books')
     if (mkdirResult.isErr()) return err(mkdirResult.error)
 
@@ -54,18 +56,22 @@ export async function initVaultWithNativeHandle(
 }
 
 export async function loadAndRestoreVaultHandle(): Promise<'ok' | 'needs-permission' | 'not-found'> {
-  const handle = await loadVaultHandle()
-  if (!handle) return 'not-found'
+  try {
+    const handle = await loadVaultHandle()
+    if (!handle) return 'not-found'
 
-  const permission = await handle.queryPermission({ mode: 'readwrite' })
-  if (permission === 'granted') {
-    setFilesystemRoot(handle)
-    useVaultStore.getState().setVaultPath(WEB_NATIVE_PATH)
-    return 'ok'
+    const permission = await handle.queryPermission({ mode: 'readwrite' })
+    if (permission === 'granted') {
+      setFilesystemRoot(handle)
+      useVaultStore.getState().setVaultPath(WEB_NATIVE_PATH)
+      return 'ok'
+    }
+
+    useVaultStore.getState().setPendingPermissionHandle(handle)
+    return 'needs-permission'
+  } catch {
+    return 'not-found'
   }
-
-  useVaultStore.getState().setPendingPermissionHandle(handle)
-  return 'needs-permission'
 }
 
 export async function grantVaultPermission(
