@@ -30,21 +30,101 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>Communicate all responses in {communication_language}</critical>
 
   <!-- ============================================================ -->
-  <!-- PHASE 1: IMPLEMENTATION                                       -->
+  <!-- PHASE 1: IMPLEMENTATION VIA SUBTASK SUB-AGENTS               -->
   <!-- ============================================================ -->
-  <step n="1" goal="Implement the story using bmad-dev-story">
+  <step n="1" goal="Implement each story subtask via a dedicated Sonnet sub-agent">
     <output>🚀 **Pipeline Phase 1/4 — Implementation**</output>
 
-    <action>Invoke the `/bmad-dev-story` skill with the story path (if provided)</action>
-    <action>Let dev-story run to completion — all tasks, tests, lint, validation</action>
-    <action>Dev-story will mark the story status as "review" when done</action>
+    <!-- Context loading -->
+    <action>Read the story file at {{story_path}}</action>
+    <action>Load `_bmad/bmm/config.yaml`, `AGENTS.md`, and any `**/project-context.md`</action>
+    <action>Extract story_key and story_title from the story file</action>
+    <action>Extract all subtasks from the story file (checkbox items `- [ ]` under task/subtask sections)</action>
 
-    <check if="dev-story HALTs or fails">
-      <action>HALT pipeline — surface the dev-story error to the user</action>
+    <!-- Branch creation — must happen BEFORE sub-agents start -->
+    <action>Check current branch name</action>
+    <check if="on main or master">
+      <action>Create and switch to branch: `story/{{story_key}}`</action>
+    </check>
+    <action>Capture: {{branch_name}}</action>
+
+    <!-- Parallel vs sequential analysis -->
+    <action>For each subtask, identify the files it is likely to touch based on its description and story context</action>
+    <check if="all subtask file sets are disjoint (zero overlap between any two tasks)">
+      <action>Mark execution mode as PARALLEL</action>
+    </check>
+    <check if="any two subtasks share at least one file">
+      <action>Mark execution mode as SEQUENTIAL</action>
+    </check>
+
+    <!-- Sub-agent dispatch (one agent per subtask) -->
+    <critical>Each subtask MUST be handled by a dedicated sub-agent (Agent tool, model: "sonnet").
+      Never implement tasks inline — always delegate. This gives each task a fresh context window.</critical>
+
+    <action>For SEQUENTIAL mode: invoke sub-agents one at a time, waiting for each to complete before starting the next.
+      For PARALLEL mode: invoke all sub-agents simultaneously in a single message (multiple Agent tool calls).</action>
+
+    <action>Each sub-agent receives the following prompt (fill in the placeholders):
+
+      ```
+      You are a dev agent for the Letko project. Your job is to implement ONE specific subtask.
+
+      ## Context
+
+      - Story file path: {{story_path}}
+      - Story content (full text):
+        {{story_file_content}}
+      - Task to implement: {{task_description}}
+      - Branch to work on: {{branch_name}} (already created locally — do NOT create another branch)
+      - AGENTS.md path: AGENTS.md
+      - Project config: _bmad/bmm/config.yaml
+
+      ## Instructions
+
+      Follow the implementation workflow defined in `.claude/skills/bmad-dev-story/workflow.md`,
+      with the following adjustments:
+
+      **Scope restriction — implement ONLY the task described above.**
+      - Skip Step 1 (story discovery): use the story file path provided above directly
+      - Skip Step 3 (review continuation detection): not applicable here
+      - Skip Step 4 (sprint status in-progress update): the orchestrator handles this
+      - In Step 8: mark ONLY the checkbox(es) for your assigned task as [x]; leave all other tasks untouched
+      - Skip Step 9 (story status → "review" and sprint status update): the orchestrator handles this
+      - Skip Step 10 (user communication): return a summary instead (see below)
+
+      **After your commit(s):**
+      1. Pull and rebase to integrate any commits already on the branch:
+         `git pull --rebase origin {{branch_name}}`
+         (If the branch has no remote yet, skip the pull and push with -u)
+      2. Push: `git push -u origin {{branch_name}}`
+
+      ## Return value
+
+      Return a concise summary of your work (3–6 bullet points max):
+      - What was implemented
+      - Any non-obvious approach, workaround, or architecture decision
+      - List of files changed
+      ```
+    </action>
+
+    <check if="any sub-agent fails or HALTs">
+      <action>HALT pipeline — surface the failing sub-agent's error to the user</action>
       <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Dev phase failed — action needed"`</action>
     </check>
 
-    <output>✅ **Phase 1 complete** — Story implemented and validated</output>
+    <!-- Collect summaries -->
+    <action>Collect the summary returned by each sub-agent into: {{all_task_summaries}}
+      (preserve the per-task attribution so the PR body can list them separately)</action>
+
+    <!-- Story file housekeeping — done by orchestrator, not sub-agents, to avoid conflicts -->
+    <action>Mark all implemented tasks as done in the story file (`- [ ]` → `- [x]`)</action>
+    <action>Set story status to "review"</action>
+    <action>Update sprint status if applicable</action>
+    <action>Stage the story file and sprint status file</action>
+    <action>Commit: `chore: update story {{story_key}} status to review`</action>
+    <action>Push: `git push origin {{branch_name}}`</action>
+
+    <output>✅ **Phase 1 complete** — {{subtask_count}} subtask(s) implemented by dedicated agents</output>
   </step>
 
   <!-- ============================================================ -->
@@ -104,12 +184,9 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Create the Pull Request with `gh pr create`:
       - Target branch: main
       - Title: "feat: story {{story_key}} — {{story_title_short}}"
-      - Body ({{dev_summary_section}} prepended if non-empty, then placeholder for review agent):
+      - Body ({{dev_summary_section}} if non-empty, otherwise a minimal placeholder):
         ```
         {{dev_summary_section}}
-        ## Summary
-        _Pending code review..._
-
         🤖 Generated with [Claude Code](https://claude.com/claude-code)
         ```
     </action>
@@ -144,7 +221,14 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       1. Read the story file at: {{story_path}}
       2. Load project context from `_bmad/bmm/config.yaml` and `**/project-context.md` if it exists
       3. Load AGENTS.md for coding standards
-      4. Read the current PR body with `gh pr view #{{pr_number}} --json body` and extract the **Dev Summary**
+      4. Load planning artifacts (load each if it exists — skip silently if absent):
+         - Architecture: `{planning_artifacts}/*architecture*.md` or `{planning_artifacts}/*architecture*/*.md`
+         - UX design:    `{planning_artifacts}/*ux*.md`           or `{planning_artifacts}/*ux*/*.md`
+         - Epic:         identify the epic number from the story key, then load
+                         `{planning_artifacts}/*epic*/epic-{{epic_num}}.md`
+                         (or the whole `{planning_artifacts}/*epic*.md` if not sharded)
+         Use these to validate that the implementation respects architectural constraints and UX specifications.
+      5. Read the current PR body with `gh pr view #{{pr_number}} --json body` and extract the **Dev Summary**
          section if present — use it as context on the dev agent's choices (workarounds, approach, decisions)
          before reviewing the code
 
@@ -173,11 +257,9 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
       10. If action items were created in the story file, commit and push those changes
 
-      11. Update the PR body using `gh pr edit #{{pr_number}} --body "..."` — structure:
-          - If a Dev Summary section was found in step 4: keep it first, verbatim
-          - Then append the review report below it
+      11. Post the review report as a PR comment using `gh pr comment #{{pr_number}} --body "..."`:
           ```
-          <Dev Summary section verbatim, if it existed — omit this line if absent>
+          ## Code Review Report
 
           ## Summary
           - <1-3 bullet points summarizing the story implementation>
@@ -213,6 +295,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
           🤖 Generated with [Claude Code](https://claude.com/claude-code)
           ```
+          Note: Do NOT edit the PR body — the description is owned by the dev agent. Post only as a comment.
 
       11. Return: the PR URL, the verdict (APPROVED/CHANGES REQUESTED), and a summary of findings count
       ```
