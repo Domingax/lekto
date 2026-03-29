@@ -7,7 +7,7 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, 1)
     req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME)
     req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
+    req.onerror = () => reject(new Error(req.error?.message ?? 'Failed to open IDB'))
   })
 }
 
@@ -17,7 +17,7 @@ export async function storeVaultHandle(handle: FileSystemDirectoryHandle): Promi
     const tx = db.transaction(STORE_NAME, 'readwrite')
     tx.objectStore(STORE_NAME).put(handle, VAULT_HANDLE_KEY)
     tx.oncomplete = () => { db.close(); resolve() }
-    tx.onerror = () => { db.close(); reject(tx.error) }
+    tx.onerror = () => { db.close(); reject(new Error(tx.error?.message ?? 'IDB transaction failed')) }
   })
 }
 
@@ -31,7 +31,7 @@ export async function loadVaultHandle(): Promise<FileSystemDirectoryHandle | nul
         db.close()
         resolve((req.result as FileSystemDirectoryHandle | undefined) ?? null)
       }
-      req.onerror = () => { db.close(); reject(req.error) }
+      req.onerror = () => { db.close(); reject(new Error(req.error?.message ?? 'IDB request failed')) }
     })
   } catch {
     return null
@@ -45,7 +45,7 @@ export async function clearVaultHandle(): Promise<void> {
       const tx = db.transaction(STORE_NAME, 'readwrite')
       tx.objectStore(STORE_NAME).delete(VAULT_HANDLE_KEY)
       tx.oncomplete = () => { db.close(); resolve() }
-      tx.onerror = () => { db.close(); reject(tx.error) }
+      tx.onerror = () => { db.close(); reject(new Error(tx.error?.message ?? 'IDB transaction failed')) }
     })
   } catch {
     // IDB unavailable — nothing to clear

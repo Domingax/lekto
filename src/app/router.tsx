@@ -1,7 +1,6 @@
 import { createBrowserRouter, redirect } from 'react-router-dom'
 import { useVaultStore } from '../shared/stores'
-import { VaultSetupPage } from '../pages'
-import { LibraryPage } from '../pages'
+import { VaultSetupPage, LibraryPage } from '../pages'
 
 export const router = createBrowserRouter([
   {

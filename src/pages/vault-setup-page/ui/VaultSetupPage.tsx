@@ -16,7 +16,7 @@ type FlowState = 'idle' | 'create' | 'creating'
 
 const isNativePlatform = Capacitor.isNativePlatform()
 const hasDirectoryPicker =
-  !isNativePlatform && typeof window !== 'undefined' && 'showDirectoryPicker' in window
+  !isNativePlatform && typeof globalThis.window !== 'undefined' && 'showDirectoryPicker' in globalThis
 
 export function VaultSetupPage() {
   const navigate = useNavigate()
@@ -48,7 +48,7 @@ export function VaultSetupPage() {
     } else if (hasDirectoryPicker) {
       try {
         const handle = await (
-          window as Window & { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }
+          globalThis as typeof globalThis & { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }
         ).showDirectoryPicker()
         setSelectedHandle(handle)
         setSelectedLabel(handle.name)
