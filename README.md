@@ -6,6 +6,17 @@ Import an EPUB or PDF → words color-coded by mastery level → click to transl
 
 BYOK AI: connect your own OpenAI, Anthropic, or Ollama account. The app is fully functional without AI; AI is a progressive enhancement.
 
+## Browser Support
+
+| Browser | Reading & Vocabulary | Cloud Sync |
+|---|---|---|
+| Chrome / Edge | ✅ Full support | ✅ Via native folder picker |
+| Firefox | ✅ Full support | ❌ Not possible |
+| Safari | ✅ Full support | ❌ Not possible |
+| Android app | ✅ Full support | ✅ Via SAF folder picker |
+
+**Cloud sync** (Google Drive, Syncthing, etc.) requires pointing the vault to a native folder. This relies on the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) (`showDirectoryPicker`), which Firefox and Safari do not support — [Mozilla has formally opposed the API](https://mozilla.github.io/standards-positions/#file-system-access). On these browsers the vault is stored in OPFS (browser-internal storage), which is fully persistent locally but invisible to external sync tools.
+
 ## Tech Stack
 
 | | |

@@ -2,7 +2,16 @@ import { ok, err } from 'neverthrow'
 import type { FilesystemAdapter } from './filesystem.interface'
 import type { AsyncResult } from '../../lib/types'
 
+// Native folder root set by sync-vault when user picks a folder via showDirectoryPicker.
+// Falls back to OPFS when null (Firefox/Safari, or OPFS default on Chrome/Edge).
+let _nativeRoot: FileSystemDirectoryHandle | null = null
+
+export function setWebFilesystemRoot(handle: FileSystemDirectoryHandle | null): void {
+  _nativeRoot = handle
+}
+
 function getRoot(): Promise<FileSystemDirectoryHandle> {
+  if (_nativeRoot) return Promise.resolve(_nativeRoot)
   return navigator.storage.getDirectory()
 }
 
@@ -49,13 +58,15 @@ export function createWebFilesystemAdapter(): FilesystemAdapter {
     },
 
     async writeFile(path: string, data: string): AsyncResult<void> {
+      let writable: FileSystemWritableFileStream | undefined
       try {
         const fileHandle = await resolveFile(path, true)
-        const writable = await fileHandle.createWritable()
+        writable = await fileHandle.createWritable()
         await writable.write(data)
         await writable.close()
         return ok(undefined)
       } catch {
+        await writable?.abort()
         return err(`Failed to write file: ${path}`)
       }
     },
@@ -104,7 +115,12 @@ export function createWebFilesystemAdapter(): FilesystemAdapter {
         await resolveFile(path)
         return ok(true)
       } catch {
-        return ok(false)
+        try {
+          await resolveDir(path)
+          return ok(true)
+        } catch {
+          return ok(false)
+        }
       }
     },
   }

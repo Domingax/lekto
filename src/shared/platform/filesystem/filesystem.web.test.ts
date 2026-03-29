@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { FilesystemAdapter } from './filesystem.interface'
 
 // We import the web implementation to test it directly.
@@ -112,5 +112,58 @@ describe('FilesystemAdapter (web)', () => {
     const failAdapter = createWebFilesystemAdapter()
     const result = await failAdapter.mkdir('forbidden-dir')
     expect(result.isErr()).toBe(true)
+  })
+})
+
+describe('setWebFilesystemRoot', () => {
+  afterEach(async () => {
+    // Reset native root to null after each test
+    const { setWebFilesystemRoot } = await import('./filesystem.web')
+    setWebFilesystemRoot(null)
+  })
+
+  it('when set to a handle, adapter reads from the native handle (not OPFS)', async () => {
+    // Stub OPFS to return different content so we can distinguish
+    vi.stubGlobal('navigator', {
+      storage: {
+        getDirectory: vi.fn().mockResolvedValue({
+          getFileHandle: vi.fn().mockResolvedValue({
+            getFile: vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue('opfs content') }),
+          }),
+        }),
+      },
+    })
+
+    const mockNativeHandle = {
+      getFileHandle: vi.fn().mockResolvedValue({
+        getFile: vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue('native content') }),
+      }),
+      getDirectoryHandle: vi.fn(),
+    } as unknown as FileSystemDirectoryHandle
+
+    const { setWebFilesystemRoot, createWebFilesystemAdapter } = await import('./filesystem.web')
+    setWebFilesystemRoot(mockNativeHandle)
+
+    const adapter = createWebFilesystemAdapter()
+    const result = await adapter.readFile('test.txt')
+    expect(result.isOk()).toBe(true)
+    // Result comes from native handle, not OPFS
+    expect(result._unsafeUnwrap()).toBe('native content')
+  })
+
+  it('when reset to null, adapter falls back to OPFS', async () => {
+    const mockGetDirectory = vi.fn().mockResolvedValue({
+      getFileHandle: vi.fn().mockResolvedValue({
+        getFile: vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue('opfs content') }),
+      }),
+    })
+    vi.stubGlobal('navigator', { storage: { getDirectory: mockGetDirectory } })
+
+    const { setWebFilesystemRoot, createWebFilesystemAdapter } = await import('./filesystem.web')
+    setWebFilesystemRoot(null)
+
+    const adapter = createWebFilesystemAdapter()
+    await adapter.readFile('test.txt')
+    expect(mockGetDirectory).toHaveBeenCalled()
   })
 })

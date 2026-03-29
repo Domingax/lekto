@@ -9,4 +9,4 @@ export {
   initVaultWithNativeHandle,
   loadAndRestoreVaultHandle,
   grantVaultPermission,
-} from './sync-vault'
+} from './model/sync-vault'

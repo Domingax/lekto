@@ -5,6 +5,6 @@ import App from '../App'
 describe('App', () => {
   it('renders without throwing', () => {
     render(<App />)
-    expect(screen.getByRole('button', { name: /letko/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Create new vault/i })).toBeInTheDocument()
   })
 })
