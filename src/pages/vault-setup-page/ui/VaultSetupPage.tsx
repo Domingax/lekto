@@ -15,10 +15,9 @@ import {
 type FlowState = 'idle' | 'create' | 'creating'
 
 const isNativePlatform = Capacitor.isNativePlatform()
-const hasDirectoryPicker =
-  !isNativePlatform && typeof globalThis.window !== 'undefined' && 'showDirectoryPicker' in globalThis
 
 export function VaultSetupPage() {
+  const hasDirectoryPicker = !isNativePlatform && 'showDirectoryPicker' in globalThis
   const navigate = useNavigate()
   const pendingPermissionHandle = useVaultStore((s) => s.pendingPermissionHandle)
 
