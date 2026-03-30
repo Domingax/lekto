@@ -4,6 +4,7 @@ import type { FilePickerAdapter } from './file-picker.interface'
 vi.mock('@capawesome/capacitor-file-picker', () => ({
   FilePicker: {
     pickFiles: vi.fn(),
+    pickDirectory: vi.fn(),
   },
 }))
 
@@ -53,34 +54,26 @@ describe('FilePickerAdapter (android)', () => {
     expect(result.isErr()).toBe(true)
   })
 
-  it('pickDirectory returns ok with path from file picker', async () => {
+  it('pickDirectory returns ok with path from directory picker', async () => {
     const { FilePicker } = await import('@capawesome/capacitor-file-picker')
-    vi.mocked(FilePicker.pickFiles).mockResolvedValue({
-      files: [
-        {
-          name: 'vault-dir',
-          path: 'content://com.android.externalstorage/vault',
-          mimeType: 'application/octet-stream',
-          size: 0,
-          modifiedAt: Date.now(),
-        },
-      ],
+    vi.mocked(FilePicker.pickDirectory).mockResolvedValue({
+      path: 'content://com.android.externalstorage/vault',
     })
     const result = await adapter.pickDirectory()
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value).toBe('content://com.android.externalstorage/vault')
   })
 
-  it('pickDirectory returns err when user cancels (empty files array)', async () => {
+  it('pickDirectory returns err when user cancels', async () => {
     const { FilePicker } = await import('@capawesome/capacitor-file-picker')
-    vi.mocked(FilePicker.pickFiles).mockResolvedValue({ files: [] })
+    vi.mocked(FilePicker.pickDirectory).mockRejectedValue(new Error('cancelled'))
     const result = await adapter.pickDirectory()
     expect(result.isErr()).toBe(true)
   })
 
   it('pickDirectory returns err when plugin throws', async () => {
     const { FilePicker } = await import('@capawesome/capacitor-file-picker')
-    vi.mocked(FilePicker.pickFiles).mockRejectedValue(new Error('plugin error'))
+    vi.mocked(FilePicker.pickDirectory).mockRejectedValue(new Error('plugin error'))
     const result = await adapter.pickDirectory()
     expect(result.isErr()).toBe(true)
   })
