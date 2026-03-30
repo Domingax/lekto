@@ -32,12 +32,8 @@ export function createAndroidFilePickerAdapter(): FilePickerAdapter {
 
     async pickDirectory(): AsyncResult<string> {
       try {
-        const result = await FilePicker.pickFiles({ limit: 1 })
-        const file = result.files[0]
-        if (!file) return err('No directory selected')
-        const path = file.path
-        if (!path) return err('No path returned for selected directory')
-        return ok(path)
+        const result = await FilePicker.pickDirectory()
+        return ok(result.path)
       } catch {
         return err('Directory pick cancelled or failed')
       }
