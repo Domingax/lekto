@@ -64,7 +64,11 @@ async function createAndroidDb(): Promise<DrizzleDb> {
         return { rows: [] };
       }
       const result = await connection.query(sql, params);
-      return { rows: result.values ?? [] };
+      const rows = (result.values ?? []) as Record<string, unknown>[];
+      if (method === "values") {
+        return { rows: rows.map((row) => Object.values(row)) };
+      }
+      return { rows };
     },
     { schema },
   );
