@@ -2,7 +2,7 @@
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 status: complete
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-lingq-2026-03-02.md'
+  - '_bmad-output/planning-artifacts/product-brief-2026-03-02.md'
   - '_bmad-output/planning-artifacts/prd.md'
 ---
 
@@ -17,7 +17,7 @@ inputDocuments:
 
 ### Project Vision
 
-Lekto is a local-first immersive reading app for language learning. It replicates the LingQ experience — content import, word coloring by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
+Lekto is a local-first immersive reading app for language learning. It replicates the experience of subscription-based language learning readers — content import, word coloring by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
 
 The core experience is a fluid loop: import a book → read with mastery-level word coloring → tap a word or phrase → instant translation (dictionary or AI) → save to vocabulary. Every step is immediate, local, and uninterrupted.
 
@@ -39,7 +39,7 @@ The core experience is a fluid loop: import a book → read with mastery-level w
 
 ### Design Opportunities
 
-1. **Immediate "aha moment"**: Zero friction between installation and the first word tapped — a strong differentiator against LingQ, which requires an account before any reading can happen.
+1. **Immediate "aha moment"**: Zero friction between installation and the first word tapped — a strong differentiator against cloud-based tools that require account creation before any reading can happen.
 
 2. **Exemplary progressive disclosure**: The BYOK AI onboarding as a reference pattern — advanced feature naturally discoverable, never imposed, guided setup when the user is ready.
 
@@ -217,13 +217,13 @@ The user should feel: *"This works, it's clean, it's consistent"* — on web and
 
 Lekto's signature interaction in one sentence: **"I'm reading, I tap a word I don't know, and the translation is there."**
 
-The mental model is already formed — LingQ and Readlang users know this pattern. No user education needed. The goal is flawless execution, not innovation.
+The mental model is already formed — users of existing immersive language learning readers know this pattern. No user education needed. The goal is flawless execution, not innovation.
 
 ### User Mental Model
 
 Users approach this interaction with a simple expectation: tap → see translation. The word coloring by mastery level acts as an implicit invitation — unknown words are visually distinct, signaling they are interactive. The user does not need to learn a gesture or discover a hidden action; the visual design guides them naturally.
 
-Current solutions (LingQ, Readlang) validate that this mental model is correct and widely understood. Lekto does not need to reinvent it — only to execute it faster and more cleanly.
+Existing immersive language learning tools validate that this mental model is correct and widely understood. Lekto does not need to reinvent it — only to execute it faster and more cleanly.
 
 ### Success Criteria
 

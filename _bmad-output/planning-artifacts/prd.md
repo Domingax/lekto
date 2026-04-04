@@ -7,8 +7,8 @@ classification:
   complexity: 'low-medium'
   projectContext: 'greenfield'
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-lingq-2026-03-02.md'
-  - '_bmad-output/planning-artifacts/research/technical-lingq-open-stack-research-2026-03-03.md'
+  - '_bmad-output/planning-artifacts/product-brief-2026-03-02.md'
+  - '_bmad-output/planning-artifacts/research/technical-stack-research-2026-03-03.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-02-T2100.md'
 workflowType: 'prd'
 ---
@@ -20,7 +20,7 @@ workflowType: 'prd'
 
 ## Executive Summary
 
-**Lekto** is an open-source immersive language learning application for Web and Android. It replicates the reading experience of LingQ — content import, vocabulary highlighting by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
+**Lekto** is an open-source immersive language learning application for Android and Desktop. It replicates the reading experience of subscription-based language learning readers — content import, vocabulary highlighting by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
 
 The product targets two user profiles: **technical users** (developers, power users) who want to read in their target language, own their data, and optionally connect their own AI services; and **general learners** who want an "open and read" experience that is free, simple, and works out of the box.
 
@@ -47,16 +47,16 @@ The problem being solved is concrete friction: mandatory internet connection to 
 
 ### User Success
 
-Lekto is successful when the author uses it as their primary daily reading tool without feeling limited compared to LingQ. The bar is functional parity for the core reading loop, not feature parity across the board.
+Lekto is successful when the author uses it as their primary daily reading tool without feeling limited compared to existing immersive language learning readers. The bar is functional parity for the core reading loop, not feature parity across the board.
 
 Key success moments:
 - **Reading flow**: A full chapter completed without the lookup panel breaking concentration — word and phrase translation feels instant and contextual.
 - **Cross-device continuity**: A session started on Android (pages read, words saved) is seamlessly resumable on the web app — same reading position, same updated vocabulary list.
-- **Habit formation**: The app is opened for reading sessions as consistently as LingQ would be, without friction creating a reason to switch back.
+- **Habit formation**: The app is opened for reading sessions as consistently as a premium tool would be, without friction creating a reason to switch back.
 
 ### Business Success
 
-No commercial objectives. Success is personal: the author completes reading sessions in Lekto without reverting to LingQ.
+No commercial objectives. Success is personal: the author completes reading sessions in Lekto without reverting to existing tools.
 
 Secondary success (not a requirement): the project is useful to others. 10 satisfied users would already be a positive outcome.
 
@@ -70,7 +70,7 @@ Secondary success (not a requirement): the project is useful to others. 10 satis
 
 | Outcome | Definition of Done |
 |---------|-------------------|
-| Full reading session | Import → read → save words end-to-end without switching to LingQ |
+| Full reading session | Import → read → save words end-to-end without switching to another tool |
 | Cross-device sync | Read on Android, resume on web at same position with same vocabulary |
 | New device restore | Point app to existing vault → full reading history and vocabulary restored |
 | Contributor-ready | New contributor runs the project locally following README in under 10 minutes |
@@ -165,7 +165,7 @@ Lekto's deliberate exclusion of community features is not only a scope decision 
 
 ### Market Context
 
-- Language learning tools (LingQ, Readlang, Clozemaster) are uniformly cloud-first and subscription-based
+- Language learning tools (immersive readers, vocabulary builders) are uniformly cloud-first and subscription-based
 - Community features require cloud infrastructure and reinforce the cloud-first model in this space
 - Note-taking tools have validated the vault/local-first model at scale (Obsidian, Logseq) precisely because note-taking is a personal, non-community activity
 - BYOK AI is an established pattern in developer and productivity tools, not yet present in language learning
@@ -229,7 +229,7 @@ The application is **fully offline by design**. Network access is used only for:
 
 ### MVP Strategy
 
-**Approach:** Personal Utility MVP — the product is done when it replaces LingQ as the author's daily reading tool without friction or compromise on the core experience. No market validation objective, no investor milestone, no revenue target.
+**Approach:** Personal Utility MVP — the product is done when it replaces existing immersive language learning tools as the author's daily reading tool, without friction or compromise on the core experience. No market validation objective, no investor milestone, no revenue target.
 
 **Resource profile:** Solo developer with AI agent assistance (BMAD workflow). Scope must remain lean enough for one person to ship.
 
