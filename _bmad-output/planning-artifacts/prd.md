@@ -2,7 +2,7 @@
 stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
 status: 'complete'
 classification:
-  projectType: 'web_app+mobile_app'
+  projectType: 'native_desktop+mobile_app'
   domain: 'edtech'
   complexity: 'low-medium'
   projectContext: 'greenfield'
@@ -20,7 +20,7 @@ workflowType: 'prd'
 
 ## Executive Summary
 
-**Lekto** is an open-source immersive language learning application for Android and Desktop. It replicates the reading experience of subscription-based language learning readers — content import, vocabulary highlighting by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
+**Lekto** is an open-source immersive language learning application for Android and native Desktop (Linux, Windows, macOS). It replicates the reading experience of subscription-based language learning readers — content import, vocabulary highlighting by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
 
 The product targets two user profiles: **technical users** (developers, power users) who want to read in their target language, own their data, and optionally connect their own AI services; and **general learners** who want an "open and read" experience that is free, simple, and works out of the box.
 

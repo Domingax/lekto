@@ -36,7 +36,7 @@ The architectural heart is the Import → Tokenize → Store → Render pipeline
 - Maintainability: unit + E2E test coverage on all core flows, CI pipeline required
 
 **Scale & Complexity:**
-- Primary domain: hybrid web + mobile, local-first SPA
+- Primary domain: local-first native app (Android + Desktop), shared React frontend
 - Complexity level: low-medium
 - Estimated architectural modules: 8 (Import Pipeline, Token Renderer, Vocabulary Store, Vault Manager, Translation Service, AI Adapter, TTS Adapter, Secure Storage)
 
@@ -45,7 +45,7 @@ The architectural heart is the Import → Tokenize → Store → Render pipeline
 - React/TypeScript/Vite frontend shared across Android (Capacitor) and Desktop (Tauri) — no platform-specific business logic branches; only platform adapter implementations differ
 - Vault is a user-managed folder; all data must be portable files (SQLite) — no proprietary binary formats
 - Dictionary services block iframe embedding — deep-link URLs opened via InAppBrowser (Android) or new tab (web); no API keys required, compatible with any web dictionary service
-- Web distribution is not a target — desktop users get a native Tauri app. OPFS is used for web development and testing only
+- No web distribution — desktop users get a native Tauri app; OPFS and web adapters are transitional artifacts to be removed as Tauri integration progresses
 - Android 11+ (API 30) minimum — scoped storage restrictions require SAF file picker + content:// URI approach for vault folder access
 - API keys must never enter the vault file system — requires a separate secure storage layer (Android Keystore / encrypted localStorage)
 
@@ -62,7 +62,7 @@ The architectural heart is the Import → Tokenize → Store → Render pipeline
 
 ### Primary Technology Domain
 
-Hybrid web + mobile SPA — Vite (no SSR) + Capacitor Android wrapper. No full-stack framework needed; all data is local.
+Native cross-platform app — React/TypeScript/Vite frontend shared across Android (Capacitor) and Desktop (Tauri). No SSR, no full-stack framework; all data is local.
 
 ### Starter Options Considered
 
@@ -186,7 +186,6 @@ src/
 
 ### Infrastructure & Deployment
 
-**Web:** GitHub Pages (dev reference build only — not a distribution target)
 **Android:** GitHub Actions → signed APK → GitHub Releases + F-Droid (automatic pull on tag)
 **Desktop:** GitHub Actions → Tauri build → Linux AppImage + Windows NSIS installer → GitHub Releases
 **Env vars:** no build-time variables — API keys in secure storage at runtime only
@@ -210,10 +209,8 @@ lint → unit tests → web build → E2E web
 
 Pipeline 3 — Release tag v* (triggered by merging the release-please PR):
 ```
-web build → deploy GitHub Pages
-  → Android build → sign APK (GitHub Secrets)
-  → GitHub Release (APK attached)
-  → F-Droid (automatic pull)
+Android build → sign APK → GitHub Release (APK attached) → F-Droid
+Desktop build → Tauri (Linux AppImage + Windows NSIS) → GitHub Release
 ```
 
 **Android E2E (Maestro):** run locally before release tag; CI integration post-MVP.
@@ -260,40 +257,42 @@ The browser security model requires permission re-grant on every session for fol
 
 `flutter_epub_viewer` (the mature EPUB package) renders via epub.js in a WebView with a JS↔Dart bridge for word interaction. The native rendering advantage is lost precisely for the app's core feature. A full rewrite in Dart for no reader improvement is not justified.
 
-### Platform adapter extensions for Tauri
+### Platform adapter structure (target state)
 
-The existing adapter pattern accommodates Tauri by adding `.desktop.ts` implementations:
+The adapter pattern uses exactly two implementations per capability — no web layer:
 
 ```
 shared/platform/filesystem/
 ├── filesystem.interface.ts
-├── filesystem.web.ts          ← OPFS (dev/test only)
-├── filesystem.android.ts      ← Capacitor Filesystem
+├── filesystem.android.ts      ← Capacitor Filesystem (Directory.Documents)
 └── filesystem.desktop.ts      ← Tauri fs plugin (direct OS path)
 
 shared/platform/file-picker/
 ├── file-picker.interface.ts
-├── file-picker.web.ts
-├── file-picker.android.ts
-└── file-picker.desktop.ts     ← Tauri dialog plugin
+├── file-picker.android.ts     ← @capawesome/capacitor-file-picker (SAF)
+└── file-picker.desktop.ts     ← Tauri dialog plugin (native OS picker)
 
 shared/platform/secure-storage/
 ├── secure-storage.interface.ts
-├── secure-storage.web.ts
-├── secure-storage.android.ts
+├── secure-storage.android.ts  ← @aparajita/capacitor-secure-storage
 └── secure-storage.desktop.ts  ← Tauri stronghold plugin
+
+shared/platform/preferences/
+├── preferences.interface.ts
+├── preferences.android.ts     ← @capacitor/preferences
+└── preferences.desktop.ts     ← Tauri store plugin
 ```
 
 Platform selection in each `index.ts`:
 
 ```typescript
 export const filesystemAdapter =
-  isTauri()                      ? desktopFilesystemAdapter
-  : Capacitor.isNativePlatform() ? androidFilesystemAdapter
-  :                                webFilesystemAdapter
+  isTauri() ? desktopFilesystemAdapter : androidFilesystemAdapter
 ```
 
 `isTauri()` is a build-time constant injected via Vite define — no runtime sniffing.
+
+**Migration note:** The current codebase contains `.web.ts` adapter files inherited from the initial web-first implementation. These are transitional — they are replaced by `.desktop.ts` counterparts as Tauri integration stories are implemented. No new `.web.ts` files should be created.
 
 ### Vault DB sync strategy
 
@@ -734,7 +733,7 @@ letko/
 │       │   ├── slider.tsx
 │       │   └── ...
 │       ├── db/
-│       │   ├── index.ts        ← db instance: @sqlite.org/sqlite-wasm+OPFS (web) | @capacitor-community/sqlite (android)
+│       │   ├── index.ts        ← db instance: Tauri plugin-sql/sqlx (desktop) | @capacitor-community/sqlite (android)
 │       │   ├── schema.ts       ← Drizzle schema: 5 tables + indexes
 │       │   ├── migrate.ts      ← migration runner
 │       │   └── migrations/     ← Drizzle-generated migration files
