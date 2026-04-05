@@ -1,10 +1,10 @@
 [package]
 name = "letko"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Letko — cross-platform app built with Tauri and Capacitor"
+authors = ["Domingax"]
+license = "AGPL-3.0"
+repository = "https://github.com/Domingax/letko"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

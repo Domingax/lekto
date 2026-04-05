@@ -192,7 +192,7 @@ shared/platform/filesystem/
 The `index.ts` selects the implementation at runtime using the `isTauri()` build-time constant:
 
 ```typescript
-import { isTauri } from '@/shared/lib/platform'
+import { isTauri } from '@/shared/platform'
 
 export const filesystemAdapter =
   isTauri()
