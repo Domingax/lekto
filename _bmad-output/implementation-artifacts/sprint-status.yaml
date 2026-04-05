@@ -34,6 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-05
+last_updated: 2026-04-05
 project: letko
 project_key: NOKEY
 tracking_system: file-system
@@ -51,8 +52,8 @@ development_status:
 
   # Epic 8: Tauri Desktop Integration (prioritized — must precede Desktop feature work)
   epic-8: in-progress
-  8-1-tauri-initialization-and-project-setup: review
-  8-2-desktop-db-layer-tauri-sql-plugin: backlog
+  8-1-tauri-initialization-and-project-setup: done
+  8-2-desktop-db-layer-tauri-sql-plugin: review
   8-3-desktop-platform-adapters: backlog
   8-4-desktop-cicd-pipelines: backlog
   epic-8-retrospective: optional
