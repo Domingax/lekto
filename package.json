@@ -13,6 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "prepare": "husky"
   },
   "dependencies": {
