@@ -57,8 +57,8 @@ FR37: API keys are stored using OS-level secure storage and never written to the
 FR38: The app is fully functional without any AI provider configured
 FR39: User can configure their target language and native language
 FR40: User can access and manage all app settings from a dedicated settings area (vault location, AI provider, reading preferences, language settings)
-FR41: User can navigate all app features using keyboard only (web)
-FR42: All interactive elements expose accessible labels for screen readers (web: ARIA, Android: TalkBack)
+FR41: User can navigate all app features using keyboard only (desktop)
+FR42: All interactive elements expose accessible labels for screen readers (desktop: ARIA-compatible, Android: TalkBack)
 FR43: Word mastery coloring is supplemented with non-color visual indicators for colorblind users
 FR44: The reader respects the system font size setting on Android
 
@@ -70,7 +70,7 @@ NFR3: EPUB import for a 300-page book completes in under 15 seconds on modern ha
 NFR4: App initial load completes in under 3 seconds
 NFR5: Vault state detected and reflected within 1 second of app launch
 NFR6: Reading performance does not degrade as vocabulary list grows (tested up to 10,000 entries)
-NFR7: API keys stored exclusively using OS-level secure storage (Android Keystore on Android; encrypted storage on web) — never written to vault or disk
+NFR7: API keys stored exclusively using OS-level secure storage (Android Keystore on Android; Tauri Stronghold on desktop) — never written to vault or disk
 NFR8: API keys never appear in log output, error messages, debug panels, or crash reports
 NFR9: All calls to external services use HTTPS exclusively
 NFR10: API key input fields mask the value by default
@@ -79,9 +79,9 @@ NFR12: No telemetry, analytics, or usage data collected or transmitted
 NFR13: No data sent to any remote server except user-initiated calls (dictionary lookups, BYOK AI translation, TTS playback)
 NFR14: All user data remains on the user's device inside the vault
 NFR15: All core reading features function with no network connection (fully offline by design)
-NFR16: Web interface conforms to WCAG 2.1 Level AA
-NFR17: All interactive elements keyboard-navigable on web (Tab, Enter, Space, Escape)
-NFR18: All interactive elements have accessible labels for screen readers (ARIA on web, content descriptions on Android/TalkBack)
+NFR16: Desktop and Android app conforms to WCAG 2.1 Level AA
+NFR17: All interactive elements keyboard-navigable on desktop (Tab, Enter, Space, Escape)
+NFR18: All interactive elements have accessible labels for screen readers (ARIA on desktop, content descriptions on Android/TalkBack)
 NFR19: Word mastery colors supplemented with non-color visual indicators (underline style variation per level) for colorblind users
 NFR20: Minimum touch target size of 48×48dp on Android throughout
 NFR21: Reader respects system font size setting on Android
@@ -90,7 +90,7 @@ NFR23: BYOK AI failures (invalid key, timeout, no network) display a clear inlin
 NFR24: TTS unavailability handled gracefully — audio button hidden or disabled with no error thrown
 NFR25: Lekto must not corrupt vault data under any circumstance; sync conflict resolution is delegated to the user's sync service
 NFR26: Core business logic (import pipeline, tokenization, vocabulary management, vault operations) has unit test coverage
-NFR27: E2E tests cover the primary user journey (import → read → lookup → save) on web and Android
+NFR27: E2E tests cover the primary user journey (import → read → lookup → save) on Android and Desktop
 NFR28: All commits must pass CI pipeline (lint → unit tests → build) before merge
 NFR29: Public module APIs documented; architectural decisions recorded in project documentation
 
@@ -101,12 +101,12 @@ NFR29: Public module APIs documented; architectural decisions recorded in projec
 - **Code Architecture:** Feature-Sliced Design (FSD) with layers: app / pages / widgets / features / entities / shared. Unidirectional imports only (never upward).
 - **Data persistence:** Single SQLite file `lekto.db` in the vault, managed via Drizzle ORM. Tables: books, sections, tokens, vocabulary, reading_progress. Drizzle migrate() runs automatically on startup.
 - **State management:** SQLite (source of truth) + Zustand (UI/runtime state). One Zustand store per domain. Never query SQLite inside React components — always read from Zustand.
-- **Platform adapters:** All platform-specific APIs (filesystem, TTS, secure storage, file picker) routed through `shared/platform/` adapters. No direct platform calls in business logic.
+- **Platform adapters:** All platform-specific APIs (filesystem, TTS, secure storage, file picker) routed through `shared/platform/` adapters. No direct platform calls in business logic. Pattern: interface + `*.android.ts` + `*.desktop.ts` + `index.ts` — platform selected via `isTauri()` at runtime.
 - **Error handling:** Result<T> type via `neverthrow` for all fallible async operations. No throw across module boundaries for expected failures.
 - **Async patterns:** Always async/await; no .then()/.catch() chains in feature code.
 - **CI/CD:** 3 GitHub Actions pipelines (PR gate, push to main + deploy, release tag + Android build). Conventional Commits + commitlint + husky + commitizen + release-please.
-- **Testing stack:** Vitest + React Testing Library (unit), Playwright (E2E web), Maestro (E2E Android — local only for MVP).
-- **Deployment:** GitHub Pages (web), GitHub Releases + F-Droid (Android APK).
+- **Testing stack:** Vitest + React Testing Library (unit), Playwright (E2E desktop via Tauri WebDriver), Maestro (E2E Android — local only for MVP).
+- **Deployment:** Tauri AppImage (Linux) + NSIS installer (Windows), GitHub Releases + F-Droid (Android APK).
 
 **From UX Design:**
 - **Responsive breakpoints:** Mobile (<768px), Tablet (768–1024px), Desktop (>1024px). Mobile-first Tailwind approach.
@@ -162,7 +162,7 @@ FR37: Epic 6 — API keys stored in OS-level secure storage, never in vault
 FR38: Epic 6 — App fully functional without any AI provider configured
 FR39: Epic 7 — Configure target language and native language
 FR40: Epic 7 — Access and manage all app settings from dedicated settings area
-FR41: Epic 7 — Navigate all app features using keyboard only (web)
+FR41: Epic 7 — Navigate all app features using keyboard only (desktop)
 FR42: Epic 7 — All interactive elements expose accessible labels (ARIA / TalkBack)
 FR43: Epic 7 — Word mastery coloring supplemented with non-color visual indicators
 FR44: Epic 7 — Reader respects system font size setting on Android
@@ -196,6 +196,11 @@ Users can connect their own AI subscription to unlock phrase-level translation. 
 ### Epic 7: Settings & Accessibility
 All app settings are accessible and all accessibility requirements are met. After this epic, users can configure language settings and manage all preferences from a dedicated settings area; the app is fully keyboard-navigable, screen-reader-compatible, colorblind-accessible, and respects Android system font size.
 **FRs covered:** FR39, FR40, FR41, FR42, FR43, FR44
+
+### Epic 8: Tauri Desktop Integration
+The app runs natively on Linux and Windows as a Tauri application sharing the same React/Capacitor codebase. After this epic, a developer can build and run the desktop app locally, the DB layer uses the Tauri SQL plugin with direct vault path access (no sync needed), all platform adapters have a `*.desktop.ts` implementation, and CI/CD produces AppImage and NSIS installers on release.
+**Priority:** Immediate — must precede any feature story claiming Desktop support.
+**FRs covered:** FR30 (desktop vault creation), FR31 (desktop vault relocation), FR37 (Tauri Stronghold), FR41 (desktop keyboard navigation)
 
 ---
 
@@ -251,13 +256,13 @@ So that I can start building features immediately without any setup friction.
 
 As a developer,
 I want a SQLite database layer with Drizzle ORM and automatic migrations,
-So that all subsequent features can persist data reliably on both web and Android without manual setup.
+So that all subsequent features can persist data reliably on both Android and Desktop without manual setup.
 
 **Acceptance Criteria:**
 
-**Given** the app starts on web
+**Given** the app starts on Desktop (Tauri)
 **When** `main.tsx` runs
-**Then** Drizzle's `migrate()` executes automatically and the `lekto.db` file is created in the vault directory without errors
+**Then** Drizzle's `migrate()` executes via the Tauri SQL plugin and `lekto.db` is created directly in the vault folder path without errors
 
 **Given** the app starts on Android
 **When** `main.tsx` runs
@@ -323,17 +328,17 @@ So that I can understand all project conventions, architecture rules, and workfl
 
 As a developer,
 I want a platform abstraction layer and a unified error handling pattern,
-So that all features can be written once and run correctly on both web and Android without platform-specific branching in business logic.
+So that all features can be written once and run correctly on both Android and Desktop without platform-specific branching in business logic.
 
 **Acceptance Criteria:**
 
 **Given** the platform adapters are implemented
 **When** business logic calls `filesystemAdapter.readFile(path)`
-**Then** the correct web or Android implementation is invoked based on `Capacitor.isNativePlatform()` — never a direct Capacitor or browser API call from feature code
+**Then** the correct Android or Desktop implementation is invoked based on `isTauri()` / `Capacitor.isNativePlatform()` — never a direct Capacitor or Tauri API call from feature code
 
 **Given** the four adapter interfaces exist (`filesystem`, `tts`, `secureStorage`, `filePicker`)
 **When** a developer adds a new platform capability
-**Then** they follow the established pattern: interface + `*.web.ts` + `*.android.ts` + `index.ts` runtime selector in `src/shared/platform/<capability>/`
+**Then** they follow the established pattern: interface + `*.android.ts` + `*.desktop.ts` + `index.ts` runtime selector (via `isTauri()`) in `src/shared/platform/<capability>/`
 
 **Given** `neverthrow` is installed
 **When** a fallible async operation is written in feature code
@@ -359,15 +364,15 @@ So that no broken code reaches main and releases are fully automated.
 
 **Given** a pull request is opened
 **When** the PR pipeline runs (`.github/workflows/pr.yml`)
-**Then** it executes in sequence: lint + typecheck → unit tests (Vitest) with coverage → web build → E2E web (Playwright) → CodeQL → SonarCloud — and blocks merge if any step fails
+**Then** it executes in sequence: lint + typecheck → unit tests (Vitest) with coverage → build → E2E desktop (Playwright via Tauri WebDriver) → CodeQL → SonarCloud — and blocks merge if any step fails
 
 **Given** a commit is pushed to `main`
 **When** the main pipeline runs (`.github/workflows/main.yml`)
-**Then** it deploys the web app to GitHub Pages and creates or updates a release PR via release-please
+**Then** it creates or updates a release PR via release-please
 
 **Given** a release tag `v*` is pushed (by merging the release-please PR)
 **When** the release pipeline runs (`.github/workflows/release.yml`)
-**Then** it builds the web app, builds and signs the Android APK using GitHub Secrets, attaches the APK to a GitHub Release, and triggers F-Droid pickup
+**Then** it builds the Tauri desktop app (AppImage for Linux, NSIS installer for Windows), builds and signs the Android APK using GitHub Secrets, attaches both to a GitHub Release, and triggers F-Droid pickup
 
 **Given** a developer writes a commit message that does not follow Conventional Commits format
 **When** they run `git commit`
@@ -379,7 +384,7 @@ So that no broken code reaches main and releases are fully automated.
 
 **Given** Playwright is configured
 **When** a developer runs `npm run test:e2e`
-**Then** the E2E suite runs against the built web app and reports pass/fail per spec file
+**Then** the E2E suite runs against the built desktop app via Tauri WebDriver and reports pass/fail per spec file
 
 ---
 
@@ -419,9 +424,9 @@ So that my reading data has a persistent local home without any manual configura
 **When** the app transitions
 **Then** the VaultSetupScreen is dismissed and the empty library is displayed — the setup screen is never shown again on subsequent launches
 
-**Given** the app runs on web with a browser that does not support `showDirectoryPicker` (Firefox, Safari)
+**Given** the app runs on Desktop (Tauri)
 **When** vault creation runs
-**Then** the vault is created in OPFS without error and the user is not shown a file picker for the initial creation
+**Then** the vault folder is created with a `books/` subdirectory, `lekto.db` is initialized at the chosen OS path via Drizzle + Tauri SQL plugin, and the vault path is persisted for future sessions
 
 **Given** the app runs on Android
 **When** the user taps "Modify" to choose a vault location
@@ -743,7 +748,7 @@ So that I can track my vocabulary progress directly from the reading flow.
 **When** the auto-known timer fires on the page it appears on
 **Then** that word is not modified — only level 0 (Unknown/unseen) words are auto-promoted to Known
 
-**Given** the compact panel is open on web
+**Given** the compact panel is open on desktop
 **When** the user presses Escape
 **Then** the panel closes and focus returns to the triggering `WordToken`
 
@@ -773,8 +778,8 @@ So that I never lose my place even if the app closes unexpectedly.
 **When** page turns occur in quick succession
 **Then** only one SQLite write is triggered after the last page turn — intermediate positions are not written individually
 
-**Given** the app is sent to the background (Android) or the tab loses visibility (web)
-**When** the `appStateChange` or `visibilitychange` event fires
+**Given** the app is sent to the background (Android) or loses window focus (Desktop)
+**When** the `appStateChange` or `blur` event fires
 **Then** the current Zustand position is flushed to SQLite immediately, bypassing the debounce
 
 **Given** the app is killed without warning (e.g. Android low memory)
@@ -843,7 +848,7 @@ So that I can look up definitions and hear pronunciation without leaving my read
 
 **Given** the panel is open in word mode
 **When** the user taps a dictionary tab
-**Then** the corresponding service loads in an in-app browser (Android: InAppBrowser plugin, web: embedded iframe or new tab if iframe is blocked) without navigating away from the reader
+**Then** the corresponding service loads in an in-app browser (Android: InAppBrowser plugin, Desktop: Tauri shell open or embedded webview) without navigating away from the reader
 
 **Given** the user selects a multi-word phrase in the reader
 **When** the `TranslationPanel` opens
@@ -851,7 +856,7 @@ So that I can look up definitions and hear pronunciation without leaving my read
 
 **Given** the panel is open
 **When** the user taps the TTS button
-**Then** the selected word or phrase is read aloud using Web Speech API (web) or Android TTS engine (Android) in the book's language
+**Then** the selected word or phrase is read aloud using Android TTS engine (Android) or the system TTS via Tauri shell (Desktop) in the book's language
 
 **Given** TTS is unavailable on the current platform or language
 **When** the user would normally see the TTS button
@@ -866,7 +871,7 @@ So that I can look up definitions and hear pronunciation without leaving my read
 **Then** an inline non-blocking message is shown within the tab — the other tabs remain accessible and the reading session continues uninterrupted
 
 **Given** the panel is open
-**When** the user swipes it down, taps outside it, or presses Escape (web)
+**When** the user swipes it down, taps outside it, or presses Escape
 **Then** the panel closes and the reader returns to the exact scroll position with the word deselected
 
 **Given** the panel is open
@@ -973,7 +978,7 @@ So that I can get contextual phrase translations using my existing API access wi
 
 **Given** the user selects a provider and enters an API key
 **When** they tap Save
-**Then** the key is stored exclusively via `@aparajita/capacitor-secure-storage` (Android Keystore on Android, encrypted localStorage on web) — it is never written to the vault, never written to SQLite, and never appears in any log or error output
+**Then** the key is stored exclusively via the platform secure storage adapter (Android Keystore on Android, Tauri Stronghold on Desktop) — it is never written to the vault, never written to SQLite, and never appears in any log or error output
 
 **Given** an API key is saved
 **When** the user reopens the Settings → AI Provider screen
@@ -1085,11 +1090,11 @@ So that Lekto is usable regardless of how I interact with my device.
 
 **Acceptance Criteria:**
 
-**Given** the user navigates the web app using only the keyboard
+**Given** the user navigates the desktop app using only the keyboard
 **When** they Tab through any screen (library, reader, vocabulary, settings)
 **Then** all interactive elements receive focus in a logical order and are activatable with Enter or Space
 
-**Given** the translation panel is open on web
+**Given** the translation panel is open on desktop
 **When** the user presses Escape
 **Then** the panel closes and focus returns to the `WordToken` that triggered it
 
@@ -1097,7 +1102,7 @@ So that Lekto is usable regardless of how I interact with my device.
 **When** it is displayed
 **Then** focus is trapped inside the modal — Tab does not reach elements behind it — and closing it returns focus to the triggering element
 
-**Given** the web app is used with a screen reader (NVDA/Chrome or VoiceOver/macOS)
+**Given** the desktop app is used with a screen reader (NVDA/Windows or VoiceOver/macOS)
 **When** any interactive element receives focus
 **Then** it announces a meaningful label — no element is announced as "button" or "link" without a descriptive label
 
@@ -1120,3 +1125,121 @@ So that Lekto is usable regardless of how I interact with my device.
 **Given** the Android app is used on any screen
 **When** interactive elements are rendered
 **Then** every tappable element has a minimum touch target of 48×48dp — verified across library, reader, translation panel, vocabulary list, and settings
+
+---
+
+## Epic 8: Tauri Desktop Integration
+
+The app runs natively on Linux and Windows as a Tauri application sharing the same React/Capacitor codebase. After this epic, a developer can build and run the desktop app locally, the DB layer uses the Tauri SQL plugin with direct vault path access, all platform adapters have a `*.desktop.ts` implementation, and CI/CD produces AppImage and NSIS installers on release.
+
+**Priority:** Immediate — must precede any feature story claiming Desktop support.
+
+### Story 8.1: Tauri Initialization & Project Setup
+
+As a developer,
+I want Tauri v2 integrated into the project alongside Capacitor,
+So that I can build and run the app as a native desktop application on Linux and Windows.
+
+**Acceptance Criteria:**
+
+**Given** the repository is cloned on a fresh machine
+**When** the developer runs `npm run tauri dev`
+**Then** the Tauri desktop window opens and the app renders correctly without errors
+
+**Given** Tauri is configured
+**When** a developer inspects the project
+**Then** `src-tauri/` exists with `tauri.conf.json`, `Cargo.toml`, and a minimal Rust backend — Capacitor's `android/` directory coexists without conflict
+
+**Given** the project has both Tauri and Capacitor targets
+**When** `npm run build` runs
+**Then** it produces a web-compatible bundle usable by both platforms — no duplicate build configurations
+
+**Given** Tauri is configured
+**When** the developer runs `npm run tauri build`
+**Then** an AppImage is produced on Linux and an NSIS installer on Windows without errors
+
+**Given** `isTauri()` is defined as a build-time Vite constant
+**When** feature code checks platform
+**Then** `isTauri()` returns `true` in a Tauri build and `false` in a Capacitor/Android build — no runtime import of Tauri APIs in non-Tauri builds
+
+---
+
+### Story 8.2: Desktop DB Layer (Tauri SQL Plugin)
+
+As a developer,
+I want the SQLite database accessed via the Tauri SQL plugin on desktop,
+So that `lekto.db` lives directly in the vault folder at any OS path — no sync needed.
+
+**Acceptance Criteria:**
+
+**Given** the app starts on Desktop
+**When** `main.tsx` runs
+**Then** the Tauri SQL plugin opens `lekto.db` at the configured vault path, Drizzle's `migrate()` executes, and the database is ready for queries — no intermediate copy or OPFS layer involved
+
+**Given** a vault path is set to a cloud-synced directory (e.g. `~/Dropbox/lekto-vault/`)
+**When** the app starts on Desktop
+**Then** `lekto.db` is opened directly at that path — the cloud sync tool handles replication transparently
+
+**Given** the database layer abstraction in `src/shared/db/`
+**When** `isTauri()` is true
+**Then** the Tauri SQL adapter is selected at runtime; when false, the Capacitor SQLite adapter is selected — no platform branching in feature code
+
+**Given** a Drizzle migration is pending
+**When** the desktop app starts
+**Then** the migration runs exactly once against the file at the vault path and is idempotent on subsequent restarts
+
+---
+
+### Story 8.3: Desktop Platform Adapters
+
+As a developer,
+I want `*.desktop.ts` implementations for all platform adapters,
+So that filesystem, secure storage, and file picker features work natively on Linux and Windows.
+
+**Acceptance Criteria:**
+
+**Given** `filesystem.desktop.ts` is implemented
+**When** feature code calls `filesystemAdapter.readFile(path)` on desktop
+**Then** the Tauri FS plugin reads the file at the given absolute OS path without error
+
+**Given** `filePicker.desktop.ts` is implemented
+**When** feature code calls `filePickerAdapter.pickDirectory()` on desktop
+**Then** the Tauri dialog plugin opens a native OS folder picker and returns the selected path
+
+**Given** `secureStorage.desktop.ts` is implemented using Tauri Stronghold
+**When** an API key is stored on desktop
+**Then** it is persisted in Tauri Stronghold — never written to the vault or any plain file — and survives app restarts
+
+**Given** all four adapters have `*.desktop.ts` implementations
+**When** `isTauri()` is true
+**Then** the `index.ts` runtime selector routes all adapter calls to the desktop implementation — `*.android.ts` is never loaded in a Tauri build
+
+**Given** unit tests run for a feature using a platform adapter on desktop
+**When** the adapter is mocked via dependency injection
+**Then** tests pass without importing any Tauri-specific modules
+
+---
+
+### Story 8.4: Desktop CI/CD Pipelines
+
+As a developer,
+I want CI/CD pipelines producing desktop builds on release,
+So that AppImage and NSIS installers are automatically published to GitHub Releases on every version tag.
+
+**Acceptance Criteria:**
+
+**Given** a pull request is opened
+**When** the PR pipeline runs
+**Then** a Tauri desktop build compiles without errors as part of the gate — blocking merge if it fails
+
+**Given** a release tag `v*` is pushed
+**When** the release pipeline runs
+**Then** the Tauri build action produces an AppImage (Linux) and an NSIS installer (Windows), both attached to the GitHub Release alongside the Android APK
+
+**Given** the Tauri build uses code signing secrets
+**When** secrets are not configured (e.g. a fork PR)
+**Then** the build completes without signing but does not fail the pipeline — signed artifacts are only required for release tags
+
+**Given** Playwright E2E tests are configured for desktop
+**When** the PR pipeline runs E2E
+**Then** the test suite launches the Tauri app via WebDriver and executes the primary user journey (vault creation → book import stub) — pass/fail reported per spec file
