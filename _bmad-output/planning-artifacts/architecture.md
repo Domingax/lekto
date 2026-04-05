@@ -5,8 +5,8 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
   - '_bmad-output/planning-artifacts/ux-design-directions.html'
-  - '_bmad-output/planning-artifacts/research/technical-lingq-open-stack-research-2026-03-03.md'
-  - '_bmad-output/planning-artifacts/product-brief-lingq-2026-03-02.md'
+  - '_bmad-output/planning-artifacts/research/technical-stack-research-2026-03-03.md'
+  - '_bmad-output/planning-artifacts/product-brief-2026-03-02.md'
 workflowType: 'architecture'
 project_name: 'letko'
 user_name: 'Damien'
@@ -36,16 +36,16 @@ The architectural heart is the Import → Tokenize → Store → Render pipeline
 - Maintainability: unit + E2E test coverage on all core flows, CI pipeline required
 
 **Scale & Complexity:**
-- Primary domain: hybrid web + mobile, local-first SPA
+- Primary domain: local-first native app (Android + Desktop), shared React frontend
 - Complexity level: low-medium
 - Estimated architectural modules: 8 (Import Pipeline, Token Renderer, Vocabulary Store, Vault Manager, Translation Service, AI Adapter, TTS Adapter, Secure Storage)
 
 ### Technical Constraints & Dependencies
 
-- Single codebase (React/TypeScript/Capacitor) targeting web and Android — no platform-specific business logic branches
+- React/TypeScript/Vite frontend shared across Android (Capacitor) and Desktop (Tauri) — no platform-specific business logic branches; only platform adapter implementations differ
 - Vault is a user-managed folder; all data must be portable files (SQLite) — no proprietary binary formats
-- Dictionary services block iframe embedding — deep-link URLs opened via InAppBrowser (Android) or new tab (web); same UX pattern as LingQ, no API keys required
-- File System Access API unavailable on Safari/Firefox — OPFS fallback needed
+- Dictionary services block iframe embedding — deep-link URLs opened via InAppBrowser (Android) or new tab (web); no API keys required, compatible with any web dictionary service
+- No web distribution — desktop users get a native Tauri app; OPFS and web adapters are transitional artifacts to be removed as Tauri integration progresses
 - Android 11+ (API 30) minimum — scoped storage restrictions require SAF file picker + content:// URI approach for vault folder access
 - API keys must never enter the vault file system — requires a separate secure storage layer (Android Keystore / encrypted localStorage)
 
@@ -62,7 +62,7 @@ The architectural heart is the Import → Tokenize → Store → Render pipeline
 
 ### Primary Technology Domain
 
-Hybrid web + mobile SPA — Vite (no SSR) + Capacitor Android wrapper. No full-stack framework needed; all data is local.
+Native cross-platform app — React/TypeScript/Vite frontend shared across Android (Capacitor) and Desktop (Tauri). No SSR, no full-stack framework; all data is local.
 
 ### Starter Options Considered
 
@@ -186,8 +186,8 @@ src/
 
 ### Infrastructure & Deployment
 
-**Web:** GitHub Pages, deployed via GitHub Actions on push to main
 **Android:** GitHub Actions → signed APK → GitHub Releases + F-Droid (automatic pull on tag)
+**Desktop:** GitHub Actions → Tauri build → Linux AppImage + Windows NSIS installer → GitHub Releases
 **Env vars:** no build-time variables — API keys in secure storage at runtime only
 **Platform detection:** Capacitor.isNativePlatform() in shared/platform/ — no platform branching in business logic
 
@@ -209,10 +209,8 @@ lint → unit tests → web build → E2E web
 
 Pipeline 3 — Release tag v* (triggered by merging the release-please PR):
 ```
-web build → deploy GitHub Pages
-  → Android build → sign APK (GitHub Secrets)
-  → GitHub Release (APK attached)
-  → F-Droid (automatic pull)
+Android build → sign APK → GitHub Release (APK attached) → F-Droid
+Desktop build → Tauri (Linux AppImage + Windows NSIS) → GitHub Release
 ```
 
 **Android E2E (Maestro):** run locally before release tag; CI integration post-MVP.
@@ -235,6 +233,101 @@ web build → deploy GitHub Pages
 - ANDROID_KEYSTORE_BASE64
 - ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD / ANDROID_STORE_PASSWORD
 - SONAR_TOKEN
+
+## Platform Strategy
+
+### Decision: Capacitor Android + Tauri Desktop
+
+**Context:** The app's core feature — immersive EPUB reading with word-by-word interaction — relies on HTML `<span>` elements, CSS mastery coloring, and DOM click handlers. This is what the web rendering engine does best. A native rendering framework (Flutter, React Native) would require rebuilding this text interaction layer from scratch with less mature EPUB tooling.
+
+**Decision:** Preserve the HTML-based reader advantage and solve vault portability per platform through a two-bridge architecture with a fully shared React frontend.
+
+| Target | Framework | SQLite location | Vault portability |
+|---|---|---|---|
+| Android | Capacitor | Export/import to vault folder | Via binary DB sync |
+| Desktop Linux/Windows/macOS | Tauri v2 | Directly in vault folder | Native — zero workaround |
+
+The React/TypeScript/Vite frontend is **100% shared**. Only the `shared/platform/` adapter implementations differ per target.
+
+### Why not a web PWA for desktop?
+
+The browser security model requires permission re-grant on every session for folder access (File System Access API). For a vault-centric app this is an unacceptable UX regression. Native desktop via Tauri eliminates this entirely.
+
+### Why not Flutter?
+
+`flutter_epub_viewer` (the mature EPUB package) renders via epub.js in a WebView with a JS↔Dart bridge for word interaction. The native rendering advantage is lost precisely for the app's core feature. A full rewrite in Dart for no reader improvement is not justified.
+
+### Platform adapter structure (target state)
+
+The adapter pattern uses exactly two implementations per capability — no web layer:
+
+```
+shared/platform/filesystem/
+├── filesystem.interface.ts
+├── filesystem.android.ts      ← Capacitor Filesystem (Directory.Documents)
+└── filesystem.desktop.ts      ← Tauri fs plugin (direct OS path)
+
+shared/platform/file-picker/
+├── file-picker.interface.ts
+├── file-picker.android.ts     ← @capawesome/capacitor-file-picker (SAF)
+└── file-picker.desktop.ts     ← Tauri dialog plugin (native OS picker)
+
+shared/platform/secure-storage/
+├── secure-storage.interface.ts
+├── secure-storage.android.ts  ← @aparajita/capacitor-secure-storage
+└── secure-storage.desktop.ts  ← Tauri stronghold plugin
+
+shared/platform/preferences/
+├── preferences.interface.ts
+├── preferences.android.ts     ← @capacitor/preferences
+└── preferences.desktop.ts     ← Tauri store plugin
+```
+
+Platform selection in each `index.ts`:
+
+```typescript
+export const filesystemAdapter =
+  isTauri() ? desktopFilesystemAdapter : androidFilesystemAdapter
+```
+
+`isTauri()` is a build-time constant injected via Vite define — no runtime sniffing.
+
+**Migration note:** The current codebase contains `.web.ts` adapter files inherited from the initial web-first implementation. These are transitional — they are replaced by `.desktop.ts` counterparts as Tauri integration stories are implemented. No new `.web.ts` files should be created.
+
+### Vault DB sync strategy
+
+**Goal:** `lekto.db` lives inside the vault folder on disk, making the vault a self-contained portable unit (copy folder = full backup).
+
+**Desktop (Tauri):** The Rust backend opens SQLite directly at the vault path. `lekto.db` is always current. No sync layer needed.
+
+```rust
+// Tauri command — opens DB at any OS path
+let pool = SqlitePool::connect(&format!("sqlite:{}/lekto.db", vault_path)).await?;
+```
+
+**Android (Capacitor):** `@capacitor-community/sqlite` stores the DB in app internal storage. A sync layer in `features/sync-vault/` bridges the gap:
+
+- **On vault create / write** (debounced 5s + `appStateChange` / `visibilitychange`): export DB binary via `sqlite3_js_db_export()` → write to vault folder as `lekto.db`
+- **On open existing vault**: read `lekto.db` binary from vault folder → import into internal storage → reinitialize DB connection
+- **Vault validity marker**: `filesystemAdapter.exists('lekto.db')` — the DB file is the canonical marker, not `books/`
+
+**Note:** `sqlite3_js_db_export()` requires the DB to be in journal mode DELETE (not WAL). Ensure this is set at DB initialization.
+
+### Deployment additions for Tauri
+
+Pipeline 3 (release tag) gains a desktop build step:
+
+```
+web build → deploy GitHub Pages
+  → Android APK build → sign → GitHub Release
+  → Tauri desktop build (Linux AppImage, Windows NSIS) → GitHub Release
+```
+
+Required additional GitHub Secrets:
+- `TAURI_PRIVATE_KEY` / `TAURI_KEY_PASSWORD` (updater signing)
+- Windows code signing certificate (optional for initial release)
+
+---
 
 ## Implementation Patterns & Consistency Rules
 
@@ -460,7 +553,7 @@ All agents apply the following Clean Code principles consistently:
 - Apply Clean Code principles: single responsibility, expressive naming, CQS, Rule of Three
 
 **Anti-patterns to reject in code review:**
-- Direct Capacitor API calls outside `shared/platform/`
+- Direct Capacitor or Tauri API calls outside `shared/platform/`
 - `throw` statements for expected failure modes outside adapter wrappers
 - `.then()/.catch()` chains in feature code
 - Imports crossing FSD layer boundaries upward
@@ -640,7 +733,7 @@ letko/
 │       │   ├── slider.tsx
 │       │   └── ...
 │       ├── db/
-│       │   ├── index.ts        ← db instance: @sqlite.org/sqlite-wasm+OPFS (web) | @capacitor-community/sqlite (android)
+│       │   ├── index.ts        ← db instance: Tauri plugin-sql/sqlx (desktop) | @capacitor-community/sqlite (android)
 │       │   ├── schema.ts       ← Drizzle schema: 5 tables + indexes
 │       │   ├── migrate.ts      ← migration runner
 │       │   └── migrations/     ← Drizzle-generated migration files
@@ -724,8 +817,7 @@ Rule: if a segment has only one file, the segment folder is still created. Consi
 
 ### Architectural Boundaries
 
-**Platform boundary** — `shared/platform/` is the only location where Capacitor APIs
-are called. No feature or widget imports from `@capacitor/*` directly.
+**Platform boundary** — `shared/platform/` is the only location where Capacitor or Tauri APIs are called. No feature or widget imports from `@capacitor/*` or `@tauri-apps/*` directly.
 
 **Database boundary** — `shared/db/index.ts` exports the single db instance.
 Features use Drizzle via this instance only. No feature creates its own connection.

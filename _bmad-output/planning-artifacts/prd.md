@@ -1,16 +1,20 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
+stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete', 'step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
 status: 'complete'
 classification:
-  projectType: 'web_app+mobile_app'
+  projectType: 'native_desktop+mobile_app'
   domain: 'edtech'
   complexity: 'low-medium'
   projectContext: 'greenfield'
 inputDocuments:
-  - '_bmad-output/planning-artifacts/product-brief-lingq-2026-03-02.md'
-  - '_bmad-output/planning-artifacts/research/technical-lingq-open-stack-research-2026-03-03.md'
+  - '_bmad-output/planning-artifacts/product-brief-2026-03-02.md'
+  - '_bmad-output/planning-artifacts/research/technical-stack-research-2026-03-03.md'
   - '_bmad-output/brainstorming/brainstorming-session-2026-03-02-T2100.md'
 workflowType: 'prd'
+lastEdited: '2026-04-05'
+editHistory:
+  - date: '2026-04-05'
+    changes: 'Platform pivot: web removed, Android (Capacitor) + Desktop native (Tauri) adopted. Vault architecture updated (lekto.db in vault folder). All web references replaced throughout.'
 ---
 
 # Product Requirements Document - Lekto
@@ -20,7 +24,7 @@ workflowType: 'prd'
 
 ## Executive Summary
 
-**Lekto** is an open-source immersive language learning application for Web and Android. It replicates the reading experience of LingQ — content import, vocabulary highlighting by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
+**Lekto** is an open-source immersive language learning application for Android and native Desktop (Linux, Windows, macOS). It replicates the reading experience of subscription-based language learning readers — content import, vocabulary highlighting by mastery level, integrated contextual lookup, and vocabulary management — on a fully local architecture: no server required, no subscription, user data stays on the device.
 
 The product targets two user profiles: **technical users** (developers, power users) who want to read in their target language, own their data, and optionally connect their own AI services; and **general learners** who want an "open and read" experience that is free, simple, and works out of the box.
 
@@ -38,7 +42,7 @@ The problem being solved is concrete friction: mandatory internet connection to 
 
 | Dimension | Value |
 |-----------|-------|
-| **Project Type** | Hybrid Web + Mobile App (Capacitor — React/Vite/TypeScript) |
+| **Project Type** | Native Android (Capacitor) + Native Desktop (Tauri) — React/Vite/TypeScript shared frontend |
 | **Domain** | EdTech / Consumer Language Learning |
 | **Complexity** | Low-medium — no regulatory constraints, personal open-source project |
 | **Project Context** | Greenfield — new application, no existing codebase |
@@ -47,16 +51,16 @@ The problem being solved is concrete friction: mandatory internet connection to 
 
 ### User Success
 
-Lekto is successful when the author uses it as their primary daily reading tool without feeling limited compared to LingQ. The bar is functional parity for the core reading loop, not feature parity across the board.
+Lekto is successful when the author uses it as their primary daily reading tool without feeling limited compared to existing immersive language learning readers. The bar is functional parity for the core reading loop, not feature parity across the board.
 
 Key success moments:
 - **Reading flow**: A full chapter completed without the lookup panel breaking concentration — word and phrase translation feels instant and contextual.
-- **Cross-device continuity**: A session started on Android (pages read, words saved) is seamlessly resumable on the web app — same reading position, same updated vocabulary list.
-- **Habit formation**: The app is opened for reading sessions as consistently as LingQ would be, without friction creating a reason to switch back.
+- **Cross-device continuity**: A session started on Android (pages read, words saved) is seamlessly resumable on the desktop app — same reading position, same updated vocabulary list, via shared vault folder.
+- **Habit formation**: The app is opened for reading sessions as consistently as a premium tool would be, without friction creating a reason to switch back.
 
 ### Business Success
 
-No commercial objectives. Success is personal: the author completes reading sessions in Lekto without reverting to LingQ.
+No commercial objectives. Success is personal: the author completes reading sessions in Lekto without reverting to existing tools.
 
 Secondary success (not a requirement): the project is useful to others. 10 satisfied users would already be a positive outcome.
 
@@ -70,8 +74,8 @@ Secondary success (not a requirement): the project is useful to others. 10 satis
 
 | Outcome | Definition of Done |
 |---------|-------------------|
-| Full reading session | Import → read → save words end-to-end without switching to LingQ |
-| Cross-device sync | Read on Android, resume on web at same position with same vocabulary |
+| Full reading session | Import → read → save words end-to-end without switching to another tool |
+| Cross-device sync | Read on Android, resume on Desktop at same position with same vocabulary (via shared vault folder) |
 | New device restore | Point app to existing vault → full reading history and vocabulary restored |
 | Contributor-ready | New contributor runs the project locally following README in under 10 minutes |
 
@@ -79,7 +83,7 @@ Secondary success (not a requirement): the project is useful to others. 10 satis
 
 ### Journey 1 — First Use
 
-A user hears about Lekto on a forum and opens the web app. No account prompt, no paywall — the app loads directly into an empty library. A vault folder is automatically created in a standard local location so the user can start immediately.
+A user hears about Lekto on a forum, downloads the desktop app, and installs it. No account prompt, no paywall — the app opens directly into an empty library. A vault folder is automatically created in a standard local location so the user can start immediately.
 
 A non-intrusive prompt appears: *"Your reading data is stored in a local vault. Want to sync across devices? Point your vault to a cloud-synced folder."* The user can dismiss it and read now, or immediately redirect the vault to their Google Drive or Syncthing folder — their choice, no pressure.
 
@@ -99,9 +103,9 @@ Three days later, the same user opens the app on their Android phone during thei
 
 They read for 15 minutes, clicking on a handful of words, saving two of them. They reach their stop and close the app.
 
-That evening, they open Lekto on their laptop browser. The library reflects the same progress. The two words saved on the phone are in their vocabulary list. They continue reading from Chapter 3, page 12 — exactly where the phone left off.
+That evening, they open the Lekto desktop app on their laptop. The library reflects the same progress — the vault folder is the same cloud-synced directory on both devices. The two words saved on the phone are in their vocabulary list. They continue reading from Chapter 3, page 12 — exactly where the phone left off.
 
-**Capabilities revealed:** reading position persistence, cross-device sync via vault, vocabulary sync, library resume indicator, platform consistency (web + Android).
+**Capabilities revealed:** reading position persistence, cross-device sync via shared vault folder, vocabulary sync, library resume indicator, platform consistency (Desktop + Android).
 
 ---
 
@@ -119,7 +123,7 @@ They return to their book, select the same phrase. This time, a fluid translatio
 
 ### Journey 4 — OSS Contributor
 
-A developer learning Japanese discovers Lekto on GitHub. The README is clear: what the project does, why it exists, how to run it locally. They clone the repo, run `npm install && npm run dev`, and the app opens in their browser in under 5 minutes.
+A developer learning Japanese discovers Lekto on GitHub. The README is clear: what the project does, why it exists, how to run it locally. They clone the repo, run `npm install && npm run dev`, and the app opens in a Tauri development window in under 5 minutes.
 
 They browse the architecture documentation and understand the import pipeline: EPUB → tokenizer → SQLite. They want to add support for a new dictionary provider for Japanese (Jisho). The contributing guide points them to the relevant module. The code is structured, typed, and tested — they can follow the pattern of an existing provider.
 
@@ -139,13 +143,14 @@ They open a PR. The CI pipeline runs automatically — lint, tests, build all pa
 | In-app translation panel (dictionary) | Journey 1, 2 |
 | Vocabulary save with context | Journey 1, 2 |
 | Reading position persistence | Journey 2 |
-| Vault-based cross-device sync | Journey 2 |
+| Vault-based cross-device sync (Android ↔ Desktop via shared folder) | Journey 2 |
 | Progressive AI feature disclosure | Journey 3 |
 | BYOK API key setup + secure storage | Journey 3 |
 | AI phrase translation with fallback | Journey 3 |
 | Developer documentation + CI | Journey 4 |
 | Modular dictionary provider system by language pair | Journey 4 |
 | Reading customization (font, theme, text size, page swipe) | FR18, FR40 |
+| Platform consistency (Desktop + Android) | Journey 2 |
 
 ## Innovation & Novel Patterns
 
@@ -165,7 +170,7 @@ Lekto's deliberate exclusion of community features is not only a scope decision 
 
 ### Market Context
 
-- Language learning tools (LingQ, Readlang, Clozemaster) are uniformly cloud-first and subscription-based
+- Language learning tools (immersive readers, vocabulary builders) are uniformly cloud-first and subscription-based
 - Community features require cloud infrastructure and reinforce the cloud-first model in this space
 - Note-taking tools have validated the vault/local-first model at scale (Obsidian, Logseq) precisely because note-taking is a personal, non-community activity
 - BYOK AI is an established pattern in developer and productivity tools, not yet present in language learning
@@ -176,60 +181,80 @@ Lekto's deliberate exclusion of community features is not only a scope decision 
 - **BYOK AI value**: validated by the author's own daily use — consistent use of AI translation over dictionary links confirms its value.
 - **Vault sync reliability**: validated by the cross-device sync success criterion (read on Android, resume on web).
 
-## Web + Mobile App Specific Requirements
+## Android + Desktop App Specific Requirements
 
 ### Architecture Overview
 
-Lekto is a hybrid web + mobile application built with Capacitor (React/Vite/TypeScript). The web app is the primary development target; the Android app is the same codebase wrapped in a native container. Both platforms share the same local-first architecture and vault-based storage model.
+Lekto targets Android (via Capacitor) and native Desktop (via Tauri — Linux, Windows, macOS). Both platforms share a React/Vite/TypeScript frontend. Platform-specific capabilities (filesystem, file picker, secure storage, TTS) are handled exclusively through adapters in `shared/platform/` — no platform-specific branches in business logic.
 
 ### Platform Support
 
 | Platform | Target | Notes |
 |----------|--------|-------|
-| Web — Chrome / Edge | Full support | File System Access API + OPFS fully supported |
-| Web — Firefox | Full support | OPFS fallback (no `showDirectoryPicker`); vault accessible via OPFS sandbox |
-| Web — Safari | Partial | OPFS supported (Safari 16.4+); `showDirectoryPicker` unavailable — vault sandboxed, manual import/export for sync |
-| Android | Full support | Capacitor wrapper; Android 11+ required |
-| iOS | Post-MVP (v4) | Architecturally compatible with Capacitor; deferred |
+| Android | Full support | Capacitor wrapper; Android 11+ (API 30) required |
+| Desktop Linux | Full support | Tauri v2; AppImage distribution |
+| Desktop Windows | Full support | Tauri v2; NSIS installer distribution |
+| Desktop macOS | Full support | Tauri v2; .dmg distribution |
+| iOS | Post-MVP (v5) | Architecturally compatible; deferred |
+| Web browser | Not a target | No web distribution; `npm run dev` used for development only |
+
+### Vault Architecture
+
+The vault is a user-managed folder containing all reading data:
+
+```
+vault/
+├── books/       ← imported source files (EPUB, PDF, TXT)
+└── lekto.db     ← SQLite: all application data (vocabulary, progress, metadata)
+```
+
+`lekto.db` lives inside the vault folder on disk. Copying the vault folder to another device = full data migration.
+
+**Per-platform strategy:**
+- **Desktop (Tauri):** SQLite opened directly at the vault folder path via Rust backend — no sync layer needed
+- **Android (Capacitor):** SQLite managed internally; synced to/from `lekto.db` in the vault folder on write (debounced) and on vault open
 
 ### Offline Mode
 
 The application is **fully offline by design**. Network access is used only for:
 - Dictionary lookups — opened in-app browser; degrade gracefully if offline
 - BYOK AI translation — silently unavailable if offline
-- Vault sync — handled entirely by the user's chosen third-party service
+- Vault sync — handled entirely by the user's chosen third-party sync service (Syncthing, cloud folder, etc.)
 
-### Device Features (Android)
+### Native Features by Platform
 
-| Feature | Implementation |
-|---------|---------------|
-| File system access | `@capacitor/filesystem` + file picker for vault folder selection |
-| Secure storage (API keys) | `@aparajita/capacitor-secure-storage` — Android Keystore backed |
-| TTS audio | `@capacitor-community/text-to-speech` — Android TTS engine |
-| File import (EPUB/PDF) | `@capawesome-team/capacitor-file-picker` |
+| Feature | Android (Capacitor) | Desktop (Tauri) |
+|---------|--------------------|--------------------|
+| File system access | `@capacitor/filesystem` (Documents dir) | Tauri `fs` plugin (any OS path) |
+| Vault folder picker | `@capawesome/capacitor-file-picker` (SAF) | Tauri `dialog` plugin (native OS picker) |
+| Secure storage (API keys) | `@aparajita/capacitor-secure-storage` (Android Keystore) | Tauri `stronghold` plugin |
+| TTS audio | `@capacitor-community/text-to-speech` | Tauri TTS plugin (OS speech engine) |
+| File import (EPUB/PDF) | `@capawesome/capacitor-file-picker` | Tauri `dialog` plugin |
 
 ### Distribution
 
 | Channel | Timeline |
 |---------|----------|
-| Web — self-hosted / static | MVP |
 | Android — GitHub Releases (APK) | MVP |
 | Android — F-Droid | MVP |
+| Desktop — GitHub Releases (Linux AppImage, Windows NSIS) | MVP |
+| Desktop — macOS (.dmg) | MVP |
 | Android — Google Play Store | Post-MVP |
-| iOS — App Store | v4 |
+| iOS — App Store | v5 |
 
 ### Implementation Constraints
 
-- **Single codebase**: all platform differences handled via Capacitor plugins and platform detection — no platform-specific branches in business logic
-- **Progressive enhancement**: web features (File System Access API) enhanced where available; OPFS fallback where not
-- **No SSR / SEO**: SPA only — not a public content site
+- **Shared frontend**: React/Vite/TypeScript codebase shared across both platforms — all differences in `shared/platform/` adapters only
+- **No web distribution**: no GitHub Pages, no PWA, no OPFS — web browser used for development only
+- **No SSR / SEO**: SPA only
 - **No real-time requirements**: no WebSockets, no server push — all data is local
+- **Vault boundary**: all file I/O routes through `shared/platform/filesystem/` — no direct Capacitor or Tauri API calls in business logic
 
 ## Product Scope & Roadmap
 
 ### MVP Strategy
 
-**Approach:** Personal Utility MVP — the product is done when it replaces LingQ as the author's daily reading tool without friction or compromise on the core experience. No market validation objective, no investor milestone, no revenue target.
+**Approach:** Personal Utility MVP — the product is done when it replaces existing immersive language learning tools as the author's daily reading tool, without friction or compromise on the core experience. No market validation objective, no investor milestone, no revenue target.
 
 **Resource profile:** Solo developer with AI agent assistance (BMAD workflow). Scope must remain lean enough for one person to ship.
 
@@ -244,10 +269,10 @@ The application is **fully offline by design**. Network access is used only for:
 | 3 | **Immersive reader** | Text color-coded by word mastery level; reading customization (font, size, theme, swipe) |
 | 4 | **Translation panel** | Word/phrase selection → dictionary services (WordReference, Reverso, Google Translate, Linguee) in-app |
 | 5 | **BYOK AI translation** | Phrase translation via user's own LLM; gracefully absent if not configured |
-| 6 | **TTS audio** | Pronunciation playback — Web Speech API (web), Android TTS (Android) |
+| 6 | **TTS audio** | Pronunciation playback — OS TTS engine (Desktop), Android TTS (Android) |
 | 7 | **Vocabulary management** | Save word/phrase with translation, notes, confidence level (1→4 + known) |
 | 8 | **Vault-based sync** | Portable folder structure; multi-device sync via user's chosen third-party service |
-| 9 | **Platforms** | Web (browser) + Android |
+| 9 | **Platforms** | Android + Desktop (Linux, Windows, macOS) |
 | 10 | **Accessibility** | WCAG 2.1 AA (web), TalkBack (Android) — first-class, not post-MVP |
 
 ### Out of Scope for MVP
@@ -327,10 +352,10 @@ The application is **fully offline by design**. Network access is used only for:
 
 ### Vault & Data Sync
 
-- **FR30**: The system automatically creates a vault in a default local location on first launch
+- **FR30**: The system automatically creates a vault folder in a default local location on first launch, containing `books/` and `lekto.db`
 - **FR31**: User can relocate the vault to a different folder (e.g., a cloud-synced directory)
-- **FR32**: All reading data (books, vocabulary, progress) is stored in the vault as portable files
-- **FR33**: User can point the app to an existing vault and restore all reading history and vocabulary
+- **FR32**: All reading data (books, vocabulary, progress) is stored in the vault folder as portable files — copying the vault to another device restores the full experience
+- **FR33**: User can point the app to an existing vault folder containing a valid `lekto.db` and restore all reading history and vocabulary
 - **FR34**: The system detects and reflects vault contents on app launch
 
 ### AI Configuration
@@ -344,7 +369,7 @@ The application is **fully offline by design**. Network access is used only for:
 
 - **FR39**: User can configure their target language and native language
 - **FR40**: User can access and manage all app settings from a dedicated settings area (vault location, AI provider, reading preferences, language settings)
-- **FR41**: User can navigate all app features using keyboard only (web)
+- **FR41**: User can navigate all app features using keyboard only (Desktop)
 - **FR42**: All interactive elements expose accessible labels for screen readers (web: ARIA, Android: TalkBack)
 - **FR43**: Word mastery coloring is supplemented with non-color visual indicators for colorblind users
 - **FR44**: The reader respects the system font size setting on Android
@@ -362,7 +387,7 @@ The application is **fully offline by design**. Network access is used only for:
 
 ### Security
 
-- API keys stored exclusively using OS-level secure storage (Android Keystore on Android; encrypted storage on web) — never written to vault or disk
+- API keys stored exclusively using OS-level secure storage (Android Keystore on Android; Tauri Stronghold / system keychain on Desktop) — never written to vault or disk
 - API keys never appear in log output, error messages, debug panels, or crash reports
 - All calls to external services use HTTPS exclusively
 - API key input fields mask the value by default
@@ -377,9 +402,9 @@ The application is **fully offline by design**. Network access is used only for:
 
 ### Accessibility
 
-- Web interface conforms to WCAG 2.1 Level AA
-- All interactive elements keyboard-navigable on web
-- All interactive elements have accessible labels for screen readers (ARIA on web, content descriptions on Android / TalkBack)
+- Desktop and Android interfaces conform to WCAG 2.1 Level AA
+- All interactive elements keyboard-navigable on Desktop
+- All interactive elements have accessible labels for screen readers (ARIA on Desktop, content descriptions on Android / TalkBack)
 - Word mastery colors supplemented with non-color visual indicators (pattern, underline, or icon) for colorblind users
 - Minimum touch target size of 48×48dp on Android
 - Reader respects system font size setting on Android
@@ -394,6 +419,6 @@ The application is **fully offline by design**. Network access is used only for:
 ### Maintainability
 
 - Core business logic (import pipeline, tokenization, vocabulary management, vault operations) has unit test coverage
-- E2E tests cover the primary user journey (import → read → lookup → save) on web and Android
+- E2E tests cover the primary user journey (import → read → lookup → save) on Android and Desktop
 - All commits must pass CI pipeline (lint → unit tests → build) before merge
 - Public module APIs documented; architectural decisions recorded in project documentation
