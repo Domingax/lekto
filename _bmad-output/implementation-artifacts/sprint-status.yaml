@@ -33,7 +33,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-03-31
+generated: 2026-04-05
 project: letko
 project_key: NOKEY
 tracking_system: file-system
@@ -50,15 +50,15 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 8: Tauri Desktop Integration (prioritized — must precede Desktop feature work)
-  epic-8: backlog
-  8-1-tauri-initialization-and-project-setup: backlog
+  epic-8: in-progress
+  8-1-tauri-initialization-and-project-setup: ready-for-dev
   8-2-desktop-db-layer-tauri-sql-plugin: backlog
   8-3-desktop-platform-adapters: backlog
   8-4-desktop-cicd-pipelines: backlog
   epic-8-retrospective: optional
 
   # Epic 2: Vault & First Launch
-  epic-2: in-progress
+  epic-2: backlog
   2-1-vault-setup-screen-and-create-new-vault: done
   2-2-open-existing-vault: backlog
   2-3-vault-relocation-from-settings: backlog
