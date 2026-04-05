@@ -1,21 +1,20 @@
 # letko
 
-An open-source immersive language learning app for Web and Android. Replicates the LingQ reading experience on a fully local architecture — no server, no subscription, data stays on your device.
+An open-source immersive language learning app for Android and Desktop (Linux/Windows). Fully local architecture — no server, no subscription, data stays on your device inside a portable vault folder.
 
-Import an EPUB or PDF → words color-coded by mastery level → click to translate → vocabulary saved with context. Every step is local and uninterrupted.
+Import an EPUB or PDF → words color-coded by mastery level → tap/click to translate → vocabulary saved with context. Every step is local and uninterrupted.
 
 BYOK AI: connect your own OpenAI, Anthropic, or Ollama account. The app is fully functional without AI; AI is a progressive enhancement.
 
-## Browser Support
+## Platform Support
 
-| Browser | Reading & Vocabulary | Cloud Sync |
-|---|---|---|
-| Chrome / Edge | ✅ Full support | ✅ Via native folder picker |
-| Firefox | ✅ Full support | ❌ Not possible |
-| Safari | ✅ Full support | ❌ Not possible |
-| Android app | ✅ Full support | ✅ Via SAF folder picker |
+| Platform | Status |
+|---|---|
+| Android (Capacitor) | Active development |
+| Linux Desktop (Tauri — AppImage) | Planned — Epic 8 |
+| Windows Desktop (Tauri — NSIS) | Planned — Epic 8 |
 
-**Cloud sync** (Google Drive, Syncthing, etc.) requires pointing the vault to a native folder. This relies on the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) (`showDirectoryPicker`), which Firefox and Safari do not support — [Mozilla has formally opposed the API](https://mozilla.github.io/standards-positions/#file-system-access). On these browsers the vault is stored in OPFS (browser-internal storage), which is fully persistent locally but invisible to external sync tools.
+**Vault portability:** the vault is a plain folder (`books/` + `lekto.db`) that lives wherever you choose — a local directory, a Syncthing folder, Google Drive, etc. Copying the folder moves all your data. No proprietary sync protocol.
 
 ## Tech Stack
 
@@ -24,12 +23,13 @@ BYOK AI: connect your own OpenAI, Anthropic, or Ollama account. The app is fully
 | Framework | React 19 + TypeScript 5.9 (strict) |
 | Build | Vite 7 |
 | Mobile | Capacitor 8 (Android) |
+| Desktop | Tauri v2 (Linux / Windows) — Epic 8 |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | State | Zustand 5 |
 | Routing | React Router v7 |
-| Database | SQLite via OPFS (Story 1.2) |
+| Database | SQLite — Capacitor SQLite (Android) · Tauri SQL plugin (Desktop) |
 | Error handling | neverthrow |
-| Testing | Vitest + Testing Library |
+| Testing | Vitest + Testing Library · Playwright (Desktop E2E) · Maestro (Android E2E) |
 
 ## Getting Started
 
@@ -63,7 +63,7 @@ src/
 └── shared/
     ├── ui/       # shadcn/ui components (re-exported)
     ├── db/       # Drizzle schema + migrations
-    ├── platform/ # Capacitor adapters
+    ├── platform/ # Platform adapters (*.android.ts / *.desktop.ts)
     ├── stores/   # Zustand stores
     └── lib/      # Utils, types, constants
 ```
@@ -86,4 +86,13 @@ Requires Android Studio + Java 17 + `ANDROID_HOME` set.
 npm run build
 npx cap sync
 npx cap open android
+```
+
+## Desktop (Tauri)
+
+Requires Rust toolchain ([rustup](https://rustup.rs/)) + Tauri CLI.
+
+```bash
+npm run tauri dev     # Dev window (coming — Epic 8)
+npm run tauri build   # AppImage / NSIS installer (coming — Epic 8)
 ```
