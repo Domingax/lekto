@@ -6,10 +6,17 @@ vi.mock('../../../shared/platform', () => ({
     mkdir: vi.fn(),
   },
   setFilesystemRoot: vi.fn(),
+  isTauri: vi.fn().mockReturnValue(false),
   preferencesAdapter: {
     get: vi.fn(),
     set: vi.fn(),
   },
+}))
+
+vi.mock('@/shared/db', () => ({
+  initDb: vi.fn().mockResolvedValue({ isOk: () => true, value: {} }),
+  runMigrations: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false }),
+  seedLanguages: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false }),
 }))
 
 vi.mock('../../../shared/stores', () => ({

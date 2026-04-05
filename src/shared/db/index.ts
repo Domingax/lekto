@@ -1,44 +1,36 @@
 import { Capacitor } from "@capacitor/core";
+import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { ok, err } from "neverthrow";
 import type { Result } from "neverthrow";
+import { isTauri, preferencesAdapter } from "@/shared/platform";
 import * as schema from "./schema";
 
 export type DrizzleDb = SqliteRemoteDatabase<typeof schema>;
 
+// Must match VAULT_PATH_KEY in features/sync-vault
+const VAULT_PATH_KEY = "vault_path";
+
 let _db: DrizzleDb | null = null;
 
-async function createWebDb(): Promise<DrizzleDb> {
-  const { default: sqlite3InitModule } =
-    await import("@sqlite.org/sqlite-wasm");
-  const sqlite3 = await sqlite3InitModule();
-
-  // OPFS requires COOP/COEP headers — already configured in vite.config.ts
-  const oo = sqlite3.oo1;
-  const DbClass = oo.OpfsDb ?? oo.DB;
-  const rawDb = new DbClass("/lekto.db", "ct");
+async function createDesktopDb(vaultPath: string): Promise<DrizzleDb> {
+  const db = await Database.load(`sqlite:${vaultPath}/lekto.db`);
 
   return drizzle(
     async (sql, params, method) => {
-      let stmt;
-      try {
-        stmt = rawDb.prepare(sql);
-        if (method === "run") {
-          if (params.length) stmt.bind(params);
-          stmt.stepReset();
-          return { rows: [] };
-        }
-        const rows: unknown[][] = [];
-        if (params.length) stmt.bind(params);
-        while (stmt.step()) {
-          rows.push(stmt.get([]));
-        }
-        stmt.reset();
-        return { rows };
-      } finally {
-        stmt?.finalize();
+      if (method === "run") {
+        await db.execute(sql, params as unknown[]);
+        return { rows: [] };
       }
+      const rows = await db.select<Record<string, unknown>[]>(
+        sql,
+        params as unknown[],
+      );
+      if (method === "values") {
+        return { rows: rows.map((row: Record<string, unknown>) => Object.values(row)) };
+      }
+      return { rows };
     },
     { schema },
   );
@@ -74,12 +66,18 @@ async function createAndroidDb(): Promise<DrizzleDb> {
   );
 }
 
-export async function initDb(): Promise<Result<DrizzleDb, string>> {
+export async function initDb(): Promise<Result<DrizzleDb | null, string>> {
   if (_db) return ok(_db);
   try {
-    _db = Capacitor.isNativePlatform()
-      ? await createAndroidDb()
-      : await createWebDb();
+    if (isTauri()) {
+      const vaultResult = await preferencesAdapter.get(VAULT_PATH_KEY);
+      if (vaultResult.isErr()) return ok(null); // No vault configured yet — first launch
+      _db = await createDesktopDb(vaultResult.value);
+    } else if (Capacitor.isNativePlatform()) {
+      _db = await createAndroidDb();
+    } else {
+      throw new Error("Unsupported platform");
+    }
     return ok(_db);
   } catch (e) {
     return err(e instanceof Error ? e.message : String(e));

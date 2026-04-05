@@ -84,10 +84,10 @@ so that `lekto.db` lives directly in the vault folder at any OS path — no sync
 
 ### Commit 2: `feat(db): add desktop db adapter, drop web adapter, update initDb selector`
 
-- [ ] Task 5: Update `src/shared/db/index.ts` (AC: #1, #2, #3)
-  - [ ] Change the return type of `initDb` to `Result<DrizzleDb | null, string>` to represent "no vault configured yet" on desktop
-  - [ ] Add `import Database from '@tauri-apps/plugin-sql'` at the top of the file — `createDesktopDb` vit dans `index.ts` aux côtés de `createAndroidDb`, pas dans un fichier séparé
-  - [ ] Add `createDesktopDb` function:
+- [x] Task 5: Update `src/shared/db/index.ts` (AC: #1, #2, #3)
+  - [x] Change the return type of `initDb` to `Result<DrizzleDb | null, string>` to represent "no vault configured yet" on desktop
+  - [x] Add `import Database from '@tauri-apps/plugin-sql'` at the top of the file — `createDesktopDb` vit dans `index.ts` aux côtés de `createAndroidDb`, pas dans un fichier séparé
+  - [x] Add `createDesktopDb` function:
     ```typescript
     async function createDesktopDb(vaultPath: string): Promise<DrizzleDb> {
       const db = await Database.load(`sqlite:${vaultPath}/lekto.db`)
@@ -108,10 +108,10 @@ so that `lekto.db` lives directly in the vault folder at any OS path — no sync
       )
     }
     ```
-  - [ ] The `Database.load()` call creates `lekto.db` at the path if it does not exist (SQLite `OPEN_CREATE` flag is the default)
-  - [ ] Import `isTauri` from `@/shared/platform` — **CAUTION**: check for circular imports (see Dev Notes below)
-  - [ ] Delete `createWebDb()` and its import (`@sqlite.org/sqlite-wasm`) — no web distribution target exists
-  - [ ] Update `initDb` function body:
+  - [x] The `Database.load()` call creates `lekto.db` at the path if it does not exist (SQLite `OPEN_CREATE` flag is the default)
+  - [x] Import `isTauri` from `@/shared/platform` — **CAUTION**: check for circular imports (see Dev Notes below)
+  - [x] Delete `createWebDb()` and its import (`@sqlite.org/sqlite-wasm`) — no web distribution target exists
+  - [x] Update `initDb` function body:
     ```typescript
     export async function initDb(): Promise<Result<DrizzleDb | null, string>> {
       if (_db) return ok(_db)
@@ -131,11 +131,11 @@ so that `lekto.db` lives directly in the vault folder at any OS path — no sync
       }
     }
     ```
-  - [ ] **Circular import workaround**: importer `preferencesAdapter` directement depuis `@/shared/platform` (pas depuis `features/sync-vault`) pour éviter le cycle. Définir localement `const VAULT_PATH_KEY = 'vault_path'` avec un commentaire `// Must match VAULT_PATH_KEY in features/sync-vault`.
-  - [ ] Export type: `getDb()` reste non-null ; `initDb()` retourne `DrizzleDb | null` — pas de changement pour les appelants qui passent par `getDb()`.
+  - [x] **Circular import workaround**: importer `preferencesAdapter` directement depuis `@/shared/platform` (pas depuis `features/sync-vault`) pour éviter le cycle. Définir localement `const VAULT_PATH_KEY = 'vault_path'` avec un commentaire `// Must match VAULT_PATH_KEY in features/sync-vault`.
+  - [x] Export type: `getDb()` reste non-null ; `initDb()` retourne `DrizzleDb | null` — pas de changement pour les appelants qui passent par `getDb()`.
 
-- [ ] Task 7: Update `src/main.tsx` to handle null DB on desktop (AC: #1, #2)
-  - [ ] Change the DB init check to skip migrations when db is null:
+- [x] Task 7: Update `src/main.tsx` to handle null DB on desktop (AC: #1, #2)
+  - [x] Change the DB init check to skip migrations when db is null:
     ```typescript
     const db = await initDb()
     if (db.isErr()) {
@@ -157,21 +157,21 @@ so that `lekto.db` lives directly in the vault folder at any OS path — no sync
       }
     }
     ```
-  - [ ] The rest of main.tsx (vault path restore, createRoot render) is unchanged
+  - [x] The rest of main.tsx (vault path restore, createRoot render) is unchanged
 
-- [ ] Task 8: Update vault creation flow to init DB on desktop (AC: #6)
-  - [ ] In `src/features/sync-vault/model/sync-vault.ts`, update `initVault()`:
+- [x] Task 8: Update vault creation flow to init DB on desktop (AC: #6)
+  - [x] In `src/features/sync-vault/model/sync-vault.ts`, update `initVault()`:
     - After `preferencesAdapter.set(VAULT_PATH_KEY, path)` succeeds, and when `isTauri()` is true, call `initDb()` then `runMigrations()` then `seedLanguages()`
     - Return `err(...)` if any of these fail
-  - [ ] Import `isTauri` from `@/shared/platform`
-  - [ ] Import `initDb`, `runMigrations`, `seedLanguages` from `@/shared/db`
-  - [ ] This ensures that on first vault creation on desktop, the DB is fully ready before navigation
+  - [x] Import `isTauri` from `@/shared/platform`
+  - [x] Import `initDb`, `runMigrations`, `seedLanguages` from `@/shared/db`
+  - [x] This ensures that on first vault creation on desktop, the DB is fully ready before navigation
 
-- [ ] Task 9: Quality gate — commit 2
-  - [ ] `npm run lint` — zero warnings
-  - [ ] `npm run typecheck` — zero errors
-  - [ ] `npm run test` — all existing tests pass
-  - [ ] `npm run build` — exits zero, produces `dist/`
+- [x] Task 9: Quality gate — commit 2
+  - [x] `npm run lint` — zero warnings
+  - [x] `npm run typecheck` — zero errors
+  - [x] `npm run test` — all existing tests pass
+  - [x] `npm run build` — exits zero, produces `dist/`
   - [ ] `npm run tauri:dev` — desktop window opens, console shows no DB errors on a machine with a pre-existing vault
 
 ## Dev Notes

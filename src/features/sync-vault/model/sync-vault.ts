@@ -1,8 +1,9 @@
 import { ok, err } from 'neverthrow'
-import { filesystemAdapter, setFilesystemRoot, preferencesAdapter } from '../../../shared/platform'
+import { filesystemAdapter, setFilesystemRoot, preferencesAdapter, isTauri } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
 import { storeVaultHandle, loadVaultHandle } from '../lib/handle-store'
 import type { AsyncResult } from '../../../shared/lib/types'
+import { initDb, runMigrations, seedLanguages } from '@/shared/db'
 
 export const VAULT_PATH_KEY = 'vault_path'
 export const WEB_OPFS_PATH = '__opfs__'
@@ -27,6 +28,17 @@ export async function initVault(path: string): AsyncResult<void> {
 
     const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, path)
     if (setResult.isErr()) return err(setResult.error)
+
+    if (isTauri()) {
+      const dbResult = await initDb()
+      if (dbResult.isErr()) return err(`DB init failed: ${dbResult.error}`)
+
+      const migrationsResult = await runMigrations()
+      if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
+
+      const seedResult = await seedLanguages()
+      if (seedResult.isErr()) return err(`DB seed failed: ${seedResult.error}`)
+    }
 
     useVaultStore.getState().setVaultPath(path)
     return ok(undefined)
