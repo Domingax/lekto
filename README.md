@@ -90,9 +90,9 @@ npx cap open android
 
 ## Desktop (Tauri)
 
-Requires Rust toolchain ([rustup](https://rustup.rs/)) + Tauri CLI.
+Requires Rust toolchain ([rustup](https://rustup.rs/)) and system dependencies listed in the [Tauri prerequisites guide](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
-npm run tauri dev     # Dev window (coming — Epic 8)
-npm run tauri build   # AppImage / NSIS installer (coming — Epic 8)
+npm run tauri:dev     # Start dev window with hot-reload
+npm run tauri:build   # Produce AppImage (Linux) or NSIS installer (Windows)
 ```
