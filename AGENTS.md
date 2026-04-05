@@ -1,6 +1,6 @@
 # Lekto Developer Reference
 
-Lekto is a local-first, offline-capable language learning reader for web and Android. Built with React 19, TypeScript ~5.9.3 (strict mode, `noUncheckedIndexedAccess`), Vite 7, Capacitor 8, SQLite (Drizzle ORM), Zustand, shadcn/ui, Tailwind CSS v4, and neverthrow.
+Lekto is a local-first, offline-capable language learning reader for Android and Desktop (Linux/Windows). Built with React 19, TypeScript ~5.9.3 (strict mode, `noUncheckedIndexedAccess`), Vite 7, Capacitor 8 (Android), Tauri v2 (Desktop), SQLite (Drizzle ORM), Zustand, shadcn/ui, Tailwind CSS v4, and neverthrow.
 
 This file is the single authoritative reference for all project conventions, architecture rules, and workflow protocols.
 
@@ -179,28 +179,30 @@ useAppStore(state => state.isImporting)
 
 ### Adapter Pattern
 
-Every platform capability has an interface + two implementations (web + Android) in `shared/platform/`.
+Every platform capability has an interface + two implementations (Android + Desktop) in `shared/platform/`.
 
 ```
 shared/platform/filesystem/
 ├── index.ts                   ← exports the active adapter
 ├── filesystem.interface.ts
-├── filesystem.web.ts
-└── filesystem.android.ts
+├── filesystem.android.ts
+└── filesystem.desktop.ts
 ```
 
-The `index.ts` selects the implementation at runtime:
+The `index.ts` selects the implementation at runtime using the `isTauri()` build-time constant:
 
 ```typescript
+import { isTauri } from '@/shared/lib/platform'
+
 export const filesystemAdapter =
-  Capacitor.isNativePlatform()
-    ? androidFilesystem
-    : webFilesystem
+  isTauri()
+    ? desktopFilesystem
+    : androidFilesystem
 ```
 
 ### Architectural Boundary
 
-- No feature or widget imports from `@capacitor/*` directly — all platform calls route through `shared/platform/`
+- No feature or widget imports from `@capacitor/*` or `@tauri-apps/*` directly — all platform calls route through `shared/platform/`
 - Business logic only imports the interface, never the platform-specific implementation
 
 ### Six Boundaries
@@ -241,9 +243,9 @@ features/importBook/
 ### Testing Tools
 
 - **Unit tests:** Vitest + React Testing Library (runs in jsdom)
-- **E2E web:** Playwright
+- **E2E Desktop:** Playwright via Tauri WebDriver
 - **E2E Android:** Maestro (run locally before release; CI integration post-MVP)
-- Platform-specific code (SQLite WASM, Capacitor) must be mocked in Vitest/jsdom
+- Platform-specific code (Capacitor, Tauri plugins) must be mocked in Vitest/jsdom
 
 ---
 
@@ -261,7 +263,7 @@ new Date(entry.updatedAt * 1000).toLocaleDateString()
 ```
 
 - Schema location: `src/shared/db/schema.ts`
-- Custom migration runner in `src/shared/db/migrate.ts` — uses `import.meta.glob` to bundle SQL at build time (Drizzle's built-in migrator requires Node.js `fs`, unusable in browser/WASM)
+- Custom migration runner in `src/shared/db/migrate.ts` — uses `import.meta.glob` to bundle SQL at build time (Drizzle's built-in migrator requires Node.js `fs`, incompatible with the Capacitor/Tauri runtime environment)
 
 ---
 
@@ -384,7 +386,7 @@ bd automatically syncs with git:
 
 Anti-patterns to reject — quick-scan list:
 
-- [ ] Direct Capacitor API calls outside `shared/platform/`
+- [ ] Direct Capacitor or Tauri API calls outside `shared/platform/`
 - [ ] `throw` statements for expected failure modes outside adapter wrappers
 - [ ] `.then()/.catch()` chains in feature code
 - [ ] Imports crossing FSD layer boundaries upward
