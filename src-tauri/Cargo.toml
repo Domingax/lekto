@@ -1,7 +1,7 @@
 [package]
 name = "letko"
 version = "0.1.0"
-description = "Letko — cross-platform app built with Tauri and Capacitor"
+description = "An open-source immersive language learning app for Android and Desktop (Linux/Windows)."
 authors = ["Domingax"]
 license = "AGPL-3.0"
 repository = "https://github.com/Domingax/letko"
