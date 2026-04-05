@@ -3,5 +3,5 @@
 declare const __TAURI__: boolean
 
 export function isTauri(): boolean {
-  return typeof __TAURI__ !== 'undefined' && __TAURI__
+  return __TAURI__
 }
