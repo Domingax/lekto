@@ -96,3 +96,9 @@ Requires Rust toolchain ([rustup](https://rustup.rs/)) and system dependencies l
 npm run tauri:dev     # Start dev window with hot-reload
 npm run tauri:build   # Produce AppImage (Linux) or NSIS installer (Windows)
 ```
+
+**GPU / GBM error on Linux?** If the window fails to open with a `Failed to create GBM buffer` error, disable WebKit GPU compositing:
+
+```bash
+WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri:dev
+```
