@@ -382,6 +382,22 @@ bd automatically syncs with git:
 
 ---
 
+## Dev Setup
+
+### Rust Toolchain (required for Tauri Desktop builds)
+
+The Tauri v2 CLI requires a Rust toolchain to compile the desktop host process. Install via [rustup](https://rustup.rs/):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup toolchain install stable
+rustup default stable
+```
+
+Verify with `rustc --version` and `cargo --version`. The stable toolchain is sufficient — no nightly required.
+
+---
+
 ## Enforcement Checklist
 
 Anti-patterns to reject — quick-scan list:
