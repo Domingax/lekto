@@ -1,0 +1,22 @@
+[package]
+name = "letko"
+version = "0.1.0"
+description = "An open-source immersive language learning app for Android and Desktop (Linux/Windows)."
+authors = ["Domingax"]
+license = "AGPL-3.0"
+repository = "https://github.com/Domingax/letko"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "letko_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

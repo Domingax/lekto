@@ -192,7 +192,7 @@ shared/platform/filesystem/
 The `index.ts` selects the implementation at runtime using the `isTauri()` build-time constant:
 
 ```typescript
-import { isTauri } from '@/shared/lib/platform'
+import { isTauri } from '@/shared/platform'
 
 export const filesystemAdapter =
   isTauri()
@@ -379,6 +379,22 @@ bd automatically syncs with git:
 - Link discovered work with `discovered-from` dependencies
 - Check `bd ready` before asking "what should I work on?"
 - Do NOT create markdown TODO lists or use external issue trackers
+
+---
+
+## Dev Setup
+
+### Rust Toolchain (required for Tauri Desktop builds)
+
+The Tauri v2 CLI requires a Rust toolchain to compile the desktop host process. Install via [rustup](https://rustup.rs/):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup toolchain install stable
+rustup default stable
+```
+
+Verify with `rustc --version` and `cargo --version`. The stable toolchain is sufficient — no nightly required.
 
 ---
 
