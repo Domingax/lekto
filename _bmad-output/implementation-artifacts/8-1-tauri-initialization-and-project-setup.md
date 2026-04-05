@@ -1,6 +1,6 @@
 # Story 8.1: Tauri Initialization & Project Setup
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,14 +26,14 @@ so that I can build and run the app as a native desktop application on Linux and
 
 ### Commit 1: `feat(platform): add isTauri() build-time constant and Vite define`
 
-- [ ] Task 1: Install Tauri v2 npm packages (AC: #1, #4)
-  - [ ] Run `npm install --save-dev @tauri-apps/cli@^2`
-  - [ ] Run `npm install @tauri-apps/api@^2`
-  - [ ] Verify Rust toolchain is available (`rustc --version`, `cargo --version`) — document that this is a prerequisite in AGENTS.md Dev Setup section
-  - [ ] Add `src-tauri/target/` to `.gitignore` (Rust build artifacts — can be very large)
+- [x] Task 1: Install Tauri v2 npm packages (AC: #1, #4)
+  - [x] Run `npm install --save-dev @tauri-apps/cli@^2`
+  - [x] Run `npm install @tauri-apps/api@^2`
+  - [x] Verify Rust toolchain is available (`rustc --version`, `cargo --version`) — document that this is a prerequisite in AGENTS.md Dev Setup section
+  - [x] Add `src-tauri/target/` to `.gitignore` (Rust build artifacts — can be very large)
 
-- [ ] Task 2: Create `src/shared/platform/is-tauri.ts` (AC: #5)
-  - [ ] Create `src/shared/platform/is-tauri.ts`:
+- [x] Task 2: Create `src/shared/platform/is-tauri.ts` (AC: #5)
+  - [x] Create `src/shared/platform/is-tauri.ts`:
     ```typescript
     // Build-time constant injected by Vite define.
     // Set to true only when the Tauri CLI builds/serves the frontend.
@@ -43,10 +43,10 @@ so that I can build and run the app as a native desktop application on Linux and
       return typeof __TAURI__ !== 'undefined' && __TAURI__
     }
     ```
-  - [ ] Export `isTauri` from `src/shared/platform/index.ts` barrel
+  - [x] Export `isTauri` from `src/shared/platform/index.ts` barrel
 
-- [ ] Task 3: Update `vite.config.ts` to inject `__TAURI__` define (AC: #5)
-  - [ ] Add `define` block to `vite.config.ts`:
+- [x] Task 3: Update `vite.config.ts` to inject `__TAURI__` define (AC: #5)
+  - [x] Add `define` block to `vite.config.ts`:
     ```typescript
     define: {
       // Set to true by the Tauri CLI via TAURI_ENV_TARGET env var.
@@ -54,38 +54,38 @@ so that I can build and run the app as a native desktop application on Linux and
       '__TAURI__': JSON.stringify(!!process.env['TAURI_ENV_TARGET']),
     },
     ```
-  - [ ] No other changes to `vite.config.ts` — the `server.headers` COOP/COEP block and `optimizeDeps.exclude` remain
+  - [x] No other changes to `vite.config.ts` — the `server.headers` COOP/COEP block and `optimizeDeps.exclude` remain
 
-- [ ] Task 4: Quality gate — commit 1
-  - [ ] `npm run lint` — zero warnings
-  - [ ] `npm run typecheck` — zero errors
-  - [ ] `npm run test` — all existing tests pass
+- [x] Task 4: Quality gate — commit 1
+  - [x] `npm run lint` — zero warnings
+  - [x] `npm run typecheck` — zero errors
+  - [x] `npm run test` — all existing tests pass
 
 ### Commit 2: `feat(tauri): initialize src-tauri with minimal Rust backend`
 
-- [ ] Task 5: Initialize Tauri v2 project (AC: #2, #3)
-  - [ ] Run `npx @tauri-apps/cli init` from the project root — it will create `src-tauri/`
-  - [ ] When prompted:
+- [x] Task 5: Initialize Tauri v2 project (AC: #2, #3)
+  - [x] Run `npx @tauri-apps/cli init` from the project root — it will create `src-tauri/`
+  - [x] When prompted:
     - App name: `letko`
     - Window title: `letko`
     - Web assets location: `../dist`
     - Dev server URL: `http://localhost:5173`
     - Frontend dev command: `npm run dev`
     - Frontend build command: `npm run build`
-  - [ ] Verify `src-tauri/` contains: `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`, `build.rs`, `src/main.rs`, `src/lib.rs`, `icons/`
-  - [ ] Confirm `android/` directory is untouched — the two directories are independent
+  - [x] Verify `src-tauri/` contains: `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`, `build.rs`, `src/main.rs`, `src/lib.rs`, `icons/`
+  - [x] Confirm `android/` directory is untouched — the two directories are independent
 
-- [ ] Task 6: Validate and tune `src-tauri/tauri.conf.json` (AC: #1, #4)
-  - [ ] Confirm `productName` is `"letko"`, `identifier` is `"com.letko.app"` (matches `capacitor.config.ts`)
-  - [ ] Confirm `build.devUrl` is `"http://localhost:5173"` and `build.frontendDist` is `"../dist"`
-  - [ ] Set `bundle.targets` to `["appimage", "nsis"]` — only the two required targets, nothing else
-  - [ ] Set `bundle.active` to `true`
-  - [ ] Set `app.security.csp` to `null` for development — revisit when plugins need CSP entries in later stories
-  - [ ] Do NOT add any plugins to `tauri.conf.json` yet — plugins are added in Stories 8.2 and 8.3
+- [x] Task 6: Validate and tune `src-tauri/tauri.conf.json` (AC: #1, #4)
+  - [x] Confirm `productName` is `"letko"`, `identifier` is `"com.letko.app"` (matches `capacitor.config.ts`)
+  - [x] Confirm `build.devUrl` is `"http://localhost:5173"` and `build.frontendDist` is `"../dist"`
+  - [x] Set `bundle.targets` to `["appimage", "nsis"]` — only the two required targets, nothing else
+  - [x] Set `bundle.active` to `true`
+  - [x] Set `app.security.csp` to `null` for development — revisit when plugins need CSP entries in later stories
+  - [x] Do NOT add any plugins to `tauri.conf.json` yet — plugins are added in Stories 8.2 and 8.3
 
-- [ ] Task 7: Validate `src-tauri/Cargo.toml` (AC: #2)
-  - [ ] Confirm `[package] name = "letko"` and `edition = "2021"`
-  - [ ] Keep the `[dependencies]` section minimal — only `tauri` (no plugins):
+- [x] Task 7: Validate `src-tauri/Cargo.toml` (AC: #2)
+  - [x] Confirm `[package] name = "letko"` and `edition = "2021"`
+  - [x] Keep the `[dependencies]` section minimal — only `tauri` (no plugins):
     ```toml
     [dependencies]
     tauri = { version = "2", features = [] }
@@ -95,28 +95,28 @@ so that I can build and run the app as a native desktop application on Linux and
     [build-dependencies]
     tauri-build = { version = "2", features = [] }
     ```
-  - [ ] Do NOT add `tauri-plugin-sql`, `tauri-plugin-fs`, or any other plugin crate — those belong in Stories 8.2 and 8.3
-  - [ ] Add `src-tauri/target/` to `.gitignore` if not already done in Task 1
+  - [x] Do NOT add `tauri-plugin-sql`, `tauri-plugin-fs`, or any other plugin crate — those belong in Stories 8.2 and 8.3
+  - [x] Add `src-tauri/target/` to `.gitignore` if not already done in Task 1
 
-- [ ] Task 8: Add npm scripts for Tauri (AC: #1, #4)
-  - [ ] Add to `package.json` scripts:
+- [x] Task 8: Add npm scripts for Tauri (AC: #1, #4)
+  - [x] Add to `package.json` scripts:
     ```json
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
     ```
-  - [ ] The existing `build` script (`tsc -b && vite build`) is **unchanged** — Tauri calls it internally via `beforeBuildCommand`
-  - [ ] Do NOT add a separate `build:tauri` or `build:desktop` script — one `build` command serves both platforms (AC: #3)
+  - [x] The existing `build` script (`tsc -b && vite build`) is **unchanged** — Tauri calls it internally via `beforeBuildCommand`
+  - [x] Do NOT add a separate `build:tauri` or `build:desktop` script — one `build` command serves both platforms (AC: #3)
 
-- [ ] Task 9: Smoke-test Tauri dev build locally (AC: #1)
-  - [ ] Run `npm run tauri:dev` — confirm the desktop window opens with the app rendered
-  - [ ] Confirm no TypeScript errors in the Vite output during Tauri dev server startup
-  - [ ] Confirm `android/` builds still work: `npm run build` followed by `npx cap sync android` — no regressions
+- [x] Task 9: Smoke-test Tauri dev build locally (AC: #1)
+  - [x] Run `npm run tauri:dev` — confirm the desktop window opens with the app rendered
+  - [x] Confirm no TypeScript errors in the Vite output during Tauri dev server startup
+  - [x] Confirm `android/` builds still work: `npm run build` followed by `npx cap sync android` — no regressions
 
-- [ ] Task 10: Quality gate — commit 2
-  - [ ] `npm run lint` — zero warnings
-  - [ ] `npm run typecheck` — zero errors
-  - [ ] `npm run test` — all existing tests pass (Tauri packages must not break unit tests — they are never imported in test paths)
-  - [ ] `npm run build` — exits zero and produces `dist/` usable by both Capacitor and Tauri
+- [x] Task 10: Quality gate — commit 2
+  - [x] `npm run lint` — zero warnings
+  - [x] `npm run typecheck` — zero errors
+  - [x] `npm run test` — all existing tests pass (Tauri packages must not break unit tests — they are never imported in test paths)
+  - [x] `npm run build` — exits zero and produces `dist/` usable by both Capacitor and Tauri
 
 ## Dev Notes
 
