@@ -3,9 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'
 import './index.css'
 import App from './App.tsx'
-import { initDb } from '@/shared/db'
-import { runMigrations } from '@/shared/db/migrate'
-import { seedLanguages } from '@/shared/db/seed-languages'
+import { initDb, runMigrations, seedLanguages } from '@/shared/db'
 import { useVaultStore } from '@/shared/stores'
 import {
   getVaultPath,
@@ -28,16 +26,18 @@ export async function start() {
     return
   }
 
-  const migrations = await runMigrations()
-  if (migrations.isErr()) {
-    showError(`Database migration failed: ${migrations.error}`)
-    return
-  }
+  if (db.value !== null) {
+    const migrations = await runMigrations()
+    if (migrations.isErr()) {
+      showError(`Database migration failed: ${migrations.error}`)
+      return
+    }
 
-  const seed = await seedLanguages()
-  if (seed.isErr()) {
-    showError(`Database seed failed: ${seed.error}`)
-    return
+    const seed = await seedLanguages()
+    if (seed.isErr()) {
+      showError(`Database seed failed: ${seed.error}`)
+      return
+    }
   }
 
   const vaultPathResult = await getVaultPath()
