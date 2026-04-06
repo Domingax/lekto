@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ok, err } from 'neverthrow'
 
-vi.mock('@/shared/db', () => ({ initDb: vi.fn().mockResolvedValue(ok({})) }))
-vi.mock('@/shared/db/migrate', () => ({
+vi.mock('@/shared/db', () => ({
+  initDb: vi.fn().mockResolvedValue(ok({})),
   runMigrations: vi.fn().mockResolvedValue(ok(undefined)),
-}))
-vi.mock('@/shared/db/seed-languages', () => ({
   seedLanguages: vi.fn().mockResolvedValue(ok(undefined)),
 }))
 vi.mock('react-dom/client', () => ({
@@ -37,7 +35,7 @@ describe('start()', () => {
   })
 
   it('shows migration error and does not render app when migrations fail', async () => {
-    const { runMigrations } = await import('@/shared/db/migrate')
+    const { runMigrations } = await import('@/shared/db')
     vi.mocked(runMigrations).mockResolvedValueOnce(err('migration failed'))
     const { start } = await import('./main')
     const { createRoot } = await import('react-dom/client')
@@ -47,7 +45,7 @@ describe('start()', () => {
   })
 
   it('shows seed error and does not render app when seed fails', async () => {
-    const { seedLanguages } = await import('@/shared/db/seed-languages')
+    const { seedLanguages } = await import('@/shared/db')
     vi.mocked(seedLanguages).mockResolvedValueOnce(err('seed failed'))
     const { start } = await import('./main')
     const { createRoot } = await import('react-dom/client')

@@ -32,6 +32,7 @@ export async function initVault(path: string): AsyncResult<void> {
     if (isTauri()) {
       const dbResult = await initDb()
       if (dbResult.isErr()) return err(`DB init failed: ${dbResult.error}`)
+      if (dbResult.value === null) return err('DB init returned null unexpectedly')
 
       const migrationsResult = await runMigrations()
       if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)

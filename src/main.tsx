@@ -3,9 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'
 import './index.css'
 import App from './App.tsx'
-import { initDb } from '@/shared/db'
-import { runMigrations } from '@/shared/db/migrate'
-import { seedLanguages } from '@/shared/db/seed-languages'
+import { initDb, runMigrations, seedLanguages } from '@/shared/db'
 import { useVaultStore } from '@/shared/stores'
 import {
   getVaultPath,

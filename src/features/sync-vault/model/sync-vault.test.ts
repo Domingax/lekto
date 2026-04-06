@@ -14,9 +14,9 @@ vi.mock('../../../shared/platform', () => ({
 }))
 
 vi.mock('@/shared/db', () => ({
-  initDb: vi.fn().mockResolvedValue({ isOk: () => true, value: {} }),
-  runMigrations: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false }),
-  seedLanguages: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false }),
+  initDb: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false, value: {} }),
+  runMigrations: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false, value: undefined }),
+  seedLanguages: vi.fn().mockResolvedValue({ isOk: () => true, isErr: () => false, value: undefined }),
 }))
 
 vi.mock('../../../shared/stores', () => ({
@@ -42,7 +42,8 @@ import {
   loadAndRestoreVaultHandle,
   grantVaultPermission,
 } from './sync-vault'
-import { filesystemAdapter, setFilesystemRoot, preferencesAdapter } from '../../../shared/platform'
+import { filesystemAdapter, setFilesystemRoot, preferencesAdapter, isTauri } from '../../../shared/platform'
+import { initDb, runMigrations, seedLanguages } from '@/shared/db'
 import { useVaultStore } from '../../../shared/stores'
 import { storeVaultHandle, loadVaultHandle } from '../lib/handle-store'
 
@@ -51,6 +52,7 @@ const mockSetPendingPermissionHandle = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(isTauri).mockReturnValue(false)
   vi.mocked(useVaultStore.getState).mockReturnValue({
     vaultPath: null,
     isVaultReady: false,
@@ -205,5 +207,83 @@ describe('grantVaultPermission', () => {
 
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toBe('Permission denied')
+  })
+})
+
+describe('initVault — Tauri path', () => {
+  beforeEach(() => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
+    vi.mocked(preferencesAdapter.set).mockResolvedValue(ok(undefined))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(initDb).mockResolvedValue(ok({}) as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(runMigrations).mockResolvedValue(ok(undefined) as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(seedLanguages).mockResolvedValue(ok(undefined) as any)
+  })
+
+  it('happy path — inits db, runs migrations and seed, updates store', async () => {
+    const result = await initVault('/vault/path')
+    expect(result.isOk()).toBe(true)
+    expect(initDb).toHaveBeenCalled()
+    expect(runMigrations).toHaveBeenCalled()
+    expect(seedLanguages).toHaveBeenCalled()
+    expect(mockSetVaultPath).toHaveBeenCalledWith('/vault/path')
+  })
+
+  it('returns err when initDb fails', async () => {
+    vi.mocked(initDb).mockResolvedValue(err('sql error'))
+    const result = await initVault('/vault/path')
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('DB init failed')
+  })
+
+  it('returns err when initDb returns null (first-launch race condition)', async () => {
+    vi.mocked(initDb).mockResolvedValue(ok(null))
+    const result = await initVault('/vault/path')
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('null')
+  })
+
+  it('returns err when runMigrations fails', async () => {
+    vi.mocked(runMigrations).mockResolvedValue(err('migration error'))
+    const result = await initVault('/vault/path')
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('DB migration failed')
+  })
+
+  it('returns err when seedLanguages fails', async () => {
+    vi.mocked(seedLanguages).mockResolvedValue(err('seed error'))
+    const result = await initVault('/vault/path')
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('DB seed failed')
+  })
+})
+
+describe('initVault — catch block', () => {
+  it('returns err on unexpected exception', async () => {
+    vi.mocked(filesystemAdapter.mkdir).mockRejectedValue(new Error('crash'))
+    const result = await initVault('/some/path')
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('Failed to init vault')
+  })
+})
+
+describe('initVaultWithNativeHandle — catch block', () => {
+  it('returns err on unexpected exception', async () => {
+    const mockHandle = { name: 'vault' } as FileSystemDirectoryHandle
+    vi.mocked(storeVaultHandle).mockRejectedValue(new Error('IDB crash'))
+    const result = await initVaultWithNativeHandle(mockHandle)
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('Failed to init vault with native handle')
+  })
+})
+
+describe('loadAndRestoreVaultHandle — catch block', () => {
+  it('returns not-found on unexpected exception', async () => {
+    vi.mocked(loadVaultHandle).mockRejectedValue(new Error('IDB error'))
+    const result = await loadAndRestoreVaultHandle()
+    expect(result).toBe('not-found')
   })
 })
