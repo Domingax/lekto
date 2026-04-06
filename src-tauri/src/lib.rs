@@ -9,7 +9,7 @@ pub fn run() {
       tauri_plugin_stronghold::Builder::new(|password| {
         use argon2::{Argon2, PasswordHasher};
         use argon2::password_hash::SaltString;
-        let salt = SaltString::encode_b64(b"letko-stronghold-salt-v1").unwrap();
+        let salt = SaltString::encode_b64(b"lekto-stronghold-salt-v1").unwrap();
         let argon2 = Argon2::default();
         let hash = argon2
           .hash_password(password.as_ref(), &salt)

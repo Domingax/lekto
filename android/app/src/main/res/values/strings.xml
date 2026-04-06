@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">letko</string>
-    <string name="title_activity_main">letko</string>
-    <string name="package_name">com.letko.app</string>
-    <string name="custom_url_scheme">com.letko.app</string>
+    <string name="app_name">lekto</string>
+    <string name="title_activity_main">lekto</string>
+    <string name="package_name">com.lekto.app</string>
+    <string name="custom_url_scheme">com.lekto.app</string>
 </resources>

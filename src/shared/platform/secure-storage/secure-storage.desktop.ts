@@ -7,7 +7,7 @@ import type { AsyncResult } from '../../lib/types'
 // Static password passed to the Rust hash function (argon2 derives the actual key).
 // For a local-only app with no user accounts, a static passphrase is acceptable.
 // Never changes after first vault initialization — changing it would lock out existing secrets.
-const STRONGHOLD_PASSWORD = 'letko-desktop-secure-storage-v1'
+const STRONGHOLD_PASSWORD = 'lekto-desktop-secure-storage-v1'
 const STRONGHOLD_CLIENT = 'lekto-client'
 
 let _stronghold: Stronghold | null = null

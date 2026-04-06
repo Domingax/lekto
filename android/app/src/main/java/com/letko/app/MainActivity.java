@@ -1,4 +1,4 @@
-package com.letko.app;
+package com.lekto.app;
 
 import com.getcapacitor.BridgeActivity;
 

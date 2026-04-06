@@ -7,11 +7,11 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
 ---
 
-# letko - Epic Breakdown
+# lekto - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for letko, decomposing the requirements from the PRD, UX Design, and Architecture requirements into implementable stories.
+This document provides the complete epic and story breakdown for lekto, decomposing the requirements from the PRD, UX Design, and Architecture requirements into implementable stories.
 
 ## Requirements Inventory
 
@@ -97,7 +97,7 @@ NFR29: Public module APIs documented; architectural decisions recorded in projec
 ### Additional Requirements
 
 **From Architecture:**
-- **Starter Template (Epic 1 Story 1):** Vite react-ts + Capacitor manual integration is the selected starter. Initialization: `npm create vite@latest letko -- --template react-ts && npx cap init letko com.letko.app --web-dir dist && npx cap add android && npx shadcn@latest init`. This is the first implementation story.
+- **Starter Template (Epic 1 Story 1):** Vite react-ts + Capacitor manual integration is the selected starter. Initialization: `npm create vite@latest lekto -- --template react-ts && npx cap init lekto com.lekto.app --web-dir dist && npx cap add android && npx shadcn@latest init`. This is the first implementation story.
 - **Code Architecture:** Feature-Sliced Design (FSD) with layers: app / pages / widgets / features / entities / shared. Unidirectional imports only (never upward).
 - **Data persistence:** Single SQLite file `lekto.db` in the vault, managed via Drizzle ORM. Tables: books, sections, tokens, vocabulary, reading_progress. Drizzle migrate() runs automatically on startup.
 - **State management:** SQLite (source of truth) + Zustand (UI/runtime state). One Zustand store per domain. Never query SQLite inside React components — always read from Zustand.

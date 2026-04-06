@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "letko",
+  "productName": "lekto",
   "version": "0.1.0",
-  "identifier": "com.letko.app",
+  "identifier": "com.lekto.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "letko",
+        "title": "lekto",
         "width": 800,
         "height": 600,
         "resizable": true,

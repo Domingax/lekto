@@ -1,16 +1,16 @@
 [package]
-name = "letko"
+name = "lekto"
 version = "0.1.0"
 description = "An open-source immersive language learning app for Android and Desktop (Linux/Windows)."
 authors = ["Domingax"]
 license = "AGPL-3.0"
-repository = "https://github.com/Domingax/letko"
+repository = "https://github.com/Domingax/lekto"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "letko_lib"
+name = "lekto_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

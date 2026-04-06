@@ -66,8 +66,8 @@ so that I can build and run the app as a native desktop application on Linux and
 - [x] Task 5: Initialize Tauri v2 project (AC: #2, #3)
   - [x] Run `npx @tauri-apps/cli init` from the project root — it will create `src-tauri/`
   - [x] When prompted:
-    - App name: `letko`
-    - Window title: `letko`
+    - App name: `lekto`
+    - Window title: `lekto`
     - Web assets location: `../dist`
     - Dev server URL: `http://localhost:5173`
     - Frontend dev command: `npm run dev`
@@ -76,7 +76,7 @@ so that I can build and run the app as a native desktop application on Linux and
   - [x] Confirm `android/` directory is untouched — the two directories are independent
 
 - [x] Task 6: Validate and tune `src-tauri/tauri.conf.json` (AC: #1, #4)
-  - [x] Confirm `productName` is `"letko"`, `identifier` is `"com.letko.app"` (matches `capacitor.config.ts`)
+  - [x] Confirm `productName` is `"lekto"`, `identifier` is `"com.lekto.app"` (matches `capacitor.config.ts`)
   - [x] Confirm `build.devUrl` is `"http://localhost:5173"` and `build.frontendDist` is `"../dist"`
   - [x] Set `bundle.targets` to `["appimage", "nsis"]` — only the two required targets, nothing else
   - [x] Set `bundle.active` to `true`
@@ -84,7 +84,7 @@ so that I can build and run the app as a native desktop application on Linux and
   - [x] Do NOT add any plugins to `tauri.conf.json` yet — plugins are added in Stories 8.2 and 8.3
 
 - [x] Task 7: Validate `src-tauri/Cargo.toml` (AC: #2)
-  - [x] Confirm `[package] name = "letko"` and `edition = "2021"`
+  - [x] Confirm `[package] name = "lekto"` and `edition = "2021"`
   - [x] Keep the `[dependencies]` section minimal — only `tauri` (no plugins):
     ```toml
     [dependencies]
@@ -164,7 +164,7 @@ This project uses **Tauri v2** (not v1). Key differences developers may encounte
 ### Project Structure After This Story
 
 ```
-letko/
+lekto/
 ├── android/                  ← Capacitor Android (unchanged)
 ├── src/
 │   └── shared/platform/

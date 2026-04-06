@@ -435,7 +435,7 @@ Three tools initially implemented as GitHub Actions jobs were replaced by GitHub
 
 **Initially:** A dedicated `sonarcloud` job in `pr.yml` ran `npm run test:coverage` then `SonarSource/sonarqube-scan-action@v5` to push analysis results to SonarCloud. The `sonar-project.properties` contained placeholder org/project keys.
 
-**Intermediate state:** Switched to GitHub native SonarCloud integration (Automatic Analysis). The `sonar-project.properties` was updated with real values (`sonar.organization=domingax`, `sonar.projectKey=Domingax_letko`). The dedicated `sonarcloud` job was removed from `pr.yml`.
+**Intermediate state:** Switched to GitHub native SonarCloud integration (Automatic Analysis). The `sonar-project.properties` was updated with real values (`sonar.organization=domingax`, `sonar.projectKey=Domingax_lekto`). The dedicated `sonarcloud` job was removed from `pr.yml`.
 
 **Problem discovered:** Automatic Analysis does not read `sonar-project.properties`. Exclusions (`public/coi-serviceworker.js`), coverage paths (`sonar.javascript.lcov.reportPaths`), and other settings were silently ignored.
 
