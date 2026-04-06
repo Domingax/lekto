@@ -7,6 +7,10 @@
   ],
   "permissions": [
     "core:default",
-    "sql:default"
+    "sql:default",
+    "fs:default",
+    "dialog:default",
+    "stronghold:default",
+    "store:default"
   ]
 }
