@@ -8,7 +8,7 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/research/technical-stack-research-2026-03-03.md'
   - '_bmad-output/planning-artifacts/product-brief-2026-03-02.md'
 workflowType: 'architecture'
-project_name: 'letko'
+project_name: 'lekto'
 user_name: 'Damien'
 date: '2026-03-09'
 status: 'complete'
@@ -77,9 +77,9 @@ Native cross-platform app — React/TypeScript/Vite frontend shared across Andro
 **Initialization Command:**
 
 ```bash
-npm create vite@latest letko -- --template react-ts
-cd letko && npm install
-npx cap init letko com.letko.app --web-dir dist
+npm create vite@latest lekto -- --template react-ts
+cd lekto && npm install
+npx cap init lekto com.lekto.app --web-dir dist
 npx cap add android
 npx shadcn@latest init
 ```
@@ -567,7 +567,7 @@ All agents apply the following Clean Code principles consistently:
 ### Complete Project Directory Structure
 
 ```
-letko/
+lekto/
 ├── .github/
 │   ├── workflows/
 │   │   ├── pr.yml              ← Pipeline 1: lint + tests + E2E + CodeQL + SonarCloud

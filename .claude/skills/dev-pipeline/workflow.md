@@ -67,7 +67,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Each sub-agent receives the following prompt (fill in the placeholders):
 
       ```
-      You are a dev agent for the Letko project. Your job is to implement ONE specific subtask.
+      You are a dev agent for the Lekto project. Your job is to implement ONE specific subtask.
 
       ## Context
 
@@ -109,7 +109,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <check if="any sub-agent fails or HALTs">
       <action>HALT pipeline — surface the failing sub-agent's error to the user</action>
-      <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Dev phase failed — action needed"`</action>
+      <action>Send desktop notification: `notify-send "Lekto Pipeline" "❌ Dev phase failed — action needed"`</action>
     </check>
 
     <!-- Collect summaries -->
@@ -158,7 +158,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <check if="push fails">
       <action>HALT pipeline — surface the git error to the user</action>
-      <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Git push failed — action needed"`</action>
+      <action>Send desktop notification: `notify-send "Lekto Pipeline" "❌ Git push failed — action needed"`</action>
     </check>
 
     <!-- Dev Summary self-assessment -->
@@ -209,7 +209,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Use the `Agent` tool (subagent) with `model: "opus"` and the following prompt:
 
       ```
-      You are an adversarial code reviewer for the Letko project.
+      You are an adversarial code reviewer for the Lekto project.
 
       ## Context
 
@@ -306,7 +306,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <check if="review agent fails">
       <action>HALT pipeline — surface the error</action>
-      <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Code review failed — action needed"`</action>
+      <action>Send desktop notification: `notify-send "Lekto Pipeline" "❌ Code review failed — action needed"`</action>
     </check>
 
     <output>✅ **Phase 3 complete** — Code review done: {{review_verdict}}</output>
@@ -319,7 +319,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <output>🔔 **Pipeline Phase 4/4 — Notification**</output>
 
     <check if="review_verdict == 'APPROVED'">
-      <action>Run: `notify-send -u normal "Letko Pipeline ✅" "Story {{story_key}} — PR approved and ready for your review\n{{pr_url}}"`</action>
+      <action>Run: `notify-send -u normal "Lekto Pipeline ✅" "Story {{story_key}} — PR approved and ready for your review\n{{pr_url}}"`</action>
       <output>
         🎉 **Pipeline Complete — APPROVED**
 
@@ -334,7 +334,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     </check>
 
     <check if="review_verdict == 'CHANGES REQUESTED'">
-      <action>Run: `notify-send -u critical "Letko Pipeline ⚠️" "Story {{story_key}} — Changes requested\n{{pr_url}}"`</action>
+      <action>Run: `notify-send -u critical "Lekto Pipeline ⚠️" "Story {{story_key}} — Changes requested\n{{pr_url}}"`</action>
       <output>
         ⚠️ **Pipeline Complete — CHANGES REQUESTED**
 

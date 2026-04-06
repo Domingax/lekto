@@ -1,17 +1,18 @@
-import { Capacitor } from '@capacitor/core'
-import { createWebFilesystemAdapter, setWebFilesystemRoot } from './filesystem.web'
+import { isTauri } from '../is-tauri'
+import { setWebFilesystemRoot } from './filesystem.web'
 import { createAndroidFilesystemAdapter } from './filesystem.android'
+import { createDesktopFilesystemAdapter } from './filesystem.desktop'
 import type { FilesystemAdapter } from './filesystem.interface'
 
 export type { FilesystemAdapter }
 
-export const filesystemAdapter: FilesystemAdapter = Capacitor.isNativePlatform()
-  ? createAndroidFilesystemAdapter()
-  : createWebFilesystemAdapter()
+export const filesystemAdapter: FilesystemAdapter = isTauri()
+  ? createDesktopFilesystemAdapter()
+  : createAndroidFilesystemAdapter()
 
-// Platform-safe wrapper: configures the web adapter root; no-op on Android.
+// No-op on desktop and Android; only used for web OPFS flows.
 export function setFilesystemRoot(handle: FileSystemDirectoryHandle | null): void {
-  if (!Capacitor.isNativePlatform()) {
+  if (!isTauri()) {
     setWebFilesystemRoot(handle)
   }
 }

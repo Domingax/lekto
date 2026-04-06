@@ -1,4 +1,4 @@
-# letko
+# lekto
 
 An open-source immersive language learning app for Android and Desktop (Linux/Windows). Fully local architecture — no server, no subscription, data stays on your device inside a portable vault folder.
 

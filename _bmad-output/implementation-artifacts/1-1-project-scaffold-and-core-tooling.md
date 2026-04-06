@@ -20,9 +20,9 @@ so that I can start building features immediately without any setup friction.
 ## Tasks / Subtasks
 
 - [x] Task 1: Initialize Vite React-TS project (AC: #1)
-  - [x] Run `npm create vite@latest letko -- --template react-ts`
+  - [x] Run `npm create vite@latest lekto -- --template react-ts`
   - [x] Verify `npm install && npm run dev` works
-  - [x] Set `appId: "com.letko.app"` and `webDir: "dist"` in capacitor config
+  - [x] Set `appId: "com.lekto.app"` and `webDir: "dist"` in capacitor config
 
 - [x] Task 2: Create FSD directory structure (AC: #2)
   - [x] Create all FSD directories: `src/app`, `src/pages`, `src/widgets`, `src/features`, `src/entities`, `src/shared/ui`, `src/shared/db`, `src/shared/platform`, `src/shared/lib`
@@ -42,7 +42,7 @@ so that I can start building features immediately without any setup friction.
 
 - [x] Task 5: Initialize Capacitor and add Android platform (AC: #5)
   - [x] Install `@capacitor/core` and `@capacitor/cli`
-  - [x] Run `npx cap init letko com.letko.app --web-dir dist`
+  - [x] Run `npx cap init lekto com.lekto.app --web-dir dist`
   - [x] Run `npx cap add android`
   - [x] Build once (`npm run build`) then `npx cap sync` to verify Android platform is present
 
@@ -155,12 +155,12 @@ Never import "upward" (e.g., `shared` must never import from `features`).
 All of these must exist after Story 1.1 is complete:
 
 ```
-letko/
+lekto/
 ├── vite.config.ts              ← Vite, path aliases (@→src/), COOP/COEP headers
 ├── tsconfig.json               ← TypeScript strict mode
 ├── tsconfig.app.json           ← App-specific tsconfig (from Vite template)
 ├── tsconfig.node.json          ← Node tooling tsconfig (from Vite template)
-├── capacitor.config.ts         ← appId: "com.letko.app", webDir: "dist"
+├── capacitor.config.ts         ← appId: "com.lekto.app", webDir: "dist"
 ├── vitest.config.ts            ← extends vite.config, jsdom environment
 ├── eslint.config.js            ← TypeScript ESLint rules
 ├── .commitlintrc.js            ← extends @commitlint/config-conventional
@@ -204,7 +204,7 @@ These headers are **mandatory** for SQLite WASM + OPFS (used in Story 1.2). Sett
 
 ```bash
 npm install @capacitor/core @capacitor/cli
-npx cap init letko com.letko.app --web-dir dist
+npx cap init lekto com.lekto.app --web-dir dist
 npx cap add android
 npm run build   # must build before cap sync
 npx cap sync
@@ -215,8 +215,8 @@ npx cap sync
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.letko.app',
-  appName: 'letko',
+  appId: 'com.lekto.app',
+  appName: 'lekto',
   webDir: 'dist',
 }
 
@@ -274,7 +274,7 @@ The following belong to later stories — do NOT implement them here:
 
 - This is a **Vite React-TS SPA** with Capacitor for Android — not an Ionic project, not a Capacitor + Ionic project
 - Do NOT use `@ionic/react` or any Ionic components — pure React + shadcn/ui only
-- The project name is `letko` (lowercase), package ID is `com.letko.app`
+- The project name is `lekto` (lowercase), package ID is `com.lekto.app`
 - Target web output: `dist/` (Vite default)
 - The app is **offline-first by design** — no SSR, no server-side rendering
 

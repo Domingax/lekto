@@ -3,7 +3,7 @@
 # Version: 6.1.1-next.34
 # Date: 2026-03-14T23:23:59.654Z
 
-project_name: letko
+project_name: lekto
 user_skill_level: intermediate
 planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
 implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"

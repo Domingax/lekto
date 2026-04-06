@@ -7,11 +7,11 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
 ---
 
-# letko - Epic Breakdown
+# lekto - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for letko, decomposing the requirements from the PRD, UX Design, and Architecture requirements into implementable stories.
+This document provides the complete epic and story breakdown for lekto, decomposing the requirements from the PRD, UX Design, and Architecture requirements into implementable stories.
 
 ## Requirements Inventory
 
@@ -97,7 +97,7 @@ NFR29: Public module APIs documented; architectural decisions recorded in projec
 ### Additional Requirements
 
 **From Architecture:**
-- **Starter Template (Epic 1 Story 1):** Vite react-ts + Capacitor manual integration is the selected starter. Initialization: `npm create vite@latest letko -- --template react-ts && npx cap init letko com.letko.app --web-dir dist && npx cap add android && npx shadcn@latest init`. This is the first implementation story.
+- **Starter Template (Epic 1 Story 1):** Vite react-ts + Capacitor manual integration is the selected starter. Initialization: `npm create vite@latest lekto -- --template react-ts && npx cap init lekto com.lekto.app --web-dir dist && npx cap add android && npx shadcn@latest init`. This is the first implementation story.
 - **Code Architecture:** Feature-Sliced Design (FSD) with layers: app / pages / widgets / features / entities / shared. Unidirectional imports only (never upward).
 - **Data persistence:** Single SQLite file `lekto.db` in the vault, managed via Drizzle ORM. Tables: books, sections, tokens, vocabulary, reading_progress. Drizzle migrate() runs automatically on startup.
 - **State management:** SQLite (source of truth) + Zustand (UI/runtime state). One Zustand store per domain. Never query SQLite inside React components — always read from Zustand.
@@ -198,7 +198,7 @@ All app settings are accessible and all accessibility requirements are met. Afte
 **FRs covered:** FR39, FR40, FR41, FR42, FR43, FR44
 
 ### Epic 8: Tauri Desktop Integration
-The app runs natively on Linux and Windows as a Tauri application sharing the same React/Capacitor codebase. After this epic, a developer can build and run the desktop app locally, the DB layer uses the Tauri SQL plugin with direct vault path access (no sync needed), all platform adapters have a `*.desktop.ts` implementation, and CI/CD produces AppImage and NSIS installers on release.
+The app runs natively on Linux and Windows as a Tauri application sharing the same React/Capacitor codebase. After this epic, a developer can build and run the desktop app locally, the DB layer uses the Tauri SQL plugin with direct vault path access (no sync needed), all platform adapters have a `*.desktop.ts` implementation, the Stronghold vault key is generated per-installation via the OS keychain, and CI/CD produces AppImage and NSIS installers on release.
 **Priority:** Immediate — must precede any feature story claiming Desktop support.
 **FRs covered:** FR30 (desktop vault creation), FR31 (desktop vault relocation), FR37 (Tauri Stronghold), FR41 (desktop keyboard navigation)
 
@@ -1220,7 +1220,33 @@ So that filesystem, secure storage, and file picker features work natively on Li
 
 ---
 
-### Story 8.4: Desktop CI/CD Pipelines
+### Story 8.4: Stronghold Key Generation via OS Keychain
+
+As a developer,
+I want the Stronghold vault passphrase to be generated randomly at first launch and stored in the OS keychain,
+So that the vault encryption key is unique per installation and never hardcoded in source code.
+
+**Acceptance Criteria:**
+
+**Given** the app is launched for the first time
+**When** the secure storage adapter initializes
+**Then** a 32-byte random passphrase is generated, stored in the OS keychain, and used to open Stronghold
+
+**Given** the app has been launched before
+**When** the secure storage adapter initializes
+**Then** the existing passphrase is retrieved from the OS keychain — no new passphrase is generated
+
+**Given** the passphrase is stored in the OS keychain
+**When** a developer inspects the source code
+**Then** no hardcoded passphrase string is present in any file in the repository
+
+**Given** the OS keychain is unavailable
+**When** the app attempts to retrieve or store the passphrase
+**Then** a clear error is surfaced — the app does not fall back to a hardcoded value
+
+---
+
+### Story 8.5: Desktop CI/CD Pipelines
 
 As a developer,
 I want CI/CD pipelines producing desktop builds on release,
