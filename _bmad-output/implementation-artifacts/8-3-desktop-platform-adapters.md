@@ -55,7 +55,7 @@ So that filesystem, secure storage, and file picker features work natively on Li
         tauri_plugin_stronghold::Builder::new(|password| {
           use argon2::{Argon2, PasswordHasher};
           use argon2::password_hash::SaltString;
-          let salt = SaltString::encode_b64(b"letko-stronghold-salt-v1").unwrap();
+          let salt = SaltString::encode_b64(b"lekto-stronghold-salt-v1").unwrap();
           let argon2 = Argon2::default();
           let hash = argon2
             .hash_password(password.as_ref(), &salt)
@@ -121,7 +121,7 @@ So that filesystem, secure storage, and file picker features work natively on Li
   import type { AsyncResult } from '../../lib/types'
 
   // Store file lives in Tauri app data dir (OS-managed, not in user vault)
-  const STORE_FILE = 'letko-preferences.json'
+  const STORE_FILE = 'lekto-preferences.json'
 
   export function createDesktopPreferencesAdapter(): PreferencesAdapter {
     return {
@@ -378,7 +378,7 @@ So that filesystem, secure storage, and file picker features work natively on Li
   // Static password passed to the Rust hash function (argon2 derives the actual key).
   // For a local-only app with no user accounts, a static passphrase is acceptable.
   // Never changes after first vault initialization — changing it would lock out existing secrets.
-  const STRONGHOLD_PASSWORD = 'letko-desktop-secure-storage-v1'
+  const STRONGHOLD_PASSWORD = 'lekto-desktop-secure-storage-v1'
   const STRONGHOLD_CLIENT = 'lekto-client'
 
   let _stronghold: Stronghold | null = null
@@ -443,7 +443,7 @@ So that filesystem, secure storage, and file picker features work natively on Li
   - **Critical:** `_stronghold` and `_client` are module-level singletons — Stronghold is initialized once per app session. This is intentional: loading Stronghold is expensive (argon2 key derivation).
   - **Critical:** `_stronghold!.save()` must be called after every write to persist changes to disk. Without it, changes are in-memory only.
   - **Critical:** The `STRONGHOLD_PASSWORD` must never change after the Stronghold vault is first created. Changing it would produce a different argon2-derived key and make all previously stored secrets inaccessible. The password is NOT a user-visible password — it's a static app-level secret.
-  - **Note:** `appDataDir()` returns the OS-appropriate app data directory (`~/.local/share/letko` on Linux, `%APPDATA%\letko` on Windows). The Stronghold file (`lekto-secrets.holsd`) is stored there, separate from the user vault.
+  - **Note:** `appDataDir()` returns the OS-appropriate app data directory (`~/.local/share/lekto` on Linux, `%APPDATA%\lekto` on Windows). The Stronghold file (`lekto-secrets.holsd`) is stored there, separate from the user vault.
 
 - [x] Task 19: Update `src/shared/platform/secure-storage/index.ts`
   ```typescript
@@ -485,8 +485,8 @@ So that filesystem, secure storage, and file picker features work natively on Li
 - [x] Task 24: Run full integration test on desktop
   - `npm run tauri:dev` — desktop window opens without errors
   - First-launch flow: VaultSetupScreen shows → pick directory → `preferencesAdapter.set()` stores path via Tauri Store → `filesystemAdapter.mkdir('books')` creates the books dir → DB initializes
-  - Confirm `~/.local/share/letko/letko-preferences.json` is created (Linux) with vault path
-  - Confirm `~/.local/share/letko/lekto-secrets.holsd` does NOT exist yet (Stronghold is lazy — only created when an API key is first stored)
+  - Confirm `~/.local/share/lekto/lekto-preferences.json` is created (Linux) with vault path
+  - Confirm `~/.local/share/lekto/lekto-secrets.holsd` does NOT exist yet (Stronghold is lazy — only created when an API key is first stored)
 
 - [x] Task 25: Quality gate — commit 6
   - `npm run lint` — zero warnings
@@ -597,7 +597,7 @@ The `STRONGHOLD_PASSWORD` constant in `secure-storage.desktop.ts` is the plainte
 2. The app is local-only — the threat model is casual physical access to the disk, not network attacks
 3. The actual vault encryption key is never stored — it's re-derived from the static password on every app start
 
-**Do NOT change `STRONGHOLD_PASSWORD` after shipping.** Doing so will permanently lock all users out of their stored API keys. Version the constant name if behavior must change (e.g., `letko-desktop-secure-storage-v2` for a breaking migration).
+**Do NOT change `STRONGHOLD_PASSWORD` after shipping.** Doing so will permanently lock all users out of their stored API keys. Version the constant name if behavior must change (e.g., `lekto-desktop-secure-storage-v2` for a breaking migration).
 
 ### Circular Import: Stronghold + `appDataDir`
 
@@ -633,6 +633,7 @@ Desktop adapter files import Tauri plugins (`@tauri-apps/plugin-fs`, etc.). Thes
 | `src/shared/platform/secure-storage/secure-storage.desktop.ts` | CREATE | Tauri Stronghold adapter |
 | `src/shared/platform/secure-storage/index.ts` | MODIFY | Use `isTauri()` selector |
 | `src/shared/platform/filesystem/filesystem.index.test.ts` | MODIFY | Update mocks for new selector pattern |
+| `vitest.config.ts` | MODIFY | Add `__TAURI__: false` define for test environment |
 
 ### References
 

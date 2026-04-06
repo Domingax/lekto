@@ -4,7 +4,7 @@ import type { PreferencesAdapter } from './preferences.interface'
 import type { AsyncResult } from '../../lib/types'
 
 // Store file lives in Tauri app data dir (OS-managed, not in user vault)
-const STORE_FILE = 'letko-preferences.json'
+const STORE_FILE = 'lekto-preferences.json'
 
 export function createDesktopPreferencesAdapter(): PreferencesAdapter {
   return {

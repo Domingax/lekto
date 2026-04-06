@@ -18,8 +18,8 @@ export function createDesktopFilePickerAdapter(): FilePickerAdapter {
         const path = typeof selected === 'string' ? selected : selected[0]
         if (!path) return err('File pick cancelled or failed')
         const bytes = await readFile(path)
-        const name = path.split('/').at(-1) ?? path.split('\\').at(-1) ?? path
-        return ok({ name, data: bytes.buffer as ArrayBuffer })
+        const name = path.split(/[/\\]/).at(-1) ?? path
+        return ok({ name, data: bytes.buffer })
       } catch {
         return err('File pick cancelled or failed')
       }
