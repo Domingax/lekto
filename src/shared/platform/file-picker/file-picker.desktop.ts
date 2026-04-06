@@ -9,13 +9,11 @@ export function createDesktopFilePickerAdapter(): FilePickerAdapter {
     async pickFile(options: { accept?: `.${string}`[] }): AsyncResult<PickedFile> {
       try {
         const extensions = (options.accept ?? []).map((ext) => ext.slice(1)) // remove leading dot
-        const selected = await open({
-          multiple: false,
-          filters:
-            extensions.length > 0
-              ? [{ name: 'Book files', extensions }]
-              : undefined,
-        })
+        const selected = await open(
+          extensions.length > 0
+            ? { multiple: false, filters: [{ name: 'Book files', extensions }] }
+            : { multiple: false },
+        )
         if (selected === null) return err('File pick cancelled or failed')
         const path = typeof selected === 'string' ? selected : selected[0]
         if (!path) return err('File pick cancelled or failed')
