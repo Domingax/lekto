@@ -1,5 +1,4 @@
 import { Capacitor } from "@capacitor/core";
-import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { ok, err } from "neverthrow";
@@ -15,6 +14,7 @@ const VAULT_PATH_KEY = "vault_path";
 let _db: DrizzleDb | null = null;
 
 async function createDesktopDb(vaultPath: string): Promise<DrizzleDb> {
+  const { default: Database } = await import("@tauri-apps/plugin-sql");
   const db = await Database.load(`sqlite:${vaultPath}/lekto.db`);
 
   return drizzle(
