@@ -113,6 +113,20 @@ describe('SecureStorageAdapter (desktop)', () => {
     expect(result.isErr()).toBe(true)
   })
 
+  it('get returns err keychain unavailable when invoke rejects', async () => {
+    mockInvoke.mockRejectedValue(new Error('keychain unavailable'))
+    const result = await adapter.get('any-key')
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error).toBe('Secure storage: keychain unavailable')
+  })
+
+  it('set returns err keychain unavailable when invoke rejects', async () => {
+    mockInvoke.mockRejectedValue(new Error('keychain unavailable'))
+    const result = await adapter.set('any-key', 'any-value')
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error).toBe('Secure storage: keychain unavailable')
+  })
+
   it('getClient calls invoke with get_or_create_vault_passphrase', async () => {
     const encoded = new TextEncoder().encode('val')
     mockStore.get.mockResolvedValue(encoded)
