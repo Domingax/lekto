@@ -20,7 +20,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           components: clippy
 
@@ -32,7 +32,8 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libsecret-1-dev
+            libsecret-1-dev \
+            webkit2gtk-driver
 
       - run: npm ci
 
@@ -56,6 +57,23 @@ jobs:
 
       - name: E2E tests
         run: npm run test:e2e
+
+      - name: Cache tauri-driver
+        id: cache-tauri-driver
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/tauri-driver
+          key: tauri-driver-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Install tauri-driver
+        if: steps.cache-tauri-driver.outputs.cache-hit != 'true'
+        run: cargo install tauri-driver
+
+      - name: Build Tauri binary for desktop E2E
+        run: npx tauri build --debug --features mock-keychain
+
+      - name: Desktop E2E tests
+        run: xvfb-run --auto-servernum npm run test:e2e:desktop
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@383f7e52eae3ab0510c3cb0e7d9d150bbaeab838 # v3

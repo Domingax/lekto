@@ -1,16 +1,29 @@
-use keyring::Entry;
+#[cfg(all(feature = "mock-keychain", not(debug_assertions)))]
+compile_error!("mock-keychain must never be enabled in release builds — it replaces OS keychain with a static in-memory passphrase");
 
-const KEYCHAIN_SERVICE: &str = "lekto";
-const KEYCHAIN_ACCOUNT: &str = "stronghold-passphrase";
-
+/// CI/test builds: in-memory passphrase — no OS keychain required.
+/// Activated via `--features mock-keychain` on headless runners.
 #[tauri::command]
+#[cfg(feature = "mock-keychain")]
 pub fn get_or_create_vault_passphrase() -> Result<String, String> {
+    use std::sync::OnceLock;
+    static PASSPHRASE: OnceLock<String> = OnceLock::new();
+    Ok(PASSPHRASE.get_or_init(|| generate_passphrase().unwrap_or_default()).clone())
+}
+
+/// Production builds: reads/writes to the native OS keychain.
+#[tauri::command]
+#[cfg(not(feature = "mock-keychain"))]
+pub fn get_or_create_vault_passphrase() -> Result<String, String> {
+    use keyring::{Entry, Error};
+    const KEYCHAIN_SERVICE: &str = "lekto";
+    const KEYCHAIN_ACCOUNT: &str = "stronghold-passphrase";
     let entry = Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT)
         .map_err(|e| format!("Keychain unavailable: {e}"))?;
 
     match entry.get_password() {
         Ok(passphrase) => Ok(passphrase),
-        Err(keyring::Error::NoEntry) => {
+        Err(Error::NoEntry) => {
             let passphrase = generate_passphrase()?;
             entry
                 .set_password(&passphrase)

@@ -35,6 +35,7 @@
 
 generated: 2026-04-05
 last_updated: 2026-04-07
+
 project: lekto
 project_key: NOKEY
 tracking_system: file-system
@@ -55,8 +56,8 @@ development_status:
   8-1-tauri-initialization-and-project-setup: done
   8-2-desktop-db-layer-tauri-sql-plugin: done
   8-3-desktop-platform-adapters: done
-  8-4-stronghold-os-keychain-key-generation: review
-  8-5-desktop-cicd-pipelines: backlog
+  8-4-stronghold-os-keychain-key-generation: done
+  8-5-desktop-cicd-pipelines: in-progress
   epic-8-retrospective: optional
 
   # Epic 2: Vault & First Launch
