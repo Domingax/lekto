@@ -48,13 +48,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </step>
 
   <!-- ============================================================ -->
-  <!-- PHASE 2: COMMIT & PUSH                                        -->
+  <!-- PHASE 2: DOCUMENT, COMMIT & PUSH                              -->
   <!-- ============================================================ -->
   <step n="2" goal="Document, commit, and push to remote">
     <output>📦 **Pipeline Phase 2/2 — Document, Commit & Push**</output>
 
     <critical>Dev-story (Phase 1) is responsible for creating individual commits at each "### Commit N:" boundary.
-      This phase only handles branch creation (if needed), any remaining uncommitted files (story file, sprint-status), and pushing.</critical>
+      This phase only handles branch creation (if needed), documentation updates, any remaining uncommitted files (story file, sprint-status, docs), and pushing.</critical>
 
     <action>Run `git status` to see all changes</action>
     <action>Run `git log --oneline` to verify individual commits were created by dev-story</action>
@@ -127,8 +127,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       - Body ({{dev_summary_section}} prepended if non-empty, then placeholder for review):
         ```
         {{dev_summary_section}}
-        ## Summary
-        _Pending code review..._
 
         🤖 Generated with [Claude Code](https://claude.com/claude-code)
         ```
