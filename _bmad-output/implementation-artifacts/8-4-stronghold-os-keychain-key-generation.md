@@ -1,6 +1,6 @@
 # Story 8.4: Stronghold Key Generation via OS Keychain
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -44,7 +44,7 @@ This story replaces the static constant with a randomly generated passphrase, st
 
 ### Commit 1: `chore(deps): add keyring crate for OS keychain access`
 
-- [ ] Task 1: Add `keyring` to `src-tauri/Cargo.toml`
+- [x] Task 1: Add `keyring` to `src-tauri/Cargo.toml`
   ```toml
   [dependencies]
   keyring = { version = "3", features = ["default-credential"] }
@@ -54,7 +54,7 @@ This story replaces the static constant with a randomly generated passphrase, st
 
 ### Commit 2: `feat(platform): add get_or_create_vault_passphrase Tauri command`
 
-- [ ] Task 2: Create `src-tauri/src/keychain.rs`
+- [x] Task 2: Create `src-tauri/src/keychain.rs`
   ```rust
   use keyring::Entry;
 
@@ -92,7 +92,7 @@ This story replaces the static constant with a randomly generated passphrase, st
   - Note: `getrandom` is a transitive dependency of many crates already present — verify it's available or add it explicitly.
   - Alternative if `getrandom` is unavailable: use `rand = "0.8"` with `rand::thread_rng().gen::<[u8; 32]>()`.
 
-- [ ] Task 3: Register the command in `src-tauri/src/lib.rs`
+- [x] Task 3: Register the command in `src-tauri/src/lib.rs`
   ```rust
   mod keychain;
 
@@ -105,11 +105,11 @@ This story replaces the static constant with a randomly generated passphrase, st
   }
   ```
 
-- [ ] Task 4: Run `cargo check` inside `src-tauri/` — zero errors
+- [x] Task 4: Run `cargo check` inside `src-tauri/` — zero errors
 
 ### Commit 3: `feat(platform): retrieve Stronghold passphrase from OS keychain`
 
-- [ ] Task 5: Modify `src/shared/platform/secure-storage/secure-storage.desktop.ts`
+- [x] Task 5: Modify `src/shared/platform/secure-storage/secure-storage.desktop.ts`
   - Remove the `STRONGHOLD_VAULT_KEY` constant entirely
   - Add a `getVaultPassphrase()` helper that calls `invoke<string>('get_or_create_vault_passphrase')`
   - Update `getClient()` to await `getVaultPassphrase()` before calling `Stronghold.load()`
@@ -137,12 +137,12 @@ This story replaces the static constant with a randomly generated passphrase, st
     ```
   - `invoke` is already available via `@tauri-apps/api/core` (installed in Story 8.1)
 
-- [ ] Task 6: Update `src/shared/platform/secure-storage/secure-storage.desktop.test.ts`
+- [x] Task 6: Update `src/shared/platform/secure-storage/secure-storage.desktop.test.ts`
   - Add `vi.doMock('@tauri-apps/api/core', () => ({ invoke: vi.fn().mockResolvedValue('mock-passphrase-hex') }))` in `beforeEach`
   - Verify all existing tests still pass
   - Add test: `getClient() calls invoke('get_or_create_vault_passphrase')`
 
-- [ ] Task 7: Quality gate
+- [x] Task 7: Quality gate
   - `npm run lint` — zero warnings
   - `npm run typecheck` — zero errors
   - `npm run test` — all tests pass
@@ -187,8 +187,45 @@ This is acceptable behavior — API keys can be re-entered. Document in user-fac
 
 ### Agent Model Used
 
+claude-sonnet-4-6
+
 ### Debug Log References
+
+- `keyring` v3 does not have a `default-credential` feature; used `keyring = "3"` (default features) instead — platform backends auto-selected.
+- `getrandom` v0.2 already present as transitive dep; added explicitly to Cargo.toml for direct use.
 
 ### Completion Notes List
 
+- Replaced hardcoded `STRONGHOLD_VAULT_KEY` constant with a Tauri command `get_or_create_vault_passphrase` backed by OS keychain via `keyring` crate.
+- On first launch, generates a 32-byte random hex passphrase (via `getrandom`) and stores it in the OS keychain under service `lekto`, account `stronghold-passphrase`.
+- On subsequent launches, retrieves existing passphrase from keychain.
+- `secure-storage.desktop.ts` now calls `invoke('get_or_create_vault_passphrase')` instead of using a hardcoded constant.
+- Tests updated to mock `@tauri-apps/api/core` (`invoke`); new test verifies correct Tauri command name is called.
+- All 177 tests pass; lint and typecheck clean.
+
 ### File List
+
+- `src-tauri/Cargo.toml` — added `keyring = "3"` and `getrandom = "0.2"` dependencies
+- `src-tauri/Cargo.lock` — updated with new crate resolutions
+- `src-tauri/src/keychain.rs` — NEW: `get_or_create_vault_passphrase` Tauri command
+- `src-tauri/src/lib.rs` — added `mod keychain` declaration and registered command in invoke_handler
+- `src/shared/platform/secure-storage/secure-storage.desktop.ts` — removed `STRONGHOLD_VAULT_KEY`, added `getVaultPassphrase()` calling `invoke`
+- `src/shared/platform/secure-storage/secure-storage.desktop.test.ts` — added `invoke` mock and new keychain test
+
+### Senior Developer Review (AI)
+
+**Review Date:** 2026-04-07
+**Outcome:** APPROVED (with non-blocking action items)
+
+**Action Items:**
+- [x] [MEDIUM] AC4 specifies the keychain-unavailable failure must be surfaced as `err('Secure storage: keychain unavailable')`. Currently `getClient()` is wrapped in a generic `try/catch` that always returns `'Secure storage get failed'` / `'Secure storage set failed'`, masking the keychain failure mode. Detect the `invoke('get_or_create_vault_passphrase')` rejection in `getVaultPassphrase()` (or in the adapter methods) and propagate the literal `'Secure storage: keychain unavailable'` message so the UI/feature layer can distinguish keychain outages from vault I/O errors.
+- [x] [MEDIUM] `generate_passphrase()` in `src-tauri/src/keychain.rs` calls `getrandom::getrandom(&mut bytes).expect("getrandom failed")`. A panic inside a `#[tauri::command]` will abort/unwind across the FFI boundary. Return `Result::Err("entropy unavailable: …")` from the command instead so the failure is surfaced as a rejected `invoke` rather than a host crash.
+- [x] [LOW] Add a unit test in `secure-storage.desktop.test.ts` that mocks `invoke` to reject (e.g. `mockInvoke.mockRejectedValue(new Error('keychain unavailable'))`) and asserts the adapter returns the expected `err('Secure storage: keychain unavailable')`. This locks in AC4 behavior once the action item above is fixed.
+- [ ] [LOW] `getClient()` is not race-safe: two concurrent first-callers can both pass the `if (_client) return _client` guard and end up invoking `Stronghold.load` twice. Wrap the singleton bootstrap in a memoized in-flight promise (`let _clientPromise: Promise<Client> | null`). Pre-existing from story 8.3 — note for tracking, not introduced here.
+- [ ] [LOW] Two processes (or two simultaneous first-launch calls) can both observe `NoEntry`, generate independent passphrases and race on `set_password` — the loser's vault becomes unreadable. Either guard with a file lock or document the constraint.
+
+## Change Log
+
+- 2026-04-07: Implemented story 8.4 — replaced hardcoded Stronghold passphrase with OS keychain–generated passphrase via `keyring` Rust crate and `get_or_create_vault_passphrase` Tauri command. Added `getrandom` dependency. All 177 tests pass.
+- 2026-04-07: Addressed code review findings — `generate_passphrase()` returns `Result` instead of panicking; `KeychainUnavailableError` propagates literal AC4 message through adapter catch clauses; 2 AC4 negative-path tests added. 179 tests pass.
+- 2026-04-07: Senior Developer Review (AI) appended — APPROVED with 2 MEDIUM and 3 LOW action items (no HIGH).

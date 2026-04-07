@@ -14,8 +14,12 @@ describe('SecureStorageAdapter (desktop)', () => {
     save: ReturnType<typeof vi.fn>
   }
 
+  let mockInvoke: ReturnType<typeof vi.fn>
+
   beforeEach(async () => {
     vi.resetModules()
+
+    mockInvoke = vi.fn().mockResolvedValue('mock-passphrase-hex')
 
     mockStore = {
       get: vi.fn(),
@@ -32,6 +36,10 @@ describe('SecureStorageAdapter (desktop)', () => {
       createClient: vi.fn().mockResolvedValue(mockClient),
       save: vi.fn().mockResolvedValue(undefined),
     }
+
+    vi.doMock('@tauri-apps/api/core', () => ({
+      invoke: mockInvoke,
+    }))
 
     vi.doMock('@tauri-apps/plugin-stronghold', () => ({
       Stronghold: {
@@ -103,6 +111,27 @@ describe('SecureStorageAdapter (desktop)', () => {
     mockStore.remove.mockRejectedValue(new Error('delete error'))
     const result = await adapter.remove('my-key')
     expect(result.isErr()).toBe(true)
+  })
+
+  it('get returns err keychain unavailable when invoke rejects', async () => {
+    mockInvoke.mockRejectedValue(new Error('keychain unavailable'))
+    const result = await adapter.get('any-key')
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error).toBe('Secure storage: keychain unavailable')
+  })
+
+  it('set returns err keychain unavailable when invoke rejects', async () => {
+    mockInvoke.mockRejectedValue(new Error('keychain unavailable'))
+    const result = await adapter.set('any-key', 'any-value')
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error).toBe('Secure storage: keychain unavailable')
+  })
+
+  it('getClient calls invoke with get_or_create_vault_passphrase', async () => {
+    const encoded = new TextEncoder().encode('val')
+    mockStore.get.mockResolvedValue(encoded)
+    await adapter.get('key1')
+    expect(mockInvoke).toHaveBeenCalledWith('get_or_create_vault_passphrase')
   })
 
   it('reuses existing client on subsequent calls (singleton)', async () => {

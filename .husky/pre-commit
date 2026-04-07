@@ -1,1 +1,2 @@
 npm test
+cargo check --manifest-path src-tauri/Cargo.toml

@@ -1,23 +1,37 @@
+import { invoke } from '@tauri-apps/api/core'
 import { Stronghold, Client } from '@tauri-apps/plugin-stronghold'
 import { appDataDir } from '@tauri-apps/api/path'
 import { ok, err } from 'neverthrow'
 import type { SecureStorageAdapter } from './secure-storage.interface'
 import type { AsyncResult } from '../../lib/types'
 
-// Static passphrase passed to the Rust hash function (argon2 derives the actual key).
-// For a local-only app with no user accounts, a static passphrase is acceptable.
-// Never changes after first vault initialization — changing it would lock out existing secrets.
-const STRONGHOLD_VAULT_KEY = 'lekto-desktop-secure-storage-v1'
 const STRONGHOLD_CLIENT = 'lekto-client'
+const ERR_KEYCHAIN_UNAVAILABLE = 'Secure storage: keychain unavailable'
 
 let _stronghold: Stronghold | null = null
 let _client: Client | null = null
+
+class KeychainUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super(ERR_KEYCHAIN_UNAVAILABLE)
+    this.cause = cause
+  }
+}
+
+async function getVaultPassphrase(): Promise<string> {
+  try {
+    return await invoke<string>('get_or_create_vault_passphrase')
+  } catch (e) {
+    throw new KeychainUnavailableError(e)
+  }
+}
 
 async function getClient(): Promise<Client> {
   if (_client) return _client
   const dir = await appDataDir()
   const vaultPath = `${dir}/lekto-secrets.holsd`
-  _stronghold = await Stronghold.load(vaultPath, STRONGHOLD_VAULT_KEY)
+  const passphrase = await getVaultPassphrase()
+  _stronghold = await Stronghold.load(vaultPath, passphrase)
   try {
     _client = await _stronghold.loadClient(STRONGHOLD_CLIENT)
   } catch {
@@ -38,7 +52,8 @@ export function createDesktopSecureStorageAdapter(): SecureStorageAdapter {
         const data = await store.get(key)
         if (data === null || data === undefined) return err('Secure storage: key not found')
         return ok(decoder.decode(data))
-      } catch {
+      } catch (e) {
+        if (e instanceof KeychainUnavailableError) return err(ERR_KEYCHAIN_UNAVAILABLE)
         return err('Secure storage get failed')
       }
     },
@@ -50,7 +65,8 @@ export function createDesktopSecureStorageAdapter(): SecureStorageAdapter {
         await store.insert(key, Array.from(encoder.encode(value)))
         await _stronghold!.save()
         return ok(undefined)
-      } catch {
+      } catch (e) {
+        if (e instanceof KeychainUnavailableError) return err(ERR_KEYCHAIN_UNAVAILABLE)
         return err('Secure storage set failed')
       }
     },
@@ -62,7 +78,8 @@ export function createDesktopSecureStorageAdapter(): SecureStorageAdapter {
         await store.remove(key)
         await _stronghold!.save()
         return ok(undefined)
-      } catch {
+      } catch (e) {
+        if (e instanceof KeychainUnavailableError) return err(ERR_KEYCHAIN_UNAVAILABLE)
         return err('Secure storage remove failed')
       }
     },
