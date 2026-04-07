@@ -32,7 +32,8 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libsecret-1-dev
+            libsecret-1-dev \
+            webkit2gtk-driver
 
       - run: npm ci
 
