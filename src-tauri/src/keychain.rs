@@ -24,7 +24,7 @@ pub fn get_or_create_vault_passphrase() -> Result<String, String> {
 fn generate_passphrase() -> Result<String, String> {
     use std::fmt::Write;
     let mut bytes = [0u8; 32];
-    getrandom::getrandom(&mut bytes).map_err(|e| format!("entropy unavailable: {e}"))?;
+    getrandom::getrandom(&mut bytes[..]).map_err(|e| format!("entropy unavailable: {e}"))?;
     Ok(bytes.iter().fold(String::with_capacity(64), |mut s, b| {
         let _ = write!(s, "{b:02x}");
         s
