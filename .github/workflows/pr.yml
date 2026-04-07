@@ -73,7 +73,7 @@ jobs:
         run: npx tauri build --debug --features mock-keychain
 
       - name: Desktop E2E tests
-        run: npm run test:e2e:desktop
+        run: xvfb-run --auto-servernum npm run test:e2e:desktop
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@383f7e52eae3ab0510c3cb0e7d9d150bbaeab838 # v3
