@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:desktop": "tauri-driver --port 4444 & sleep 2 && playwright test --config=playwright.desktop.config.ts; pkill tauri-driver || true",
     "db:generate": "drizzle-kit generate",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",

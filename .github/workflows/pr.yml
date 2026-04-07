@@ -51,11 +51,30 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Tauri compile check
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signing secrets are optional — absent = unsigned build, which is
+          # acceptable for PR gates. TAURI_PRIVATE_KEY / TAURI_KEY_PASSWORD
+          # are only required for release tags.
+        with:
+          args: '--features mock-keychain'
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
         run: npm run test:e2e
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver
+
+      - name: Build Tauri binary for desktop E2E
+        run: npx tauri build --debug -- --features mock-keychain
+
+      - name: Desktop E2E tests
+        run: npm run test:e2e:desktop
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@383f7e52eae3ab0510c3cb0e7d9d150bbaeab838 # v3
