@@ -1,3 +1,6 @@
+#[cfg(all(feature = "mock-keychain", not(debug_assertions)))]
+compile_error!("mock-keychain must never be enabled in release builds — it replaces OS keychain with a static in-memory passphrase");
+
 /// CI/test builds: in-memory passphrase — no OS keychain required.
 /// Activated via `--features mock-keychain` on headless runners.
 #[tauri::command]

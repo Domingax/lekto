@@ -20,7 +20,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           components: clippy
 
@@ -51,27 +51,25 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Tauri compile check
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signing secrets are optional — absent = unsigned build, which is
-          # acceptable for PR gates. TAURI_PRIVATE_KEY / TAURI_KEY_PASSWORD
-          # are only required for release tags.
-        with:
-          args: '--features mock-keychain'
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
         run: npm run test:e2e
 
+      - name: Cache tauri-driver
+        id: cache-tauri-driver
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/tauri-driver
+          key: tauri-driver-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
       - name: Install tauri-driver
+        if: steps.cache-tauri-driver.outputs.cache-hit != 'true'
         run: cargo install tauri-driver
 
       - name: Build Tauri binary for desktop E2E
-        run: npx tauri build --debug -- --features mock-keychain
+        run: npx tauri build --debug --features mock-keychain
 
       - name: Desktop E2E tests
         run: npm run test:e2e:desktop
