@@ -35,7 +35,8 @@ it('vault creation → library navigation', async () => {
   await (await driver.$('button=Confirm')).click()
 
   // Book import stub: assert library page is reachable
+  // XPath used because WebDriverIO's *=text maps to "partial link text" (anchors only)
   await expect
-    .poll(() => driver.$('*=Library').isDisplayed(), { timeout: 15_000 })
+    .poll(() => driver.$('//*[contains(., "Library")]').isDisplayed(), { timeout: 15_000 })
     .toBe(true)
 }, 60_000)
