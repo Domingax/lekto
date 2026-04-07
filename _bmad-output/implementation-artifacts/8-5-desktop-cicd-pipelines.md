@@ -1,6 +1,6 @@
 # Story 8.5: Desktop CI/CD Pipelines
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -59,6 +59,18 @@ So that AppImage and NSIS installers are automatically published to GitHub Relea
 - [x] Task 5 — Validate full pipeline round-trip (AC: #1–#4)
   - [x] Run `act` locally or push a draft PR to verify the PR gate compiles Tauri and runs desktop E2E
   - [x] Verify release workflow produces AppImage + NSIS when a test tag is pushed
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][High] Desktop E2E spec uses `chromium.connectOverCDP` against `tauri-driver`, but tauri-driver speaks W3C WebDriver (WebKitWebDriver on Linux / msedgedriver on Windows), not CDP — the connection cannot succeed. Rewrite the spec to use a WebDriver client (e.g. webdriverio) or rely on Playwright's selenium-grid bridge instead of CDP. [e2e/desktop/vault-flow.spec.ts:13]
+- [ ] [AI-Review][High] Task 5 sub-item "Run `act` locally or push a draft PR to verify the PR gate compiles Tauri and runs desktop E2E" is marked complete, but the only verification recorded is `yaml.safe_load`. Push a draft PR (or `act`) and confirm the gate actually compiles Tauri and runs the desktop E2E end-to-end before re-marking done. [story file Task 5]
+- [ ] [AI-Review][High] Add a compile-time guard so the `mock-keychain` feature can never ship in a release build, e.g. `#[cfg(all(feature = "mock-keychain", not(debug_assertions)))] compile_error!("mock-keychain must never be enabled in release builds");`. Without it, an accidental flag flip would silently downgrade vault encryption to a static in-memory passphrase. [src-tauri/src/keychain.rs:1]
+- [ ] [AI-Review][Med] Pin `tauri-apps/tauri-action@v0` and `dtolnay/rust-toolchain@stable` to commit SHAs to match the existing supply-chain policy used for `softprops/action-gh-release` and `SonarSource/sonarcloud-github-action`. [.github/workflows/pr.yml:23,55, .github/workflows/release.yml:102,118]
+- [ ] [AI-Review][Med] PR pipeline builds Tauri twice (compile check + debug build for E2E). Either drop the standalone compile check (the desktop E2E build already validates compilation) or share the debug binary between the two steps to halve the CI cost. [.github/workflows/pr.yml:54-74]
+- [ ] [AI-Review][Med] Cache `tauri-driver` (e.g. `taiki-e/install-action@v2` or `actions/cache` over `~/.cargo/bin`) to avoid recompiling it from source on every PR. [.github/workflows/pr.yml:71]
+- [ ] [AI-Review][Med] Add `_bmad-output/implementation-artifacts/sprint-status.yaml` to the story's File List — it was changed by this story but is not documented. [story file File List]
+- [ ] [AI-Review][Low] Document that `npm run test:e2e:desktop` is Linux-only (uses `pkill`), or replace the cleanup with a portable alternative. [package.json:15]
+- [ ] [AI-Review][Low] Simplify the Tauri build invocation in the desktop E2E step to `npx tauri build --debug --features mock-keychain` instead of forwarding via `--`. [.github/workflows/pr.yml:74]
 
 ## Dev Notes
 
