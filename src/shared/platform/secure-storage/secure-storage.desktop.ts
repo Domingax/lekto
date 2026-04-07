@@ -1,23 +1,25 @@
+import { invoke } from '@tauri-apps/api/core'
 import { Stronghold, Client } from '@tauri-apps/plugin-stronghold'
 import { appDataDir } from '@tauri-apps/api/path'
 import { ok, err } from 'neverthrow'
 import type { SecureStorageAdapter } from './secure-storage.interface'
 import type { AsyncResult } from '../../lib/types'
 
-// Static passphrase passed to the Rust hash function (argon2 derives the actual key).
-// For a local-only app with no user accounts, a static passphrase is acceptable.
-// Never changes after first vault initialization — changing it would lock out existing secrets.
-const STRONGHOLD_VAULT_KEY = 'lekto-desktop-secure-storage-v1'
 const STRONGHOLD_CLIENT = 'lekto-client'
 
 let _stronghold: Stronghold | null = null
 let _client: Client | null = null
 
+async function getVaultPassphrase(): Promise<string> {
+  return invoke<string>('get_or_create_vault_passphrase')
+}
+
 async function getClient(): Promise<Client> {
   if (_client) return _client
   const dir = await appDataDir()
   const vaultPath = `${dir}/lekto-secrets.holsd`
-  _stronghold = await Stronghold.load(vaultPath, STRONGHOLD_VAULT_KEY)
+  const passphrase = await getVaultPassphrase()
+  _stronghold = await Stronghold.load(vaultPath, passphrase)
   try {
     _client = await _stronghold.loadClient(STRONGHOLD_CLIENT)
   } catch {
