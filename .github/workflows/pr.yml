@@ -20,7 +20,17 @@ jobs:
           node-version: 22
           cache: npm
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install system deps (keyring)
+        run: sudo apt-get install -y libsecret-1-dev
+
       - run: npm ci
+
+      - name: Rust lint (clippy)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
       - name: Lint
         run: npm run lint
