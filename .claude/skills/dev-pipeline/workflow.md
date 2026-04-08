@@ -48,13 +48,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </step>
 
   <!-- ============================================================ -->
-  <!-- PHASE 2: COMMIT & PUSH                                        -->
+  <!-- PHASE 2: DOCUMENT, COMMIT & PUSH                              -->
   <!-- ============================================================ -->
-  <step n="2" goal="Verify commits and push to remote">
-    <output>📦 **Pipeline Phase 2/2 — Commit & Push**</output>
+  <step n="2" goal="Document, commit, and push to remote">
+    <output>📦 **Pipeline Phase 2/2 — Document, Commit & Push**</output>
 
     <critical>Dev-story (Phase 1) is responsible for creating individual commits at each "### Commit N:" boundary.
-      This phase only handles branch creation (if needed), any remaining uncommitted files (story file, sprint-status), and pushing.</critical>
+      This phase only handles branch creation (if needed), documentation updates, any remaining uncommitted files (story file, sprint-status, docs), and pushing.</critical>
 
     <action>Run `git status` to see all changes</action>
     <action>Run `git log --oneline` to verify individual commits were created by dev-story</action>
@@ -66,11 +66,31 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       <action>Create and switch to branch: `story/{{story_key}}`</action>
     </check>
 
-    <!-- Handle any remaining unstaged files (story file updates, sprint-status) -->
-    <check if="there are uncommitted changes (story file, sprint-status, etc.)">
-      <action>Stage remaining files (story file, sprint-status)</action>
+    <!-- Documentation assessment (AI-3) -->
+    <action>Assess documentation impact from the implemented story.
+      Review the story tasks, commits, and any divergence from the plan.
+      Update or create documentation if ANY of the following triggers apply:
+      - New user-visible behavior, command, or feature introduced
+      - New library, tool, or external dependency added
+      - Public API or function contract changed (signature, return semantics)
+      - Implementation diverged from the story plan (different library, approach, or protocol)
+      - Non-trivial architectural decision made
+
+      Documents to check and update if affected:
+      - README — user-facing setup, usage, testing, or development sections
+      - `AGENTS.md` — developer conventions, architecture rules, constraints
+      - `architecture.md` — system-level design decisions
+      - Dedicated document — create one if none of the above covers the subject
+
+      Documentation is a story deliverable: it ships in the same PR as the code.
+      If no trigger applies, skip — do not add placeholder content.
+    </action>
+
+    <!-- Handle any remaining unstaged files (story file updates, sprint-status, docs) -->
+    <check if="there are uncommitted changes (story file, sprint-status, docs, etc.)">
+      <action>Stage remaining files (story file, sprint-status, updated or created docs)</action>
       <action>Do NOT stage: `.env`, credentials, `node_modules/`, `dist/`, `.claude/settings.local.json`</action>
-      <action>Create a final commit: `chore: update story {{story_key}} status and sprint tracking`</action>
+      <action>Create a final commit: `chore: update story {{story_key}} status, docs, and sprint tracking`</action>
     </check>
 
     <!-- Push -->
@@ -107,8 +127,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       - Body ({{dev_summary_section}} prepended if non-empty, then placeholder for review):
         ```
         {{dev_summary_section}}
-        ## Summary
-        _Pending code review..._
 
         🤖 Generated with [Claude Code](https://claude.com/claude-code)
         ```

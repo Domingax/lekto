@@ -94,9 +94,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <!-- Post review report as PR comment -->
     <action>Post the review report as a PR comment using `gh pr comment #{{pr_number}} --body "..."`:
       ```
-      ## Summary
-      - <1-3 bullet points summarizing the story implementation>
-
       ## Code Review Findings
 
       ### 🔴 Critical/High Issues
