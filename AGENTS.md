@@ -243,29 +243,16 @@ features/importBook/
 ### Testing Tools
 
 - **Unit tests:** Vitest + React Testing Library (runs in jsdom)
-- **E2E Desktop:** WebDriverIO + Vitest via `tauri-driver` (W3C WebDriver)
+- **E2E web:** Playwright (`npm run test:e2e`) — runs in CI
 - **E2E Android:** Maestro (run locally before release; CI integration post-MVP)
+- **Desktop validation:** `npm run tauri:dev` locally — no automated desktop E2E in CI (deferred until Epic 2+ user flows exist)
 - Platform-specific code (Capacitor, Tauri plugins) must be mocked in Vitest/jsdom
 
-### Desktop E2E — Two-tier convention
+### Desktop adapters — local validation only
 
-Desktop E2E tests live in `e2e/desktop/` and run via `npm run test:e2e:desktop` (starts `tauri-driver`, then `vitest --config vitest.desktop.config.ts`).
+Desktop adapters (`filesystemAdapter`, `filePickerAdapter`, `secureStorageAdapter`, `preferencesAdapter`) call Tauri IPC and cannot run in jsdom. They are not covered by unit tests. Validate them locally with `npm run tauri:dev`.
 
-Some tests require a full Tauri IPC + SQLite + filesystem environment that is not available in headless CI. Mark them with `requiresIpc` so they are skipped on CI and run locally:
-
-```typescript
-import { it } from 'vitest'
-
-const requiresIpc = it.skipIf(!!process.env.CI)
-
-// Runs everywhere — safe for CI
-it('app launches and renders vault setup screen', async () => { ... })
-
-// Skipped on CI (GitHub Actions sets CI=true), runs locally
-requiresIpc('vault creation → library navigation', async () => { ... })
-```
-
-**Rule:** every new desktop E2E test that calls a Tauri plugin, reads/writes files, or touches SQLite must use `requiresIpc`. Pure UI smoke tests (asserting a screen renders) use plain `it`.
+Desktop E2E (WebDriverIO + `tauri-driver`) is not wired in CI. It will be reintroduced when Epic 2+ produces real user flows worth automating.
 
 ---
 
