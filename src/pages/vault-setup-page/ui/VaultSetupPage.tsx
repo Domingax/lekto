@@ -2,12 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { Button } from '@/components/ui/button'
-import { useVaultStore } from '../../../shared/stores'
 import { filePickerAdapter } from '../../../shared/platform'
 import {
   initVault,
   initVaultWithNativeHandle,
-  grantVaultPermission,
   WEB_OPFS_PATH,
   DEFAULT_ANDROID_PATH,
 } from '../../../features'
@@ -19,7 +17,6 @@ const isNativePlatform = Capacitor.isNativePlatform()
 export function VaultSetupPage() {
   const hasDirectoryPicker = !isNativePlatform && 'showDirectoryPicker' in globalThis
   const navigate = useNavigate()
-  const pendingPermissionHandle = useVaultStore((s) => s.pendingPermissionHandle)
 
   const defaultPath = isNativePlatform ? DEFAULT_ANDROID_PATH : WEB_OPFS_PATH
   const defaultLabel = isNativePlatform
@@ -31,9 +28,6 @@ export function VaultSetupPage() {
   const [selectedLabel, setSelectedLabel] = useState(defaultLabel)
   const [selectedHandle, setSelectedHandle] = useState<FileSystemDirectoryHandle | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  // Derived: permission re-grant takes precedence over normal flow
-  const isGrantPermission = pendingPermissionHandle !== null
 
   async function handleModify() {
     setError(null)
@@ -74,31 +68,6 @@ export function VaultSetupPage() {
       setError(result.error)
       setFlowState('create')
     }
-  }
-
-  async function handleGrantPermission() {
-    if (!pendingPermissionHandle) return
-    setError(null)
-    const result = await grantVaultPermission(pendingPermissionHandle)
-    if (result.isOk()) {
-      navigate('/library')
-    } else {
-      setError(result.error)
-    }
-  }
-
-  if (isGrantPermission) {
-    return (
-      <div>
-        <h1>Restore vault access</h1>
-        <p>
-          Your browser requires you to confirm access to your vault folder after each session.
-          Click the button below to restore access.
-        </p>
-        {error && <p role="alert">{error}</p>}
-        <Button onClick={handleGrantPermission}>Restore vault access</Button>
-      </div>
-    )
   }
 
   if (flowState === 'idle') {

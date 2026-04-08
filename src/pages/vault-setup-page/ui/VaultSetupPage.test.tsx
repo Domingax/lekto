@@ -12,7 +12,6 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../../../features', () => ({
   initVault: vi.fn(),
   initVaultWithNativeHandle: vi.fn(),
-  grantVaultPermission: vi.fn(),
   WEB_OPFS_PATH: '__opfs__',
   DEFAULT_ANDROID_PATH: 'lekto-vault',
 }))
@@ -23,19 +22,13 @@ vi.mock('../../../shared/platform', () => ({
   },
 }))
 
-const mockUseVaultStore = vi.fn()
-vi.mock('../../../shared/stores', () => ({
-  useVaultStore: (selector: (s: { pendingPermissionHandle: null }) => unknown) =>
-    mockUseVaultStore(selector),
-}))
-
 // Capacitor.isNativePlatform() returns false in jsdom
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => false },
 }))
 
 import { VaultSetupPage } from './VaultSetupPage'
-import { initVault, initVaultWithNativeHandle, grantVaultPermission } from '../../../features'
+import { initVault, initVaultWithNativeHandle } from '../../../features'
 
 function renderPage() {
   return render(
@@ -47,10 +40,6 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockUseVaultStore.mockImplementation(
-    (selector: (s: { pendingPermissionHandle: null }) => unknown) =>
-      selector({ pendingPermissionHandle: null }),
-  )
 })
 
 describe('VaultSetupPage', () => {
@@ -90,16 +79,6 @@ describe('VaultSetupPage', () => {
     expect(screen.getByText('Confirm')).toBeInTheDocument()
   })
 
-  it('renders grant-permission state when pendingPermissionHandle is set', () => {
-    const mockHandle = {} as FileSystemDirectoryHandle
-    mockUseVaultStore.mockImplementation(
-      (selector: (s: { pendingPermissionHandle: FileSystemDirectoryHandle }) => unknown) =>
-        selector({ pendingPermissionHandle: mockHandle }),
-    )
-    renderPage()
-    expect(screen.getByRole('button', { name: 'Restore vault access' })).toBeInTheDocument()
-  })
-
   it('Cancel button returns to idle state', async () => {
     renderPage()
     fireEvent.click(screen.getByText('Create new vault'))
@@ -123,31 +102,5 @@ describe('VaultSetupPage', () => {
     expect(initVaultWithNativeHandle).toHaveBeenCalledWith(mockHandle)
 
     vi.unstubAllGlobals()
-  })
-
-  it('shows error when grantVaultPermission fails', async () => {
-    const mockHandle = {} as FileSystemDirectoryHandle
-    mockUseVaultStore.mockImplementation(
-      (selector: (s: { pendingPermissionHandle: FileSystemDirectoryHandle }) => unknown) =>
-        selector({ pendingPermissionHandle: mockHandle }),
-    )
-    vi.mocked(grantVaultPermission).mockResolvedValue(err('access denied'))
-    renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'Restore vault access' }))
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('access denied'))
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('"Restore vault access" click calls grantVaultPermission and navigates', async () => {
-    const mockHandle = {} as FileSystemDirectoryHandle
-    mockUseVaultStore.mockImplementation(
-      (selector: (s: { pendingPermissionHandle: FileSystemDirectoryHandle }) => unknown) =>
-        selector({ pendingPermissionHandle: mockHandle }),
-    )
-    vi.mocked(grantVaultPermission).mockResolvedValue(ok(undefined))
-    renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'Restore vault access' }))
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/library'))
-    expect(grantVaultPermission).toHaveBeenCalledWith(mockHandle)
   })
 })
