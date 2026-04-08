@@ -10,16 +10,11 @@ vi.mock('../shared/stores', () => ({
 import { rootLoader, libraryLoader } from './router'
 import { useVaultStore } from '../shared/stores'
 
-function mockStore(state: {
-  vaultPath: string | null
-  pendingPermissionHandle: FileSystemDirectoryHandle | null
-}) {
+function mockStore(state: { vaultPath: string | null }) {
   vi.mocked(useVaultStore.getState).mockReturnValue({
     vaultPath: state.vaultPath,
-    pendingPermissionHandle: state.pendingPermissionHandle,
     isVaultReady: !!state.vaultPath,
     setVaultPath: vi.fn(),
-    setPendingPermissionHandle: vi.fn(),
     clearVault: vi.fn(),
   })
 }
@@ -30,33 +25,27 @@ beforeEach(() => {
 
 describe('rootLoader', () => {
   it('redirects to /vault-setup when no vault configured', () => {
-    mockStore({ vaultPath: null, pendingPermissionHandle: null })
+    mockStore({ vaultPath: null })
     const result = rootLoader()
     expect(result).toEqual(redirect('/vault-setup'))
   })
 
   it('redirects to /library when vault is configured', () => {
-    mockStore({ vaultPath: '__opfs__', pendingPermissionHandle: null })
+    mockStore({ vaultPath: 'lekto-vault' })
     const result = rootLoader()
     expect(result).toEqual(redirect('/library'))
-  })
-
-  it('redirects to /vault-setup when pendingPermissionHandle is set', () => {
-    mockStore({ vaultPath: '__native__', pendingPermissionHandle: {} as FileSystemDirectoryHandle })
-    const result = rootLoader()
-    expect(result).toEqual(redirect('/vault-setup'))
   })
 })
 
 describe('libraryLoader', () => {
   it('redirects to /vault-setup when no vault configured', () => {
-    mockStore({ vaultPath: null, pendingPermissionHandle: null })
+    mockStore({ vaultPath: null })
     const result = libraryLoader()
     expect(result).toEqual(redirect('/vault-setup'))
   })
 
   it('returns null when vault is configured', () => {
-    mockStore({ vaultPath: '__opfs__', pendingPermissionHandle: null })
+    mockStore({ vaultPath: 'lekto-vault' })
     const result = libraryLoader()
     expect(result).toBeNull()
   })

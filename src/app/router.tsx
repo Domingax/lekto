@@ -3,8 +3,7 @@ import { useVaultStore } from '../shared/stores'
 import { VaultSetupPage, LibraryPage } from '../pages'
 
 export function rootLoader() {
-  const { vaultPath, pendingPermissionHandle } = useVaultStore.getState()
-  if (pendingPermissionHandle) return redirect('/vault-setup')
+  const { vaultPath } = useVaultStore.getState()
   if (vaultPath) return redirect('/library')
   return redirect('/vault-setup')
 }
