@@ -11,24 +11,26 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../../../features', () => ({
   initVault: vi.fn(),
-  initVaultWithNativeHandle: vi.fn(),
-  WEB_OPFS_PATH: '__opfs__',
+  initVaultDesktop: vi.fn(),
+  DESKTOP_DEFAULT_VAULT_NAME: 'lekto-vault',
   DEFAULT_ANDROID_PATH: 'lekto-vault',
 }))
 
 vi.mock('../../../shared/platform', () => ({
+  isTauri: vi.fn().mockReturnValue(false),
   filePickerAdapter: {
     pickDirectory: vi.fn(),
   },
 }))
 
-// Capacitor.isNativePlatform() returns false in jsdom
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: () => false },
+vi.mock('@tauri-apps/api/path', () => ({
+  documentDir: vi.fn().mockResolvedValue('/home/user/Documents'),
 }))
 
 import { VaultSetupPage } from './VaultSetupPage'
-import { initVault, initVaultWithNativeHandle } from '../../../features'
+import { initVault, initVaultDesktop } from '../../../features'
+import { isTauri, filePickerAdapter } from '../../../shared/platform'
+import { documentDir } from '@tauri-apps/api/path'
 
 function renderPage() {
   return render(
@@ -40,9 +42,10 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(isTauri).mockReturnValue(false)
 })
 
-describe('VaultSetupPage', () => {
+describe('VaultSetupPage — Android', () => {
   it('shows both buttons on initial render', () => {
     renderPage()
     expect(screen.getByText('Create new vault')).toBeInTheDocument()
@@ -60,13 +63,13 @@ describe('VaultSetupPage', () => {
     expect(screen.getByText('Confirm')).toBeInTheDocument()
   })
 
-  it('Confirm calls initVault and navigates on success', async () => {
+  it('Confirm calls initVault with Android path and navigates on success', async () => {
     vi.mocked(initVault).mockResolvedValue(ok(undefined))
     renderPage()
     fireEvent.click(screen.getByText('Create new vault'))
     fireEvent.click(screen.getByText('Confirm'))
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/library'))
-    expect(initVault).toHaveBeenCalledWith('__opfs__')
+    expect(initVault).toHaveBeenCalledWith('lekto-vault')
   })
 
   it('shows error and stays on create state when initVault fails', async () => {
@@ -79,7 +82,7 @@ describe('VaultSetupPage', () => {
     expect(screen.getByText('Confirm')).toBeInTheDocument()
   })
 
-  it('Cancel button returns to idle state', async () => {
+  it('Cancel button returns to idle state', () => {
     renderPage()
     fireEvent.click(screen.getByText('Create new vault'))
     expect(screen.getByText('Confirm')).toBeInTheDocument()
@@ -88,19 +91,63 @@ describe('VaultSetupPage', () => {
     expect(screen.queryByText('Confirm')).not.toBeInTheDocument()
   })
 
-  it('Confirm calls initVaultWithNativeHandle when a native handle is selected', async () => {
-    const mockHandle = { name: 'my-vault' } as FileSystemDirectoryHandle
-    vi.stubGlobal('showDirectoryPicker', vi.fn().mockResolvedValue(mockHandle))
-    vi.mocked(initVaultWithNativeHandle).mockResolvedValue(ok(undefined))
-
+  it('"Modify" calls filePickerAdapter.pickDirectory and updates path', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok('/custom/path'))
     renderPage()
     fireEvent.click(screen.getByText('Create new vault'))
-    fireEvent.click(screen.getByText('Choose folder'))
-    await waitFor(() => expect(screen.getByText(/my-vault/)).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Modify'))
+    await waitFor(() => expect(screen.getByText(/\/custom\/path/)).toBeInTheDocument())
+    expect(filePickerAdapter.pickDirectory).toHaveBeenCalled()
+  })
+})
+
+describe('VaultSetupPage — Desktop (Tauri)', () => {
+  beforeEach(() => {
+    vi.mocked(isTauri).mockReturnValue(true)
+  })
+
+  it('calls documentDir on mount and shows resolved path in create state', async () => {
+    renderPage()
+    // documentDir is called on mount
+    await waitFor(() => expect(documentDir).toHaveBeenCalled())
+    // navigate to create state to see the resolved path
+    fireEvent.click(screen.getByText('Create new vault'))
+    await waitFor(() =>
+      expect(screen.getByText(/\/home\/user\/Documents\/lekto-vault/)).toBeInTheDocument(),
+    )
+  })
+
+  it('"Modify" calls filePickerAdapter.pickDirectory and updates path', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok('/custom/vault'))
+    renderPage()
+    fireEvent.click(screen.getByText('Create new vault'))
+    fireEvent.click(screen.getByText('Modify'))
+    await waitFor(() => expect(screen.getByText(/\/custom\/vault/)).toBeInTheDocument())
+    expect(filePickerAdapter.pickDirectory).toHaveBeenCalled()
+  })
+
+  it('Confirm calls initVaultDesktop with resolved path and navigates on success', async () => {
+    vi.mocked(initVaultDesktop).mockResolvedValue(ok(undefined))
+    renderPage()
+    // wait for documentDir to resolve
+    await waitFor(() =>
+      expect(screen.queryByText('Resolving default location…')).not.toBeInTheDocument(),
+    )
+    fireEvent.click(screen.getByText('Create new vault'))
     fireEvent.click(screen.getByText('Confirm'))
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/library'))
-    expect(initVaultWithNativeHandle).toHaveBeenCalledWith(mockHandle)
+    expect(initVaultDesktop).toHaveBeenCalledWith('/home/user/Documents/lekto-vault')
+  })
 
-    vi.unstubAllGlobals()
+  it('shows error and stays on create state when initVaultDesktop fails', async () => {
+    vi.mocked(initVaultDesktop).mockResolvedValue(err('vault error'))
+    renderPage()
+    await waitFor(() =>
+      expect(screen.queryByText('Resolving default location…')).not.toBeInTheDocument(),
+    )
+    fireEvent.click(screen.getByText('Create new vault'))
+    fireEvent.click(screen.getByText('Confirm'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('vault error'))
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 })
