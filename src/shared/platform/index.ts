@@ -1,5 +1,5 @@
 export { isTauri } from './is-tauri'
-export { filesystemAdapter, setFilesystemRoot } from './filesystem'
+export { filesystemAdapter } from './filesystem'
 export { ttsAdapter } from './tts'
 export { secureStorageAdapter } from './secure-storage'
 export { filePickerAdapter } from './file-picker'

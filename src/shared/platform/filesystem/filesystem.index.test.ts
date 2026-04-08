@@ -4,11 +4,6 @@ vi.mock('@/shared/platform/is-tauri', () => ({
   isTauri: vi.fn().mockReturnValue(false),
 }))
 
-vi.mock('./filesystem.web', () => ({
-  createWebFilesystemAdapter: vi.fn().mockReturnValue({}),
-  setWebFilesystemRoot: vi.fn(),
-}))
-
 vi.mock('./filesystem.android', () => ({
   createAndroidFilesystemAdapter: vi.fn().mockReturnValue({ _adapter: 'android' }),
 }))
@@ -18,7 +13,6 @@ vi.mock('./filesystem.desktop', () => ({
 }))
 
 import { isTauri } from '@/shared/platform/is-tauri'
-import { setWebFilesystemRoot } from './filesystem.web'
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -36,22 +30,5 @@ describe('filesystemAdapter', () => {
     vi.mocked(isTauri).mockReturnValue(false)
     const { filesystemAdapter } = await import('./index')
     expect(filesystemAdapter).toEqual({ _adapter: 'android' })
-  })
-})
-
-describe('setFilesystemRoot', () => {
-  it('calls setWebFilesystemRoot on web platform', async () => {
-    vi.mocked(isTauri).mockReturnValue(false)
-    const { setFilesystemRoot } = await import('./index')
-    const mockHandle = {} as FileSystemDirectoryHandle
-    setFilesystemRoot(mockHandle)
-    expect(setWebFilesystemRoot).toHaveBeenCalledWith(mockHandle)
-  })
-
-  it('does not call setWebFilesystemRoot on desktop (Tauri)', async () => {
-    vi.mocked(isTauri).mockReturnValue(true)
-    const { setFilesystemRoot } = await import('./index')
-    setFilesystemRoot(null)
-    expect(setWebFilesystemRoot).not.toHaveBeenCalled()
   })
 })
