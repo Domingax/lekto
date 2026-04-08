@@ -243,7 +243,6 @@ features/importBook/
 ### Testing Tools
 
 - **Unit tests:** Vitest + React Testing Library (runs in jsdom)
-- **E2E web:** Playwright (`npm run test:e2e`) — runs in CI
 - **E2E Android:** Maestro (run locally before release; CI integration post-MVP)
 - **Desktop validation:** `npm run tauri:dev` locally — no automated desktop E2E in CI (deferred until Epic 2+ user flows exist)
 - Platform-specific code (Capacitor, Tauri plugins) must be mocked in Vitest/jsdom
