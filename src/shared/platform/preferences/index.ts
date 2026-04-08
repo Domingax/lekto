@@ -1,9 +1,9 @@
 import { isTauri } from '../is-tauri'
-import { createWebPreferencesAdapter } from './preferences.web'
+import { createAndroidPreferencesAdapter } from './preferences.android'
 import { createDesktopPreferencesAdapter } from './preferences.desktop'
 
 export type { PreferencesAdapter } from './preferences.interface'
 
 export const preferencesAdapter = isTauri()
   ? createDesktopPreferencesAdapter()
-  : createWebPreferencesAdapter()
+  : createAndroidPreferencesAdapter()

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createWebPreferencesAdapter } from './preferences.web'
+import { createAndroidPreferencesAdapter } from './preferences.android'
 
-describe('WebPreferencesAdapter', () => {
-  let adapter: ReturnType<typeof createWebPreferencesAdapter>
+describe('AndroidPreferencesAdapter', () => {
+  let adapter: ReturnType<typeof createAndroidPreferencesAdapter>
 
   beforeEach(() => {
     localStorage.clear()
-    adapter = createWebPreferencesAdapter()
+    adapter = createAndroidPreferencesAdapter()
   })
 
   it('sets and gets a value', async () => {
