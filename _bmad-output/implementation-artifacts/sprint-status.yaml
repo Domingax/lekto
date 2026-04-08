@@ -63,7 +63,7 @@ development_status:
   # Epic 2: Vault & First Launch
   epic-2: backlog
   2-1-vault-setup-screen-and-create-new-vault: done
-  2-1-desktop-vault-setup-and-web-cleanup: review
+  2-1-desktop-vault-setup-and-web-cleanup: in-progress
   2-2-open-existing-vault: backlog
   2-3-vault-relocation-from-settings: backlog
   epic-2-retrospective: optional
