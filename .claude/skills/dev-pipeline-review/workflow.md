@@ -92,6 +92,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     </check>
 
     <!-- Post review report as PR comment -->
+    <critical>The PR comment must be written entirely in English, regardless of {communication_language}. It is a code artifact visible to all contributors.</critical>
     <action>Post the review report as a PR comment using `gh pr comment #{{pr_number}} --body "..."`:
       ```
       ## Code Review Findings
