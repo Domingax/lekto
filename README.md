@@ -11,8 +11,8 @@ BYOK AI: connect your own OpenAI, Anthropic, or Ollama account. The app is fully
 | Platform | Status |
 |---|---|
 | Android (Capacitor) | Active development |
-| Linux Desktop (Tauri — AppImage) | Planned — Epic 8 |
-| Windows Desktop (Tauri — NSIS) | Planned — Epic 8 |
+| Linux Desktop (Tauri — AppImage) | Active development |
+| Windows Desktop (Tauri — NSIS) | Active development |
 
 **Vault portability:** the vault is a plain folder (`books/` + `lekto.db`) that lives wherever you choose — a local directory, a Syncthing folder, Google Drive, etc. Copying the folder moves all your data. No proprietary sync protocol.
 
@@ -23,13 +23,13 @@ BYOK AI: connect your own OpenAI, Anthropic, or Ollama account. The app is fully
 | Framework | React 19 + TypeScript 5.9 (strict) |
 | Build | Vite 7 |
 | Mobile | Capacitor 8 (Android) |
-| Desktop | Tauri v2 (Linux / Windows) — Epic 8 |
+| Desktop | Tauri v2 (Linux / Windows) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | State | Zustand 5 |
 | Routing | React Router v7 |
 | Database | SQLite — Capacitor SQLite (Android) · Tauri SQL plugin (Desktop) |
 | Error handling | neverthrow |
-| Testing | Vitest + Testing Library · Playwright (Desktop E2E) · Maestro (Android E2E) |
+| Testing | Vitest + Testing Library · Maestro (Android E2E) |
 
 ## Getting Started
 
@@ -102,3 +102,21 @@ npm run tauri:build   # Produce AppImage (Linux) or NSIS installer (Windows)
 ```bash
 WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri:dev
 ```
+
+### Local Testing (Desktop)
+
+The desktop platform adapters (filesystem, file-picker, secure-storage, preferences) invoke Tauri IPC commands that cannot run in JSDOM. They are **not covered by the unit test suite** — validation requires a live Tauri window.
+
+**Linux prerequisites:**
+
+- Active graphical session (X11 or Wayland)
+- GNOME Keyring (or any Secret Service-compatible daemon) running — required by the `secure-storage` adapter for vault passphrase storage
+
+**Smoke test — first launch:**
+
+1. `npm run tauri:dev`
+2. On first launch, the app should display the vault creation screen (no existing vault found)
+3. Create a vault → confirm navigation to the library screen
+4. Quit and relaunch → app should reopen directly on the library screen (vault path persisted via `preferencesAdapter`)
+
+If any of these steps fail, the most likely culprits are the filesystem adapter (vault path resolution) or the secure-storage adapter (GNOME Keyring not available).
