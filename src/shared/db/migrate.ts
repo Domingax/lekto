@@ -92,10 +92,11 @@ export async function runMigrations(): Promise<Result<void, string>> {
     return ok(undefined);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    const cause =
-      e instanceof Error && e.cause != null
-        ? ` → ${e.cause instanceof Error ? e.cause.message : String(e.cause)}`
-        : '';
+    let cause = '';
+    if (e instanceof Error && e.cause != null) {
+      const causeMessage = e.cause instanceof Error ? e.cause.message : String(e.cause);
+      cause = ` → ${causeMessage}`;
+    }
     return err(msg + cause);
   }
 }
