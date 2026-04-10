@@ -2,7 +2,7 @@ import { ok, err } from 'neverthrow'
 import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
 import type { AsyncResult } from '../../../shared/lib/types'
-import { initDb, runMigrations, seedLanguages } from '@/shared/db'
+import { initDbForNewVault, runMigrations, seedLanguages } from '@/shared/db'
 
 export const VAULT_PATH_KEY = 'vault_path'
 export const DEFAULT_ANDROID_PATH = 'lekto-vault'
@@ -35,18 +35,18 @@ export async function initVaultDesktop(vaultPath: string): AsyncResult<void> {
     const mkdirResult = await filesystemAdapter.mkdir(`${vaultPath}/books`)
     if (mkdirResult.isErr()) return err(mkdirResult.error)
 
-    const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, vaultPath)
-    if (setResult.isErr()) return err(setResult.error)
-
-    const dbResult = await initDb()
+    const dbResult = await initDbForNewVault(vaultPath)
     if (dbResult.isErr()) return err(`DB init failed: ${dbResult.error}`)
-    if (dbResult.value === null) return err('DB init returned null unexpectedly')
 
     const migrationsResult = await runMigrations()
     if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
 
     const seedResult = await seedLanguages()
     if (seedResult.isErr()) return err(`DB seed failed: ${seedResult.error}`)
+
+    // Save vault path only after everything succeeded — prevents corrupt state on relaunch
+    const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, vaultPath)
+    if (setResult.isErr()) return err(setResult.error)
 
     useVaultStore.getState().setVaultPath(vaultPath)
     return ok(undefined)

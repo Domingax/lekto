@@ -12,7 +12,7 @@ vi.mock('../../../shared/platform', () => ({
 }))
 
 vi.mock('@/shared/db', () => ({
-  initDb: vi.fn(),
+  initDbForNewVault: vi.fn(),
   runMigrations: vi.fn(),
   seedLanguages: vi.fn(),
 }))
@@ -33,7 +33,7 @@ import {
   initVaultDesktop,
 } from './sync-vault'
 import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
-import { initDb, runMigrations, seedLanguages } from '@/shared/db'
+import { initDbForNewVault, runMigrations, seedLanguages } from '@/shared/db'
 import { useVaultStore } from '../../../shared/stores'
 
 const mockSetVaultPath = vi.fn()
@@ -124,65 +124,62 @@ describe('initVaultDesktop', () => {
     vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
     vi.mocked(preferencesAdapter.set).mockResolvedValue(ok(undefined))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(initDb).mockResolvedValue(ok({}) as any)
+    vi.mocked(initDbForNewVault).mockResolvedValue(ok({}) as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(runMigrations).mockResolvedValue(ok(undefined) as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(seedLanguages).mockResolvedValue(ok(undefined) as any)
   })
 
-  it('happy path — mkdir with vaultPath/books, persists path, inits db, migrates, seeds, updates store', async () => {
+  it('happy path — mkdir, inits db, migrates, seeds, then persists path and updates store', async () => {
     const result = await initVaultDesktop(vaultPath)
 
     expect(result.isOk()).toBe(true)
     expect(filesystemAdapter.mkdir).toHaveBeenCalledWith(`${vaultPath}/books`)
-    expect(preferencesAdapter.set).toHaveBeenCalledWith(VAULT_PATH_KEY, vaultPath)
-    expect(initDb).toHaveBeenCalled()
+    expect(initDbForNewVault).toHaveBeenCalledWith(vaultPath)
     expect(runMigrations).toHaveBeenCalled()
     expect(seedLanguages).toHaveBeenCalled()
+    expect(preferencesAdapter.set).toHaveBeenCalledWith(VAULT_PATH_KEY, vaultPath)
     expect(mockSetVaultPath).toHaveBeenCalledWith(vaultPath)
   })
 
-  it('returns err when mkdir fails, no preference stored', async () => {
+  it('returns err when mkdir fails, db never inited', async () => {
     vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(err('permission denied'))
     const result = await initVaultDesktop(vaultPath)
     expect(result.isErr()).toBe(true)
+    expect(initDbForNewVault).not.toHaveBeenCalled()
     expect(preferencesAdapter.set).not.toHaveBeenCalled()
   })
 
-  it('returns err when preferences.set fails', async () => {
-    vi.mocked(preferencesAdapter.set).mockResolvedValue(err('storage full'))
-    const result = await initVaultDesktop(vaultPath)
-    expect(result.isErr()).toBe(true)
-    expect(initDb).not.toHaveBeenCalled()
-  })
-
-  it('returns err when initDb fails', async () => {
-    vi.mocked(initDb).mockResolvedValue(err('sql error'))
+  it('returns err when initDbForNewVault fails', async () => {
+    vi.mocked(initDbForNewVault).mockResolvedValue(err('sql error'))
     const result = await initVaultDesktop(vaultPath)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toContain('DB init failed')
+    expect(preferencesAdapter.set).not.toHaveBeenCalled()
   })
 
-  it('returns err when initDb returns null', async () => {
-    vi.mocked(initDb).mockResolvedValue(ok(null))
-    const result = await initVaultDesktop(vaultPath)
-    expect(result.isErr()).toBe(true)
-    expect(result._unsafeUnwrapErr()).toContain('null')
-  })
-
-  it('returns err when runMigrations fails', async () => {
+  it('returns err when runMigrations fails, preference never stored', async () => {
     vi.mocked(runMigrations).mockResolvedValue(err('migration error'))
     const result = await initVaultDesktop(vaultPath)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toContain('DB migration failed')
+    expect(preferencesAdapter.set).not.toHaveBeenCalled()
   })
 
-  it('returns err when seedLanguages fails', async () => {
+  it('returns err when seedLanguages fails, preference never stored', async () => {
     vi.mocked(seedLanguages).mockResolvedValue(err('seed error'))
     const result = await initVaultDesktop(vaultPath)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toContain('DB seed failed')
+    expect(preferencesAdapter.set).not.toHaveBeenCalled()
+  })
+
+  it('returns err when preferences.set fails after successful db setup', async () => {
+    vi.mocked(preferencesAdapter.set).mockResolvedValue(err('storage full'))
+    const result = await initVaultDesktop(vaultPath)
+    expect(result.isErr()).toBe(true)
+    expect(runMigrations).toHaveBeenCalled()
   })
 
   it('returns err on unexpected exception', async () => {

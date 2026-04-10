@@ -14,18 +14,23 @@ export function libraryLoader() {
   return null
 }
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    loader: rootLoader,
-  },
-  {
-    path: '/vault-setup',
-    element: <VaultSetupPage />,
-  },
-  {
-    path: '/library',
-    loader: libraryLoader,
-    element: <LibraryPage />,
-  },
-])
+// Factory function — must be called AFTER the vault store is populated in main.tsx,
+// otherwise the initial navigation runs rootLoader with vaultPath: null
+// and always redirects to /vault-setup regardless of persisted preferences.
+export function createAppRouter() {
+  return createBrowserRouter([
+    {
+      path: '/',
+      loader: rootLoader,
+    },
+    {
+      path: '/vault-setup',
+      element: <VaultSetupPage />,
+    },
+    {
+      path: '/library',
+      loader: libraryLoader,
+      element: <LibraryPage />,
+    },
+  ])
+}

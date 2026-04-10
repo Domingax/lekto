@@ -52,7 +52,10 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       try {
         await Filesystem.mkdir({ path, directory: BASE_DIR, recursive: true })
         return ok(undefined)
-      } catch {
+      } catch (e) {
+        if (e != null && typeof e === 'object' && 'code' in e && e.code === 'OS-PLUG-FILE-0010') {
+          return ok(undefined)
+        }
         return err(`Failed to create directory: ${path}`)
       }
     },

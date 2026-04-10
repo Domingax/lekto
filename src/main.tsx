@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { initDb, runMigrations, seedLanguages } from '@/shared/db'
 import { useVaultStore } from '@/shared/stores'
 import { getVaultPath } from '@/features'
+import { createAppRouter } from '@/app/router'
 
 function showError(message: string) {
   const el = document.getElementById('root')!
@@ -40,9 +41,13 @@ export async function start() {
     useVaultStore.getState().setVaultPath(vaultPathResult.value)
   }
 
+  // Router is created here — after the vault store is populated — so that
+  // rootLoader sees the correct vaultPath on its very first navigation.
+  const router = createAppRouter()
+
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <App />
+      <App router={router} />
     </StrictMode>,
   )
 }

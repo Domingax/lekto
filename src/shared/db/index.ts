@@ -13,6 +13,20 @@ const VAULT_PATH_KEY = "vault_path";
 
 let _db: DrizzleDb | null = null;
 
+export function resetDb(): void {
+  _db = null;
+}
+
+export async function initDbForNewVault(vaultPath: string): Promise<Result<DrizzleDb, string>> {
+  _db = null;
+  try {
+    _db = await createDesktopDb(vaultPath);
+    return ok(_db);
+  } catch (e) {
+    return err(e instanceof Error ? e.message : String(e));
+  }
+}
+
 async function createDesktopDb(vaultPath: string): Promise<DrizzleDb> {
   const { default: Database } = await import("@tauri-apps/plugin-sql");
   const db = await Database.load(`sqlite:${vaultPath}/lekto.db`);
