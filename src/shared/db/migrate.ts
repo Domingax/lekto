@@ -94,7 +94,14 @@ export async function runMigrations(): Promise<Result<void, string>> {
     const msg = e instanceof Error ? e.message : String(e);
     let cause = '';
     if (e instanceof Error && e.cause != null) {
-      const causeMessage = e.cause instanceof Error ? e.cause.message : String(e.cause);
+      let causeMessage: string;
+      if (e.cause instanceof Error) {
+        causeMessage = e.cause.message;
+      } else if (typeof e.cause === 'object') {
+        causeMessage = JSON.stringify(e.cause);
+      } else {
+        causeMessage = String(e.cause);
+      }
       cause = ` → ${causeMessage}`;
     }
     return err(msg + cause);
