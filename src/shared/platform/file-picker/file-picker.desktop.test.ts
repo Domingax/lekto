@@ -92,17 +92,22 @@ describe('FilePickerAdapter (desktop)', () => {
     if (result.isOk()) expect(result.value).toBe('/home/user/vault')
   })
 
-  it('pickDirectory returns err when user cancels (null)', async () => {
+  it('pickDirectory returns err("cancelled") when user cancels (null)', async () => {
     const { open } = await import('@tauri-apps/plugin-dialog')
     vi.mocked(open).mockResolvedValue(null)
     const result = await adapter.pickDirectory()
     expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error).toBe('cancelled')
   })
 
-  it('pickDirectory returns err when plugin throws', async () => {
+  it('pickDirectory returns a non-cancelled err when plugin throws', async () => {
     const { open } = await import('@tauri-apps/plugin-dialog')
     vi.mocked(open).mockRejectedValue(new Error('plugin error'))
     const result = await adapter.pickDirectory()
     expect(result.isErr()).toBe(true)
+    if (result.isErr()) {
+      expect(result.error).toBe('plugin error')
+      expect(result.error).not.toBe('cancelled')
+    }
   })
 })

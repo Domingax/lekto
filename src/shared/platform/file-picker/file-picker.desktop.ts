@@ -28,10 +28,10 @@ export function createDesktopFilePickerAdapter(): FilePickerAdapter {
     async pickDirectory(): AsyncResult<string> {
       try {
         const selected = await open({ directory: true })
-        if (selected === null) return err('Directory pick cancelled or failed')
+        if (selected === null) return err('cancelled')
         return ok(typeof selected === 'string' ? selected : selected[0] ?? '')
-      } catch {
-        return err('Directory pick cancelled or failed')
+      } catch (e) {
+        return err(e instanceof Error ? e.message : 'Directory pick failed')
       }
     },
   }

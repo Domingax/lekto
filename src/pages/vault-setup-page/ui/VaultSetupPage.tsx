@@ -27,11 +27,15 @@ export function VaultSetupPage() {
 
   useEffect(() => {
     if (isDesktop) {
-      documentDir().then((dir) => {
-        const defaultPath = `${dir}/${DESKTOP_DEFAULT_VAULT_NAME}`
-        setSelectedPath(defaultPath)
-        setSelectedLabel(defaultPath)
-      })
+      documentDir()
+        .then((dir) => {
+          const defaultPath = `${dir}/${DESKTOP_DEFAULT_VAULT_NAME}`
+          setSelectedPath(defaultPath)
+          setSelectedLabel(defaultPath)
+        })
+        .catch(() => {
+          setSelectedLabel('Could not resolve default location — use Modify to choose manually')
+        })
     }
     // isDesktop is a stable platform flag — intentionally omitted from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,6 +47,8 @@ export function VaultSetupPage() {
     if (result.isOk()) {
       setSelectedPath(result.value)
       setSelectedLabel(result.value)
+    } else if (isDesktop && result.error !== 'cancelled') {
+      setError(result.error)
     }
   }
 
@@ -81,7 +87,7 @@ export function VaultSetupPage() {
         Modify
       </Button>
       {error && <p role="alert">{error}</p>}
-      <Button onClick={handleConfirm} disabled={flowState === 'creating'}>
+      <Button onClick={handleConfirm} disabled={flowState === 'creating' || (isDesktop && selectedPath === '')}>
         {flowState === 'creating' ? 'Creating…' : 'Confirm'}
       </Button>
       <Button

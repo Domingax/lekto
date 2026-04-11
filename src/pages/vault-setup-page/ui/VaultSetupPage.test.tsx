@@ -150,4 +150,45 @@ describe('VaultSetupPage — Desktop (Tauri)', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('vault error'))
     expect(mockNavigate).not.toHaveBeenCalled()
   })
+
+  it('Confirm is disabled until documentDir resolves (M2)', () => {
+    vi.mocked(documentDir).mockReturnValue(new Promise(() => {}))
+    renderPage()
+    fireEvent.click(screen.getByText('Create new vault'))
+    expect(screen.getByText('Confirm')).toBeDisabled()
+  })
+
+  it('shows error label and Confirm remains disabled when documentDir rejects (M1)', async () => {
+    vi.mocked(documentDir).mockRejectedValue(new Error('path plugin unavailable'))
+    renderPage()
+    await waitFor(() =>
+      expect(screen.queryByText('Resolving default location…')).not.toBeInTheDocument(),
+    )
+    fireEvent.click(screen.getByText('Create new vault'))
+    expect(screen.getByText(/Could not resolve default location/)).toBeInTheDocument()
+    expect(screen.getByText('Confirm')).toBeDisabled()
+  })
+
+  it('shows error in handleModify when pickDirectory returns a real failure (L2)', async () => {
+    renderPage()
+    await waitFor(() =>
+      expect(screen.queryByText('Resolving default location…')).not.toBeInTheDocument(),
+    )
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(err('Permission denied'))
+    fireEvent.click(screen.getByText('Create new vault'))
+    fireEvent.click(screen.getByText('Modify'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Permission denied'))
+  })
+
+  it('silently ignores cancel in handleModify on desktop (L2)', async () => {
+    renderPage()
+    await waitFor(() =>
+      expect(screen.queryByText('Resolving default location…')).not.toBeInTheDocument(),
+    )
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(err('cancelled'))
+    fireEvent.click(screen.getByText('Create new vault'))
+    fireEvent.click(screen.getByText('Modify'))
+    await waitFor(() => expect(filePickerAdapter.pickDirectory).toHaveBeenCalled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })
