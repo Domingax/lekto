@@ -1,6 +1,6 @@
 # Story 2.3: Vault Relocation from Settings
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -397,6 +397,14 @@ claude-sonnet-4-6
 - The `/settings` route reuses `libraryLoader` (vault-guard) to prevent access with no configured vault.
 - `useVaultStore` mock in `SettingsPage.test.tsx` uses `as never` cast to satisfy the typed selector signature at build time.
 - 215 tests pass across 25 test files; lint, typecheck, and build all clean.
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][HIGH] `relocateVaultDesktop`: add `await initDbForNewVault(currentVaultPath)` rollback before returning `err` after `runMigrations()` failure — DB connection is already at new vault but store/prefs still point to old path [src/features/sync-vault/model/sync-vault.ts:113]
+- [ ] [AI-Review][MEDIUM] Add test: `relocateVaultDesktop — runMigrations fails → err returned and original DB restored` to cover the H1 failure path [src/features/sync-vault/sync-vault.test.ts]
+- [ ] [AI-Review][LOW] `SettingsPage`: `exists()` returning `err` silently falls into `confirm-migrate`; consider setting an inline error instead [src/pages/settings-page/ui/SettingsPage.tsx:23]
+- [ ] [AI-Review][LOW] `SettingsPage`: call `setPickedPath('')` on successful migration/switch (currently only reset by `handleCancel`) [src/pages/settings-page/ui/SettingsPage.tsx:41]
+- [ ] [AI-Review][LOW] `sync-vault.test.ts`: replace hardcoded `'vault_path'` string with imported `VAULT_PATH_KEY` constant [src/features/sync-vault/sync-vault.test.ts:76]
 
 ### File List
 
