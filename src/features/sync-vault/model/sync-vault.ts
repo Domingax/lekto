@@ -1,14 +1,12 @@
 import { ok, err } from 'neverthrow'
-import { filesystemAdapter, setFilesystemRoot, preferencesAdapter, isTauri } from '../../../shared/platform'
+import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
-import { storeVaultHandle, loadVaultHandle } from '../lib/handle-store'
 import type { AsyncResult } from '../../../shared/lib/types'
-import { initDb, runMigrations, seedLanguages } from '@/shared/db'
+import { initDbForNewVault, runMigrations, seedLanguages } from '@/shared/db'
 
 export const VAULT_PATH_KEY = 'vault_path'
-export const WEB_OPFS_PATH = '__opfs__'
-export const WEB_NATIVE_PATH = '__native__'
 export const DEFAULT_ANDROID_PATH = 'lekto-vault'
+export const DESKTOP_DEFAULT_VAULT_NAME = 'lekto-vault'
 
 export function getVaultPath(): AsyncResult<string> {
   return preferencesAdapter.get(VAULT_PATH_KEY)
@@ -21,26 +19,10 @@ export async function isVaultConfigured(): Promise<boolean> {
 
 export async function initVault(path: string): AsyncResult<void> {
   try {
-    if (path === WEB_OPFS_PATH) setFilesystemRoot(null)
-
     const mkdirResult = await filesystemAdapter.mkdir('books')
     if (mkdirResult.isErr()) return err(mkdirResult.error)
-
     const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, path)
     if (setResult.isErr()) return err(setResult.error)
-
-    if (isTauri()) {
-      const dbResult = await initDb()
-      if (dbResult.isErr()) return err(`DB init failed: ${dbResult.error}`)
-      if (dbResult.value === null) return err('DB init returned null unexpectedly')
-
-      const migrationsResult = await runMigrations()
-      if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
-
-      const seedResult = await seedLanguages()
-      if (seedResult.isErr()) return err(`DB seed failed: ${seedResult.error}`)
-    }
-
     useVaultStore.getState().setVaultPath(path)
     return ok(undefined)
   } catch (e) {
@@ -48,52 +30,27 @@ export async function initVault(path: string): AsyncResult<void> {
   }
 }
 
-export async function initVaultWithNativeHandle(
-  handle: FileSystemDirectoryHandle,
-): AsyncResult<void> {
+export async function initVaultDesktop(vaultPath: string): AsyncResult<void> {
   try {
-    await storeVaultHandle(handle)
-    setFilesystemRoot(handle)
-
-    const mkdirResult = await filesystemAdapter.mkdir('books')
+    const mkdirResult = await filesystemAdapter.mkdir(`${vaultPath}/books`)
     if (mkdirResult.isErr()) return err(mkdirResult.error)
 
-    const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, WEB_NATIVE_PATH)
+    const dbResult = await initDbForNewVault(vaultPath)
+    if (dbResult.isErr()) return err(`DB init failed: ${dbResult.error}`)
+
+    const migrationsResult = await runMigrations()
+    if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
+
+    const seedResult = await seedLanguages()
+    if (seedResult.isErr()) return err(`DB seed failed: ${seedResult.error}`)
+
+    // Save vault path only after everything succeeded — prevents corrupt state on relaunch
+    const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, vaultPath)
     if (setResult.isErr()) return err(setResult.error)
 
-    useVaultStore.getState().setVaultPath(WEB_NATIVE_PATH)
+    useVaultStore.getState().setVaultPath(vaultPath)
     return ok(undefined)
   } catch (e) {
-    return err(`Failed to init vault with native handle: ${e}`)
+    return err(`Failed to init desktop vault: ${e}`)
   }
-}
-
-export async function loadAndRestoreVaultHandle(): Promise<'ok' | 'needs-permission' | 'not-found'> {
-  try {
-    const handle = await loadVaultHandle()
-    if (!handle) return 'not-found'
-
-    const permission = await handle.queryPermission({ mode: 'readwrite' })
-    if (permission === 'granted') {
-      setFilesystemRoot(handle)
-      useVaultStore.getState().setVaultPath(WEB_NATIVE_PATH)
-      return 'ok'
-    }
-
-    useVaultStore.getState().setPendingPermissionHandle(handle)
-    return 'needs-permission'
-  } catch {
-    return 'not-found'
-  }
-}
-
-export async function grantVaultPermission(
-  handle: FileSystemDirectoryHandle,
-): AsyncResult<void> {
-  const result = await handle.requestPermission({ mode: 'readwrite' })
-  if (result !== 'granted') return err('Permission denied')
-
-  setFilesystemRoot(handle)
-  useVaultStore.getState().setVaultPath(WEB_NATIVE_PATH)
-  return ok(undefined)
 }

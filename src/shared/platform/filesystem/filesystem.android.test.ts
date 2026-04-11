@@ -63,6 +63,20 @@ describe('FilesystemAdapter (android)', () => {
     expect(result.isOk()).toBe(true)
   })
 
+  it('mkdir returns ok when directory already exists (OS-PLUG-FILE-0010)', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    vi.mocked(Filesystem.mkdir).mockRejectedValue({ code: 'OS-PLUG-FILE-0010', message: 'already exists' })
+    const result = await adapter.mkdir('existing-dir')
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('mkdir returns err on other errors', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    vi.mocked(Filesystem.mkdir).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.mkdir('new-dir')
+    expect(result.isErr()).toBe(true)
+  })
+
   it('readdir returns ok with file names', async () => {
     const result = await adapter.readdir('.')
     expect(result.isOk()).toBe(true)

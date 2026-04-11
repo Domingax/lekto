@@ -43,8 +43,8 @@ export function createDesktopFilesystemAdapter(): FilesystemAdapter {
       try {
         await mkdir(path, { recursive: true })
         return ok(undefined)
-      } catch {
-        return err(`Failed to create directory: ${path}`)
+      } catch (e) {
+        return err(`Failed to create directory: ${path} — ${e}`)
       }
     },
 

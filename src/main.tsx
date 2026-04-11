@@ -1,15 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Capacitor } from '@capacitor/core'
 import './index.css'
 import App from './App.tsx'
 import { initDb, runMigrations, seedLanguages } from '@/shared/db'
 import { useVaultStore } from '@/shared/stores'
-import {
-  getVaultPath,
-  WEB_NATIVE_PATH,
-  loadAndRestoreVaultHandle,
-} from '@/features'
+import { getVaultPath } from '@/features'
+import { createAppRouter } from '@/app/router'
 
 function showError(message: string) {
   const el = document.getElementById('root')!
@@ -42,17 +38,16 @@ export async function start() {
 
   const vaultPathResult = await getVaultPath()
   if (vaultPathResult.isOk()) {
-    const storedPath = vaultPathResult.value
-    if (storedPath === WEB_NATIVE_PATH && !Capacitor.isNativePlatform()) {
-      await loadAndRestoreVaultHandle()
-    } else {
-      useVaultStore.getState().setVaultPath(storedPath)
-    }
+    useVaultStore.getState().setVaultPath(vaultPathResult.value)
   }
+
+  // Router is created here — after the vault store is populated — so that
+  // rootLoader sees the correct vaultPath on its very first navigation.
+  const router = createAppRouter()
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <App />
+      <App router={router} />
     </StrictMode>,
   )
 }

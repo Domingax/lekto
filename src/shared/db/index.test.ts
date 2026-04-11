@@ -172,6 +172,36 @@ describe('Desktop proxy callbacks', () => {
   })
 })
 
+describe('resetDb', () => {
+  it('clears the singleton so getDb throws again', async () => {
+    mockState.isNativePlatform = true
+    const { initDb, resetDb, getDb } = await import('./index')
+    await initDb()
+    expect(() => getDb()).not.toThrow()
+    resetDb()
+    expect(() => getDb()).toThrow('DB not initialized')
+  })
+})
+
+describe('initDbForNewVault', () => {
+  it('returns ok with a DrizzleDb when vault path is valid', async () => {
+    mockState.isTauri = true
+    const { initDbForNewVault } = await import('./index')
+    const result = await initDbForNewVault('/some/vault')
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBeDefined()
+  })
+
+  it('returns err when createDesktopDb throws', async () => {
+    const { default: Database } = await import('@tauri-apps/plugin-sql')
+    vi.mocked(Database.load).mockRejectedValueOnce(new Error('cannot open db'))
+    const { initDbForNewVault } = await import('./index')
+    const result = await initDbForNewVault('/bad/path')
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toBe('cannot open db')
+  })
+})
+
 describe('Android proxy callbacks', () => {
   beforeEach(() => {
     mockState.isNativePlatform = true

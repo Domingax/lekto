@@ -17,6 +17,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `user_skill_level`
 - `implementation_artifacts`
 
+### Project Conventions
+
+<action>Read `{project-root}/AGENTS.md` in full before starting any implementation.
+  This file is the authoritative reference for all project conventions:
+  error handling patterns, naming rules, FSD architecture, TDD protocol, commit format, etc.
+  All code produced or reviewed by this pipeline must comply with it.</action>
+
 ### Inputs
 
 - `story_path` = `` (explicit story path; auto-discovered if empty — passed to dev-story)
@@ -41,7 +48,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <check if="dev-story HALTs or fails">
       <action>HALT pipeline — surface the dev-story error to the user</action>
-      <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Dev phase failed — action needed"`</action>
+      <action>Send desktop notification: `notify-send "Lekto Pipeline" "❌ Dev phase failed — action needed"`</action>
     </check>
 
     <output>✅ **Phase 1 complete** — Story implemented and validated</output>
@@ -98,7 +105,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <check if="push fails">
       <action>HALT pipeline — surface the git error to the user</action>
-      <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Git push failed — action needed"`</action>
+      <action>Send desktop notification: `notify-send "Lekto Pipeline" "❌ Git push failed — action needed"`</action>
     </check>
 
     <!-- Dev Summary self-assessment -->
@@ -134,7 +141,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Capture: {{pr_url}} and {{pr_number}}</action>
 
     <!-- Notify user -->
-    <action>Run: `notify-send -u normal "Letko Pipeline ✅" "Story {{story_key}} — Dev complete, PR ready\n{{pr_url}}"`</action>
+    <action>Run: `notify-send -u normal "Lekto Pipeline ✅" "Story {{story_key}} — Dev complete, PR ready\n{{pr_url}}"`</action>
 
     <output>
       ✅ **Pipeline Dev Complete**

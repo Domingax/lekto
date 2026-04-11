@@ -46,18 +46,18 @@ function loadMigrations(): Migration[] {
 }
 
 async function createMigrationsTable(): Promise<void> {
-  await getDb().run(sql`
-    CREATE TABLE IF NOT EXISTS \`${sql.raw(MIGRATIONS_TABLE)}\` (
+  await getDb().run(
+    sql.raw(`CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       hash text NOT NULL,
       created_at numeric
-    )
-  `);
+    )`),
+  );
 }
 
 async function fetchLastAppliedAt(): Promise<number | undefined> {
   const rows = await getDb().values<[number, string, number]>(
-    sql`SELECT id, hash, created_at FROM \`${sql.raw(MIGRATIONS_TABLE)}\` ORDER BY created_at DESC LIMIT 1`,
+    sql.raw(`SELECT id, hash, created_at FROM ${MIGRATIONS_TABLE} ORDER BY created_at DESC LIMIT 1`),
   );
   return rows[0]?.[2];
 }
@@ -91,6 +91,19 @@ export async function runMigrations(): Promise<Result<void, string>> {
     }
     return ok(undefined);
   } catch (e) {
-    return err(e instanceof Error ? e.message : String(e));
+    const msg = e instanceof Error ? e.message : String(e);
+    let cause = '';
+    if (e instanceof Error && e.cause != null) {
+      let causeMessage: string;
+      if (e.cause instanceof Error) {
+        causeMessage = e.cause.message;
+      } else if (typeof e.cause === 'object') {
+        causeMessage = JSON.stringify(e.cause);
+      } else {
+        causeMessage = String(e.cause);
+      }
+      cause = ` → ${causeMessage}`;
+    }
+    return err(msg + cause);
   }
 }

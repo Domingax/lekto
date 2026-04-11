@@ -32,4 +32,35 @@ it('returns err() on migration failure', async () => {
     expect(r1).toEqual(ok(undefined))
     expect(r2).toEqual(ok(undefined))
   })
+
+  it('includes cause.message when cause is an Error', async () => {
+    const cause = new Error('disk full')
+    const error = new Error('migration failed')
+    error.cause = cause
+    mockRun.mockRejectedValueOnce(error)
+    const { runMigrations } = await import('./migrate')
+    const result = await runMigrations()
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toBe('migration failed → disk full')
+  })
+
+  it('includes JSON.stringify(cause) when cause is a plain object', async () => {
+    const error = new Error('migration failed')
+    error.cause = { code: 42 }
+    mockRun.mockRejectedValueOnce(error)
+    const { runMigrations } = await import('./migrate')
+    const result = await runMigrations()
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toBe('migration failed → {"code":42}')
+  })
+
+  it('includes String(cause) when cause is a primitive', async () => {
+    const error = new Error('migration failed')
+    error.cause = 'constraint violation'
+    mockRun.mockRejectedValueOnce(error)
+    const { runMigrations } = await import('./migrate')
+    const result = await runMigrations()
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toBe('migration failed → constraint violation')
+  })
 })

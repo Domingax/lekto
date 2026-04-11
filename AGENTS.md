@@ -243,7 +243,6 @@ features/importBook/
 ### Testing Tools
 
 - **Unit tests:** Vitest + React Testing Library (runs in jsdom)
-- **E2E web:** Playwright (`npm run test:e2e`) — runs in CI
 - **E2E Android:** Maestro (run locally before release; CI integration post-MVP)
 - **Desktop validation:** `npm run tauri:dev` locally — no automated desktop E2E in CI (deferred until Epic 2+ user flows exist)
 - Platform-specific code (Capacitor, Tauri plugins) must be mocked in Vitest/jsdom
@@ -317,77 +316,6 @@ git checkout -b fix/<short-description>
 git add <changed files>
 git commit -m "feat|fix|chore(<scope>): <short description>"
 ```
-
----
-
-## Beads Workflow
-
-This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
-
-### Session Start
-
-1. `bd ready --json` — get the prioritized work queue (unblocked issues)
-2. `bd update <id> --claim` — claim the task before starting
-
-### Mid-Session Discovery
-
-When you discover new work during implementation:
-
-```bash
-bd create "Issue title" --description="Detailed context" -t bug|feature|task -p 0-4 --json
-bd create "Found bug" --description="Details" -p 1 --deps discovered-from:<parent-id> --json
-```
-
-### Issue Types & Priorities
-
-| Type | Use for |
-|---|---|
-| `bug` | Something broken |
-| `feature` | New functionality |
-| `task` | Work item (tests, docs, refactoring) |
-| `epic` | Large feature with subtasks |
-| `chore` | Maintenance (dependencies, tooling) |
-
-| Priority | Meaning |
-|---|---|
-| `0` | Critical (security, data loss, broken builds) |
-| `1` | High (major features, important bugs) |
-| `2` | Medium (default) |
-| `3` | Low (polish, optimization) |
-| `4` | Backlog (future ideas) |
-
-### Landing the Plane (Session End)
-
-**When ending a work session**, complete ALL steps. Work is NOT complete until `git push` succeeds.
-
-1. **Close completed issues** — `bd close <id> --reason "Done"`
-2. **File remaining work** — create issues for anything that needs follow-up
-3. **Run quality gates** (if code changed) — tests, linters, builds
-4. **Sync and push:**
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Verify** — all changes committed AND pushed
-
-**Critical:** unpushed work blocks other agents. Never stop before pushing.
-
-### Auto-Sync
-
-bd automatically syncs with git:
-- Exports to `.beads/issues.jsonl` after changes (5s debounce)
-- Imports from JSONL when newer (e.g., after `git pull`)
-
-### Rules
-
-- Always use `--json` flag for programmatic use
-- Link discovered work with `discovered-from` dependencies
-- Check `bd ready` before asking "what should I work on?"
-- Do NOT create markdown TODO lists or use external issue trackers
-
----
 
 ## Dev Setup
 

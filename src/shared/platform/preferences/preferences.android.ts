@@ -2,7 +2,7 @@ import { ok, err } from 'neverthrow'
 import type { PreferencesAdapter } from './preferences.interface'
 import type { AsyncResult } from '../../lib/types'
 
-export function createWebPreferencesAdapter(): PreferencesAdapter {
+export function createAndroidPreferencesAdapter(): PreferencesAdapter {
   return {
     async get(key: string): AsyncResult<string> {
       const value = localStorage.getItem(key)
