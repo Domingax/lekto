@@ -296,6 +296,7 @@ so that the codebase reflects the actual two-platform architecture (Tauri + Capa
 - [ ] [AI-Review][Medium] Disable Confirm on desktop while `selectedPath === ''` to prevent the race where a fast click triggers `initVaultDesktop('')` (which would call `mkdir('/books')` at filesystem root) [src/pages/vault-setup-page/ui/VaultSetupPage.tsx:49-62, 84-86]
 - [ ] [AI-Review][Low] Remove empty `src/features/sync-vault/lib/` directory left behind after `handle-store.{ts,test.ts}` deletion [src/features/sync-vault/lib/]
 - [ ] [AI-Review][Low] Distinguish cancel vs real failure in `pickDirectory()` desktop adapter, then surface real errors in `handleModify` (currently both collapse into a swallowed `'cancelled or failed'`) [src/shared/platform/file-picker/file-picker.desktop.ts:23-25,33-35; src/pages/vault-setup-page/ui/VaultSetupPage.tsx:40-47]
+- [ ] [AI-Review][Low] Update story File List to include files added/modified by post-review fix commits: `src/App.tsx`, `src/app/App.test.tsx`, `src/shared/db/index.ts`, `src/shared/db/index.test.ts`, `src/shared/db/migrate.ts`, `src/shared/db/migrate.test.ts`, `src/shared/platform/filesystem/filesystem.android.ts`, `src/shared/platform/filesystem/filesystem.android.test.ts`
 
 ## Dev Notes
 
