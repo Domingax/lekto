@@ -27,6 +27,39 @@ export async function initDbForNewVault(vaultPath: string): Promise<Result<Drizz
   }
 }
 
+export async function importAndroidVaultDb(vaultPath: string): Promise<Result<DrizzleDb, string>> {
+  _db = null;
+  try {
+    const { Filesystem } = await import('@capacitor/filesystem');
+    const { CapacitorSQLite, SQLiteConnection } = await import('@capacitor-community/sqlite');
+    const sqlite = new SQLiteConnection(CapacitorSQLite);
+
+    // Read the binary DB from the external vault path (absolute path, no directory)
+    const fileResult = await Filesystem.readFile({ path: `${vaultPath}/lekto.db` });
+    const base64Data =
+      typeof fileResult.data === 'string'
+        ? fileResult.data
+        : await (fileResult.data as Blob).text();
+
+    // Close existing connections and delete internal DB if present
+    const isDbResult = await sqlite.isDatabase('lekto');
+    if (isDbResult.result) {
+      await sqlite.closeAllConnections();
+      await sqlite.deleteDatabase('lekto');
+    }
+
+    // Write binary DB to internal SQLite storage path used by @capacitor-community/sqlite
+    // Android internal databases dir: /data/user/0/com.lekto.app/databases/lektoSQLite.db
+    await Filesystem.writeFile({ path: '/data/user/0/com.lekto.app/databases/lektoSQLite.db', data: base64Data });
+
+    // Reinitialize the Android DB connection
+    _db = await createAndroidDb();
+    return ok(_db);
+  } catch (e) {
+    return err(e instanceof Error ? e.message : String(e));
+  }
+}
+
 async function createDesktopDb(vaultPath: string): Promise<DrizzleDb> {
   const { default: Database } = await import("@tauri-apps/plugin-sql");
   const db = await Database.load(`sqlite:${vaultPath}/lekto.db`);

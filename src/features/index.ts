@@ -6,4 +6,6 @@ export {
   isVaultConfigured,
   initVault,
   initVaultDesktop,
+  openExistingVaultDesktop,
+  openExistingVaultAndroid,
 } from './sync-vault'
