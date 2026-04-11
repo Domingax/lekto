@@ -34,7 +34,7 @@ export async function importAndroidVaultDb(vaultPath: string): Promise<Result<Dr
     const { CapacitorSQLite, SQLiteConnection } = await import('@capacitor-community/sqlite');
     const sqlite = new SQLiteConnection(CapacitorSQLite);
 
-    // Read the binary DB from the external vault path (absolute path, no directory)
+    // Read the binary DB from the external vault path (absolute path, no directory option)
     const fileResult = await Filesystem.readFile({ path: `${vaultPath}/lekto.db` });
     const base64Data =
       typeof fileResult.data === 'string'
@@ -45,7 +45,7 @@ export async function importAndroidVaultDb(vaultPath: string): Promise<Result<Dr
     const isDbResult = await sqlite.isDatabase('lekto');
     if (isDbResult.result) {
       await sqlite.closeAllConnections();
-      await sqlite.deleteDatabase('lekto');
+      await CapacitorSQLite.deleteDatabase({ database: 'lekto' });
     }
 
     // Write binary DB to internal SQLite storage path used by @capacitor-community/sqlite
