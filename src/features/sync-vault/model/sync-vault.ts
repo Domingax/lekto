@@ -4,7 +4,7 @@ import { useVaultStore } from '../../../shared/stores'
 import type { AsyncResult } from '../../../shared/lib/types'
 import { VAULT_PATH_KEY } from '../../../shared/lib'
 export { VAULT_PATH_KEY } from '../../../shared/lib'
-import { initDbForNewVault, importAndroidVaultDb, runMigrations, seedLanguages } from '@/shared/db'
+import { initDbForNewVault, importAndroidVaultDb, runMigrations, resetDb, seedLanguages } from '@/shared/db'
 export const DEFAULT_ANDROID_PATH = 'lekto-vault'
 export const DESKTOP_DEFAULT_VAULT_NAME = 'lekto-vault'
 
@@ -69,6 +69,56 @@ export async function openExistingVaultAndroid(vaultPath: string): AsyncResult<v
     return ok(undefined)
   } catch (e) {
     return err(`Failed to open existing vault (Android): ${e}`)
+  }
+}
+
+export async function relocateVaultDesktop(newVaultPath: string): AsyncResult<void> {
+  const currentVaultPath = useVaultStore.getState().vaultPath
+  if (!currentVaultPath) return err('No active vault to relocate')
+
+  try {
+    const mkResult = await filesystemAdapter.mkdir(`${newVaultPath}/books`)
+    if (mkResult.isErr()) return err(mkResult.error)
+
+    const readdirResult = await filesystemAdapter.readdir(`${currentVaultPath}/books`)
+    if (readdirResult.isErr()) return err(readdirResult.error)
+
+    for (const filename of readdirResult.value) {
+      const copyResult = await filesystemAdapter.copyFile(
+        `${currentVaultPath}/books/${filename}`,
+        `${newVaultPath}/books/${filename}`,
+      )
+      if (copyResult.isErr()) return err(copyResult.error)
+    }
+
+    // Reset before copying DB — connection must be closed before the file is accessed
+    resetDb()
+
+    const copyDbResult = await filesystemAdapter.copyFile(
+      `${currentVaultPath}/lekto.db`,
+      `${newVaultPath}/lekto.db`,
+    )
+    if (copyDbResult.isErr()) {
+      await initDbForNewVault(currentVaultPath) // best-effort restore
+      return err(copyDbResult.error)
+    }
+
+    const dbResult = await initDbForNewVault(newVaultPath)
+    if (dbResult.isErr()) {
+      await initDbForNewVault(currentVaultPath) // best-effort restore
+      return err(`DB init at new location failed: ${dbResult.error}`)
+    }
+
+    const migrationsResult = await runMigrations()
+    if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
+
+    const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, newVaultPath)
+    if (setResult.isErr()) return err(setResult.error)
+
+    useVaultStore.getState().setVaultPath(newVaultPath)
+    return ok(undefined)
+  } catch (e) {
+    return err(`Failed to relocate vault: ${e}`)
   }
 }
 
