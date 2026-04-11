@@ -5,6 +5,7 @@ import {
   mkdir,
   readDir,
   exists,
+  copyFile as tauriCopyFile,
 } from '@tauri-apps/plugin-fs'
 import { ok, err } from 'neverthrow'
 import type { FilesystemAdapter } from './filesystem.interface'
@@ -64,6 +65,15 @@ export function createDesktopFilesystemAdapter(): FilesystemAdapter {
         return ok(result)
       } catch {
         return ok(false)
+      }
+    },
+
+    async copyFile(src: string, dest: string): AsyncResult<void> {
+      try {
+        await tauriCopyFile(src, dest)
+        return ok(undefined)
+      } catch {
+        return err(`Failed to copy file: ${src} → ${dest}`)
       }
     },
   }

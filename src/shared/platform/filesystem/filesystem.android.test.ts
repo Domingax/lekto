@@ -9,6 +9,7 @@ vi.mock('@capacitor/filesystem', () => ({
     mkdir: vi.fn(),
     readdir: vi.fn(),
     stat: vi.fn(),
+    copy: vi.fn(),
   },
   Directory: {
     Documents: 'DOCUMENTS',
@@ -30,6 +31,7 @@ describe('FilesystemAdapter (android)', () => {
     vi.mocked(Filesystem.mkdir).mockResolvedValue({ uri: 'file://dir/' } as never)
     vi.mocked(Filesystem.readdir).mockResolvedValue({ files: [{ name: 'a.txt', type: 'file', size: 0, mtime: 0, uri: '', ctime: 0 }] } as never)
     vi.mocked(Filesystem.stat).mockResolvedValue({ size: 1, type: 'file', mtime: 0, uri: 'file://test.txt', ctime: 0 } as never)
+    vi.mocked(Filesystem.copy).mockResolvedValue({ uri: 'file://dest.db' } as never)
 
     const { createAndroidFilesystemAdapter } = await import('./filesystem.android')
     adapter = createAndroidFilesystemAdapter()
@@ -101,6 +103,18 @@ describe('FilesystemAdapter (android)', () => {
     const { Filesystem } = await import('@capacitor/filesystem')
     vi.mocked(Filesystem.stat).mockRejectedValue(new Error('Permission denied'))
     const result = await adapter.exists('protected.txt')
+    expect(result.isErr()).toBe(true)
+  })
+
+  it('copyFile returns ok on success', async () => {
+    const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('copyFile returns err when Capacitor throws', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    vi.mocked(Filesystem.copy).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
     expect(result.isErr()).toBe(true)
   })
 })
