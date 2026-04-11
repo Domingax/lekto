@@ -119,4 +119,11 @@ The desktop platform adapters (filesystem, file-picker, secure-storage, preferen
 3. Create a vault → confirm navigation to the library screen
 4. Quit and relaunch → app should reopen directly on the library screen (vault path persisted via `preferencesAdapter`)
 
+**Smoke test — open existing vault:**
+
+1. `npm run tauri:dev` (delete the `preferences` store to simulate first launch if needed)
+2. On the vault setup screen, click **"Open existing vault"**
+3. A native folder picker opens; select a folder that contains a `lekto.db` file → confirm navigation to the library screen with all previous data
+4. Select a folder without `lekto.db` → confirm the inline error "This folder does not contain a valid Lekto vault" is shown and the screen stays open
+
 If any of these steps fail, the most likely culprits are the filesystem adapter (vault path resolution) or the secure-storage adapter (GNOME Keyring not available).
