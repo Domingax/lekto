@@ -8,6 +8,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   mkdir: vi.fn(),
   readDir: vi.fn(),
   exists: vi.fn(),
+  copyFile: vi.fn(),
 }))
 
 describe('FilesystemAdapter (desktop)', () => {
@@ -22,6 +23,7 @@ describe('FilesystemAdapter (desktop)', () => {
     vi.mocked(fs.mkdir).mockResolvedValue(undefined)
     vi.mocked(fs.readDir).mockResolvedValue([{ name: 'a.txt' }, { name: 'b.txt' }] as never)
     vi.mocked(fs.exists).mockResolvedValue(true)
+    vi.mocked(fs.copyFile).mockResolvedValue(undefined)
 
     const { createDesktopFilesystemAdapter } = await import('./filesystem.desktop')
     adapter = createDesktopFilesystemAdapter()
@@ -120,5 +122,17 @@ describe('FilesystemAdapter (desktop)', () => {
     const result = await adapter.exists('test.txt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value).toBe(false)
+  })
+
+  it('copyFile returns ok on success', async () => {
+    const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('copyFile returns err when plugin throws', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    vi.mocked(fs.copyFile).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
+    expect(result.isErr()).toBe(true)
   })
 })
