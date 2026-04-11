@@ -74,8 +74,15 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       try {
         await Filesystem.stat({ path, directory: BASE_DIR })
         return ok(true)
-      } catch {
-        return ok(false)
+      } catch (e) {
+        const msg = e != null && typeof e === 'object' && 'message' in e ? String(e.message) : ''
+        const isNotFound =
+          msg.toLowerCase().includes('not found') ||
+          msg.includes('does not exist') ||
+          msg.includes('ENOENT') ||
+          msg.includes('No such file')
+        if (isNotFound) return ok(false)
+        return err(`Failed to check file existence: ${path}`)
       }
     },
   }

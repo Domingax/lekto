@@ -5,6 +5,8 @@ export { secureStorageAdapter } from './secure-storage'
 export { filePickerAdapter } from './file-picker'
 export { inAppBrowserAdapter } from './in-app-browser'
 export { preferencesAdapter } from './preferences'
+export { vaultDbAdapter } from './vault-db'
+export type { VaultDbAdapter } from './vault-db'
 
 export type { FilesystemAdapter } from './filesystem'
 export type { TtsAdapter } from './tts'

@@ -89,11 +89,18 @@ describe('FilesystemAdapter (android)', () => {
     if (result.isOk()) expect(result.value).toBe(true)
   })
 
-  it('exists returns ok(false) when stat throws', async () => {
+  it('exists returns ok(false) when stat throws a not-found error', async () => {
     const { Filesystem } = await import('@capacitor/filesystem')
-    vi.mocked(Filesystem.stat).mockRejectedValue(new Error('not found'))
+    vi.mocked(Filesystem.stat).mockRejectedValue(new Error('File does not exist'))
     const result = await adapter.exists('missing.txt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value).toBe(false)
+  })
+
+  it('exists returns err when stat throws a genuine error (not file-not-found)', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    vi.mocked(Filesystem.stat).mockRejectedValue(new Error('Permission denied'))
+    const result = await adapter.exists('protected.txt')
+    expect(result.isErr()).toBe(true)
   })
 })

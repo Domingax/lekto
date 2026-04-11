@@ -3,13 +3,11 @@ import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { ok, err } from "neverthrow";
 import type { Result } from "neverthrow";
-import { isTauri, preferencesAdapter } from "@/shared/platform";
+import { isTauri, preferencesAdapter, vaultDbAdapter } from "@/shared/platform";
+import { VAULT_PATH_KEY } from "@/shared/lib";
 import * as schema from "./schema";
 
 export type DrizzleDb = SqliteRemoteDatabase<typeof schema>;
-
-// Must match VAULT_PATH_KEY in features/sync-vault
-const VAULT_PATH_KEY = "vault_path";
 
 let _db: DrizzleDb | null = null;
 
@@ -22,6 +20,18 @@ export async function initDbForNewVault(vaultPath: string): Promise<Result<Drizz
   try {
     _db = await createDesktopDb(vaultPath);
     return ok(_db);
+  } catch (e) {
+    return err(e instanceof Error ? e.message : String(e));
+  }
+}
+
+export async function importAndroidVaultDb(vaultPath: string): Promise<Result<void, string>> {
+  _db = null;
+  const replaceResult = await vaultDbAdapter.replaceVaultDb(vaultPath);
+  if (replaceResult.isErr()) return err(replaceResult.error);
+  try {
+    _db = await createAndroidDb();
+    return ok(undefined);
   } catch (e) {
     return err(e instanceof Error ? e.message : String(e));
   }

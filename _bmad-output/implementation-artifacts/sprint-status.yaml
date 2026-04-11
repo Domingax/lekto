@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-05
-last_updated: 2026-04-11
+last_updated: 2026-04-11  # 2-2-open-existing-vault → review (code review findings addressed)
 
 project: lekto
 project_key: NOKEY
@@ -61,10 +61,10 @@ development_status:
   epic-8-retrospective: done
 
   # Epic 2: Vault & First Launch
-  epic-2: backlog
+  epic-2: in-progress
   2-1-vault-setup-screen-and-create-new-vault: done
   2-1-desktop-vault-setup-and-web-cleanup: done
-  2-2-open-existing-vault: backlog
+  2-2-open-existing-vault: review
   2-3-vault-relocation-from-settings: backlog
   epic-2-retrospective: optional
 

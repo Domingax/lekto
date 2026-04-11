@@ -6,11 +6,13 @@ import { filePickerAdapter, isTauri } from '../../../shared/platform'
 import {
   initVault,
   initVaultDesktop,
+  openExistingVaultDesktop,
+  openExistingVaultAndroid,
   DESKTOP_DEFAULT_VAULT_NAME,
   DEFAULT_ANDROID_PATH,
 } from '../../../features'
 
-type FlowState = 'idle' | 'create' | 'creating'
+type FlowState = 'idle' | 'create' | 'creating' | 'opening'
 
 export function VaultSetupPage() {
   const isDesktop = isTauri()
@@ -53,6 +55,28 @@ export function VaultSetupPage() {
     }
   }
 
+  async function handleOpenPick() {
+    setError(null)
+    const result = await filePickerAdapter.pickDirectory()
+    if (result.isOk()) {
+      setFlowState('opening')
+      const openResult = isDesktop
+        ? await openExistingVaultDesktop(result.value)
+        : await openExistingVaultAndroid(result.value)
+      if (openResult.isOk()) {
+        navigate('/library')
+      } else {
+        setError(openResult.error)
+        setFlowState('idle')
+      }
+    } else {
+      if (isDesktop && result.error !== 'cancelled') {
+        setError(result.error)
+      }
+      setFlowState('idle')
+    }
+  }
+
   async function handleConfirm() {
     if (flowState === 'creating') return
     setError(null)
@@ -68,14 +92,22 @@ export function VaultSetupPage() {
     }
   }
 
-  if (flowState === 'idle') {
+  if (flowState === 'idle' || flowState === 'opening') {
     return (
       <div>
         <h1>Set up your vault</h1>
-        <Button onClick={() => setFlowState('create')}>Create new vault</Button>
-        <Button variant="outline" disabled>
-          Open existing vault
+        {error && <p role="alert">{error}</p>}
+        <Button onClick={() => setFlowState('create')} disabled={flowState === 'opening'}>
+          Create new vault
         </Button>
+        <Button
+          variant="outline"
+          onClick={handleOpenPick}
+          disabled={flowState === 'opening'}
+        >
+          {flowState === 'opening' ? 'Opening…' : 'Open existing vault'}
+        </Button>
+        {flowState === 'opening' && <p>Opening vault…</p>}
       </div>
     )
   }

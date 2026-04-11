@@ -12,6 +12,8 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../../../features', () => ({
   initVault: vi.fn(),
   initVaultDesktop: vi.fn(),
+  openExistingVaultDesktop: vi.fn(),
+  openExistingVaultAndroid: vi.fn(),
   DESKTOP_DEFAULT_VAULT_NAME: 'lekto-vault',
   DEFAULT_ANDROID_PATH: 'lekto-vault',
 }))
@@ -28,7 +30,7 @@ vi.mock('@tauri-apps/api/path', () => ({
 }))
 
 import { VaultSetupPage } from './VaultSetupPage'
-import { initVault, initVaultDesktop } from '../../../features'
+import { initVault, initVaultDesktop, openExistingVaultDesktop, openExistingVaultAndroid } from '../../../features'
 import { isTauri, filePickerAdapter } from '../../../shared/platform'
 import { documentDir } from '@tauri-apps/api/path'
 
@@ -50,11 +52,6 @@ describe('VaultSetupPage — Android', () => {
     renderPage()
     expect(screen.getByText('Create new vault')).toBeInTheDocument()
     expect(screen.getByText('Open existing vault')).toBeInTheDocument()
-  })
-
-  it('"Open existing vault" is disabled', () => {
-    renderPage()
-    expect(screen.getByText('Open existing vault')).toBeDisabled()
   })
 
   it('clicking "Create new vault" shows confirm button', () => {
@@ -98,6 +95,43 @@ describe('VaultSetupPage — Android', () => {
     fireEvent.click(screen.getByText('Modify'))
     await waitFor(() => expect(screen.getByText(/\/custom\/path/)).toBeInTheDocument())
     expect(filePickerAdapter.pickDirectory).toHaveBeenCalled()
+  })
+
+  it('clicking "Open existing vault" triggers filePickerAdapter.pickDirectory', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(err('cancelled'))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() => expect(filePickerAdapter.pickDirectory).toHaveBeenCalled())
+  })
+
+  it('Android open: picker returns valid vault path → openExistingVaultAndroid called → navigates to /library', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok('/storage/emulated/0/Documents/my-vault'))
+    vi.mocked(openExistingVaultAndroid).mockResolvedValue(ok(undefined))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/library'))
+    expect(openExistingVaultAndroid).toHaveBeenCalledWith('/storage/emulated/0/Documents/my-vault')
+  })
+
+  it('Android open: invalid vault → openExistingVaultAndroid returns err → inline error shown, flow stays idle', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok('/storage/emulated/0/Documents/no-vault'))
+    vi.mocked(openExistingVaultAndroid).mockResolvedValue(err('This folder does not contain a valid Lekto vault'))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('This folder does not contain a valid Lekto vault'),
+    )
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(screen.getByText('Open existing vault')).toBeInTheDocument()
+  })
+
+  it('Android open: picker cancelled → no error shown, flow stays idle', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(err('cancelled'))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() => expect(filePickerAdapter.pickDirectory).toHaveBeenCalled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 })
 
@@ -190,5 +224,33 @@ describe('VaultSetupPage — Desktop (Tauri)', () => {
     fireEvent.click(screen.getByText('Modify'))
     await waitFor(() => expect(filePickerAdapter.pickDirectory).toHaveBeenCalled())
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('Desktop open: picker returns valid vault path → openExistingVaultDesktop called → navigates to /library', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok('/home/user/Documents/my-vault'))
+    vi.mocked(openExistingVaultDesktop).mockResolvedValue(ok(undefined))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/library'))
+    expect(openExistingVaultDesktop).toHaveBeenCalledWith('/home/user/Documents/my-vault')
+  })
+
+  it('Desktop open: openExistingVaultDesktop returns err → inline error shown', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok('/home/user/Documents/bad-vault'))
+    vi.mocked(openExistingVaultDesktop).mockResolvedValue(err('This folder does not contain a valid Lekto vault'))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('This folder does not contain a valid Lekto vault'),
+    )
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('Desktop open: picker returns real error (not cancelled) → inline error shown', async () => {
+    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(err('Permission denied'))
+    renderPage()
+    fireEvent.click(screen.getByText('Open existing vault'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Permission denied'))
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 })
