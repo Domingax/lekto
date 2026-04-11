@@ -42,8 +42,8 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(isTauri).mockReturnValue(false)
-  vi.mocked(useVaultStore).mockImplementation((selector: (s: unknown) => unknown) =>
-    selector({ vaultPath: VAULT_PATH }),
+  vi.mocked(useVaultStore).mockImplementation(
+    ((selector: (s: unknown) => unknown) => selector({ vaultPath: VAULT_PATH })) as never,
   )
 })
 
