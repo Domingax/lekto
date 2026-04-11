@@ -3,13 +3,11 @@ import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { ok, err } from "neverthrow";
 import type { Result } from "neverthrow";
-import { isTauri, preferencesAdapter } from "@/shared/platform";
+import { isTauri, preferencesAdapter, vaultDbAdapter } from "@/shared/platform";
+import { VAULT_PATH_KEY } from "@/shared/lib";
 import * as schema from "./schema";
 
 export type DrizzleDb = SqliteRemoteDatabase<typeof schema>;
-
-// Must match VAULT_PATH_KEY in features/sync-vault
-const VAULT_PATH_KEY = "vault_path";
 
 let _db: DrizzleDb | null = null;
 
@@ -27,34 +25,13 @@ export async function initDbForNewVault(vaultPath: string): Promise<Result<Drizz
   }
 }
 
-export async function importAndroidVaultDb(vaultPath: string): Promise<Result<DrizzleDb, string>> {
+export async function importAndroidVaultDb(vaultPath: string): Promise<Result<void, string>> {
   _db = null;
+  const replaceResult = await vaultDbAdapter.replaceVaultDb(vaultPath);
+  if (replaceResult.isErr()) return err(replaceResult.error);
   try {
-    const { Filesystem } = await import('@capacitor/filesystem');
-    const { CapacitorSQLite, SQLiteConnection } = await import('@capacitor-community/sqlite');
-    const sqlite = new SQLiteConnection(CapacitorSQLite);
-
-    // Read the binary DB from the external vault path (absolute path, no directory option)
-    const fileResult = await Filesystem.readFile({ path: `${vaultPath}/lekto.db` });
-    const base64Data =
-      typeof fileResult.data === 'string'
-        ? fileResult.data
-        : await (fileResult.data as Blob).text();
-
-    // Close existing connections and delete internal DB if present
-    const isDbResult = await sqlite.isDatabase('lekto');
-    if (isDbResult.result) {
-      await sqlite.closeAllConnections();
-      await CapacitorSQLite.deleteDatabase({ database: 'lekto' });
-    }
-
-    // Write binary DB to internal SQLite storage path used by @capacitor-community/sqlite
-    // Android internal databases dir: /data/user/0/com.lekto.app/databases/lektoSQLite.db
-    await Filesystem.writeFile({ path: '/data/user/0/com.lekto.app/databases/lektoSQLite.db', data: base64Data });
-
-    // Reinitialize the Android DB connection
     _db = await createAndroidDb();
-    return ok(_db);
+    return ok(undefined);
   } catch (e) {
     return err(e instanceof Error ? e.message : String(e));
   }

@@ -258,10 +258,9 @@ describe('openExistingVaultAndroid', () => {
   const vaultPath = '/storage/emulated/0/Documents/my-vault'
 
   beforeEach(() => {
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
     vi.mocked(preferencesAdapter.set).mockResolvedValue(ok(undefined))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(importAndroidVaultDb).mockResolvedValue(ok({}) as any)
+    // importAndroidVaultDb now returns AsyncResult<void> (L2)
+    vi.mocked(importAndroidVaultDb).mockResolvedValue(ok(undefined))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(runMigrations).mockResolvedValue(ok(undefined) as any)
   })
@@ -270,23 +269,44 @@ describe('openExistingVaultAndroid', () => {
     const result = await openExistingVaultAndroid(vaultPath)
 
     expect(result.isOk()).toBe(true)
-    expect(filesystemAdapter.exists).toHaveBeenCalledWith(`${vaultPath}/lekto.db`)
+    // Existence is validated inside importAndroidVaultDb — no separate exists() call (H1)
+    expect(filesystemAdapter.exists).not.toHaveBeenCalled()
     expect(importAndroidVaultDb).toHaveBeenCalledWith(vaultPath)
     expect(runMigrations).toHaveBeenCalled()
     expect(preferencesAdapter.set).toHaveBeenCalledWith(VAULT_PATH_KEY, vaultPath)
     expect(mockSetVaultPath).toHaveBeenCalledWith(vaultPath)
   })
 
-  it('lekto.db NOT found — returns vault error, no side effects', async () => {
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+  it('lekto.db NOT found — importAndroidVaultDb returns vault error, no further side effects', async () => {
+    vi.mocked(importAndroidVaultDb).mockResolvedValue(
+      err('This folder does not contain a valid Lekto vault'),
+    )
 
     const result = await openExistingVaultAndroid(vaultPath)
 
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toBe('This folder does not contain a valid Lekto vault')
-    expect(importAndroidVaultDb).not.toHaveBeenCalled()
     expect(runMigrations).not.toHaveBeenCalled()
     expect(preferencesAdapter.set).not.toHaveBeenCalled()
+    expect(mockSetVaultPath).not.toHaveBeenCalled()
+  })
+
+  it('returns err when runMigrations fails', async () => {
+    vi.mocked(runMigrations).mockResolvedValue(err('migration error'))
+
+    const result = await openExistingVaultAndroid(vaultPath)
+
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('DB migration failed')
+    expect(preferencesAdapter.set).not.toHaveBeenCalled()
+  })
+
+  it('returns err when preferences.set fails', async () => {
+    vi.mocked(preferencesAdapter.set).mockResolvedValue(err('storage full'))
+
+    const result = await openExistingVaultAndroid(vaultPath)
+
+    expect(result.isErr()).toBe(true)
     expect(mockSetVaultPath).not.toHaveBeenCalled()
   })
 })

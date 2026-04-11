@@ -12,7 +12,7 @@ import {
   DEFAULT_ANDROID_PATH,
 } from '../../../features'
 
-type FlowState = 'idle' | 'create' | 'creating' | 'open' | 'opening'
+type FlowState = 'idle' | 'create' | 'creating' | 'opening'
 
 export function VaultSetupPage() {
   const isDesktop = isTauri()

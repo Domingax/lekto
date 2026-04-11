@@ -2,9 +2,10 @@ import { ok, err } from 'neverthrow'
 import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
 import type { AsyncResult } from '../../../shared/lib/types'
+import { VAULT_PATH_KEY } from '../../../shared/lib'
 import { initDbForNewVault, importAndroidVaultDb, runMigrations, seedLanguages } from '@/shared/db'
 
-export const VAULT_PATH_KEY = 'vault_path'
+export { VAULT_PATH_KEY }
 export const DEFAULT_ANDROID_PATH = 'lekto-vault'
 export const DESKTOP_DEFAULT_VAULT_NAME = 'lekto-vault'
 
@@ -54,12 +55,10 @@ export async function openExistingVaultDesktop(vaultPath: string): AsyncResult<v
 
 export async function openExistingVaultAndroid(vaultPath: string): AsyncResult<void> {
   try {
-    const existsResult = await filesystemAdapter.exists(`${vaultPath}/lekto.db`)
-    if (existsResult.isErr()) return err(existsResult.error)
-    if (!existsResult.value) return err('This folder does not contain a valid Lekto vault')
-
+    // Existence is validated inside importAndroidVaultDb — the binary read
+    // will fail with the vault-invalid error if lekto.db is absent at vaultPath.
     const dbResult = await importAndroidVaultDb(vaultPath)
-    if (dbResult.isErr()) return err(`DB import failed: ${dbResult.error}`)
+    if (dbResult.isErr()) return err(dbResult.error)
 
     const migrationsResult = await runMigrations()
     if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
