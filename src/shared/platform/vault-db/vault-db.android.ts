@@ -50,7 +50,7 @@ export function createAndroidVaultDbAdapter(deps?: VaultDbDeps): VaultDbAdapter 
       const Filesystem = deps ? deps.filesystem : CapacitorFilesystem
       const sqlite: SqliteManager = deps
         ? deps.sqlite
-        : (new CapacitorSQLiteConnection(CapacitorSQLite) as SqliteManager)
+        : new CapacitorSQLiteConnection(CapacitorSQLite)
 
       // Step 1 — Read the vault binary.
       // Filesystem.readFile without `directory` treats path as absolute —
@@ -62,7 +62,7 @@ export function createAndroidVaultDbAdapter(deps?: VaultDbDeps): VaultDbAdapter 
         base64Data =
           typeof fileResult.data === 'string'
             ? fileResult.data
-            : await (fileResult.data as Blob).text()
+            : await fileResult.data.text()
       } catch {
         return err('This folder does not contain a valid Lekto vault')
       }

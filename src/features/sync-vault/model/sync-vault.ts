@@ -3,9 +3,8 @@ import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
 import type { AsyncResult } from '../../../shared/lib/types'
 import { VAULT_PATH_KEY } from '../../../shared/lib'
+export { VAULT_PATH_KEY } from '../../../shared/lib'
 import { initDbForNewVault, importAndroidVaultDb, runMigrations, seedLanguages } from '@/shared/db'
-
-export { VAULT_PATH_KEY }
 export const DEFAULT_ANDROID_PATH = 'lekto-vault'
 export const DESKTOP_DEFAULT_VAULT_NAME = 'lekto-vault'
 
