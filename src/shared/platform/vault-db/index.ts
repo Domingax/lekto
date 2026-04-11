@@ -1,4 +1,5 @@
 import { createAndroidVaultDbAdapter } from './vault-db.android'
+import type { VaultDbAdapter } from './vault-db.android'
 
 export type { VaultDbAdapter, VaultDbDeps } from './vault-db.android'
 
