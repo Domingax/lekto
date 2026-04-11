@@ -15,6 +15,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `project_name`, `user_name`
 - `communication_language`
 
+### Project Conventions
+
+<action>Read `{project-root}/AGENTS.md` in full before starting any review phase.
+  This file is the authoritative reference for all project conventions:
+  error handling patterns, naming rules, FSD architecture, TDD protocol, commit format, etc.
+  Pass it as context to `/bmad-code-review` so findings include AGENTS.md violations.</action>
+
 ### Inputs
 
 - `story_path` = `` (explicit story path; auto-discovered if empty)
@@ -63,7 +70,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <check if="bmad-code-review fails or HALTs">
       <action>HALT pipeline — surface the error</action>
-      <action>Send desktop notification: `notify-send "Letko Pipeline" "❌ Code review failed — action needed"`</action>
+      <action>Send desktop notification: `notify-send "Lekto Pipeline" "❌ Code review failed — action needed"`</action>
     </check>
 
     <output>✅ **Phase 1 complete** — Code review done: {{review_verdict}}</output>
@@ -130,7 +137,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <!-- Notify user -->
     <check if="review_verdict == 'APPROVED'">
-      <action>Run: `notify-send -u normal "Letko Pipeline ✅" "Story {{story_key}} — PR approved and ready for your review\n{{pr_url}}"`</action>
+      <action>Run: `notify-send -u normal "Lekto Pipeline ✅" "Story {{story_key}} — PR approved and ready for your review\n{{pr_url}}"`</action>
       <output>
         🎉 **Review Complete — APPROVED**
 
@@ -145,7 +152,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     </check>
 
     <check if="review_verdict == 'CHANGES REQUESTED'">
-      <action>Run: `notify-send -u critical "Letko Pipeline ⚠️" "Story {{story_key}} — Changes requested\n{{pr_url}}"`</action>
+      <action>Run: `notify-send -u critical "Lekto Pipeline ⚠️" "Story {{story_key}} — Changes requested\n{{pr_url}}"`</action>
       <output>
         ⚠️ **Review Complete — CHANGES REQUESTED**
 

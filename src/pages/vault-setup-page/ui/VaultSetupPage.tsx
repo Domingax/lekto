@@ -26,17 +26,18 @@ export function VaultSetupPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (isDesktop) {
-      documentDir()
-        .then((dir) => {
-          const defaultPath = `${dir}/${DESKTOP_DEFAULT_VAULT_NAME}`
-          setSelectedPath(defaultPath)
-          setSelectedLabel(defaultPath)
-        })
-        .catch(() => {
-          setSelectedLabel('Could not resolve default location — use Modify to choose manually')
-        })
+    if (!isDesktop) return
+    async function resolveDefaultPath() {
+      try {
+        const dir = await documentDir()
+        const defaultPath = `${dir}/${DESKTOP_DEFAULT_VAULT_NAME}`
+        setSelectedPath(defaultPath)
+        setSelectedLabel(defaultPath)
+      } catch {
+        setSelectedLabel('Could not resolve default location — use Modify to choose manually')
+      }
     }
+    void resolveDefaultPath()
     // isDesktop is a stable platform flag — intentionally omitted from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
