@@ -8,4 +8,5 @@ export {
   initVaultDesktop,
   openExistingVaultDesktop,
   openExistingVaultAndroid,
+  relocateVaultDesktop,
 } from './model/sync-vault'
