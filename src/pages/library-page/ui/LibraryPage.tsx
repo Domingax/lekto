@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { filePickerAdapter } from '@/shared/platform'
 import { importBook } from '@/features/import-book'
 import { useVaultStore } from '@/shared/stores'
+import { getDb, schema } from '@/shared/db'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,16 @@ const SEED_LANGUAGES = [
 
 export function LibraryPage() {
   const books = useVaultStore((s) => s.books)
+
+  useEffect(() => {
+    try {
+      getDb().select().from(schema.books).then((rows) => {
+        useVaultStore.getState().setBooks(rows)
+      }).catch(() => { /* DB not ready yet — vault not configured */ })
+    } catch {
+      // DB not initialized — vault not configured yet
+    }
+  }, [])
 
   const [isImporting, setIsImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
