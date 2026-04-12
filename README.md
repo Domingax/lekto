@@ -127,3 +127,11 @@ The desktop platform adapters (filesystem, file-picker, secure-storage, preferen
 4. Select a folder without `lekto.db` → confirm the inline error "This folder does not contain a valid Lekto vault" is shown and the screen stays open
 
 If any of these steps fail, the most likely culprits are the filesystem adapter (vault path resolution) or the secure-storage adapter (GNOME Keyring not available).
+
+**Smoke test — EPUB import (story 3-1):**
+
+1. `npm run tauri:dev` (vault already configured)
+2. On the library screen, click **"Import EPUB"**
+3. Select a valid `.epub` file → confirm the language detection dialog appears
+4. Confirm the language → book should appear in the library list with title, language code, and "0%"
+5. Relaunch the app → the imported book should still appear (persisted in `lekto.db`)
