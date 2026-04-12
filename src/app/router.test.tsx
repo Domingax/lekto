@@ -50,3 +50,16 @@ describe('libraryLoader', () => {
     expect(result).toBeNull()
   })
 })
+
+// /settings uses libraryLoader — same vault-guard behaviour
+describe('/settings route (via libraryLoader)', () => {
+  it('redirects to /vault-setup when no vault configured', () => {
+    mockStore({ vaultPath: null })
+    expect(libraryLoader()).toEqual(redirect('/vault-setup'))
+  })
+
+  it('allows access when vault is configured', () => {
+    mockStore({ vaultPath: '/some/vault' })
+    expect(libraryLoader()).toBeNull()
+  })
+})

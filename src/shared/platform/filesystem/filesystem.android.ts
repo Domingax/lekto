@@ -85,5 +85,14 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
         return err(`Failed to check file existence: ${path}`)
       }
     },
+
+    async copyFile(src: string, dest: string): AsyncResult<void> {
+      try {
+        await Filesystem.copy({ from: src, to: dest })
+        return ok(undefined)
+      } catch {
+        return err(`Failed to copy file: ${src} → ${dest}`)
+      }
+    },
   }
 }

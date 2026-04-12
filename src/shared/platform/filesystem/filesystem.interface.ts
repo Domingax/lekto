@@ -7,4 +7,5 @@ export interface FilesystemAdapter {
   mkdir(path: string): AsyncResult<void>
   readdir(path: string): AsyncResult<string[]>
   exists(path: string): AsyncResult<boolean>
+  copyFile(src: string, dest: string): AsyncResult<void>
 }
