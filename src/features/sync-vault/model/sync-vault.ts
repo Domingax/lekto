@@ -110,7 +110,10 @@ export async function relocateVaultDesktop(newVaultPath: string): AsyncResult<vo
     }
 
     const migrationsResult = await runMigrations()
-    if (migrationsResult.isErr()) return err(`DB migration failed: ${migrationsResult.error}`)
+    if (migrationsResult.isErr()) {
+      await initDbForNewVault(currentVaultPath) // best-effort restore
+      return err(`DB migration failed: ${migrationsResult.error}`)
+    }
 
     const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, newVaultPath)
     if (setResult.isErr()) return err(setResult.error)

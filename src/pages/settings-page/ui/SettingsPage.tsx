@@ -21,11 +21,14 @@ export function SettingsPage() {
     }
     const picked = result.value
     const existsResult = await filesystemAdapter.exists(`${picked}/lekto.db`)
-    if (existsResult.isOk() && existsResult.value) {
-      setPickedPath(picked)
+    if (existsResult.isErr()) {
+      setError(existsResult.error)
+      return
+    }
+    setPickedPath(picked)
+    if (existsResult.value) {
       setFlowState('confirm-switch')
     } else {
-      setPickedPath(picked)
       setFlowState('confirm-migrate')
     }
   }
@@ -39,6 +42,7 @@ export function SettingsPage() {
     setFlowState('migrating')
     const result = await relocateVaultDesktop(pickedPath)
     if (result.isOk()) {
+      setPickedPath('')
       setFlowState('idle')
     } else {
       setError(result.error)
@@ -52,6 +56,7 @@ export function SettingsPage() {
       ? await openExistingVaultDesktop(pickedPath)
       : await openExistingVaultAndroid(pickedPath)
     if (result.isOk()) {
+      setPickedPath('')
       setFlowState('idle')
     } else {
       setError(result.error)

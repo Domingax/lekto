@@ -29,6 +29,7 @@ vi.mock('@/shared/stores', () => ({
 import { filesystemAdapter, preferencesAdapter } from '@/shared/platform'
 import { initDbForNewVault, runMigrations, resetDb } from '@/shared/db'
 import { useVaultStore } from '@/shared/stores'
+import { VAULT_PATH_KEY } from '@/shared/lib'
 
 const CURRENT_PATH = '/current/vault'
 const NEW_PATH = '/new/vault'
@@ -73,7 +74,7 @@ describe('relocateVaultDesktop', () => {
       `${NEW_PATH}/lekto.db`,
     )
     expect(initDbForNewVault).toHaveBeenCalledWith(NEW_PATH)
-    expect(preferencesAdapter.set).toHaveBeenCalledWith('vault_path', NEW_PATH)
+    expect(preferencesAdapter.set).toHaveBeenCalledWith(VAULT_PATH_KEY, NEW_PATH)
   })
 
   it('returns err immediately when no active vault', async () => {
@@ -127,6 +128,18 @@ describe('relocateVaultDesktop', () => {
 
   it('returns err and restores original DB when initDbForNewVault at new path fails', async () => {
     vi.mocked(initDbForNewVault).mockResolvedValueOnce(err('db init failed'))
+    const { relocateVaultDesktop } = await import('./model/sync-vault')
+
+    const result = await relocateVaultDesktop(NEW_PATH)
+
+    expect(result.isErr()).toBe(true)
+    expect(initDbForNewVault).toHaveBeenCalledWith(NEW_PATH)
+    expect(initDbForNewVault).toHaveBeenCalledWith(CURRENT_PATH)
+    expect(setVaultPath).not.toHaveBeenCalled()
+  })
+
+  it('returns err and restores original DB when runMigrations fails', async () => {
+    vi.mocked(runMigrations).mockResolvedValueOnce(err('migration failed'))
     const { relocateVaultDesktop } = await import('./model/sync-vault')
 
     const result = await relocateVaultDesktop(NEW_PATH)
