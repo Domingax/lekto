@@ -117,4 +117,16 @@ describe('FilesystemAdapter (android)', () => {
     const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
     expect(result.isErr()).toBe(true)
   })
+
+  it('writeFileBinary returns ok on success', async () => {
+    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('writeFileBinary returns err when Capacitor throws', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    vi.mocked(Filesystem.writeFile).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isErr()).toBe(true)
+  })
 })

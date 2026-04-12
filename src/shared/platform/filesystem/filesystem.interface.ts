@@ -3,6 +3,7 @@ import type { AsyncResult } from '../../lib/types'
 export interface FilesystemAdapter {
   readFile(path: string): AsyncResult<string>
   writeFile(path: string, data: string): AsyncResult<void>
+  writeFileBinary(path: string, data: Uint8Array): AsyncResult<void>
   deleteFile(path: string): AsyncResult<void>
   mkdir(path: string): AsyncResult<void>
   readdir(path: string): AsyncResult<string[]>

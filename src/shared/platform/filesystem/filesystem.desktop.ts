@@ -1,6 +1,7 @@
 import {
   readTextFile,
   writeTextFile,
+  writeFile as tauriWriteFile,
   remove,
   mkdir,
   readDir,
@@ -28,6 +29,15 @@ export function createDesktopFilesystemAdapter(): FilesystemAdapter {
         return ok(undefined)
       } catch {
         return err(`Failed to write file: ${path}`)
+      }
+    },
+
+    async writeFileBinary(path: string, data: Uint8Array): AsyncResult<void> {
+      try {
+        await tauriWriteFile(path, data)
+        return ok(undefined)
+      } catch {
+        return err(`Failed to write binary file: ${path}`)
       }
     },
 

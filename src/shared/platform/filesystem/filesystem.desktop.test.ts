@@ -9,6 +9,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   readDir: vi.fn(),
   exists: vi.fn(),
   copyFile: vi.fn(),
+  writeFile: vi.fn(),
 }))
 
 describe('FilesystemAdapter (desktop)', () => {
@@ -24,6 +25,7 @@ describe('FilesystemAdapter (desktop)', () => {
     vi.mocked(fs.readDir).mockResolvedValue([{ name: 'a.txt' }, { name: 'b.txt' }] as never)
     vi.mocked(fs.exists).mockResolvedValue(true)
     vi.mocked(fs.copyFile).mockResolvedValue(undefined)
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
 
     const { createDesktopFilesystemAdapter } = await import('./filesystem.desktop')
     adapter = createDesktopFilesystemAdapter()
@@ -133,6 +135,18 @@ describe('FilesystemAdapter (desktop)', () => {
     const fs = await import('@tauri-apps/plugin-fs')
     vi.mocked(fs.copyFile).mockRejectedValue(new Error('permission denied'))
     const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
+    expect(result.isErr()).toBe(true)
+  })
+
+  it('writeFileBinary returns ok on success', async () => {
+    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('writeFileBinary returns err when plugin throws', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    vi.mocked(fs.writeFile).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
     expect(result.isErr()).toBe(true)
   })
 })

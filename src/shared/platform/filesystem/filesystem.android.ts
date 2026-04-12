@@ -39,6 +39,17 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       }
     },
 
+    async writeFileBinary(path: string, data: Uint8Array): AsyncResult<void> {
+      try {
+        let binary = ''
+        data.forEach((b) => (binary += String.fromCharCode(b)))
+        await Filesystem.writeFile({ path, data: btoa(binary), recursive: true })
+        return ok(undefined)
+      } catch {
+        return err(`Failed to write binary file: ${path}`)
+      }
+    },
+
     async deleteFile(path: string): AsyncResult<void> {
       try {
         await Filesystem.deleteFile({ path, directory: BASE_DIR })
