@@ -36,8 +36,9 @@ export function createDesktopFilesystemAdapter(): FilesystemAdapter {
       try {
         await tauriWriteFile(path, data)
         return ok(undefined)
-      } catch {
-        return err(`Failed to write binary file: ${path}`)
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e)
+        return err(`Failed to write binary file: ${path} — ${detail}`)
       }
     },
 
