@@ -11,10 +11,9 @@ vi.mock('./detect-language', () => ({
 }))
 
 vi.mock('@/shared/platform', () => ({
-  isTauri: vi.fn().mockReturnValue(true),
   filesystemAdapter: {
-    mkdir: vi.fn(),
-    writeFileBinary: vi.fn(),
+    mkdirInVault: vi.fn(),
+    writeFileBinaryToVault: vi.fn(),
   },
 }))
 
@@ -60,8 +59,8 @@ describe('importBook', () => {
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
     vi.mocked(detectLanguage).mockResolvedValue('en')
     mockResolveLanguage.mockResolvedValue('en')
-    vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
-    vi.mocked(filesystemAdapter.writeFileBinary).mockResolvedValue(ok(undefined))
+    vi.mocked(filesystemAdapter.mkdirInVault).mockResolvedValue(ok(undefined))
+    vi.mocked(filesystemAdapter.writeFileBinaryToVault).mockResolvedValue(ok(undefined))
 
     const mockInsert = vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
@@ -117,8 +116,8 @@ describe('importBook', () => {
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
     vi.mocked(detectLanguage).mockResolvedValue('en')
     mockResolveLanguage.mockResolvedValue('en')
-    vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
-    vi.mocked(filesystemAdapter.writeFileBinary).mockResolvedValue(err('Failed to write binary file'))
+    vi.mocked(filesystemAdapter.mkdirInVault).mockResolvedValue(ok(undefined))
+    vi.mocked(filesystemAdapter.writeFileBinaryToVault).mockResolvedValue(err('Failed to write binary file'))
 
     const { importBook } = await import('./import-book')
     const result = await importBook(mockData, mockFileName, mockResolveLanguage)

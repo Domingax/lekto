@@ -13,7 +13,7 @@ import type { FilesystemAdapter } from './filesystem.interface'
 import type { AsyncResult } from '../../lib/types'
 
 export function createDesktopFilesystemAdapter(): FilesystemAdapter {
-  return {
+  const desktopAdapter: FilesystemAdapter = {
     async readFile(path: string): AsyncResult<string> {
       try {
         const content = await readTextFile(path)
@@ -87,5 +87,14 @@ export function createDesktopFilesystemAdapter(): FilesystemAdapter {
         return err(`Failed to copy file: ${src} → ${dest}`)
       }
     },
+
+    async mkdirInVault(vaultPath: string, relativePath: string): AsyncResult<void> {
+      return desktopAdapter.mkdir(`${vaultPath}/${relativePath}`)
+    },
+
+    async writeFileBinaryToVault(vaultPath: string, relativePath: string, data: Uint8Array): AsyncResult<void> {
+      return desktopAdapter.writeFileBinary(`${vaultPath}/${relativePath}`, data)
+    },
   }
+  return desktopAdapter
 }

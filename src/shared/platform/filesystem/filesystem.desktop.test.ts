@@ -149,4 +149,18 @@ describe('FilesystemAdapter (desktop)', () => {
     const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
     expect(result.isErr()).toBe(true)
   })
+
+  it('mkdirInVault delegates to mkdir with combined path', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    const result = await adapter.mkdirInVault('/home/user/vault', 'books')
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(fs.mkdir)).toHaveBeenCalledWith('/home/user/vault/books', expect.any(Object))
+  })
+
+  it('writeFileBinaryToVault delegates to writeFileBinary with combined path', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    const result = await adapter.writeFileBinaryToVault('/home/user/vault', 'books/file.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(fs.writeFile)).toHaveBeenCalledWith('/home/user/vault/books/file.epub', expect.any(Uint8Array))
+  })
 })

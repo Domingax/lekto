@@ -1,12 +1,23 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { ok, err } from 'neverthrow'
+import { VaultFs } from './vault-fs.android'
 import type { FilesystemAdapter } from './filesystem.interface'
 import type { AsyncResult } from '../../lib/types'
 
 const BASE_DIR = Directory.Documents
 
+function isSafUri(path: string): boolean {
+  return path.startsWith('content://')
+}
+
+function uint8ToBase64(data: Uint8Array): string {
+  let binary = ''
+  data.forEach((b) => (binary += String.fromCharCode(b)))
+  return btoa(binary)
+}
+
 export function createAndroidFilesystemAdapter(): FilesystemAdapter {
-  return {
+  const adapter: FilesystemAdapter = {
     async readFile(path: string): AsyncResult<string> {
       try {
         const result = await Filesystem.readFile({
@@ -41,14 +52,38 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
 
     async writeFileBinary(path: string, data: Uint8Array): AsyncResult<void> {
       try {
-        let binary = ''
-        data.forEach((b) => (binary += String.fromCharCode(b)))
-        await Filesystem.writeFile({ path, data: btoa(binary), directory: BASE_DIR, recursive: true })
+        await Filesystem.writeFile({ path, data: uint8ToBase64(data), directory: BASE_DIR, recursive: true })
         return ok(undefined)
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e)
         return err(`Failed to write binary file: ${path} — ${detail}`)
       }
+    },
+
+    async mkdirInVault(vaultPath: string, relativePath: string): AsyncResult<void> {
+      if (isSafUri(vaultPath)) {
+        try {
+          await VaultFs.mkdir({ treeUri: vaultPath, path: relativePath })
+          return ok(undefined)
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e)
+          return err(`Failed to create vault directory: ${relativePath} — ${detail}`)
+        }
+      }
+      return adapter.mkdir(`${vaultPath}/${relativePath}`)
+    },
+
+    async writeFileBinaryToVault(vaultPath: string, relativePath: string, data: Uint8Array): AsyncResult<void> {
+      if (isSafUri(vaultPath)) {
+        try {
+          await VaultFs.writeFile({ treeUri: vaultPath, path: relativePath, data: uint8ToBase64(data) })
+          return ok(undefined)
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e)
+          return err(`Failed to write binary file to vault: ${relativePath} — ${detail}`)
+        }
+      }
+      return adapter.writeFileBinary(`${vaultPath}/${relativePath}`, data)
     },
 
     async deleteFile(path: string): AsyncResult<void> {
@@ -107,4 +142,5 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       }
     },
   }
+  return adapter
 }

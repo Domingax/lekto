@@ -9,4 +9,16 @@ export interface FilesystemAdapter {
   readdir(path: string): AsyncResult<string[]>
   exists(path: string): AsyncResult<boolean>
   copyFile(src: string, dest: string): AsyncResult<void>
+  /**
+   * Create a directory relative to a vault root.
+   * On Android, routes through the native VaultFs plugin when vaultPath is a SAF URI.
+   * On Desktop, equivalent to mkdir(`${vaultPath}/${relativePath}`).
+   */
+  mkdirInVault(vaultPath: string, relativePath: string): AsyncResult<void>
+  /**
+   * Write binary data to a path relative to a vault root.
+   * On Android, routes through the native VaultFs plugin when vaultPath is a SAF URI.
+   * On Desktop, equivalent to writeFileBinary(`${vaultPath}/${relativePath}`, data).
+   */
+  writeFileBinaryToVault(vaultPath: string, relativePath: string, data: Uint8Array): AsyncResult<void>
 }

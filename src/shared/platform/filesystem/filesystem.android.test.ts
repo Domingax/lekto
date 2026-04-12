@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { FilesystemAdapter } from './filesystem.interface'
 
+vi.mock('./vault-fs.android', () => ({
+  VaultFs: {
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+  },
+}))
+
 vi.mock('@capacitor/filesystem', () => ({
   Filesystem: {
     readFile: vi.fn(),
@@ -119,14 +126,55 @@ describe('FilesystemAdapter (android)', () => {
   })
 
   it('writeFileBinary returns ok on success', async () => {
-    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    const result = await adapter.writeFileBinary('books/test.epub', new Uint8Array([1, 2, 3]))
     expect(result.isOk()).toBe(true)
   })
 
   it('writeFileBinary returns err when Capacitor throws', async () => {
     const { Filesystem } = await import('@capacitor/filesystem')
     vi.mocked(Filesystem.writeFile).mockRejectedValue(new Error('permission denied'))
-    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    const result = await adapter.writeFileBinary('books/test.epub', new Uint8Array([1, 2, 3]))
     expect(result.isErr()).toBe(true)
+  })
+
+  it('mkdirInVault routes to VaultFs.mkdir for SAF content:// vault paths', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    const result = await adapter.mkdirInVault('content://com.android.externalstorage.documents/tree/primary%3Avault', 'books')
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(VaultFs.mkdir)).toHaveBeenCalledWith({
+      treeUri: 'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      path: 'books',
+    })
+  })
+
+  it('mkdirInVault uses Documents-relative mkdir for non-SAF paths', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    const result = await adapter.mkdirInVault('lekto-vault', 'books')
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(Filesystem.mkdir)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'lekto-vault/books' }),
+    )
+  })
+
+  it('writeFileBinaryToVault routes to VaultFs.writeFile for SAF content:// vault paths', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    const result = await adapter.writeFileBinaryToVault(
+      'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      'books/file.epub',
+      new Uint8Array([1, 2, 3]),
+    )
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(VaultFs.writeFile)).toHaveBeenCalledWith(
+      expect.objectContaining({ treeUri: 'content://com.android.externalstorage.documents/tree/primary%3Avault', path: 'books/file.epub' }),
+    )
+  })
+
+  it('writeFileBinaryToVault uses Documents-relative writeFileBinary for non-SAF paths', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    const result = await adapter.writeFileBinaryToVault('lekto-vault', 'books/file.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(Filesystem.writeFile)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'lekto-vault/books/file.epub' }),
+    )
   })
 })

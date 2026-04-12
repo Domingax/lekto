@@ -1,7 +1,7 @@
 import { ok, err } from 'neverthrow'
 import type { AsyncResult } from '@/shared/lib'
 import type { BookEntity } from '@/entities'
-import { filesystemAdapter, isTauri } from '@/shared/platform'
+import { filesystemAdapter } from '@/shared/platform'
 import { useVaultStore } from '@/shared/stores'
 import { getDb, schema } from '@/shared/db'
 import { parseEpub } from '../api/parse-epub'
@@ -28,19 +28,13 @@ export async function importBook(
   const language = await resolveLanguage(detectedCode)
   if (language === null) return err('Import cancelled')
 
-  // Step 4: ensure books/ directory exists, then save EPUB
-  // On Android, Capacitor Filesystem resolves paths relative to Directory.Documents —
-  // content:// vault URIs cannot be used for writeFile. Use a simple relative path.
+  // Step 4: ensure books/ directory exists, then save EPUB to vault.
+  // mkdirInVault / writeFileBinaryToVault handle platform differences transparently:
+  // on Android with a SAF content:// vault path they route to the native VaultFsPlugin.
   const vaultPath = useVaultStore.getState().vaultPath!
-  const booksDir = isTauri() ? `${vaultPath}/books` : 'books'
-  console.debug('[importBook] booksDir:', booksDir, 'vaultPath:', vaultPath)
-  const mkdirResult = await filesystemAdapter.mkdir(booksDir)
-  console.debug('[importBook] mkdir result:', mkdirResult)
+  const mkdirResult = await filesystemAdapter.mkdirInVault(vaultPath, 'books')
   if (mkdirResult.isErr()) return err(`Failed to create books directory: ${mkdirResult.error}`)
-  const destPath = `${booksDir}/${fileName}`
-  console.debug('[importBook] writeFileBinary:', destPath, 'size:', data.byteLength)
-  const saveResult = await filesystemAdapter.writeFileBinary(destPath, new Uint8Array(data))
-  console.debug('[importBook] writeFileBinary result:', saveResult)
+  const saveResult = await filesystemAdapter.writeFileBinaryToVault(vaultPath, `books/${fileName}`, new Uint8Array(data))
   if (saveResult.isErr()) return err(`Failed to save EPUB: ${saveResult.error}`)
 
   // Step 5: build row objects in memory
