@@ -22,7 +22,7 @@ export async function importBook(
 
   // Step 2: detect language
   const allText = parsedBook.sections.map((s) => s.text).join(' ')
-  const detectedCode = detectLanguage(allText)
+  const detectedCode = await detectLanguage(allText)
 
   // Step 3: resolve language via dialog callback
   const language = await resolveLanguage(detectedCode)

@@ -1,4 +1,3 @@
-import Epub from 'epubjs'
 import { ok, err } from 'neverthrow'
 import type { AsyncResult } from '@/shared/lib'
 
@@ -16,6 +15,7 @@ interface SpineItem {
 
 export async function parseEpub(data: ArrayBuffer): AsyncResult<ParsedBook> {
   try {
+    const { default: Epub } = await import('epubjs')
     const book = Epub(data as never)
     await book.ready
     const meta = await book.loaded.metadata

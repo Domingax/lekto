@@ -57,7 +57,7 @@ describe('importBook', () => {
     const { getDb } = await import('@/shared/db')
 
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
-    vi.mocked(detectLanguage).mockReturnValue('en')
+    vi.mocked(detectLanguage).mockResolvedValue('en')
     mockResolveLanguage.mockResolvedValue('en')
     vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
     vi.mocked(filesystemAdapter.writeFileBinary).mockResolvedValue(ok(undefined))
@@ -95,7 +95,7 @@ describe('importBook', () => {
     const { detectLanguage } = await import('./detect-language')
 
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
-    vi.mocked(detectLanguage).mockReturnValue('en')
+    vi.mocked(detectLanguage).mockResolvedValue('en')
     mockResolveLanguage.mockResolvedValue(null)
 
     const { importBook } = await import('./import-book')
@@ -114,7 +114,7 @@ describe('importBook', () => {
     const { getDb } = await import('@/shared/db')
 
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
-    vi.mocked(detectLanguage).mockReturnValue('en')
+    vi.mocked(detectLanguage).mockResolvedValue('en')
     mockResolveLanguage.mockResolvedValue('en')
     vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
     vi.mocked(filesystemAdapter.writeFileBinary).mockResolvedValue(err('Failed to write binary file'))

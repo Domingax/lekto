@@ -13,27 +13,27 @@ describe('detectLanguage', () => {
     const { franc } = await import('franc')
     vi.mocked(franc).mockReturnValue('eng')
     const { detectLanguage } = await import('./detect-language')
-    expect(detectLanguage('some english text')).toBe('en')
+    expect(await detectLanguage('some english text')).toBe('en')
   })
 
   it('maps franc "fra" to "fr"', async () => {
     const { franc } = await import('franc')
     vi.mocked(franc).mockReturnValue('fra')
     const { detectLanguage } = await import('./detect-language')
-    expect(detectLanguage('du texte français')).toBe('fr')
+    expect(await detectLanguage('du texte français')).toBe('fr')
   })
 
   it('returns null for "und" (undetermined)', async () => {
     const { franc } = await import('franc')
     vi.mocked(franc).mockReturnValue('und')
     const { detectLanguage } = await import('./detect-language')
-    expect(detectLanguage('???')).toBeNull()
+    expect(await detectLanguage('???')).toBeNull()
   })
 
   it('returns null for unknown franc code', async () => {
     const { franc } = await import('franc')
     vi.mocked(franc).mockReturnValue('xyz')
     const { detectLanguage } = await import('./detect-language')
-    expect(detectLanguage('some text')).toBeNull()
+    expect(await detectLanguage('some text')).toBeNull()
   })
 })

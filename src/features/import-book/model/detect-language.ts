@@ -1,5 +1,3 @@
-import { franc } from 'franc'
-
 const ISO3_TO_ISO1: Record<string, string> = {
   eng: 'en',
   fra: 'fr',
@@ -19,7 +17,8 @@ const ISO3_TO_ISO1: Record<string, string> = {
 }
 
 /** Detect ISO 639-1 code from text. Returns null if detection fails. */
-export function detectLanguage(text: string): string | null {
+export async function detectLanguage(text: string): Promise<string | null> {
+  const { franc } = await import('franc')
   const code3 = franc(text.slice(0, 3000))
   return ISO3_TO_ISO1[code3] ?? null
 }
