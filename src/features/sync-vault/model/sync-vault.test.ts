@@ -49,6 +49,9 @@ beforeEach(() => {
     isVaultReady: false,
     setVaultPath: mockSetVaultPath,
     clearVault: vi.fn(),
+    books: [],
+    setBooks: vi.fn(),
+    addBook: vi.fn(),
   })
 })
 

@@ -7,14 +7,22 @@ export interface ParsedBook {
   sections: Array<{ title: string; text: string }>
 }
 
+interface SpineItem {
+  load(fn: unknown): Promise<void>
+  unload(): void
+  label?: string
+  document?: { body?: { textContent?: string } }
+}
+
 export async function parseEpub(data: ArrayBuffer): AsyncResult<ParsedBook> {
   try {
     const book = Epub(data as never)
     await book.ready
     const meta = await book.loaded.metadata
     const sections: Array<{ title: string; text: string }> = []
+    const spineItems = (book.spine as unknown as { items: SpineItem[] }).items
 
-    for (const spineItem of book.spine.items) {
+    for (const spineItem of spineItems) {
       await spineItem.load(book.load.bind(book))
       const text = spineItem.document?.body?.textContent ?? ''
       sections.push({ title: spineItem.label ?? '', text })
