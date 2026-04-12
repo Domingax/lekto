@@ -12,6 +12,7 @@ vi.mock('./detect-language', () => ({
 
 vi.mock('@/shared/platform', () => ({
   filesystemAdapter: {
+    mkdir: vi.fn(),
     writeFileBinary: vi.fn(),
   },
 }))
@@ -58,6 +59,7 @@ describe('importBook', () => {
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
     vi.mocked(detectLanguage).mockReturnValue('en')
     mockResolveLanguage.mockResolvedValue('en')
+    vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
     vi.mocked(filesystemAdapter.writeFileBinary).mockResolvedValue(ok(undefined))
 
     const mockInsert = vi.fn().mockReturnValue({
@@ -114,6 +116,7 @@ describe('importBook', () => {
     vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
     vi.mocked(detectLanguage).mockReturnValue('en')
     mockResolveLanguage.mockResolvedValue('en')
+    vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
     vi.mocked(filesystemAdapter.writeFileBinary).mockResolvedValue(err('Failed to write binary file'))
 
     const { importBook } = await import('./import-book')

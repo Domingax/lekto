@@ -28,8 +28,10 @@ export async function importBook(
   const language = await resolveLanguage(detectedCode)
   if (language === null) return err('Import cancelled')
 
-  // Step 4: save EPUB to vault
+  // Step 4: ensure books/ directory exists, then save EPUB to vault
   const vaultPath = useVaultStore.getState().vaultPath!
+  const mkdirResult = await filesystemAdapter.mkdir(`${vaultPath}/books`)
+  if (mkdirResult.isErr()) return err(`Failed to create books directory: ${mkdirResult.error}`)
   const destPath = `${vaultPath}/books/${fileName}`
   const saveResult = await filesystemAdapter.writeFileBinary(destPath, new Uint8Array(data))
   if (saveResult.isErr()) return err(`Failed to save EPUB: ${saveResult.error}`)
