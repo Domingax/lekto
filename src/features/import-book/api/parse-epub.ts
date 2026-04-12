@@ -20,7 +20,8 @@ export async function parseEpub(data: ArrayBuffer): AsyncResult<ParsedBook> {
     await book.ready
     const meta = await book.loaded.metadata
     const sections: Array<{ title: string; text: string }> = []
-    const spineItems = (book.spine as unknown as { items: SpineItem[] }).items
+    // spineItems (Section instances) — not spine.items (raw OPF metadata)
+    const spineItems = (book.spine as unknown as { spineItems: SpineItem[] }).spineItems
 
     for (const spineItem of spineItems) {
       await spineItem.load(book.load.bind(book))
@@ -30,7 +31,8 @@ export async function parseEpub(data: ArrayBuffer): AsyncResult<ParsedBook> {
     }
 
     return ok({ title: (meta as { title?: string }).title ?? 'Unknown', sections })
-  } catch {
-    return err('Failed to parse EPUB — file may be corrupted or invalid')
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e)
+    return err(`Failed to parse EPUB — ${detail}`)
   }
 }

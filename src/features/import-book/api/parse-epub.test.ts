@@ -10,7 +10,7 @@ const mockSpineItem = (text: string, label: string) => ({
 const mockBook = (title: string, spineItems: ReturnType<typeof mockSpineItem>[]) => ({
   ready: Promise.resolve(),
   loaded: { metadata: Promise.resolve({ title }) },
-  spine: { items: spineItems },
+  spine: { spineItems },
   load: vi.fn(),
 })
 
