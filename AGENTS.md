@@ -1,4 +1,4 @@
-# Lekto Developer Reference
+  # Lekto Developer Reference
 
 Lekto is a local-first, offline-capable language learning reader for Android and Desktop (Linux/Windows). Built with React 19, TypeScript ~5.9.3 (strict mode, `noUncheckedIndexedAccess`), Vite 7, Capacitor 8 (Android), Tauri v2 (Desktop), SQLite (Drizzle ORM), Zustand, shadcn/ui, Tailwind CSS v4, and neverthrow.
 
@@ -352,3 +352,11 @@ Anti-patterns to reject — quick-scan list:
 - [ ] Toasts or modal alerts overlaying reading content for error display
 - [ ] Test files in `__tests__/` directories instead of co-located
 - [ ] Manual column name aliasing in Drizzle (it auto-maps snake_case → camelCase)
+
+---
+
+## Token Efficiency
+
+- Never re-read this file explicitly — it is already in context.
+- When reading large planning artifacts (`epics.md`, `architecture.md`, `ux-design-specification.md`), use `Grep` to target the relevant section rather than `Read` on the whole file.
+- Story dev notes must reference existing code files rather than duplicate snippets already in the codebase.

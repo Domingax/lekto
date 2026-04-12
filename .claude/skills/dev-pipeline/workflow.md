@@ -17,13 +17,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `user_skill_level`
 - `implementation_artifacts`
 
-### Project Conventions
-
-<action>Read `{project-root}/AGENTS.md` in full before starting any implementation.
-  This file is the authoritative reference for all project conventions:
-  error handling patterns, naming rules, FSD architecture, TDD protocol, commit format, etc.
-  All code produced or reviewed by this pipeline must comply with it.</action>
-
 ### Inputs
 
 - `story_path` = `` (explicit story path; auto-discovered if empty — passed to dev-story)

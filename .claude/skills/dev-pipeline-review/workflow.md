@@ -15,13 +15,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `project_name`, `user_name`
 - `communication_language`
 
-### Project Conventions
-
-<action>Read `{project-root}/AGENTS.md` in full before starting any review phase.
-  This file is the authoritative reference for all project conventions:
-  error handling patterns, naming rules, FSD architecture, TDD protocol, commit format, etc.
-  Pass it as context to `/bmad-code-review` so findings include AGENTS.md violations.</action>
-
 ### Inputs
 
 - `story_path` = `` (explicit story path; auto-discovered if empty)

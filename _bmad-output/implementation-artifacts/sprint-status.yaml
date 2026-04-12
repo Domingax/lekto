@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-05
-last_updated: 2026-04-12  # 2-3-vault-relocation-from-settings → in-progress (review findings)
+last_updated: 2026-04-12  # epic-2 → done, epic-2-retrospective → done
 
 project: lekto
 project_key: NOKEY
@@ -61,12 +61,12 @@ development_status:
   epic-8-retrospective: done
 
   # Epic 2: Vault & First Launch
-  epic-2: in-progress
+  epic-2: done
   2-1-vault-setup-screen-and-create-new-vault: done
   2-1-desktop-vault-setup-and-web-cleanup: done
   2-2-open-existing-vault: done
-  2-3-vault-relocation-from-settings: in-progress
-  epic-2-retrospective: optional
+  2-3-vault-relocation-from-settings: done
+  epic-2-retrospective: done
 
   # Epic 3: Book Import & Library
   epic-3: backlog
