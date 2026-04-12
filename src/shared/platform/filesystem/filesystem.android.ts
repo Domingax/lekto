@@ -43,10 +43,11 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       try {
         let binary = ''
         data.forEach((b) => (binary += String.fromCharCode(b)))
-        await Filesystem.writeFile({ path, data: btoa(binary), recursive: true })
+        await Filesystem.writeFile({ path, data: btoa(binary), directory: BASE_DIR, recursive: true })
         return ok(undefined)
-      } catch {
-        return err(`Failed to write binary file: ${path}`)
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e)
+        return err(`Failed to write binary file: ${path} — ${detail}`)
       }
     },
 

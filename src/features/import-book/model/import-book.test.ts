@@ -11,6 +11,7 @@ vi.mock('./detect-language', () => ({
 }))
 
 vi.mock('@/shared/platform', () => ({
+  isTauri: vi.fn().mockReturnValue(true),
   filesystemAdapter: {
     mkdir: vi.fn(),
     writeFileBinary: vi.fn(),

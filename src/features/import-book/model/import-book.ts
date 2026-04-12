@@ -1,7 +1,7 @@
 import { ok, err } from 'neverthrow'
 import type { AsyncResult } from '@/shared/lib'
 import type { BookEntity } from '@/entities'
-import { filesystemAdapter } from '@/shared/platform'
+import { filesystemAdapter, isTauri } from '@/shared/platform'
 import { useVaultStore } from '@/shared/stores'
 import { getDb, schema } from '@/shared/db'
 import { parseEpub } from '../api/parse-epub'
@@ -28,11 +28,12 @@ export async function importBook(
   const language = await resolveLanguage(detectedCode)
   if (language === null) return err('Import cancelled')
 
-  // Step 4: ensure books/ directory exists, then save EPUB to vault
+  // Step 4: ensure books/ directory exists, then save EPUB
+  // On Android, Capacitor Filesystem resolves paths relative to Directory.Documents —
+  // content:// vault URIs cannot be used for writeFile. Use a simple relative path.
   const vaultPath = useVaultStore.getState().vaultPath!
-  console.debug('[importBook] vaultPath:', vaultPath)
-  const booksDir = `${vaultPath}/books`
-  console.debug('[importBook] mkdir:', booksDir)
+  const booksDir = isTauri() ? `${vaultPath}/books` : 'books'
+  console.debug('[importBook] booksDir:', booksDir, 'vaultPath:', vaultPath)
   const mkdirResult = await filesystemAdapter.mkdir(booksDir)
   console.debug('[importBook] mkdir result:', mkdirResult)
   if (mkdirResult.isErr()) return err(`Failed to create books directory: ${mkdirResult.error}`)
