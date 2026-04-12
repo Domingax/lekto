@@ -10,3 +10,4 @@ export {
   openExistingVaultAndroid,
   relocateVaultDesktop,
 } from './sync-vault'
+export { importBook } from './import-book'
