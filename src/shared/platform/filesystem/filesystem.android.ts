@@ -86,6 +86,17 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       return adapter.writeFileBinary(`${vaultPath}/${relativePath}`, data)
     },
 
+    async takeVaultPermissions(vaultPath: string): AsyncResult<void> {
+      if (!isSafUri(vaultPath)) return ok(undefined)
+      try {
+        await VaultFs.takePermissions({ treeUri: vaultPath })
+        return ok(undefined)
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e)
+        return err(`Failed to persist vault permissions — ${detail}`)
+      }
+    },
+
     async deleteFile(path: string): AsyncResult<void> {
       try {
         await Filesystem.deleteFile({ path, directory: BASE_DIR })

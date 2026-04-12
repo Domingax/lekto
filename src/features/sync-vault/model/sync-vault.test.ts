@@ -5,6 +5,7 @@ vi.mock('../../../shared/platform', () => ({
   filesystemAdapter: {
     mkdir: vi.fn(),
     exists: vi.fn(),
+    takeVaultPermissions: vi.fn(),
   },
   preferencesAdapter: {
     get: vi.fn(),
@@ -261,6 +262,7 @@ describe('openExistingVaultAndroid', () => {
   const vaultPath = '/storage/emulated/0/Documents/my-vault'
 
   beforeEach(() => {
+    vi.mocked(filesystemAdapter.takeVaultPermissions).mockResolvedValue(ok(undefined))
     vi.mocked(preferencesAdapter.set).mockResolvedValue(ok(undefined))
     // importAndroidVaultDb now returns AsyncResult<void> (L2)
     vi.mocked(importAndroidVaultDb).mockResolvedValue(ok(undefined))

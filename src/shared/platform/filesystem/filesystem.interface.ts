@@ -21,4 +21,10 @@ export interface FilesystemAdapter {
    * On Desktop, equivalent to writeFileBinary(`${vaultPath}/${relativePath}`, data).
    */
   writeFileBinaryToVault(vaultPath: string, relativePath: string, data: Uint8Array): AsyncResult<void>
+  /**
+   * Persist SAF read+write permissions for the vault path so they survive app restarts.
+   * Must be called immediately after the user picks a vault directory.
+   * No-op on Desktop and for non-SAF Android paths.
+   */
+  takeVaultPermissions(vaultPath: string): AsyncResult<void>
 }

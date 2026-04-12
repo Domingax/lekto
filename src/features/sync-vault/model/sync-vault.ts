@@ -54,6 +54,11 @@ export async function openExistingVaultDesktop(vaultPath: string): AsyncResult<v
 
 export async function openExistingVaultAndroid(vaultPath: string): AsyncResult<void> {
   try {
+    // Persist SAF permissions immediately — the temporary grant from pickDirectory
+    // is only valid in the current session; takeVaultPermissions makes it survive restarts.
+    const permResult = await filesystemAdapter.takeVaultPermissions(vaultPath)
+    if (permResult.isErr()) return err(`Failed to persist vault permissions: ${permResult.error}`)
+
     // Existence is validated inside importAndroidVaultDb — the binary read
     // will fail with the vault-invalid error if lekto.db is absent at vaultPath.
     const dbResult = await importAndroidVaultDb(vaultPath)

@@ -1,5 +1,6 @@
 package com.lekto.app;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.util.Base64;
 
@@ -45,6 +46,31 @@ public class VaultFsPlugin extends Plugin {
             current = child;
         }
         return current;
+    }
+
+    /**
+     * Persist read+write SAF permissions for a tree URI so they survive app restarts.
+     * Must be called immediately after the user picks a vault directory, while the
+     * temporary grant from ACTION_OPEN_DOCUMENT_TREE is still active.
+     *
+     * Required call params:
+     *   treeUri  {string}  — the SAF tree URI to persist permissions for
+     */
+    @PluginMethod
+    public void takePermissions(PluginCall call) {
+        String treeUriStr = call.getString("treeUri");
+        if (treeUriStr == null) {
+            call.reject("treeUri is required");
+            return;
+        }
+        try {
+            Uri treeUri = Uri.parse(treeUriStr);
+            int flags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+            getContext().getContentResolver().takePersistableUriPermission(treeUri, flags);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to take persistable permissions: " + (e.getMessage() != null ? e.getMessage() : "unknown error"));
+        }
     }
 
     /**
