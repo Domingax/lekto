@@ -20,7 +20,7 @@ export function SettingsPage() {
       return
     }
     const picked = result.value
-    const existsResult = await filesystemAdapter.exists(`${picked}/lekto.db`)
+    const existsResult = await filesystemAdapter.fileExistsInVault(picked, 'lekto.db')
     if (existsResult.isErr()) {
       setError(existsResult.error)
       return

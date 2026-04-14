@@ -86,6 +86,19 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       return adapter.writeFileBinary(`${vaultPath}/${relativePath}`, data)
     },
 
+    async fileExistsInVault(vaultPath: string, relativePath: string): AsyncResult<boolean> {
+      if (isSafUri(vaultPath)) {
+        try {
+          const result = await VaultFs.fileExists({ treeUri: vaultPath, path: relativePath })
+          return ok(result.exists)
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e)
+          return err(`Failed to check file existence in vault: ${relativePath} — ${detail}`)
+        }
+      }
+      return adapter.exists(`${vaultPath}/${relativePath}`)
+    },
+
     async takeVaultPermissions(vaultPath: string): AsyncResult<void> {
       if (!isSafUri(vaultPath)) return ok(undefined)
       try {

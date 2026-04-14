@@ -15,7 +15,7 @@ vi.mock('../../../shared/platform', () => ({
     pickDirectory: vi.fn(),
   },
   filesystemAdapter: {
-    exists: vi.fn(),
+    fileExistsInVault: vi.fn(),
   },
 }))
 
@@ -67,7 +67,7 @@ describe('SettingsPage', () => {
 
   it('picker returns path with existing lekto.db → confirm-switch state shown', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(true))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
     await waitFor(() => expect(screen.getByText('Use existing vault data')).toBeInTheDocument())
@@ -76,7 +76,7 @@ describe('SettingsPage', () => {
 
   it('picker returns path without lekto.db → confirm-migrate state shown', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(false))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
     await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
@@ -102,7 +102,7 @@ describe('SettingsPage', () => {
   it('confirm migrate → relocateVaultDesktop called → on ok, idle state', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(false))
     vi.mocked(relocateVaultDesktop).mockResolvedValue(ok(undefined))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
@@ -116,7 +116,7 @@ describe('SettingsPage', () => {
   it('confirm migrate → relocateVaultDesktop returns err → inline error shown, idle state', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(false))
     vi.mocked(relocateVaultDesktop).mockResolvedValue(err('copy failed'))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
@@ -129,7 +129,7 @@ describe('SettingsPage', () => {
   it('confirm switch (Desktop) → openExistingVaultDesktop called → on ok, idle state', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(true))
     vi.mocked(openExistingVaultDesktop).mockResolvedValue(ok(undefined))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
@@ -142,7 +142,7 @@ describe('SettingsPage', () => {
   it('confirm switch (Android) → openExistingVaultAndroid called', async () => {
     vi.mocked(isTauri).mockReturnValue(false)
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(true))
     vi.mocked(openExistingVaultAndroid).mockResolvedValue(ok(undefined))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
@@ -154,7 +154,7 @@ describe('SettingsPage', () => {
 
   it('cancel from confirm state → returns to idle', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(false))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
     await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
@@ -166,7 +166,7 @@ describe('SettingsPage', () => {
   it('"migrating" state disables all buttons', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+    vi.mocked(filesystemAdapter.fileExistsInVault).mockResolvedValue(ok(false))
     // Never resolves — holds in migrating state
     vi.mocked(relocateVaultDesktop).mockReturnValue(new Promise(() => {}))
     renderPage()

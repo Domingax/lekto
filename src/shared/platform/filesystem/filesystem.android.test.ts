@@ -5,6 +5,8 @@ vi.mock('./vault-fs.android', () => ({
   VaultFs: {
     writeFile: vi.fn().mockResolvedValue(undefined),
     mkdir: vi.fn().mockResolvedValue(undefined),
+    fileExists: vi.fn().mockResolvedValue({ exists: true }),
+    takePermissions: vi.fn().mockResolvedValue(undefined),
   },
 }))
 
@@ -175,6 +177,51 @@ describe('FilesystemAdapter (android)', () => {
     expect(result.isOk()).toBe(true)
     expect(vi.mocked(Filesystem.writeFile)).toHaveBeenCalledWith(
       expect.objectContaining({ path: 'lekto-vault/books/file.epub' }),
+    )
+  })
+
+  it('fileExistsInVault routes to VaultFs.fileExists for SAF paths and returns true', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    vi.mocked(VaultFs.fileExists).mockResolvedValue({ exists: true })
+    const result = await adapter.fileExistsInVault(
+      'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      'lekto.db',
+    )
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBe(true)
+    expect(vi.mocked(VaultFs.fileExists)).toHaveBeenCalledWith({
+      treeUri: 'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      path: 'lekto.db',
+    })
+  })
+
+  it('fileExistsInVault returns false when VaultFs reports file absent', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    vi.mocked(VaultFs.fileExists).mockResolvedValue({ exists: false })
+    const result = await adapter.fileExistsInVault(
+      'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      'lekto.db',
+    )
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBe(false)
+  })
+
+  it('fileExistsInVault returns err when VaultFs throws', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    vi.mocked(VaultFs.fileExists).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.fileExistsInVault(
+      'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      'lekto.db',
+    )
+    expect(result.isErr()).toBe(true)
+  })
+
+  it('fileExistsInVault uses Documents-relative exists for non-SAF paths', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    const result = await adapter.fileExistsInVault('lekto-vault', 'lekto.db')
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(Filesystem.stat)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'lekto-vault/lekto.db' }),
     )
   })
 })

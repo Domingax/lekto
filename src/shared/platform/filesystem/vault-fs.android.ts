@@ -5,6 +5,8 @@ export interface VaultFsPlugin {
   writeFile(options: { treeUri: string; path: string; data: string }): Promise<void>
   /** Create a directory (and intermediate parents) relative to a SAF tree URI. */
   mkdir(options: { treeUri: string; path: string }): Promise<void>
+  /** Check whether a file exists at a path relative to a SAF tree URI. */
+  fileExists(options: { treeUri: string; path: string }): Promise<{ exists: boolean }>
   /**
    * Persist read+write SAF permissions for a tree URI so they survive app restarts.
    * Must be called immediately after pickDirectory(), while the temporary grant is active.

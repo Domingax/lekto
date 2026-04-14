@@ -6,6 +6,7 @@ import android.util.Base64;
 
 import androidx.documentfile.provider.DocumentFile;
 
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -147,6 +148,57 @@ public class VaultFsPlugin extends Plugin {
             call.resolve();
         } catch (IOException e) {
             call.reject("IO error: " + e.getMessage());
+        } catch (Exception e) {
+            call.reject(e.getMessage() != null ? e.getMessage() : "Unknown error");
+        }
+    }
+
+    /**
+     * Check whether a file or directory exists at a path relative to a SAF tree URI.
+     *
+     * Required call params:
+     *   treeUri  {string}  — the SAF tree URI
+     *   path     {string}  — relative path to check, e.g. "lekto.db" or "books/file.epub"
+     *
+     * Resolves with { exists: true|false }.
+     */
+    @PluginMethod
+    public void fileExists(PluginCall call) {
+        String treeUriStr = call.getString("treeUri");
+        String relativePath = call.getString("path");
+
+        if (treeUriStr == null || relativePath == null) {
+            call.reject("treeUri and path are required");
+            return;
+        }
+
+        try {
+            Uri treeUri = Uri.parse(treeUriStr);
+            DocumentFile treeDoc = DocumentFile.fromTreeUri(getContext(), treeUri);
+            if (treeDoc == null) {
+                call.reject("Invalid or inaccessible tree URI");
+                return;
+            }
+
+            String[] parts = relativePath.split("/");
+            // Navigate to the parent directory (all parts except last)
+            String[] dirParts = new String[parts.length - 1];
+            System.arraycopy(parts, 0, dirParts, 0, parts.length - 1);
+            String name = parts[parts.length - 1];
+
+            DocumentFile dir = navigateDirs(treeDoc, dirParts, false);
+            if (dir == null) {
+                // Parent directory doesn't exist → file can't exist either
+                JSObject result = new JSObject();
+                result.put("exists", false);
+                call.resolve(result);
+                return;
+            }
+
+            DocumentFile target = dir.findFile(name);
+            JSObject result = new JSObject();
+            result.put("exists", target != null);
+            call.resolve(result);
         } catch (Exception e) {
             call.reject(e.getMessage() != null ? e.getMessage() : "Unknown error");
         }

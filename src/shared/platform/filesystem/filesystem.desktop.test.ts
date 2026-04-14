@@ -163,4 +163,13 @@ describe('FilesystemAdapter (desktop)', () => {
     expect(result.isOk()).toBe(true)
     expect(vi.mocked(fs.writeFile)).toHaveBeenCalledWith('/home/user/vault/books/file.epub', expect.any(Uint8Array))
   })
+
+  it('fileExistsInVault delegates to exists with combined path', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    vi.mocked(fs.exists).mockResolvedValue(true)
+    const result = await adapter.fileExistsInVault('/home/user/vault', 'lekto.db')
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBe(true)
+    expect(vi.mocked(fs.exists)).toHaveBeenCalledWith('/home/user/vault/lekto.db')
+  })
 })
