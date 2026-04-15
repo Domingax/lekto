@@ -1,6 +1,6 @@
 # Story 3.1: EPUB Import & Tokenization
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -668,6 +668,16 @@ After ALL commits, before marking the story done:
   - [x] `npm run typecheck` — zero errors
   - [x] `npm run test` — all tests pass
   - [x] `npm run build` — succeeds
+
+---
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][HIGH] Wrap DB bulk inserts in a transaction for atomicity — `importBook` writes book → sections → tokens without a DB transaction; if token insert fails partway, partial data remains in SQLite [src/features/import-book/model/import-book.ts:66-73]
+- [ ] [AI-Review][HIGH] Add try/catch around DB writes returning `err(...)` — current code lets `db.insert()` throw as unhandled promise rejection instead of returning neverthrow `err` [src/features/import-book/model/import-book.ts:66-73]
+- [ ] [AI-Review][MEDIUM] Replace `.then()/.catch()` chain with `async/await` in LibraryPage hydration — violates AGENTS.md "Never use .then()/.catch() chains" rule [src/pages/library-page/ui/LibraryPage.tsx:38-39]
+- [ ] [AI-Review][MEDIUM] Move SQLite books hydration from LibraryPage `useEffect` back to `main.tsx` startup — AGENTS.md says "Never read from SQLite inside React render — always read from Zustand" [src/pages/library-page/ui/LibraryPage.tsx:36-44]
+- [ ] [AI-Review][MEDIUM] Add `onOpenChange` handler to language Dialog to prevent soft-lock — if user presses Escape or clicks X, the `resolveLanguage` promise hangs forever and import button stays permanently disabled [src/pages/library-page/ui/LibraryPage.tsx:94]
 
 ---
 

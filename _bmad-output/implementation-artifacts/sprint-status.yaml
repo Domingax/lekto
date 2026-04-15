@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-05
-last_updated: 2026-04-12  # 3-1 → review
+last_updated: 2026-04-15  # 3-1 → in-progress (review findings)
 
 project: lekto
 project_key: NOKEY
@@ -70,7 +70,7 @@ development_status:
 
   # Epic 3: Book Import & Library
   epic-3: in-progress
-  3-1-epub-import-and-tokenization: review
+  3-1-epub-import-and-tokenization: in-progress
   3-2-pdf-and-plain-text-import: backlog
   3-3-library-view-and-book-management: backlog
   3-4-basic-reader-and-in-book-navigation: backlog
