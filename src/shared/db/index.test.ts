@@ -228,7 +228,7 @@ describe('Android proxy callbacks', () => {
     const { initDb } = await import('./index')
     await initDb()
     const result = await capturedProxy!('SELECT 1', [], 'get')
-    expect(result).toEqual({ rows: [{ id: 1 }] })
+    expect(result).toEqual({ rows: [1] })
   })
 
   it('uses empty array when result.values is null (nullish coalescing fallback)', async () => {

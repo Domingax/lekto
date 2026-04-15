@@ -51,10 +51,10 @@ async function createDesktopDb(vaultPath: string): Promise<DrizzleDb> {
         sql,
         params as unknown[],
       );
-      if (method === "values") {
-        return { rows: rows.map((row: Record<string, unknown>) => Object.values(row)) };
+      if (method === "get") {
+        return { rows: rows[0] != null ? Object.values(rows[0]) : [] };
       }
-      return { rows };
+      return { rows: rows.map((row: Record<string, unknown>) => Object.values(row)) };
     },
     { schema },
   );
@@ -81,10 +81,10 @@ async function createAndroidDb(): Promise<DrizzleDb> {
       }
       const result = await connection.query(sql, params);
       const rows = (result.values ?? []) as Record<string, unknown>[];
-      if (method === "values") {
-        return { rows: rows.map((row) => Object.values(row)) };
+      if (method === "get") {
+        return { rows: rows[0] != null ? Object.values(rows[0]) : [] };
       }
-      return { rows };
+      return { rows: rows.map((row) => Object.values(row)) };
     },
     { schema },
   );
