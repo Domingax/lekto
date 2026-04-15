@@ -15,7 +15,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onStart() {
+    public void onStart() {
         super.onStart();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Subclass BridgeWebViewClient so Capacitor's URL interception (local assets,
