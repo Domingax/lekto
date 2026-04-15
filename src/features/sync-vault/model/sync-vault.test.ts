@@ -36,6 +36,8 @@ import {
   initVaultDesktop,
   openExistingVaultDesktop,
   openExistingVaultAndroid,
+  switchVaultDesktop,
+  switchVaultFolderAndroid,
 } from './sync-vault'
 import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
 import { initDbForNewVault, importAndroidVaultDb, runMigrations, seedLanguages } from '@/shared/db'
@@ -255,6 +257,87 @@ describe('openExistingVaultDesktop', () => {
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toContain('DB migration failed')
     expect(preferencesAdapter.set).not.toHaveBeenCalled()
+  })
+})
+
+describe('switchVaultDesktop', () => {
+  const vaultPath = '/home/user/Documents/my-vault'
+
+  beforeEach(() => {
+    vi.mocked(preferencesAdapter.set).mockResolvedValue(ok(undefined))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(initDbForNewVault).mockResolvedValue(ok({}) as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(runMigrations).mockResolvedValue(ok(undefined) as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(seedLanguages).mockResolvedValue(ok(undefined) as any)
+  })
+
+  it('lekto.db exists → delegates to openExistingVaultDesktop', async () => {
+    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
+
+    const result = await switchVaultDesktop(vaultPath)
+
+    expect(result.isOk()).toBe(true)
+    expect(initDbForNewVault).toHaveBeenCalledWith(vaultPath)
+    expect(seedLanguages).not.toHaveBeenCalled()
+  })
+
+  it('lekto.db absent → delegates to initVaultDesktop', async () => {
+    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
+    vi.mocked(filesystemAdapter.mkdir).mockResolvedValue(ok(undefined))
+
+    const result = await switchVaultDesktop(vaultPath)
+
+    expect(result.isOk()).toBe(true)
+    expect(filesystemAdapter.mkdir).toHaveBeenCalledWith(`${vaultPath}/books`)
+    expect(seedLanguages).toHaveBeenCalled()
+  })
+
+  it('returns err when exists check fails', async () => {
+    vi.mocked(filesystemAdapter.exists).mockResolvedValue(err('io error'))
+
+    const result = await switchVaultDesktop(vaultPath)
+
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toBe('io error')
+  })
+})
+
+describe('switchVaultFolderAndroid', () => {
+  const vaultPath = 'content://com.android.externalstorage.documents/tree/primary%3Alekto'
+
+  beforeEach(() => {
+    vi.mocked(filesystemAdapter.takeVaultPermissions).mockResolvedValue(ok(undefined))
+    vi.mocked(preferencesAdapter.set).mockResolvedValue(ok(undefined))
+  })
+
+  it('happy path — persists permissions, stores path, updates store', async () => {
+    const result = await switchVaultFolderAndroid(vaultPath)
+
+    expect(result.isOk()).toBe(true)
+    expect(filesystemAdapter.takeVaultPermissions).toHaveBeenCalledWith(vaultPath)
+    expect(preferencesAdapter.set).toHaveBeenCalledWith(VAULT_PATH_KEY, vaultPath)
+    expect(mockSetVaultPath).toHaveBeenCalledWith(vaultPath)
+  })
+
+  it('returns err when takeVaultPermissions fails', async () => {
+    vi.mocked(filesystemAdapter.takeVaultPermissions).mockResolvedValue(err('denied'))
+
+    const result = await switchVaultFolderAndroid(vaultPath)
+
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toContain('denied')
+    expect(preferencesAdapter.set).not.toHaveBeenCalled()
+  })
+
+  it('returns err when preferences.set fails', async () => {
+    vi.mocked(preferencesAdapter.set).mockResolvedValue(err('storage full'))
+
+    const result = await switchVaultFolderAndroid(vaultPath)
+
+    expect(result.isErr()).toBe(true)
+    expect(mockSetVaultPath).not.toHaveBeenCalled()
   })
 })
 

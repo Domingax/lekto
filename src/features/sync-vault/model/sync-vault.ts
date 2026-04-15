@@ -1,5 +1,5 @@
 import { ok, err } from 'neverthrow'
-import { filesystemAdapter, preferencesAdapter } from '../../../shared/platform'
+import { filesystemAdapter, preferencesAdapter, isTauri } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
 import type { AsyncResult } from '../../../shared/lib/types'
 import { VAULT_PATH_KEY } from '../../../shared/lib'
@@ -49,6 +49,34 @@ export async function openExistingVaultDesktop(vaultPath: string): AsyncResult<v
     return ok(undefined)
   } catch (e) {
     return err(`Failed to open existing vault: ${e}`)
+  }
+}
+
+export async function switchVaultDesktop(vaultPath: string): AsyncResult<void> {
+  const existsResult = await filesystemAdapter.exists(`${vaultPath}/lekto.db`)
+  if (existsResult.isErr()) return err(existsResult.error)
+  return existsResult.value
+    ? openExistingVaultDesktop(vaultPath)
+    : initVaultDesktop(vaultPath)
+}
+
+export function switchVault(vaultPath: string): AsyncResult<void> {
+  return isTauri() ? switchVaultDesktop(vaultPath) : switchVaultFolderAndroid(vaultPath)
+}
+
+export async function switchVaultFolderAndroid(vaultPath: string): AsyncResult<void> {
+  try {
+    // Persist SAF permissions so the grant survives restarts.
+    const permResult = await filesystemAdapter.takeVaultPermissions(vaultPath)
+    if (permResult.isErr()) return err(`Failed to persist vault permissions: ${permResult.error}`)
+
+    const setResult = await preferencesAdapter.set(VAULT_PATH_KEY, vaultPath)
+    if (setResult.isErr()) return err(setResult.error)
+
+    useVaultStore.getState().setVaultPath(vaultPath)
+    return ok(undefined)
+  } catch (e) {
+    return err(`Failed to switch vault folder: ${e}`)
   }
 }
 
