@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { initDb, runMigrations, seedLanguages } from '@/shared/db'
+import { initDb, runMigrations, seedLanguages, getDb, schema } from '@/shared/db'
 import { useVaultStore } from '@/shared/stores'
 import { getVaultPath } from '@/features'
 import { createAppRouter } from '@/app/router'
@@ -53,6 +53,10 @@ export async function start() {
       showError(`Database seed failed: ${seed.error}`)
       return
     }
+
+    showStep('hydrateBooks…')
+    const books = await getDb().select().from(schema.books)
+    useVaultStore.getState().setBooks(books)
   }
 
   showStep('getVaultPath…')

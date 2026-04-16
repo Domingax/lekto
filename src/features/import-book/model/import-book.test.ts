@@ -65,7 +65,8 @@ describe('importBook', () => {
     const mockInsert = vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
     })
-    vi.mocked(getDb).mockReturnValue({ insert: mockInsert } as never)
+    const mockTransaction = vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<void>) => fn({ insert: mockInsert }))
+    vi.mocked(getDb).mockReturnValue({ transaction: mockTransaction } as never)
 
     const { importBook } = await import('./import-book')
     const result = await importBook(mockData, mockFileName, mockResolveLanguage)
@@ -76,6 +77,30 @@ describe('importBook', () => {
       expect(book.title).toBe('Test Book')
       expect(book.language).toBe('en')
       expect(book.fileName).toBe('test.epub')
+    }
+  })
+
+  it('returns err when DB transaction throws', async () => {
+    const { parseEpub } = await import('../api/parse-epub')
+    const { detectLanguage } = await import('./detect-language')
+    const { filesystemAdapter } = await import('@/shared/platform')
+    const { getDb } = await import('@/shared/db')
+
+    vi.mocked(parseEpub).mockResolvedValue(ok(mockParsedBook))
+    vi.mocked(detectLanguage).mockResolvedValue('en')
+    mockResolveLanguage.mockResolvedValue('en')
+    vi.mocked(filesystemAdapter.mkdirInVault).mockResolvedValue(ok(undefined))
+    vi.mocked(filesystemAdapter.writeFileBinaryToVault).mockResolvedValue(ok(undefined))
+
+    const mockTransaction = vi.fn().mockRejectedValue(new Error('disk full'))
+    vi.mocked(getDb).mockReturnValue({ transaction: mockTransaction } as never)
+
+    const { importBook } = await import('./import-book')
+    const result = await importBook(mockData, mockFileName, mockResolveLanguage)
+
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) {
+      expect(result.error).toBe('disk full')
     }
   })
 

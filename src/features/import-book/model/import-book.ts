@@ -62,14 +62,20 @@ export async function importBook(
     return tokenizeSection(s.text, sectionId)
   })
 
-  // Step 6: bulk insert — book → sections → tokens
+  // Step 6: bulk insert — book → sections → tokens (atomic: all-or-nothing)
   const db = getDb()
-  await db.insert(schema.books).values([bookEntity])
-  if (sectionRows.length > 0) {
-    await db.insert(schema.sections).values(sectionRows)
-  }
-  for (let i = 0; i < allTokenRows.length; i += CHUNK) {
-    await db.insert(schema.tokens).values(allTokenRows.slice(i, i + CHUNK))
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.books).values([bookEntity])
+      if (sectionRows.length > 0) {
+        await tx.insert(schema.sections).values(sectionRows)
+      }
+      for (let i = 0; i < allTokenRows.length; i += CHUNK) {
+        await tx.insert(schema.tokens).values(allTokenRows.slice(i, i + CHUNK))
+      }
+    })
+  } catch (e) {
+    return err(e instanceof Error ? e.message : String(e))
   }
 
   // Step 7: update Zustand store (optimistic, no await)
