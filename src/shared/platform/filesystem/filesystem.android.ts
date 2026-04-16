@@ -12,7 +12,7 @@ function isSafUri(path: string): boolean {
 
 function uint8ToBase64(data: Uint8Array): string {
   let binary = ''
-  data.forEach((b) => (binary += String.fromCharCode(b)))
+  data.forEach((b) => (binary += String.fromCodePoint(b)))
   return btoa(binary)
 }
 

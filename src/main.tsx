@@ -27,7 +27,7 @@ function showError(message: string) {
   el.replaceChildren(p)
 }
 
-window.addEventListener('unhandledrejection', (e) => {
+globalThis.addEventListener('unhandledrejection', (e) => {
   showError(`Unhandled error: ${e.reason instanceof Error ? e.reason.message : String(e.reason)}`)
 })
 
