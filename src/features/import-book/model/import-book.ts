@@ -40,14 +40,14 @@ export async function importBook(
   const language = await resolveLanguage(detectedCode)
   if (language === null) return err('Import cancelled')
 
-  // Step 4: ensure books/ directory exists, then save EPUB to vault.
+  // Step 4: ensure books/ directory exists, then save file to vault.
   // mkdirInVault / writeFileBinaryToVault handle platform differences transparently:
   // on Android with a SAF content:// vault path they route to the native VaultFsPlugin.
   const vaultPath = useVaultStore.getState().vaultPath!
   const mkdirResult = await filesystemAdapter.mkdirInVault(vaultPath, 'books')
   if (mkdirResult.isErr()) return err(`Failed to create books directory: ${mkdirResult.error}`)
   const saveResult = await filesystemAdapter.writeFileBinaryToVault(vaultPath, `books/${fileName}`, new Uint8Array(data))
-  if (saveResult.isErr()) return err(`Failed to save EPUB: ${saveResult.error}`)
+  if (saveResult.isErr()) return err(`Failed to save file: ${saveResult.error}`)
 
   // Step 5: build row objects in memory
   const bookId = crypto.randomUUID()

@@ -6,7 +6,7 @@ import type { ParsedBook } from './parse-epub'
 export async function parsePdf(data: ArrayBuffer, fileName: string): AsyncResult<ParsedBook> {
   try {
     const pdfjsLib = await import('pdfjs-dist')
-    const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default as string
+    const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
     pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
     const pdf = await pdfjsLib.getDocument({ data }).promise

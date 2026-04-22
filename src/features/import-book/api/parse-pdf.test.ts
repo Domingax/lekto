@@ -104,6 +104,25 @@ describe('parsePdf', () => {
     }
   })
 
+  it('falls back to filename when getMetadata throws', async () => {
+    const mockPdf = {
+      numPages: 1,
+      getPage: vi.fn().mockResolvedValue({
+        getTextContent: vi.fn().mockResolvedValue({ items: makeTextItems(['Content here']) }),
+      }),
+      getMetadata: vi.fn().mockRejectedValue(new Error('metadata unavailable')),
+    }
+    vi.mocked(pdfjsLib.getDocument).mockReturnValue({ promise: Promise.resolve(mockPdf) } as never)
+    const { parsePdf } = await import('./parse-pdf')
+
+    const result = await parsePdf(new ArrayBuffer(8), 'fallback-book.pdf')
+
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.title).toBe('fallback-book')
+    }
+  })
+
   it('creates one section per PDF page', async () => {
     makeMockPdf([['Page 1'], ['Page 2'], ['Page 3'], ['Page 4']])
     const { parsePdf } = await import('./parse-pdf')
