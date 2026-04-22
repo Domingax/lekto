@@ -1,13 +1,14 @@
 import { ok, err } from 'neverthrow'
-import * as pdfjsLib from 'pdfjs-dist'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import type { AsyncResult } from '@/shared/lib'
 import type { ParsedBook } from './parse-epub'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 export async function parsePdf(data: ArrayBuffer, fileName: string): AsyncResult<ParsedBook> {
   try {
+    const pdfjsLib = await import('pdfjs-dist')
+    const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default as string
     pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
+
     const pdf = await pdfjsLib.getDocument({ data }).promise
     const sections: Array<{ title: string; text: string }> = []
 
