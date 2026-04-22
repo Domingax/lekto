@@ -16,6 +16,9 @@ function mockStore(state: { vaultPath: string | null }) {
     isVaultReady: !!state.vaultPath,
     setVaultPath: vi.fn(),
     clearVault: vi.fn(),
+    books: [],
+    setBooks: vi.fn(),
+    addBook: vi.fn(),
   })
 }
 

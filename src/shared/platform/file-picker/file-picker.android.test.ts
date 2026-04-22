@@ -40,6 +40,14 @@ describe('FilePickerAdapter (android)', () => {
     }
   })
 
+  it('pickFile passes MIME type (not extension) to FilePicker', async () => {
+    const { FilePicker } = await import('@capawesome/capacitor-file-picker')
+    await adapter.pickFile({ accept: ['.epub'] })
+    expect(vi.mocked(FilePicker.pickFiles)).toHaveBeenCalledWith(
+      expect.objectContaining({ types: ['application/epub+zip'] }),
+    )
+  })
+
   it('pickFile returns err when user cancels (empty files array)', async () => {
     const { FilePicker } = await import('@capawesome/capacitor-file-picker')
     vi.mocked(FilePicker.pickFiles).mockResolvedValue({ files: [] })

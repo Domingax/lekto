@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ok, err } from 'neverthrow'
 
+const mockSelect = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue([]) })
+
 vi.mock('@/shared/db', () => ({
   initDb: vi.fn().mockResolvedValue(ok({})),
   runMigrations: vi.fn().mockResolvedValue(ok(undefined)),
   seedLanguages: vi.fn().mockResolvedValue(ok(undefined)),
+  getDb: vi.fn(() => ({ select: mockSelect })),
+  schema: { books: 'books' },
 }))
 vi.mock('react-dom/client', () => ({
   createRoot: vi.fn().mockReturnValue({ render: vi.fn() }),

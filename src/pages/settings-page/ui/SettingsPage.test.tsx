@@ -4,18 +4,12 @@ import { MemoryRouter } from 'react-router-dom'
 import { ok, err } from 'neverthrow'
 
 vi.mock('../../../features', () => ({
-  relocateVaultDesktop: vi.fn(),
-  openExistingVaultDesktop: vi.fn(),
-  openExistingVaultAndroid: vi.fn(),
+  switchVault: vi.fn(),
 }))
 
 vi.mock('../../../shared/platform', () => ({
-  isTauri: vi.fn().mockReturnValue(false),
   filePickerAdapter: {
     pickDirectory: vi.fn(),
-  },
-  filesystemAdapter: {
-    exists: vi.fn(),
   },
 }))
 
@@ -24,8 +18,8 @@ vi.mock('../../../shared/stores', () => ({
 }))
 
 import { SettingsPage } from './SettingsPage'
-import { relocateVaultDesktop, openExistingVaultDesktop, openExistingVaultAndroid } from '../../../features'
-import { isTauri, filePickerAdapter, filesystemAdapter } from '../../../shared/platform'
+import { switchVault } from '../../../features'
+import { filePickerAdapter } from '../../../shared/platform'
 import { useVaultStore } from '../../../shared/stores'
 
 const VAULT_PATH = '/some/vault'
@@ -41,7 +35,6 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(isTauri).mockReturnValue(false)
   vi.mocked(useVaultStore).mockImplementation(
     ((selector: (s: unknown) => unknown) => selector({ vaultPath: VAULT_PATH })) as never,
   )
@@ -65,21 +58,11 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(filePickerAdapter.pickDirectory).toHaveBeenCalled())
   })
 
-  it('picker returns path with existing lekto.db → confirm-switch state shown', async () => {
+  it('picker returns path → confirm-switch state shown', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Use existing vault data')).toBeInTheDocument())
-    expect(screen.getByText(new RegExp(NEW_PATH))).toBeInTheDocument()
-  })
-
-  it('picker returns path without lekto.db → confirm-migrate state shown', async () => {
-    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
-    renderPage()
-    fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Switch to this folder')).toBeInTheDocument())
     expect(screen.getByText(new RegExp(NEW_PATH))).toBeInTheDocument()
   })
 
@@ -99,81 +82,47 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Permission denied'))
   })
 
-  it('confirm migrate → relocateVaultDesktop called → on ok, idle state', async () => {
-    vi.mocked(isTauri).mockReturnValue(true)
+  it('confirm switch → switchVault called → idle on ok', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
-    vi.mocked(relocateVaultDesktop).mockResolvedValue(ok(undefined))
+    vi.mocked(switchVault).mockResolvedValue(ok(undefined))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Migrate current data here'))
+    await waitFor(() => expect(screen.getByText('Switch to this folder')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Switch to this folder'))
     await waitFor(() => expect(screen.getByText('Change location')).toBeInTheDocument())
-    expect(relocateVaultDesktop).toHaveBeenCalledWith(NEW_PATH)
+    expect(switchVault).toHaveBeenCalledWith(NEW_PATH)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('confirm migrate → relocateVaultDesktop returns err → inline error shown, idle state', async () => {
-    vi.mocked(isTauri).mockReturnValue(true)
+  it('switch returns err → inline error shown, idle state', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
-    vi.mocked(relocateVaultDesktop).mockResolvedValue(err('copy failed'))
+    vi.mocked(switchVault).mockResolvedValue(err('Permission denied'))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Migrate current data here'))
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('copy failed'))
+    await waitFor(() => expect(screen.getByText('Switch to this folder')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Switch to this folder'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Permission denied'))
     expect(screen.getByText('Change location')).toBeInTheDocument()
   })
 
-  it('confirm switch (Desktop) → openExistingVaultDesktop called → on ok, idle state', async () => {
-    vi.mocked(isTauri).mockReturnValue(true)
+  it('cancel from confirm-switch → returns to idle', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
-    vi.mocked(openExistingVaultDesktop).mockResolvedValue(ok(undefined))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Use existing vault data')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Use existing vault data'))
-    await waitFor(() => expect(screen.getByText('Change location')).toBeInTheDocument())
-    expect(openExistingVaultDesktop).toHaveBeenCalledWith(NEW_PATH)
-  })
-
-  it('confirm switch (Android) → openExistingVaultAndroid called', async () => {
-    vi.mocked(isTauri).mockReturnValue(false)
-    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(true))
-    vi.mocked(openExistingVaultAndroid).mockResolvedValue(ok(undefined))
-    renderPage()
-    fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Use existing vault data')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Use existing vault data'))
-    await waitFor(() => expect(screen.getByText('Change location')).toBeInTheDocument())
-    expect(openExistingVaultAndroid).toHaveBeenCalledWith(NEW_PATH)
-  })
-
-  it('cancel from confirm state → returns to idle', async () => {
-    vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
-    renderPage()
-    fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Switch to this folder')).toBeInTheDocument())
     fireEvent.click(screen.getByText('Cancel'))
     expect(screen.getByText('Change location')).toBeInTheDocument()
-    expect(screen.queryByText('Migrate current data here')).not.toBeInTheDocument()
+    expect(screen.queryByText('Switch to this folder')).not.toBeInTheDocument()
   })
 
-  it('"migrating" state disables all buttons', async () => {
-    vi.mocked(isTauri).mockReturnValue(true)
+  it('"switching" state disables all buttons', async () => {
     vi.mocked(filePickerAdapter.pickDirectory).mockResolvedValue(ok(NEW_PATH))
-    vi.mocked(filesystemAdapter.exists).mockResolvedValue(ok(false))
-    // Never resolves — holds in migrating state
-    vi.mocked(relocateVaultDesktop).mockReturnValue(new Promise(() => {}))
+    vi.mocked(switchVault).mockReturnValue(new Promise(() => {}))
     renderPage()
     fireEvent.click(screen.getByText('Change location'))
-    await waitFor(() => expect(screen.getByText('Migrate current data here')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Migrate current data here'))
-    await waitFor(() => expect(screen.getByText('Migrating vault…')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Switch to this folder')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Switch to this folder'))
+    await waitFor(() => expect(screen.getByText('Switching vault…')).toBeInTheDocument())
     const buttons = screen.getAllByRole('button')
     for (const btn of buttons) expect(btn).toBeDisabled()
   })

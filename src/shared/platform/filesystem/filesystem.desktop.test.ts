@@ -9,6 +9,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   readDir: vi.fn(),
   exists: vi.fn(),
   copyFile: vi.fn(),
+  writeFile: vi.fn(),
 }))
 
 describe('FilesystemAdapter (desktop)', () => {
@@ -24,6 +25,7 @@ describe('FilesystemAdapter (desktop)', () => {
     vi.mocked(fs.readDir).mockResolvedValue([{ name: 'a.txt' }, { name: 'b.txt' }] as never)
     vi.mocked(fs.exists).mockResolvedValue(true)
     vi.mocked(fs.copyFile).mockResolvedValue(undefined)
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
 
     const { createDesktopFilesystemAdapter } = await import('./filesystem.desktop')
     adapter = createDesktopFilesystemAdapter()
@@ -134,5 +136,40 @@ describe('FilesystemAdapter (desktop)', () => {
     vi.mocked(fs.copyFile).mockRejectedValue(new Error('permission denied'))
     const result = await adapter.copyFile('/old/path/file.db', '/new/path/file.db')
     expect(result.isErr()).toBe(true)
+  })
+
+  it('writeFileBinary returns ok on success', async () => {
+    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('writeFileBinary returns err when plugin throws', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    vi.mocked(fs.writeFile).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.writeFileBinary('/vault/books/test.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isErr()).toBe(true)
+  })
+
+  it('mkdirInVault delegates to mkdir with combined path', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    const result = await adapter.mkdirInVault('/home/user/vault', 'books')
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(fs.mkdir)).toHaveBeenCalledWith('/home/user/vault/books', expect.any(Object))
+  })
+
+  it('writeFileBinaryToVault delegates to writeFileBinary with combined path', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    const result = await adapter.writeFileBinaryToVault('/home/user/vault', 'books/file.epub', new Uint8Array([1, 2, 3]))
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(fs.writeFile)).toHaveBeenCalledWith('/home/user/vault/books/file.epub', expect.any(Uint8Array))
+  })
+
+  it('fileExistsInVault delegates to exists with combined path', async () => {
+    const fs = await import('@tauri-apps/plugin-fs')
+    vi.mocked(fs.exists).mockResolvedValue(true)
+    const result = await adapter.fileExistsInVault('/home/user/vault', 'lekto.db')
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBe(true)
+    expect(vi.mocked(fs.exists)).toHaveBeenCalledWith('/home/user/vault/lekto.db')
   })
 })

@@ -112,18 +112,4 @@ The desktop platform adapters (filesystem, file-picker, secure-storage, preferen
 - Active graphical session (X11 or Wayland)
 - GNOME Keyring (or any Secret Service-compatible daemon) running — required by the `secure-storage` adapter for vault passphrase storage
 
-**Smoke test — first launch:**
-
-1. `npm run tauri:dev`
-2. On first launch, the app should display the vault creation screen (no existing vault found)
-3. Create a vault → confirm navigation to the library screen
-4. Quit and relaunch → app should reopen directly on the library screen (vault path persisted via `preferencesAdapter`)
-
-**Smoke test — open existing vault:**
-
-1. `npm run tauri:dev` (delete the `preferences` store to simulate first launch if needed)
-2. On the vault setup screen, click **"Open existing vault"**
-3. A native folder picker opens; select a folder that contains a `lekto.db` file → confirm navigation to the library screen with all previous data
-4. Select a folder without `lekto.db` → confirm the inline error "This folder does not contain a valid Lekto vault" is shown and the screen stays open
-
-If any of these steps fail, the most likely culprits are the filesystem adapter (vault path resolution) or the secure-storage adapter (GNOME Keyring not available).
+See [docs/smoke-tests.md](docs/smoke-tests.md) for the full manual validation checklist (vault setup, EPUB import, and future features).
