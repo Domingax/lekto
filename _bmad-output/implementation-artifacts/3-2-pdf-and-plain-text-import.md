@@ -1,6 +1,6 @@
 # Story 3.2: PDF & Plain Text Import
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -386,6 +386,12 @@ After all commits:
   - [x] `npm run typecheck` — zero errors
   - [x] `npm run test` — all tests pass (282 total)
   - [x] `npm run build` — succeeds
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][MEDIUM] Fix user-visible error message: `import-book.ts:50` says `'Failed to save EPUB: ...'` — should say `'Failed to save file: ...'` since this step now handles PDF and TXT files too [src/features/import-book/model/import-book.ts:50]
+- [ ] [AI-Review][LOW] Update stale inline comment in `import-book.ts:43-44` — "save EPUB to vault" should read "save file to vault" [src/features/import-book/model/import-book.ts:43]
+- [ ] [AI-Review][LOW] Add test in `parse-pdf.test.ts` for `getMetadata()` throwing — verify title falls back to filename via the `.catch(() => null)` path [src/features/import-book/api/parse-pdf.test.ts]
 
 ---
 
