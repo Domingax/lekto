@@ -43,7 +43,16 @@ beforeEach(() => {
 describe('LibraryPage', () => {
   it('renders the import button', () => {
     renderPage()
-    expect(screen.getByRole('button', { name: /import epub/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /import book/i })).toBeInTheDocument()
+  })
+
+  it('calls file picker with correct accept array including pdf and txt', async () => {
+    vi.mocked(filePickerAdapter.pickFile).mockResolvedValue(err('cancelled'))
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /import book/i }))
+    await waitFor(() => expect(filePickerAdapter.pickFile).toHaveBeenCalled())
+    expect(filePickerAdapter.pickFile).toHaveBeenCalledWith({ accept: ['.epub', '.pdf', '.txt'] })
   })
 
   it('shows progress paragraph while importBook is pending', async () => {
@@ -54,7 +63,7 @@ describe('LibraryPage', () => {
     vi.mocked(importBook).mockReturnValue(new Promise(() => {}))
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /import epub/i }))
+    fireEvent.click(screen.getByRole('button', { name: /import book/i }))
     await waitFor(() => expect(screen.getByText('Importing…')).toBeInTheDocument())
   })
 
@@ -62,7 +71,7 @@ describe('LibraryPage', () => {
     vi.mocked(filePickerAdapter.pickFile).mockResolvedValue(err('cancelled'))
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /import epub/i }))
+    fireEvent.click(screen.getByRole('button', { name: /import book/i }))
     // cancelled is silent — no error shown (not a failure, just cancel)
     await waitFor(() => expect(filePickerAdapter.pickFile).toHaveBeenCalled())
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -75,7 +84,7 @@ describe('LibraryPage', () => {
     vi.mocked(importBook).mockResolvedValue(err('Failed to parse EPUB'))
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /import epub/i }))
+    fireEvent.click(screen.getByRole('button', { name: /import book/i }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Failed to parse EPUB'))
   })
 
@@ -94,7 +103,7 @@ describe('LibraryPage', () => {
     })
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /import epub/i }))
+    fireEvent.click(screen.getByRole('button', { name: /import book/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
   })
 
