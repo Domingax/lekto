@@ -140,6 +140,22 @@ describe('importBook', () => {
     }
   })
 
+  it('passes a copy of the data buffer to parsePdf so the original is available for file save', async () => {
+    const { parsePdf } = await import('../api/parse-pdf')
+    let capturedData: ArrayBuffer | undefined
+    vi.mocked(parsePdf).mockImplementationOnce(async (data) => {
+      capturedData = data
+      return err('stop early')
+    })
+
+    const originalData = new ArrayBuffer(16)
+    const { importBook } = await import('./import-book')
+    await importBook(originalData, 'book.pdf', mockResolveLanguage)
+
+    expect(capturedData).not.toBe(originalData)
+    expect(capturedData?.byteLength).toBe(originalData.byteLength)
+  })
+
   it('dispatches to parsePdf for .pdf files and not parseEpub', async () => {
     const { parseEpub } = await import('../api/parse-epub')
     const { parsePdf } = await import('../api/parse-pdf')

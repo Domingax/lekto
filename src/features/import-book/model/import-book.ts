@@ -23,7 +23,7 @@ export async function importBook(
   if (ext === 'epub') {
     parseResult = await parseEpub(data)
   } else if (ext === 'pdf') {
-    parseResult = await parsePdf(data, fileName)
+    parseResult = await parsePdf(data.slice(0), fileName)
   } else if (ext === 'txt') {
     parseResult = await parseTxt(data, fileName)
   } else {
