@@ -53,6 +53,17 @@ describe('parsePdf', () => {
     }
   })
 
+  it('passes disableStream:true to getDocument to avoid ReadableStream issues in Tauri WebKitGTK', async () => {
+    makeMockPdf([['Some text']])
+    const { parsePdf } = await import('./parse-pdf')
+
+    await parsePdf(new ArrayBuffer(8), 'test.pdf')
+
+    expect(vi.mocked(pdfjsLib.getDocument)).toHaveBeenCalledWith(
+      expect.objectContaining({ disableStream: true }),
+    )
+  })
+
   it('uses metadata Title when available', async () => {
     makeMockPdf([['Content here']], 'My Great Novel')
     const { parsePdf } = await import('./parse-pdf')

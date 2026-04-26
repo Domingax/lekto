@@ -9,7 +9,9 @@ export async function parsePdf(data: ArrayBuffer, fileName: string): AsyncResult
     const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
     pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
-    const pdf = await pdfjsLib.getDocument({ data }).promise
+    // disableStream prevents PDF.js from using ReadableStream async iteration,
+    // which is unsupported in Tauri's WebKitGTK webview.
+    const pdf = await pdfjsLib.getDocument({ data, disableStream: true }).promise
     const sections: Array<{ title: string; text: string }> = []
 
     for (let i = 1; i <= pdf.numPages; i++) {
