@@ -64,6 +64,23 @@ describe('parsePdf', () => {
     )
   })
 
+  it('polyfills ReadableStream async iterator when Symbol.asyncIterator is missing (Tauri WebKitGTK)', async () => {
+    makeMockPdf([['Content']])
+    const original = Object.getOwnPropertyDescriptor(ReadableStream.prototype, Symbol.asyncIterator)
+    delete (ReadableStream.prototype as unknown as Record<symbol, unknown>)[Symbol.asyncIterator]
+
+    const { parsePdf } = await import('./parse-pdf')
+    await parsePdf(new ArrayBuffer(8), 'test.pdf')
+
+    expect(ReadableStream.prototype[Symbol.asyncIterator]).toBeDefined()
+
+    if (original) {
+      Object.defineProperty(ReadableStream.prototype, Symbol.asyncIterator, original)
+    } else {
+      delete (ReadableStream.prototype as unknown as Record<symbol, unknown>)[Symbol.asyncIterator]
+    }
+  })
+
   it('uses metadata Title when available', async () => {
     makeMockPdf([['Content here']], 'My Great Novel')
     const { parsePdf } = await import('./parse-pdf')

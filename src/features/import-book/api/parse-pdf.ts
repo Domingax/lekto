@@ -3,7 +3,41 @@ import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import type { AsyncResult } from '@/shared/lib'
 import type { ParsedBook } from './parse-epub'
 
+// pdfjs-dist 5.x uses `for await...of ReadableStream` internally in getTextContent().
+// WebKitGTK (Tauri Linux webview) does not implement ReadableStream[Symbol.asyncIterator].
+function polyfillReadableStreamAsyncIterator(): void {
+  if (typeof ReadableStream !== 'undefined' && !(Symbol.asyncIterator in ReadableStream.prototype)) {
+    ReadableStream.prototype[Symbol.asyncIterator] = function () {
+      const reader = this.getReader()
+      return {
+        async next() {
+          try {
+            const { done, value } = await reader.read()
+            if (done) {
+              reader.releaseLock()
+              return { done: true as const, value: undefined }
+            }
+            return { done: false as const, value }
+          } catch (e) {
+            reader.releaseLock()
+            throw e
+          }
+        },
+        async return() {
+          await reader.cancel()
+          reader.releaseLock()
+          return { done: true as const, value: undefined }
+        },
+        [Symbol.asyncIterator]() {
+          return this
+        },
+      }
+    }
+  }
+}
+
 export async function parsePdf(data: ArrayBuffer, fileName: string): AsyncResult<ParsedBook> {
+  polyfillReadableStreamAsyncIterator()
   try {
     const pdfjsLib = await import('pdfjs-dist')
     const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
