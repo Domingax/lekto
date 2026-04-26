@@ -7,7 +7,9 @@ import type { ParsedBook } from './parse-epub'
 // WebKitGTK (Tauri Linux webview) does not implement ReadableStream[Symbol.asyncIterator].
 function polyfillReadableStreamAsyncIterator(): void {
   if (typeof ReadableStream !== 'undefined' && !(Symbol.asyncIterator in ReadableStream.prototype)) {
-    (ReadableStream.prototype as unknown as Record<symbol, unknown>)[Symbol.asyncIterator] = function () {
+    (ReadableStream.prototype as unknown as Record<symbol, unknown>)[Symbol.asyncIterator] = function (
+      this: ReadableStream<unknown>,
+    ) {
       const reader = this.getReader()
       return {
         async next() {
