@@ -72,7 +72,7 @@ describe('parsePdf', () => {
     const { parsePdf } = await import('./parse-pdf')
     await parsePdf(new ArrayBuffer(8), 'test.pdf')
 
-    expect(ReadableStream.prototype[Symbol.asyncIterator]).toBeDefined()
+    expect((ReadableStream.prototype as unknown as Record<symbol, unknown>)[Symbol.asyncIterator]).toBeDefined()
 
     if (original) {
       Object.defineProperty(ReadableStream.prototype, Symbol.asyncIterator, original)
