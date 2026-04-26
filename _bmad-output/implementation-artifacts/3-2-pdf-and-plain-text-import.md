@@ -389,9 +389,9 @@ After all commits:
 
 ### Review Follow-ups (AI)
 
-- [ ] [AI-Review][MEDIUM] Fix user-visible error message: `import-book.ts:50` says `'Failed to save EPUB: ...'` — should say `'Failed to save file: ...'` since this step now handles PDF and TXT files too [src/features/import-book/model/import-book.ts:50]
-- [ ] [AI-Review][LOW] Update stale inline comment in `import-book.ts:43-44` — "save EPUB to vault" should read "save file to vault" [src/features/import-book/model/import-book.ts:43]
-- [ ] [AI-Review][LOW] Add test in `parse-pdf.test.ts` for `getMetadata()` throwing — verify title falls back to filename via the `.catch(() => null)` path [src/features/import-book/api/parse-pdf.test.ts]
+- [x] [AI-Review][MEDIUM] Fix user-visible error message: `import-book.ts:50` says `'Failed to save EPUB: ...'` — should say `'Failed to save file: ...'` since this step now handles PDF and TXT files too [src/features/import-book/model/import-book.ts:50]
+- [x] [AI-Review][LOW] Update stale inline comment in `import-book.ts:43-44` — "save EPUB to vault" should read "save file to vault" [src/features/import-book/model/import-book.ts:43]
+- [x] [AI-Review][LOW] Add test in `parse-pdf.test.ts` for `getMetadata()` throwing — verify title falls back to filename via the `.catch(() => null)` path [src/features/import-book/api/parse-pdf.test.ts]
 
 ---
 
@@ -406,7 +406,9 @@ After all commits:
 
 ### Completion Notes
 
-All 13 tasks completed. 282 tests pass (was 251 before story, +31 new). Zero typecheck errors. Build succeeds. pdfjs-dist v5.6.205 installed (story spec said v4.x; v5 API is identical for our usage — `getDocument`, `getTextContent`, `TextItem`).
+All 13 tasks completed + 3 review follow-ups resolved + 1 post-review bug fix. 284 tests pass. Zero typecheck errors. Build succeeds. pdfjs-dist v5.6.205 installed (story spec said v4.x; v5 API is identical for our usage — `getDocument`, `getTextContent`, `TextItem`).
+
+**Post-review bug fix (2026-04-26):** PDF import failed on desktop with "Failed to parse PDF — undefined is not a function (near '...value of readableStream...')". Root cause: pdfjs-dist v5 uses `ReadableStream` async iteration, unsupported in Tauri's WebKitGTK webview. Fixed by passing `disableStream: true` to `getDocument()`.
 
 ---
 
@@ -434,6 +436,8 @@ All 13 tasks completed. 282 tests pass (was 251 before story, +31 new). Zero typ
 - Added PDF parser (`parse-pdf.ts`) using pdfjs-dist v5 with lazy import, per-page sections, scanned-PDF detection (2026-04-22)
 - Updated `import-book.ts` orchestrator with format dispatch for epub/pdf/txt and unsupported-extension error (2026-04-22)
 - Updated `LibraryPage.tsx`: accept array extended to `.epub`, `.pdf`, `.txt`; button label changed to "Import Book" (2026-04-22)
+- Fixed PDF import on Tauri desktop: `disableStream: true` in `getDocument()` to avoid ReadableStream async iteration (unsupported in WebKitGTK) (2026-04-26)
+- Resolved all 3 AI code review follow-ups: stale error message, stale comment, getMetadata-throws test (2026-04-26)
 
 ---
 
