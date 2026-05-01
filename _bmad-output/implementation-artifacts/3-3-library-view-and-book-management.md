@@ -1,6 +1,6 @@
 # Story 3.3: Library View & Book Management
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -860,6 +860,18 @@ After all commits:
   - [x] Confirm `npm run tauri:dev` is running
   - [x] `driver_session` `start` → session connected, Tauri IPC responding (app identifier: com.lekto.app)
   - [ ] `webview_screenshot` — BLOCKED: WebView JS injection times out on this Linux/WebKitGTK setup (known limitation; all other MCP tools also timeout); app renders correctly with WEBKIT_DISABLE_COMPOSITING_MODE=1
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][High] Uncommitted `package.json` + `package-lock.json` changes add `shadcn ^4.6.0` devDependency (3270 lockfile lines). Contradicts dev summary that claims the CLI was not installed. Either revert or commit + update story File List + PR Dev Summary. [package.json:78, package-lock.json:67]
+- [ ] [AI-Review][Medium] Desktop UI not visually validated — `webview_screenshot` blocked by WebKitGTK MCP timeout. AGENTS.md mandates visual validation for any UI change; provide an alternative (manual screenshot attached to PR or recorded clip) or document the limitation as an explicit deviation in the PR description. [story Task 39]
+- [ ] [AI-Review][Medium] AC6 mentions "browser/native context menu" but `BookListItem` exposes no `onContextMenu` handler — the trash button is the only delete entry point. Either add an `onContextMenu` that calls `onRequestDelete(book)` or amend the AC/dev notes to drop the context-menu wording. [src/widgets/book-list-item/ui/BookListItem.tsx:14]
+- [ ] [AI-Review][Medium] Pre-existing — `eslint.config.js` only ignores `dist`; on machines that have run an Android build, `npm run lint` reports an error + warnings inside `android/app/build/intermediates/...`. Add `'android/app/build'` to `globalIgnores`. [eslint.config.js:9]
+- [ ] [AI-Review][Medium] Pre-existing — `npm run build` emits `"file" is not a known CSS property` because Tailwind v4 scans `.claude/skills/bmad-code-review/workflow.md` and treats `[file:line]` as an arbitrary class. Add an `@source` directive (or `@source not`) in `src/index.css` to scope scanning to `src/`. [src/index.css:1]
+- [ ] [AI-Review][Low] `SEED_LANGUAGES` duplicated between `src/shared/db/seed-languages.ts:6` and `src/pages/library-page/ui/LibraryPage.tsx:21`. Pre-existing. Extract to a shared module under `src/shared/lib/` so the import-language dialog and the library fallback share one source of truth. [src/pages/library-page/ui/LibraryPage.tsx:21]
+- [ ] [AI-Review][Low] Filtered list with zero matches shows nothing — when a language filter is active and no books match (e.g. user deletes the last book of that language), neither the empty state nor a "no results in this filter" message is rendered. Add a small "No books match this filter" line. [src/pages/library-page/ui/LibraryPage.tsx:339]
+- [ ] [AI-Review][Low] `handleOpen` does not refresh `reading_progress.updatedAt` on subsequent opens — only the initial insert sets it. Until Story 3.4 wires position-save, "Continue reading" anchors to the first-open timestamp. Either bump `updatedAt` here or document the limitation in story 3.4 dev notes. [src/pages/library-page/ui/LibraryPage.tsx:158]
+- [ ] [AI-Review][Low] `LibraryPage.tsx:122` carries an `eslint-disable-next-line react-hooks/set-state-in-effect` whose justification ("false positive") is misleading. Rewrite the comment to state the real reason: setState fires after `await`, which the rule cannot statically prove is safe. [src/pages/library-page/ui/LibraryPage.tsx:122]
 
 ---
 
