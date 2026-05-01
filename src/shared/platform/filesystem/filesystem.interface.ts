@@ -28,6 +28,14 @@ export interface FilesystemAdapter {
    */
   fileExistsInVault(vaultPath: string, relativePath: string): AsyncResult<boolean>
   /**
+   * Delete a file at a path relative to a vault root.
+   * On Android, routes through the native VaultFs plugin when vaultPath is a SAF URI.
+   * On Desktop, equivalent to deleteFile(`${vaultPath}/${relativePath}`).
+   * Returns err('not found') (or analogous) when the file does not exist —
+   * callers may treat that case as success since the goal is "file is absent".
+   */
+  deleteFileInVault(vaultPath: string, relativePath: string): AsyncResult<void>
+  /**
    * Persist SAF read+write permissions for the vault path so they survive app restarts.
    * Must be called immediately after the user picks a vault directory.
    * No-op on Desktop and for non-SAF Android paths.

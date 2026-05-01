@@ -7,6 +7,8 @@ export interface VaultFsPlugin {
   mkdir(options: { treeUri: string; path: string }): Promise<void>
   /** Check whether a file exists at a path relative to a SAF tree URI. */
   fileExists(options: { treeUri: string; path: string }): Promise<{ exists: boolean }>
+  /** Delete a file at a path relative to a SAF tree URI. No-op if file doesn't exist. */
+  deleteFile(options: { treeUri: string; path: string }): Promise<void>
   /**
    * Persist read+write SAF permissions for a tree URI so they survive app restarts.
    * Must be called immediately after pickDirectory(), while the temporary grant is active.

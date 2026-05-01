@@ -99,6 +99,19 @@ export function createAndroidFilesystemAdapter(): FilesystemAdapter {
       return adapter.exists(`${vaultPath}/${relativePath}`)
     },
 
+    async deleteFileInVault(vaultPath: string, relativePath: string): AsyncResult<void> {
+      if (isSafUri(vaultPath)) {
+        try {
+          await VaultFs.deleteFile({ treeUri: vaultPath, path: relativePath })
+          return ok(undefined)
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e)
+          return err(`Failed to delete file in vault: ${relativePath} — ${detail}`)
+        }
+      }
+      return adapter.deleteFile(`${vaultPath}/${relativePath}`)
+    },
+
     async takeVaultPermissions(vaultPath: string): AsyncResult<void> {
       if (!isSafUri(vaultPath)) return ok(undefined)
       try {
