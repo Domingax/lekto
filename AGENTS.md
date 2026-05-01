@@ -244,12 +244,25 @@ features/importBook/
 
 - **Unit tests:** Vitest + React Testing Library (runs in jsdom)
 - **E2E Android:** Maestro (run locally before release; CI integration post-MVP)
-- **Desktop validation:** `npm run tauri:dev` locally — no automated desktop E2E in CI (deferred until Epic 2+ user flows exist)
+- **Desktop validation:** `npm run tauri:dev` locally, then use the Tauri MCP Bridge to verify UI (see below)
 - Platform-specific code (Capacitor, Tauri plugins) must be mocked in Vitest/jsdom
+
+### Desktop UI Validation — Tauri MCP Bridge
+
+The project has `tauri-plugin-mcp-bridge` installed (debug builds only). After implementing any desktop UI change, **always** validate visually using the MCP tools — do not rely solely on type-checking or unit tests.
+
+**Protocol:**
+1. Confirm `npm run tauri:dev` is running (ask the user if unsure)
+2. Call `driver_session` with `action: "start"` to connect (port 9223)
+3. Call `webview_screenshot` to capture the current state
+4. Use `webview_find_element` / `webview_interact` to test the golden path
+5. Report what was verified and any visual regressions spotted
+
+**When to apply:** any task that touches a component, page, widget, or CSS — even a one-line style change.
 
 ### Desktop adapters — local validation only
 
-Desktop adapters (`filesystemAdapter`, `filePickerAdapter`, `secureStorageAdapter`, `preferencesAdapter`) call Tauri IPC and cannot run in jsdom. They are not covered by unit tests. Validate them locally with `npm run tauri:dev`.
+Desktop adapters (`filesystemAdapter`, `filePickerAdapter`, `secureStorageAdapter`, `preferencesAdapter`) call Tauri IPC and cannot run in jsdom. They are not covered by unit tests. Validate them locally with `npm run tauri:dev` + MCP Bridge.
 
 Desktop E2E (WebDriverIO + `tauri-driver`) is not wired in CI. It will be reintroduced when Epic 2+ produces real user flows worth automating.
 

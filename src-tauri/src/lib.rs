@@ -2,7 +2,7 @@ mod keychain;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
+  let mut builder = tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![keychain::get_or_create_vault_passphrase])
     .plugin(tauri_plugin_sql::Builder::default().build())
     .plugin(tauri_plugin_fs::init())
@@ -21,7 +21,14 @@ pub fn run() {
         hash.as_bytes().to_vec()
       })
       .build(),
-    )
+    );
+
+  #[cfg(debug_assertions)]
+  {
+    builder = builder.plugin(tauri_plugin_mcp_bridge::init());
+  }
+
+  builder
     .run(tauri::generate_context!())
     .expect("error while running tauri application")
 }
