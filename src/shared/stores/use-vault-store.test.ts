@@ -50,4 +50,16 @@ describe('useVaultStore', () => {
     useVaultStore.getState().addBook(book3)
     expect(useVaultStore.getState().books).toEqual([book1, book3])
   })
+
+  it('removeBook removes the book with the given id', () => {
+    useVaultStore.getState().setBooks([book1, book2, book3])
+    useVaultStore.getState().removeBook('2')
+    expect(useVaultStore.getState().books).toEqual([book1, book3])
+  })
+
+  it('removeBook is a no-op when id does not match any book', () => {
+    useVaultStore.getState().setBooks([book1, book2])
+    useVaultStore.getState().removeBook('999')
+    expect(useVaultStore.getState().books).toEqual([book1, book2])
+  })
 })
