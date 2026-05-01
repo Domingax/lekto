@@ -6,6 +6,14 @@ vi.mock('../api/parse-epub', () => ({
   parseEpub: vi.fn(),
 }))
 
+vi.mock('../api/parse-pdf', () => ({
+  parsePdf: vi.fn(),
+}))
+
+vi.mock('../api/parse-txt', () => ({
+  parseTxt: vi.fn(),
+}))
+
 vi.mock('./detect-language', () => ({
   detectLanguage: vi.fn(),
 }))
@@ -129,6 +137,58 @@ describe('importBook', () => {
     expect(result.isErr()).toBe(true)
     if (result.isErr()) {
       expect(result.error).toBe('Import cancelled')
+    }
+  })
+
+  it('passes a copy of the data buffer to parsePdf so the original is available for file save', async () => {
+    const { parsePdf } = await import('../api/parse-pdf')
+    let capturedData: ArrayBuffer | undefined
+    vi.mocked(parsePdf).mockImplementationOnce(async (data) => {
+      capturedData = data
+      return err('stop early')
+    })
+
+    const originalData = new ArrayBuffer(16)
+    const { importBook } = await import('./import-book')
+    await importBook(originalData, 'book.pdf', mockResolveLanguage)
+
+    expect(capturedData).not.toBe(originalData)
+    expect(capturedData?.byteLength).toBe(originalData.byteLength)
+  })
+
+  it('dispatches to parsePdf for .pdf files and not parseEpub', async () => {
+    const { parseEpub } = await import('../api/parse-epub')
+    const { parsePdf } = await import('../api/parse-pdf')
+
+    vi.mocked(parsePdf).mockResolvedValue(err('stop early'))
+
+    const { importBook } = await import('./import-book')
+    await importBook(mockData, 'book.pdf', mockResolveLanguage)
+
+    expect(parsePdf).toHaveBeenCalled()
+    expect(parseEpub).not.toHaveBeenCalled()
+  })
+
+  it('dispatches to parseTxt for .txt files and not parseEpub', async () => {
+    const { parseEpub } = await import('../api/parse-epub')
+    const { parseTxt } = await import('../api/parse-txt')
+
+    vi.mocked(parseTxt).mockResolvedValue(err('stop early'))
+
+    const { importBook } = await import('./import-book')
+    await importBook(mockData, 'notes.txt', mockResolveLanguage)
+
+    expect(parseTxt).toHaveBeenCalled()
+    expect(parseEpub).not.toHaveBeenCalled()
+  })
+
+  it('returns err for unsupported file extension .docx', async () => {
+    const { importBook } = await import('./import-book')
+    const result = await importBook(mockData, 'document.docx', mockResolveLanguage)
+
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) {
+      expect(result.error).toBe('Unsupported file format: .docx')
     }
   })
 

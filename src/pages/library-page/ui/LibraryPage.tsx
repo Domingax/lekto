@@ -59,7 +59,7 @@ export function LibraryPage() {
 
   const handleImport = async () => {
     setImportError(null)
-    const pickerResult = await filePickerAdapter.pickFile({ accept: ['.epub'] })
+    const pickerResult = await filePickerAdapter.pickFile({ accept: ['.epub', '.pdf', '.txt'] })
     if (pickerResult.isErr()) return
 
     const { data, name } = pickerResult.value
@@ -74,7 +74,7 @@ export function LibraryPage() {
   return (
     <div>
       <button onClick={handleImport} disabled={isImporting}>
-        Import EPUB
+        Import Book
       </button>
 
       {isImporting && <p>Importing…</p>}
