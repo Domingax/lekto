@@ -138,7 +138,7 @@ beforeEach(() => {
     addBook: vi.fn(),
     removeBook: vi.fn(),
   }
-  vi.mocked(useReaderStore).getState.mockReturnValue({ setPosition: vi.fn() } as never)
+  vi.mocked(useReaderStore.getState).mockReturnValue({ setPosition: vi.fn() } as never)
 })
 
 describe('LibraryPage — import flow', () => {
@@ -337,7 +337,7 @@ describe('LibraryPage — open book flow', () => {
       readingProgressForOpen: [{ sectionId: 's1', tokenIndex: 3 }],
     }) as never)
     const setPosition = vi.fn()
-    vi.mocked(useReaderStore).getState.mockReturnValue({ setPosition } as never)
+    vi.mocked(useReaderStore.getState).mockReturnValue({ setPosition } as never)
 
     renderPage()
     await waitFor(() => screen.getByText('Dune'))
@@ -356,7 +356,7 @@ describe('LibraryPage — open book flow', () => {
     })
     vi.mocked(getDb).mockReturnValue(db as never)
     const setPosition = vi.fn()
-    vi.mocked(useReaderStore).getState.mockReturnValue({ setPosition } as never)
+    vi.mocked(useReaderStore.getState).mockReturnValue({ setPosition } as never)
 
     renderPage()
     await waitFor(() => screen.getByText('Dune'))

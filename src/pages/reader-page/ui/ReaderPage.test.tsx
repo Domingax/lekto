@@ -33,11 +33,11 @@ function renderAtRoute(bookId: string) {
 
 describe('ReaderPage', () => {
   it('renders the book title from the store', () => {
-    vi.mocked(useVaultStore).mockImplementation((selector: (s: unknown) => unknown) =>
-      selector({ books: [book] }) as never,
+    vi.mocked(useVaultStore).mockImplementation(
+      ((selector: (s: unknown) => unknown) => selector({ books: [book] })) as never,
     )
-    vi.mocked(useReaderStore).mockImplementation((selector: (s: unknown) => unknown) =>
-      selector({ currentSectionId: 's1', tokenIndex: 5 }) as never,
+    vi.mocked(useReaderStore).mockImplementation(
+      ((selector: (s: unknown) => unknown) => selector({ currentSectionId: 's1', tokenIndex: 5 })) as never,
     )
 
     renderAtRoute('b1')
@@ -47,11 +47,11 @@ describe('ReaderPage', () => {
   })
 
   it('shows alert and back link when book is not found', () => {
-    vi.mocked(useVaultStore).mockImplementation((selector: (s: unknown) => unknown) =>
-      selector({ books: [] }) as never,
+    vi.mocked(useVaultStore).mockImplementation(
+      ((selector: (s: unknown) => unknown) => selector({ books: [] })) as never,
     )
-    vi.mocked(useReaderStore).mockImplementation((selector: (s: unknown) => unknown) =>
-      selector({ currentSectionId: null, tokenIndex: 0 }) as never,
+    vi.mocked(useReaderStore).mockImplementation(
+      ((selector: (s: unknown) => unknown) => selector({ currentSectionId: null, tokenIndex: 0 })) as never,
     )
 
     renderAtRoute('unknown-id')

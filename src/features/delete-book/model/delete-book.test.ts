@@ -47,7 +47,7 @@ describe('deleteBook', () => {
     const { getDb } = await import('@/shared/db')
     const removeBook = vi.fn()
 
-    vi.mocked(useVaultStore).getState.mockReturnValue({
+    vi.mocked(useVaultStore.getState).mockReturnValue({
       books: [book],
       vaultPath: '/vault',
       removeBook,
@@ -72,7 +72,7 @@ describe('deleteBook', () => {
     const { filesystemAdapter } = await import('@/shared/platform')
     const { getDb } = await import('@/shared/db')
 
-    vi.mocked(useVaultStore).getState.mockReturnValue({
+    vi.mocked(useVaultStore.getState).mockReturnValue({
       books: [],
       vaultPath: '/vault',
       removeBook: vi.fn(),
@@ -92,7 +92,7 @@ describe('deleteBook', () => {
     const { filesystemAdapter } = await import('@/shared/platform')
     const { getDb } = await import('@/shared/db')
 
-    vi.mocked(useVaultStore).getState.mockReturnValue({
+    vi.mocked(useVaultStore.getState).mockReturnValue({
       books: [book],
       vaultPath: null,
       removeBook: vi.fn(),
@@ -113,7 +113,7 @@ describe('deleteBook', () => {
     const { getDb } = await import('@/shared/db')
     const removeBook = vi.fn()
 
-    vi.mocked(useVaultStore).getState.mockReturnValue({
+    vi.mocked(useVaultStore.getState).mockReturnValue({
       books: [book],
       vaultPath: '/vault',
       removeBook,
@@ -138,7 +138,7 @@ describe('deleteBook', () => {
     const { getDb } = await import('@/shared/db')
     const removeBook = vi.fn()
 
-    vi.mocked(useVaultStore).getState.mockReturnValue({
+    vi.mocked(useVaultStore.getState).mockReturnValue({
       books: [book],
       vaultPath: '/vault',
       removeBook,
@@ -163,7 +163,7 @@ describe('deleteBook', () => {
     const removeBook = vi.fn()
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-    vi.mocked(useVaultStore).getState.mockReturnValue({
+    vi.mocked(useVaultStore.getState).mockReturnValue({
       books: [book],
       vaultPath: '/vault',
       removeBook,
