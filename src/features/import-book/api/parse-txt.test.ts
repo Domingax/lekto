@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { parseTxt } from './parse-txt'
 
 function encodeText(text: string): ArrayBuffer {
@@ -57,5 +57,49 @@ describe('parseTxt', () => {
     if (result.isOk()) {
       expect(result.value.title).toBe('my.book.v2')
     }
+  })
+
+  describe('when TextDecoder throws', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('returns err with the Error message', async () => {
+      vi.stubGlobal(
+        'TextDecoder',
+        vi.fn().mockImplementation(() => ({
+          decode: () => {
+            throw new Error('decode failed')
+          },
+        })),
+      )
+
+      const result = await parseTxt(new ArrayBuffer(8), 'bad.txt')
+
+      expect(result.isErr()).toBe(true)
+      if (result.isErr()) {
+        expect(result.error).toMatch(/Failed to read text file/)
+        expect(result.error).toMatch(/decode failed/)
+      }
+    })
+
+    it('returns err with String(e) for non-Error throws', async () => {
+      vi.stubGlobal(
+        'TextDecoder',
+        vi.fn().mockImplementation(() => ({
+          decode: () => {
+            throw 'plain string failure'
+          },
+        })),
+      )
+
+      const result = await parseTxt(new ArrayBuffer(8), 'bad.txt')
+
+      expect(result.isErr()).toBe(true)
+      if (result.isErr()) {
+        expect(result.error).toMatch(/Failed to read text file/)
+        expect(result.error).toMatch(/plain string failure/)
+      }
+    })
   })
 })
