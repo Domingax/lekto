@@ -125,11 +125,8 @@ describe('parsePdf', () => {
         },
       })
 
-      await expect(async () => {
-        for await (const _chunk of stream as unknown as AsyncIterable<number>) {
-          // unreachable
-        }
-      }).rejects.toThrow('stream boom')
+      const iterator = (stream as unknown as AsyncIterable<number>)[Symbol.asyncIterator]()
+      await expect(iterator.next()).rejects.toThrow('stream boom')
     })
 
     it('cancels the reader when iteration breaks early (return path)', async () => {
@@ -141,12 +138,12 @@ describe('parsePdf', () => {
         },
       })
 
-      for await (const _chunk of stream as unknown as AsyncIterable<number>) {
-        break
-      }
+      const iterator = (stream as unknown as AsyncIterable<number>)[Symbol.asyncIterator]()
+      await iterator.next()
+      await iterator.return?.()
 
-      // After break, the iterator's return() ran — getReader() must succeed again
-      // (would throw "ReadableStream is locked" if return() didn't releaseLock)
+      // After return(), the reader's lock was released — getReader() must succeed
+      // (would throw "ReadableStream is locked" if releaseLock was not called)
       expect(() => stream.getReader()).not.toThrow()
     })
   })
