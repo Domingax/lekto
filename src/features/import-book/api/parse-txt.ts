@@ -9,7 +9,7 @@ export async function parseTxt(data: ArrayBuffer, fileName: string): AsyncResult
       return err('The text file is empty')
     }
     const title = fileName.replace(/\.[^.]+$/, '')
-    return ok({ title, sections: [{ title: '', text }] })
+    return ok({ title, author: null, sections: [{ title: '', text }] })
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e)
     return err(`Failed to read text file — ${detail}`)

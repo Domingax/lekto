@@ -50,6 +50,7 @@ describe('importBook', () => {
 
   const mockParsedBook = {
     title: 'Test Book',
+    author: null,
     sections: [{ title: 'Chapter 1', text: 'Hello world' }],
   }
 

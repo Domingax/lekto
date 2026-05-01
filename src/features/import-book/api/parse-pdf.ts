@@ -66,13 +66,16 @@ export async function parsePdf(data: ArrayBuffer, fileName: string): AsyncResult
     }
 
     const meta = await pdf.getMetadata().catch(() => null)
-    const pdfTitle = (meta?.info as Record<string, unknown> | null)?.['Title']
+    const info = meta?.info as Record<string, unknown> | null
+    const pdfTitle = info?.['Title']
     const title =
       typeof pdfTitle === 'string' && pdfTitle.trim()
         ? pdfTitle.trim()
         : fileName.replace(/\.[^.]+$/, '')
+    const rawAuthor = info?.['Author']
+    const author = typeof rawAuthor === 'string' && rawAuthor.trim() ? rawAuthor.trim() : null
 
-    return ok({ title, sections })
+    return ok({ title, author, sections })
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e)
     return err(`Failed to parse PDF — ${detail}`)

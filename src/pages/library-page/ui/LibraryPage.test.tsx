@@ -96,7 +96,7 @@ describe('LibraryPage', () => {
       // Call resolveLanguage to trigger dialog, but never resolve the outer promise yet
       return new Promise((resolve) => {
         resolveLanguage('en').then((lang) => {
-          if (lang) resolve(ok({ id: '1', title: 'T', fileName: 'test.epub', language: lang, coverPath: null, createdAt: 1 }))
+          if (lang) resolve(ok({ id: '1', title: 'T', author: null, fileName: 'test.epub', language: lang, coverPath: null, createdAt: 1 }))
           else resolve(err('Import cancelled'))
         })
       })
@@ -109,7 +109,7 @@ describe('LibraryPage', () => {
 
   it('books appear in the list via store', () => {
     const mockBooks: BookEntity[] = [
-      { id: '1', title: 'My Novel', fileName: 'novel.epub', language: 'en', coverPath: null, createdAt: 1000 },
+      { id: '1', title: 'My Novel', author: null, fileName: 'novel.epub', language: 'en', coverPath: null, createdAt: 1000 },
     ]
     vi.mocked(useVaultStore).mockImplementation(
       ((selector: (s: unknown) => unknown) =>

@@ -6,13 +6,14 @@ function encodeText(text: string): ArrayBuffer {
 }
 
 describe('parseTxt', () => {
-  it('returns ok with correct title and single section for valid UTF-8 text', async () => {
+  it('returns ok with correct title, null author, and single section for valid UTF-8 text', async () => {
     const data = encodeText('Hello world, this is a test.')
     const result = await parseTxt(data, 'my-novel.txt')
 
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
       expect(result.value.title).toBe('my-novel')
+      expect(result.value.author).toBeNull()
       expect(result.value.sections).toHaveLength(1)
       expect(result.value.sections[0]!.text).toBe('Hello world, this is a test.')
       expect(result.value.sections[0]!.title).toBe('')

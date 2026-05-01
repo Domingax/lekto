@@ -9,6 +9,7 @@ export const languages = sqliteTable('languages', {
 export const books = sqliteTable('books', {
   id: text('id').primaryKey(),                 // UUID
   title: text('title').notNull(),
+  author: text('author'),
   fileName: text('file_name').notNull(),
   language: text('language').notNull().references(() => languages.code),
   coverPath: text('cover_path'),

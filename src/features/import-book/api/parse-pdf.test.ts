@@ -13,17 +13,19 @@ function makeTextItems(strs: string[]) {
   return strs.map((str) => ({ str, dir: 'ltr', width: 10, height: 10, transform: [], fontName: 'F', hasEOL: false }))
 }
 
-function makeMockPdf(pages: string[][], titleMeta?: string) {
+function makeMockPdf(pages: string[][], titleMeta?: string, authorMeta?: string) {
   const mockPages = pages.map((strs) => ({
     getTextContent: vi.fn().mockResolvedValue({ items: makeTextItems(strs) }),
   }))
 
+  const info: Record<string, string> = {}
+  if (titleMeta) info['Title'] = titleMeta
+  if (authorMeta) info['Author'] = authorMeta
+
   const mockPdf = {
     numPages: pages.length,
     getPage: vi.fn((i: number) => Promise.resolve(mockPages[i - 1])),
-    getMetadata: vi.fn().mockResolvedValue(
-      titleMeta ? { info: { Title: titleMeta } } : { info: {} },
-    ),
+    getMetadata: vi.fn().mockResolvedValue({ info }),
   }
 
   vi.mocked(pdfjsLib.getDocument).mockReturnValue({ promise: Promise.resolve(mockPdf) } as never)
@@ -242,6 +244,42 @@ describe('parsePdf', () => {
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
       expect(result.value.sections).toHaveLength(4)
+    }
+  })
+
+  it('extracts author from metadata Author field', async () => {
+    makeMockPdf([['Content']], 'My Novel', 'Jules Verne')
+    const { parsePdf } = await import('./parse-pdf')
+
+    const result = await parsePdf(new ArrayBuffer(8), 'novel.pdf')
+
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.author).toBe('Jules Verne')
+    }
+  })
+
+  it('returns null author when Author metadata is absent', async () => {
+    makeMockPdf([['Content']])
+    const { parsePdf } = await import('./parse-pdf')
+
+    const result = await parsePdf(new ArrayBuffer(8), 'no-author.pdf')
+
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.author).toBeNull()
+    }
+  })
+
+  it('returns null author when Author metadata is empty string', async () => {
+    makeMockPdf([['Content']], undefined, '   ')
+    const { parsePdf } = await import('./parse-pdf')
+
+    const result = await parsePdf(new ArrayBuffer(8), 'empty-author.pdf')
+
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.author).toBeNull()
     }
   })
 })

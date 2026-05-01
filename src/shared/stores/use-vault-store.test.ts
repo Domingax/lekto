@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useVaultStore } from './use-vault-store'
 import type { BookEntity } from '@/entities'
 
-const book1: BookEntity = { id: '1', title: 'Book One', fileName: 'one.epub', language: 'en', coverPath: null, createdAt: 1000 }
-const book2: BookEntity = { id: '2', title: 'Book Two', fileName: 'two.epub', language: 'fr', coverPath: null, createdAt: 2000 }
-const book3: BookEntity = { id: '3', title: 'Book Three', fileName: 'three.epub', language: 'de', coverPath: null, createdAt: 3000 }
+const book1: BookEntity = { id: '1', title: 'Book One', author: null, fileName: 'one.epub', language: 'en', coverPath: null, createdAt: 1000 }
+const book2: BookEntity = { id: '2', title: 'Book Two', author: null, fileName: 'two.epub', language: 'fr', coverPath: null, createdAt: 2000 }
+const book3: BookEntity = { id: '3', title: 'Book Three', author: null, fileName: 'three.epub', language: 'de', coverPath: null, createdAt: 3000 }
 
 describe('useVaultStore', () => {
   beforeEach(() => {
