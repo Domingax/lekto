@@ -6,6 +6,7 @@ import { importBook } from '@/features/import-book'
 import { deleteBook } from '@/features/delete-book'
 import { useVaultStore, useReaderStore } from '@/shared/stores'
 import { getDb, schema } from '@/shared/db'
+import { SEED_LANGUAGES } from '@/shared/lib'
 import { BookListItem } from '@/widgets/book-list-item'
 import { ContinueReadingCard } from '@/widgets/continue-reading-card'
 import type { BookEntity } from '@/entities'
@@ -17,24 +18,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-
-const SEED_LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'French' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'ar', name: 'Arabic' },
-  { code: 'pl', name: 'Polish' },
-  { code: 'sv', name: 'Swedish' },
-  { code: 'tr', name: 'Turkish' },
-]
 
 interface ProgressRow {
   bookId: string
@@ -119,7 +102,7 @@ export function LibraryPage() {
   }, [books])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState fires after await; the rule cannot statically prove this is safe
     void hydrateLibraryData()
   }, [hydrateLibraryData])
 
@@ -169,6 +152,10 @@ export function LibraryPage() {
     if (existing) {
       sectionId = existing.sectionId
       tokenIndex = existing.tokenIndex
+      await db
+        .update(schema.readingProgress)
+        .set({ updatedAt: Math.floor(Date.now() / 1000) })
+        .where(eq(schema.readingProgress.bookId, bookId))
     } else {
       const sections = await db
         .select()
@@ -333,6 +320,11 @@ export function LibraryPage() {
             </Button>
           ))}
         </div>
+      )}
+
+      {/* Empty filter state */}
+      {books.length > 0 && filteredBooks.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">No books match this filter</p>
       )}
 
       {/* Book list */}

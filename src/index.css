@@ -1,3 +1,6 @@
+@layer utilities {
+  @tailwind utilities source(".");
+}
 @import "tailwindcss";
 
 #root {
