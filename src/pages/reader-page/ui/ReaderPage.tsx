@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { eq } from 'drizzle-orm'
 import { useReaderStore, useVaultStore } from '@/shared/stores'
 import { getDb, schema } from '@/shared/db'
+import type { TokenEntity } from '@/entities/token'
 import { ReaderView } from '@/widgets/reader-view'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -62,7 +63,7 @@ export function ReaderPage() {
         .from(schema.tokens)
         .where(eq(schema.tokens.sectionId, currentSectionId!))
         .orderBy(schema.tokens.index)
-      setTokens(rows)
+      setTokens(rows as TokenEntity[])
       setIsLoading(false)
     }
     loadTokens()
