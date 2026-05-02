@@ -11,12 +11,16 @@ interface BookListItemProps {
   onRequestDelete: (book: BookEntity) => void
 }
 
-export function BookListItem({ book, progressPct, languageName, onOpen, onRequestDelete }: BookListItemProps) {
+export function BookListItem({ book, progressPct, languageName, onOpen, onRequestDelete }: Readonly<BookListItemProps>) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${book.title}`}
       className="flex items-center gap-3 min-h-[48px] px-3 py-2 cursor-pointer hover:bg-muted/50 rounded-md"
       onClick={() => onOpen(book.id)}
       onContextMenu={(e) => { e.preventDefault(); onRequestDelete(book) }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(book.id) } }}
     >
       <div className="flex-shrink-0 w-10 h-14 bg-muted rounded flex items-center justify-center text-sm font-semibold text-muted-foreground select-none">
         {book.title.charAt(0).toUpperCase()}

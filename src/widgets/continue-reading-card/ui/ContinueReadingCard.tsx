@@ -1,11 +1,15 @@
 import { Button } from '@/components/ui/button'
 import type { ContinueReadingCardProps } from '../model/types'
 
-export function ContinueReadingCard({ book, chapterTitle, progressPct, onResume }: ContinueReadingCardProps) {
+export function ContinueReadingCard({ book, chapterTitle, progressPct, onResume }: Readonly<ContinueReadingCardProps>) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Continue reading ${book.title}`}
       className="flex items-center gap-4 w-full min-h-[96px] px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg cursor-pointer"
       onClick={() => onResume(book.id)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onResume(book.id) } }}
     >
       <div className="flex-shrink-0 w-16 h-22 bg-amber-200 rounded flex items-center justify-center text-xl font-bold text-amber-800 select-none">
         {book.title.charAt(0).toUpperCase()}

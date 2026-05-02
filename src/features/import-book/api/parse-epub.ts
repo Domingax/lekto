@@ -33,7 +33,7 @@ export async function parseEpub(data: ArrayBuffer): AsyncResult<ParsedBook> {
 
     const typedMeta = meta as { title?: string; creator?: string }
     const rawCreator = typedMeta.creator?.trim()
-    const author = rawCreator ? rawCreator : null
+    const author = rawCreator || null
     return ok({ title: typedMeta.title ?? 'Unknown', author, sections })
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e)

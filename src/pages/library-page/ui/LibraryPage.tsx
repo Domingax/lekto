@@ -198,10 +198,10 @@ export function LibraryPage() {
     progressMap[row.bookId] = row
   }
 
-  const lastOpenedRow =
-    progressRows.length > 0
-      ? progressRows.reduce((max, r) => (r.updatedAt > max.updatedAt ? r : max))
-      : null
+  const firstProgressRow = progressRows.at(0)
+  const lastOpenedRow = firstProgressRow
+    ? progressRows.reduce((max, r) => (r.updatedAt > max.updatedAt ? r : max), firstProgressRow)
+    : null
   const lastOpenedBook = lastOpenedRow
     ? (books.find((b) => b.id === lastOpenedRow.bookId) ?? null)
     : null
@@ -306,7 +306,8 @@ export function LibraryPage() {
 
       {/* Language filter chips */}
       {showLanguageFilter && (
-        <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter by language">
+        <fieldset className="flex gap-2 flex-wrap border-0 m-0 p-0">
+          <legend className="sr-only">Filter by language</legend>
           {distinctLanguages.map((code) => (
             <Button
               key={code}
@@ -319,7 +320,7 @@ export function LibraryPage() {
               {resolvedLanguageNames[code] ?? code}
             </Button>
           ))}
-        </div>
+        </fieldset>
       )}
 
       {/* Empty filter state */}
