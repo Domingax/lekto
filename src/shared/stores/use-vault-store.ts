@@ -9,6 +9,7 @@ interface VaultState {
   clearVault: () => void
   setBooks: (books: BookEntity[]) => void
   addBook: (book: BookEntity) => void
+  removeBook: (id: string) => void
 }
 
 export const useVaultStore = create<VaultState>((set) => ({
@@ -27,4 +28,7 @@ export const useVaultStore = create<VaultState>((set) => ({
 
   addBook: (book: BookEntity) =>
     set((s) => ({ books: [...s.books, book] })),
+
+  removeBook: (id: string) =>
+    set((s) => ({ books: s.books.filter((b) => b.id !== id) })),
 }))

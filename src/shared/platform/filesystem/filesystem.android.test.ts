@@ -6,6 +6,7 @@ vi.mock('./vault-fs.android', () => ({
     writeFile: vi.fn().mockResolvedValue(undefined),
     mkdir: vi.fn().mockResolvedValue(undefined),
     fileExists: vi.fn().mockResolvedValue({ exists: true }),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
     takePermissions: vi.fn().mockResolvedValue(undefined),
   },
 }))
@@ -222,6 +223,38 @@ describe('FilesystemAdapter (android)', () => {
     expect(result.isOk()).toBe(true)
     expect(vi.mocked(Filesystem.stat)).toHaveBeenCalledWith(
       expect.objectContaining({ path: 'lekto-vault/lekto.db' }),
+    )
+  })
+
+  it('deleteFileInVault routes to VaultFs.deleteFile for SAF content:// vault paths', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    const result = await adapter.deleteFileInVault(
+      'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      'books/file.epub',
+    )
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(VaultFs.deleteFile)).toHaveBeenCalledWith({
+      treeUri: 'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      path: 'books/file.epub',
+    })
+  })
+
+  it('deleteFileInVault returns err when VaultFs.deleteFile throws', async () => {
+    const { VaultFs } = await import('./vault-fs.android')
+    vi.mocked(VaultFs.deleteFile).mockRejectedValue(new Error('permission denied'))
+    const result = await adapter.deleteFileInVault(
+      'content://com.android.externalstorage.documents/tree/primary%3Avault',
+      'books/file.epub',
+    )
+    expect(result.isErr()).toBe(true)
+  })
+
+  it('deleteFileInVault uses Documents-relative deleteFile for non-SAF paths', async () => {
+    const { Filesystem } = await import('@capacitor/filesystem')
+    const result = await adapter.deleteFileInVault('lekto-vault', 'books/file.epub')
+    expect(result.isOk()).toBe(true)
+    expect(vi.mocked(Filesystem.deleteFile)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'lekto-vault/books/file.epub' }),
     )
   })
 })

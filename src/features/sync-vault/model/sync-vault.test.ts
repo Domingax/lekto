@@ -55,6 +55,7 @@ beforeEach(() => {
     books: [],
     setBooks: vi.fn(),
     addBook: vi.fn(),
+    removeBook: vi.fn(),
   })
 })
 

@@ -19,6 +19,7 @@ function mockStore(state: { vaultPath: string | null }) {
     books: [],
     setBooks: vi.fn(),
     addBook: vi.fn(),
+    removeBook: vi.fn(),
   })
 }
 
@@ -56,6 +57,19 @@ describe('libraryLoader', () => {
 
 // /settings uses libraryLoader — same vault-guard behaviour
 describe('/settings route (via libraryLoader)', () => {
+  it('redirects to /vault-setup when no vault configured', () => {
+    mockStore({ vaultPath: null })
+    expect(libraryLoader()).toEqual(redirect('/vault-setup'))
+  })
+
+  it('allows access when vault is configured', () => {
+    mockStore({ vaultPath: '/some/vault' })
+    expect(libraryLoader()).toBeNull()
+  })
+})
+
+// /reader/:bookId uses same libraryLoader vault guard
+describe('/reader/:bookId route (via libraryLoader)', () => {
   it('redirects to /vault-setup when no vault configured', () => {
     mockStore({ vaultPath: null })
     expect(libraryLoader()).toEqual(redirect('/vault-setup'))

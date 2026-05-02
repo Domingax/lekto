@@ -1,6 +1,6 @@
 import { createBrowserRouter, redirect } from 'react-router-dom'
 import { useVaultStore } from '../shared/stores'
-import { VaultSetupPage, LibraryPage, SettingsPage } from '../pages'
+import { VaultSetupPage, LibraryPage, SettingsPage, ReaderPage } from '../pages'
 
 export function rootLoader() {
   const { vaultPath } = useVaultStore.getState()
@@ -36,6 +36,11 @@ export function createAppRouter() {
       path: '/settings',
       loader: libraryLoader,
       element: <SettingsPage />,
+    },
+    {
+      path: '/reader/:bookId',
+      loader: libraryLoader,
+      element: <ReaderPage />,
     },
   ])
 }

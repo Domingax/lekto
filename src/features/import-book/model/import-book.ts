@@ -56,6 +56,7 @@ export async function importBook(
   const bookEntity: BookEntity = {
     id: bookId,
     title: parsedBook.title,
+    author: parsedBook.author,
     fileName,
     language,
     coverPath: null,

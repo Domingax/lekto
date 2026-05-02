@@ -3,6 +3,7 @@ import type { AsyncResult } from '@/shared/lib'
 
 export interface ParsedBook {
   title: string
+  author: string | null
   sections: Array<{ title: string; text: string }>
 }
 
@@ -30,7 +31,10 @@ export async function parseEpub(data: ArrayBuffer): AsyncResult<ParsedBook> {
       spineItem.unload()
     }
 
-    return ok({ title: (meta as { title?: string }).title ?? 'Unknown', sections })
+    const typedMeta = meta as { title?: string; creator?: string }
+    const rawCreator = typedMeta.creator?.trim()
+    const author = rawCreator || null
+    return ok({ title: typedMeta.title ?? 'Unknown', author, sections })
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e)
     return err(`Failed to parse EPUB — ${detail}`)

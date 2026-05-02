@@ -100,6 +100,10 @@ export function createDesktopFilesystemAdapter(): FilesystemAdapter {
       return desktopAdapter.exists(`${vaultPath}/${relativePath}`)
     },
 
+    async deleteFileInVault(vaultPath: string, relativePath: string): AsyncResult<void> {
+      return desktopAdapter.deleteFile(`${vaultPath}/${relativePath}`)
+    },
+
     async takeVaultPermissions(_: string): AsyncResult<void> {
       return ok(undefined) // No-op on Desktop — Tauri uses absolute paths, no SAF
     },

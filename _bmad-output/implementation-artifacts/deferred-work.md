@@ -30,3 +30,31 @@ Pre-existing issues surfaced during review, not caused by the Sonar fixes:
 
 **Surfaces during:** toute histoire touchant la couche de migration DB.
 
+---
+
+## Delete dialog — close animation missing (open={true} + conditional render)
+
+**Source:** Adversarial review of fix/delete-dialog-overlay
+
+`LibraryPage.tsx` line 262 renders the delete confirmation `Dialog` with a hard-coded `open={true}` and wraps it in `{pendingDelete && ...}`. Radix never sees a `closed` state transition, so `data-[state=closed]` animation classes never fire — both the backdrop and dialog content vanish instantly on confirm/cancel rather than fading out.
+
+**Fix:** Replace the conditional render + `open={true}` pattern with a controlled `open={!!pendingDelete}` that always mounts the Dialog (so Radix can animate it closed), e.g.:
+
+```tsx
+<Dialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null) }}>
+  ...
+</Dialog>
+```
+
+**Surfaces during:** any story touching LibraryPage or the delete-book flow.
+
+---
+
+## index.css — @layer utilities declared before @import "tailwindcss"
+
+**Source:** Adversarial review of fix/delete-dialog-overlay
+
+The `@layer utilities` block in `src/index.css` appears before `@import "tailwindcss"`. In Tailwind CSS v4, `@layer` declarations before the import may be silently ignored by the build pipeline.
+
+**Surfaces during:** any story touching global styles or adding custom utility classes.
+

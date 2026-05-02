@@ -205,6 +205,44 @@ public class VaultFsPlugin extends Plugin {
     }
 
     /**
+     * Delete a file at a path relative to a SAF tree URI.
+     * Resolves silently if the file or its parent directory does not exist.
+     *
+     * Required call params:
+     *   treeUri  {string}  — the SAF tree URI
+     *   path     {string}  — relative file path, e.g. "books/file.epub"
+     */
+    @PluginMethod
+    public void deleteFile(PluginCall call) {
+        String treeUriStr = call.getString("treeUri");
+        String relativePath = call.getString("path");
+        if (treeUriStr == null || relativePath == null) {
+            call.reject("treeUri and path are required");
+            return;
+        }
+        try {
+            Uri treeUri = Uri.parse(treeUriStr);
+            DocumentFile treeDoc = DocumentFile.fromTreeUri(getContext(), treeUri);
+            if (treeDoc == null) {
+                call.reject("Invalid or inaccessible tree URI");
+                return;
+            }
+            String[] parts = relativePath.split("/");
+            String[] dirParts = new String[parts.length - 1];
+            System.arraycopy(parts, 0, dirParts, 0, parts.length - 1);
+            String name = parts[parts.length - 1];
+            DocumentFile dir = navigateDirs(treeDoc, dirParts, false);
+            if (dir == null) { call.resolve(); return; }
+            DocumentFile target = dir.findFile(name);
+            if (target == null || !target.isFile()) { call.resolve(); return; }
+            target.delete();
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage() != null ? e.getMessage() : "Unknown error");
+        }
+    }
+
+    /**
      * Create a directory (and all intermediate parents) inside a SAF tree URI.
      * Succeeds silently if the directory already exists.
      *
