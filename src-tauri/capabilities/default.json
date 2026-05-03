@@ -20,7 +20,6 @@
     { "identifier": "fs:allow-copy-file", "allow": [{ "path": "**" }] },
     "dialog:default",
     "stronghold:default",
-    "store:default",
-    "mcp-bridge:default"
+    "store:default"
   ]
 }
