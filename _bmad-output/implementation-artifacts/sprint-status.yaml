@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-05
-last_updated: 2026-05-01  # 3-3 → in-progress (review action items)
+last_updated: 2026-05-03  # 3-4 → in-progress (Sonar gate failure)
 
 project: lekto
 project_key: NOKEY
@@ -72,8 +72,8 @@ development_status:
   epic-3: in-progress
   3-1-epub-import-and-tokenization: done
   3-2-pdf-and-plain-text-import: done
-  3-3-library-view-and-book-management: in-progress
-  3-4-basic-reader-and-in-book-navigation: backlog
+  3-3-library-view-and-book-management: done
+  3-4-basic-reader-and-in-book-navigation: in-progress
   epic-3-retrospective: optional
 
   # Epic 4: Immersive Reading Experience
