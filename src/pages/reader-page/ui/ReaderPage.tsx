@@ -32,12 +32,27 @@ export function ReaderPage() {
     let cancelled = false
     async function loadSections() {
       const db = getDb()
-      const rows = await db
+      const sectionRows = await db
         .select()
         .from(schema.sections)
         .where(eq(schema.sections.bookId, id))
         .orderBy(schema.sections.index)
-      if (!cancelled) setSections(rows)
+      if (cancelled) return
+      setSections(sectionRows)
+      // Restore position from DB when StrictMode's clear() wiped currentSectionId
+      if (!useReaderStore.getState().currentSectionId) {
+        const progressRows = await db
+          .select()
+          .from(schema.readingProgress)
+          .where(eq(schema.readingProgress.bookId, id))
+          .orderBy(schema.readingProgress.updatedAt)
+        if (cancelled) return
+        const progress = progressRows[0]
+        const sectionId = progress?.sectionId ?? sectionRows[0]?.id
+        if (sectionId) {
+          useReaderStore.getState().setPosition({ bookId: id, sectionId, tokenIndex: progress?.tokenIndex ?? 0 })
+        }
+      }
     }
     loadSections()
     return () => { cancelled = true }

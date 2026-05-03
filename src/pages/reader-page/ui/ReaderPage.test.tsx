@@ -192,6 +192,27 @@ describe('ReaderPage', () => {
     expect(mockOnConflictDoUpdate).toHaveBeenCalled()
   })
 
+  it('restores position from saved reading progress when currentSectionId is null', async () => {
+    setupStores({ currentSectionId: null })
+    const progressRow = { sectionId: 's2', tokenIndex: 5, bookId: 'b1', updatedAt: 100 }
+    mockOrderBy
+      .mockResolvedValueOnce(sections)      // sections query
+      .mockResolvedValueOnce([progressRow]) // reading progress query
+
+    await act(async () => { renderAtRoute() })
+    expect(mockSetPosition).toHaveBeenCalledWith({ bookId: 'b1', sectionId: 's2', tokenIndex: 5 })
+  })
+
+  it('falls back to first section when no reading progress exists and currentSectionId is null', async () => {
+    setupStores({ currentSectionId: null })
+    mockOrderBy
+      .mockResolvedValueOnce(sections) // sections query
+      .mockResolvedValueOnce([])       // reading progress query: no saved progress
+
+    await act(async () => { renderAtRoute() })
+    expect(mockSetPosition).toHaveBeenCalledWith({ bookId: 'b1', sectionId: 's1', tokenIndex: 0 })
+  })
+
   it('calls clear on unmount', async () => {
     setupStores({ currentSectionId: null })
     mockOrderBy.mockResolvedValue([])
