@@ -1,6 +1,6 @@
 # Story 3.4: Basic Reader & In-Book Navigation
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -824,6 +824,20 @@ After all commits:
 
 - [x] Task 21: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` — all green
 - [x] Task 22: Desktop validation — `npm run tauri:dev` not running; `driver_session start` timed out. Known limitation on Linux/WebKitGTK (documented in Story 3.3 completion notes). Manual smoke test deferred to user.
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][Low] Stabilize `useReaderView()` callbacks with `useCallback` so `ReaderView`'s keyboard `useEffect` no longer adds/removes the `keydown` listener on every render [src/widgets/reader-view/model/use-reader-view.ts:9-21, src/widgets/reader-view/ui/ReaderView.tsx:30-37]
+- [ ] [AI-Review][Low] Scope chrome-toggle to non-text taps (margin/padding) per AC9; current `onClick={toggleChrome}` on `<main>` also fires on text — refine when Story 4.2 wires WordToken interactions [src/widgets/reader-view/ui/ReaderView.tsx:55-60]
+- [ ] [AI-Review][Low] Guard against eternal "Loading…" when `ReaderPage` mounts without a `currentSectionId` (deep-link / hard refresh) — either reset `isLoading=false` when no section is set or pre-load `reading_progress` inside `ReaderPage` [src/pages/reader-page/ui/ReaderPage.tsx:23,56-71]
+- [ ] [AI-Review][Low] Add stale-result handling (ignore flag or AbortController) to `loadSections` and `loadTokens` so rapid section changes can't resolve out of order [src/pages/reader-page/ui/ReaderPage.tsx:29-41,56-71]
+- [ ] [AI-Review][Low] Drop the `bookId!` and `currentSectionId!` non-null assertions — the early returns already narrow them [src/pages/reader-page/ui/ReaderPage.tsx:36,64]
+- [ ] [Sonar][Major] `typescript:S7721` — Move `navigateForward` and `navigatePrev` out of `useReaderView`'s body (or stabilize with `useCallback`) so they aren't redeclared on every render [src/widgets/reader-view/model/use-reader-view.ts:9,16]
+- [ ] [Sonar][Major] `typescript:S6847` — `<main>` is a non-interactive element with mouse + keyboard event handlers; add `role="button"`/`tabIndex={0}` or move the chrome-toggle handler to a dedicated interactive padding area (also addresses Phase 1 LOW #2) [src/widgets/reader-view/ui/ReaderView.tsx:55-60]
+- [ ] [Sonar][Minor] `typescript:S1082` — Click handler on `<main>` lacks a paired keyboard handler; resolves alongside S6847 [src/widgets/reader-view/ui/ReaderView.tsx:55-60]
+- [ ] [Sonar][Minor] `typescript:S6759` — Mark `ReaderViewProps` and `WordTokenProps` as `Readonly<…>` (or use `readonly` on each field) [src/widgets/reader-view/ui/ReaderView.tsx:17, src/widgets/reader-view/ui/WordToken.tsx:7]
+- [ ] [Sonar][Minor] `typescript:S7764` — Replace `window.addEventListener` / `window.removeEventListener` with `globalThis.…` [src/widgets/reader-view/ui/ReaderView.tsx:35-36]
+- [ ] [Sonar][Info] `typescript:S1135` — The `TODO: virtualize token rendering` is fine for now; track via a real story before resolving [src/widgets/reader-view/ui/ReaderView.tsx:9]
 
 ---
 
