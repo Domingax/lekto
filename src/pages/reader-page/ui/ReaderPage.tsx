@@ -20,7 +20,7 @@ export function ReaderPage() {
   const clear = useReaderStore((s) => s.clear)
 
   const [isChapterListOpen, setIsChapterListOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (!bookId) navigate('/library')
@@ -28,16 +28,19 @@ export function ReaderPage() {
 
   useEffect(() => {
     if (!bookId) return
+    const id = bookId
+    let cancelled = false
     async function loadSections() {
       const db = getDb()
       const rows = await db
         .select()
         .from(schema.sections)
-        .where(eq(schema.sections.bookId, bookId!))
+        .where(eq(schema.sections.bookId, id))
         .orderBy(schema.sections.index)
-      setSections(rows)
+      if (!cancelled) setSections(rows)
     }
     loadSections()
+    return () => { cancelled = true }
   }, [bookId, setSections])
 
   const savePosition = useCallback(async () => {
@@ -55,19 +58,24 @@ export function ReaderPage() {
 
   useEffect(() => {
     if (!currentSectionId) return
+    const sectionId = currentSectionId
+    let cancelled = false
     async function loadTokens() {
       setIsLoading(true)
       const db = getDb()
       const rows = await db
         .select()
         .from(schema.tokens)
-        .where(eq(schema.tokens.sectionId, currentSectionId!))
+        .where(eq(schema.tokens.sectionId, sectionId))
         .orderBy(schema.tokens.index)
-      setTokens(rows as TokenEntity[])
-      setIsLoading(false)
+      if (!cancelled) {
+        setTokens(rows as TokenEntity[])
+        setIsLoading(false)
+      }
     }
     loadTokens()
     savePosition()
+    return () => { cancelled = true }
   }, [currentSectionId, setTokens, savePosition])
 
   useEffect(() => {

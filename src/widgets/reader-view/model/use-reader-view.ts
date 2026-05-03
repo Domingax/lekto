@@ -3,22 +3,22 @@ import { useReaderStore } from '@/shared/stores'
 
 const SWIPE_THRESHOLD_PX = 50
 
+function navigateForward() {
+  const { sections, currentSectionId, bookId, setPosition } = useReaderStore.getState()
+  const idx = sections.findIndex((s) => s.id === currentSectionId)
+  const next = sections[idx + 1]
+  if (next && bookId) setPosition({ bookId, sectionId: next.id, tokenIndex: 0 })
+}
+
+function navigatePrev() {
+  const { sections, currentSectionId, bookId, setPosition } = useReaderStore.getState()
+  const idx = sections.findIndex((s) => s.id === currentSectionId)
+  const prev = sections[idx - 1]
+  if (prev && bookId) setPosition({ bookId, sectionId: prev.id, tokenIndex: 0 })
+}
+
 export function useReaderView() {
   const pointerStartX = useRef<number | null>(null)
-
-  function navigateForward() {
-    const { sections, currentSectionId, bookId, setPosition } = useReaderStore.getState()
-    const idx = sections.findIndex((s) => s.id === currentSectionId)
-    const next = sections[idx + 1]
-    if (next && bookId) setPosition({ bookId, sectionId: next.id, tokenIndex: 0 })
-  }
-
-  function navigatePrev() {
-    const { sections, currentSectionId, bookId, setPosition } = useReaderStore.getState()
-    const idx = sections.findIndex((s) => s.id === currentSectionId)
-    const prev = sections[idx - 1]
-    if (prev && bookId) setPosition({ bookId, sectionId: prev.id, tokenIndex: 0 })
-  }
 
   function handlePointerDown(e: React.PointerEvent) {
     pointerStartX.current = e.clientX

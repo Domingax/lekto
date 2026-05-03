@@ -6,15 +6,12 @@ import { useReaderStore } from '@/shared/stores'
 import { WordToken } from './WordToken'
 import { useReaderView } from '../model/use-reader-view'
 
-// TODO: virtualize token rendering with @tanstack/react-virtual for sections > 3000 tokens
-// See architecture.md "Gap Analysis — Virtualization" and widgets/reader-view/model/use-reader-view.ts
-
 interface ReaderViewProps {
   bookTitle: string
   onChapterListOpen: () => void
 }
 
-export function ReaderView({ bookTitle, onChapterListOpen }: ReaderViewProps) {
+export function ReaderView({ bookTitle, onChapterListOpen }: Readonly<ReaderViewProps>) {
   const tokens = useReaderStore((s) => s.tokens)
   const sections = useReaderStore((s) => s.sections)
   const currentSectionId = useReaderStore((s) => s.currentSectionId)
@@ -32,8 +29,8 @@ export function ReaderView({ bookTitle, onChapterListOpen }: ReaderViewProps) {
       if (e.key === 'ArrowRight' || e.key === 'PageDown') navigateForward()
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') navigatePrev()
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    globalThis.addEventListener('keydown', onKeyDown)
+    return () => globalThis.removeEventListener('keydown', onKeyDown)
   }, [navigateForward, navigatePrev])
 
   return (
@@ -56,16 +53,20 @@ export function ReaderView({ bookTitle, onChapterListOpen }: ReaderViewProps) {
         className="flex-1 overflow-y-auto relative"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        onClick={toggleChrome}
       >
         <div
-          key={currentSectionId ?? 'initial'}
-          className="px-6 py-8"
-          style={{ fontFamily: 'Georgia, serif', fontSize: '18px', lineHeight: 1.7, animation: 'readerFadeIn 80ms ease' }}
+          onClick={toggleChrome}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleChrome() } }}
         >
-          {tokens.map((token) => (
-            <WordToken key={token.id} token={token} />
-          ))}
+          <div
+            key={currentSectionId ?? 'initial'}
+            className="px-6 py-8"
+            style={{ fontFamily: 'Georgia, serif', fontSize: '18px', lineHeight: 1.7, animation: 'readerFadeIn 80ms ease' }}
+          >
+            {tokens.map((token) => (
+              <WordToken key={token.id} token={token} />
+            ))}
+          </div>
         </div>
       </main>
 

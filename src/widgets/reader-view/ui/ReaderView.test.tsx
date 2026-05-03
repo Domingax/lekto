@@ -88,10 +88,10 @@ describe('ReaderView', () => {
     expect(header).toHaveClass('opacity-0')
   })
 
-  it('calls toggleChrome when main area is clicked', () => {
+  it('calls toggleChrome when reading area is clicked', () => {
     setupStore()
     renderReaderView()
-    fireEvent.click(screen.getByRole('main'))
+    fireEvent.click(screen.getByRole('main').firstElementChild!)
     expect(mockToggleChrome).toHaveBeenCalled()
   })
 

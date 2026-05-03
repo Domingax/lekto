@@ -4,7 +4,7 @@ interface WordTokenProps {
   token: TokenEntity
 }
 
-export function WordToken({ token }: WordTokenProps) {
+export function WordToken({ token }: Readonly<WordTokenProps>) {
   if (token.type === 'whitespace') {
     return <span>{token.text}</span>
   }
