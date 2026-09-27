@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0010
+---
+
 # Vault portability is capability-driven, not guaranteed
 
 Lekto promises a portable "Vault" folder that the user can relocate to a cloud-synced
