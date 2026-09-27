@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lekto — UX Design Directions</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f0f; color: #fff; }
+
+  /* Nav */
+  .nav { position: sticky; top: 0; z-index: 100; background: #0f0f0f; border-bottom: 1px solid #222; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .nav h1 { font-size: 14px; color: #666; margin-right: 12px; }
+  .nav-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 12px; transition: all 0.15s; }
+  .nav-btn:hover, .nav-btn.active { background: #fff; color: #000; border-color: #fff; }
+
+  /* Layout */
+  .direction { display: none; padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
+  .direction.active { display: block; }
+  .direction-header { margin-bottom: 32px; }
+  .direction-header h2 { font-size: 22px; margin-bottom: 8px; }
+  .direction-header p { color: #888; font-size: 14px; max-width: 600px; }
+  .screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  .screen-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #555; margin-bottom: 8px; }
+
+  /* Phone frame */
+  .phone { width: 100%; max-width: 360px; aspect-ratio: 9/19; border-radius: 32px; overflow: hidden; border: 2px solid #333; position: relative; margin: 0 auto; }
+  /* Web frame */
+  .web { width: 100%; max-width: 640px; aspect-ratio: 16/10; border-radius: 12px; overflow: hidden; border: 2px solid #333; position: relative; margin: 0 auto; }
+
+  /* ==================== DIRECTION A — Minimal Light ==================== */
+  .da { background: #fff; color: #111; height: 100%; display: flex; flex-direction: column; font-family: system-ui, sans-serif; }
+  .da-topbar { padding: 16px 20px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .da-topbar-title { font-size: 18px; font-weight: 600; }
+  .da-topbar-icon { width: 32px; height: 32px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
+  .da-import-btn { background: #111; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; text-align: center; margin: 16px 20px 8px; }
+  .da-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #999; padding: 0 20px 10px; }
+  .da-book-list { flex: 1; overflow: hidden; padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+  .da-book { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 12px; background: #f8f8f8; }
+  .da-cover { width: 40px; height: 56px; border-radius: 6px; flex-shrink: 0; }
+  .da-book-info { flex: 1; min-width: 0; }
+  .da-book-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .da-book-meta { font-size: 11px; color: #999; margin-bottom: 6px; }
+  .da-progress-bar { height: 3px; background: #eee; border-radius: 2px; }
+  .da-progress-fill { height: 100%; border-radius: 2px; background: #111; }
+  .da-bottom-nav { border-top: 1px solid #eee; padding: 10px 0 6px; display: flex; justify-content: space-around; }
+  .da-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9px; color: #999; padding: 4px 12px; }
+  .da-nav-item.active { color: #111; }
+  .da-nav-icon { font-size: 18px; }
+
+  /* Reader A */
+  .da-reader { background: #fff; color: #111; height: 100%; display: flex; flex-direction: column; }
+  .da-reader-bar { padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
+  .da-reader-back { font-size: 13px; color: #666; }
+  .da-reader-title { font-size: 13px; font-weight: 500; }
+  .da-reader-actions { display: flex; gap: 8px; }
+  .da-reader-actions span { font-size: 16px; color: #666; }
+  .da-text { flex: 1; padding: 24px 28px; font-family: Georgia, serif; font-size: 15px; line-height: 1.8; color: #222; overflow: hidden; }
+  .da-text p { margin-bottom: 16px; }
+  .w0 { background: rgba(59,130,246,0.25); border-radius: 2px; padding: 1px 0; border-bottom: 2px solid #3b82f6; }
+  .w1 { background: rgba(234,179,8,0.2); border-radius: 2px; padding: 1px 0; border-bottom: 2px solid #eab308; }
+  .w2 { background: rgba(249,115,22,0.15); border-radius: 2px; padding: 1px 0; border-bottom: 2px solid #f97316; }
+  .w3 { background: rgba(34,197,94,0.15); border-radius: 2px; padding: 1px 0; border-bottom: 2px solid #22c55e; }
+  .da-reader-footer { padding: 10px 20px; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .da-reader-page { font-size: 11px; color: #bbb; }
+  .da-reader-swipe { font-size: 11px; color: #bbb; }
+
+  /* Panel A */
+  .da-panel { background: #fff; color: #111; height: 100%; display: flex; flex-direction: column; position: relative; }
+  .da-panel-reader { flex: 1; padding: 20px 28px; font-family: Georgia, serif; font-size: 15px; line-height: 1.8; color: #222; position: relative; }
+  .da-panel-reader p { margin-bottom: 14px; }
+  .da-panel-reader::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(transparent, rgba(255,255,255,0.8)); }
+  .da-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 20px 20px 0 0; border-top: 1px solid #eee; box-shadow: 0 -8px 32px rgba(0,0,0,0.08); }
+  .da-sheet-handle { width: 36px; height: 4px; background: #ddd; border-radius: 2px; margin: 10px auto 0; }
+  .da-sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 0; }
+  .da-sheet-word { font-size: 20px; font-weight: 700; }
+  .da-sheet-actions { display: flex; gap: 8px; align-items: center; }
+  .da-tts-btn { width: 32px; height: 32px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .da-save-btn { padding: 6px 14px; background: #111; color: #fff; border-radius: 8px; font-size: 12px; font-weight: 500; }
+  .da-tabs { display: flex; gap: 0; padding: 10px 20px 0; border-bottom: 1px solid #eee; }
+  .da-tab { font-size: 11px; padding: 6px 12px 8px; color: #999; border-bottom: 2px solid transparent; cursor: pointer; }
+  .da-tab.active { color: #111; border-bottom-color: #111; font-weight: 500; }
+  .da-dict-content { padding: 12px 20px; }
+  .da-dict-entry { margin-bottom: 10px; }
+  .da-dict-pos { font-size: 10px; text-transform: uppercase; color: #999; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .da-dict-def { font-size: 13px; color: #333; line-height: 1.5; }
+  .da-dict-example { font-size: 12px; color: #999; font-style: italic; margin-top: 3px; }
+  .da-mastery { display: flex; gap: 6px; padding: 10px 20px 14px; }
+  .da-m { flex: 1; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; cursor: pointer; border: 2px solid transparent; }
+  .da-m1 { background: rgba(234,179,8,0.15); color: #854d0e; border-color: #eab308; }
+  .da-m2 { background: rgba(249,115,22,0.1); color: #9a3412; }
+  .da-m3 { background: rgba(34,197,94,0.1); color: #166534; }
+  .da-m4 { background: rgba(59,130,246,0.1); color: #1e3a8a; }
+  .da-mK { background: #111; color: #fff; }
+
+  /* ==================== DIRECTION B — Dark Focused ==================== */
+  .db { background: #121212; color: #e8e8e8; height: 100%; display: flex; flex-direction: column; font-family: system-ui; }
+  .db-topbar { padding: 16px 20px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .db-title { font-size: 20px; font-weight: 700; color: #fff; }
+  .db-icon { width: 36px; height: 36px; background: #2a2a2a; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .db-search { margin: 0 20px 16px; background: #1e1e1e; border-radius: 10px; padding: 10px 14px; display: flex; gap: 8px; align-items: center; }
+  .db-search-icon { font-size: 14px; color: #555; }
+  .db-search-text { font-size: 13px; color: #555; }
+  .db-grid { flex: 1; overflow: hidden; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .db-card { background: #1e1e1e; border-radius: 14px; overflow: hidden; }
+  .db-card-cover { width: 100%; aspect-ratio: 2/3; }
+  .db-card-info { padding: 8px 10px 10px; }
+  .db-card-title { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .db-card-prog { height: 2px; background: #2e2e2e; border-radius: 1px; margin-top: 6px; }
+  .db-card-fill { height: 100%; border-radius: 1px; background: #6366f1; }
+  .db-bottom-nav { background: #1a1a1a; border-top: 1px solid #2a2a2a; padding: 10px 0 6px; display: flex; justify-content: space-around; }
+  .db-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: #555; padding: 4px 12px; }
+  .db-nav-item.active { color: #6366f1; }
+  .db-nav-icon { font-size: 18px; }
+  .db-add-btn { position: absolute; bottom: 70px; right: 20px; width: 48px; height: 48px; background: #6366f1; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; box-shadow: 0 4px 16px rgba(99,102,241,0.4); }
+
+  /* Reader B */
+  .db-reader { background: #0e0e0e; color: #d4d4d4; height: 100%; display: flex; flex-direction: column; }
+  .db-reader-bar { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: #0e0e0e; }
+  .db-reader-back { font-size: 18px; }
+  .db-reader-menu { font-size: 18px; color: #555; }
+  .db-reader-text { flex: 1; padding: 20px 24px; font-family: Georgia, serif; font-size: 16px; line-height: 1.85; overflow: hidden; }
+  .db-reader-text p { margin-bottom: 18px; }
+  .dbw0 { background: rgba(99,102,241,0.3); border-radius: 2px; border-bottom: 2px solid #6366f1; padding: 1px 0; }
+  .dbw1 { background: rgba(234,179,8,0.2); border-radius: 2px; border-bottom: 2px solid #eab308; padding: 1px 0; }
+  .dbw2 { background: rgba(249,115,22,0.2); border-radius: 2px; border-bottom: 2px solid #f97316; padding: 1px 0; }
+  .dbw3 { background: rgba(34,197,94,0.15); border-radius: 2px; border-bottom: 2px solid #22c55e; padding: 1px 0; }
+  .db-reader-footer { padding: 10px 20px; display: flex; justify-content: center; align-items: center; gap: 24px; }
+  .db-reader-prev, .db-reader-next { font-size: 20px; color: #444; }
+  .db-reader-page { font-size: 12px; color: #444; }
+
+  /* Panel B */
+  .db-panel { background: #0e0e0e; color: #d4d4d4; height: 100%; display: flex; flex-direction: column; position: relative; }
+  .db-panel-text { flex: 1; padding: 20px 24px; font-family: Georgia, serif; font-size: 16px; line-height: 1.85; overflow: hidden; }
+  .db-panel-text p { margin-bottom: 18px; }
+  .db-panel-text::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, rgba(14,14,14,0.9)); }
+  .db-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-radius: 22px 22px 0 0; border-top: 1px solid #2a2a2a; }
+  .db-sheet-handle { width: 36px; height: 4px; background: #333; border-radius: 2px; margin: 10px auto 0; }
+  .db-sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px 4px; }
+  .db-sheet-word { font-size: 22px; font-weight: 700; color: #fff; }
+  .db-sheet-btns { display: flex; gap: 8px; align-items: center; }
+  .db-tts { width: 34px; height: 34px; background: #2a2a2a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .db-save { padding: 7px 16px; background: #6366f1; color: #fff; border-radius: 9px; font-size: 12px; font-weight: 600; }
+  .db-tabs { display: flex; padding: 8px 20px 0; border-bottom: 1px solid #2a2a2a; gap: 0; }
+  .db-tab { font-size: 11px; padding: 6px 12px 8px; color: #555; border-bottom: 2px solid transparent; }
+  .db-tab.active { color: #6366f1; border-bottom-color: #6366f1; font-weight: 500; }
+  .db-dict { padding: 12px 20px; }
+  .db-pos { font-size: 10px; text-transform: uppercase; color: #555; letter-spacing: 0.06em; margin-bottom: 3px; }
+  .db-def { font-size: 13px; color: #ccc; line-height: 1.5; }
+  .db-ex { font-size: 12px; color: #666; font-style: italic; margin-top: 3px; }
+  .db-mastery-row { display: flex; gap: 6px; padding: 10px 20px 14px; }
+  .db-ml { flex: 1; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; cursor: pointer; }
+  .db-ml1 { background: rgba(234,179,8,0.15); color: #fbbf24; }
+  .db-ml2 { background: rgba(249,115,22,0.15); color: #fb923c; }
+  .db-ml3 { background: rgba(34,197,94,0.12); color: #4ade80; }
+  .db-mlK { background: #6366f1; color: #fff; }
+
+  /* ==================== DIRECTION C — Sepia Warm ==================== */
+  .dc { background: #f5efe0; color: #3d2b1a; height: 100%; display: flex; flex-direction: column; font-family: system-ui; }
+  .dc-topbar { padding: 16px 20px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .dc-title { font-size: 18px; font-weight: 600; color: #3d2b1a; }
+  .dc-icon { font-size: 20px; }
+  .dc-continue { margin: 0 20px 16px; background: #7c5c38; color: #f5efe0; border-radius: 12px; padding: 14px 18px; display: flex; gap: 12px; align-items: center; }
+  .dc-continue-cover { width: 38px; height: 52px; border-radius: 6px; flex-shrink: 0; }
+  .dc-continue-info { flex: 1; }
+  .dc-continue-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(245,239,224,0.6); margin-bottom: 4px; }
+  .dc-continue-title { font-size: 13px; font-weight: 600; color: #f5efe0; margin-bottom: 4px; }
+  .dc-continue-prog { font-size: 11px; color: rgba(245,239,224,0.6); }
+  .dc-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #9a8070; padding: 0 20px 10px; }
+  .dc-list { flex: 1; overflow: hidden; padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+  .dc-item { display: flex; gap: 12px; align-items: center; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 10px; }
+  .dc-item-cover { width: 36px; height: 50px; border-radius: 5px; flex-shrink: 0; }
+  .dc-item-title { font-size: 13px; font-weight: 500; color: #3d2b1a; margin-bottom: 2px; }
+  .dc-item-meta { font-size: 11px; color: #9a8070; }
+  .dc-bottom-nav { border-top: 1px solid rgba(61,43,26,0.1); padding: 10px 0 6px; display: flex; justify-content: space-around; }
+  .dc-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: #9a8070; }
+  .dc-nav-item.active { color: #7c5c38; }
+  .dc-nav-icon { font-size: 18px; }
+
+  /* Reader C */
+  .dc-reader { background: #f8f0e0; color: #3d2b1a; height: 100%; display: flex; flex-direction: column; }
+  .dc-reader-bar { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(61,43,26,0.08); }
+  .dc-reader-back { font-size: 13px; color: #9a8070; }
+  .dc-reader-settings { font-size: 16px; color: #9a8070; }
+  .dc-reader-text { flex: 1; padding: 22px 28px; font-family: Georgia, serif; font-size: 16px; line-height: 1.9; color: #3d2b1a; overflow: hidden; }
+  .dc-reader-text p { margin-bottom: 18px; }
+  .dcw0 { background: rgba(59,130,246,0.18); border-radius: 2px; border-bottom: 2px solid #3b82f6; padding: 1px 0; }
+  .dcw1 { background: rgba(234,179,8,0.2); border-radius: 2px; border-bottom: 2px solid #ca8a04; padding: 1px 0; }
+  .dcw2 { background: rgba(234,88,12,0.12); border-radius: 2px; border-bottom: 2px solid #ea580c; padding: 1px 0; }
+  .dcw3 { background: rgba(21,128,61,0.12); border-radius: 2px; border-bottom: 2px solid #15803d; padding: 1px 0; }
+  .dc-reader-footer { padding: 10px 20px; border-top: 1px solid rgba(61,43,26,0.08); display: flex; justify-content: space-between; align-items: center; }
+  .dc-reader-page { font-size: 11px; color: #bba890; }
+
+  /* ==================== DIRECTION D — Web Split Layout ==================== */
+  .dd { background: #fff; color: #111; height: 100%; display: grid; grid-template-columns: 240px 1fr; font-family: system-ui; }
+  .dd-sidebar { background: #f9f9f9; border-right: 1px solid #eee; display: flex; flex-direction: column; }
+  .dd-sidebar-header { padding: 18px 16px 12px; border-bottom: 1px solid #eee; }
+  .dd-sidebar-logo { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .dd-sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .dd-sidebar-item { padding: 8px 12px; border-radius: 8px; font-size: 13px; color: #666; display: flex; gap: 8px; align-items: center; }
+  .dd-sidebar-item.active { background: #f0f0f0; color: #111; font-weight: 500; }
+  .dd-sidebar-icon { font-size: 15px; }
+  .dd-sidebar-books { flex: 1; padding: 12px 16px; overflow: hidden; }
+  .dd-sidebar-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #bbb; margin-bottom: 8px; }
+  .dd-sidebar-book { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+  .dd-sidebar-cover { width: 28px; height: 38px; border-radius: 4px; flex-shrink: 0; }
+  .dd-sidebar-title { font-size: 12px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dd-main { display: flex; flex-direction: column; overflow: hidden; }
+  .dd-main-header { padding: 14px 24px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .dd-main-title { font-size: 14px; font-weight: 600; }
+  .dd-main-actions { display: flex; gap: 8px; }
+  .dd-main-btn { padding: 6px 12px; border-radius: 7px; font-size: 12px; border: 1px solid #eee; color: #666; }
+  .dd-main-btn.primary { background: #111; color: #fff; border-color: #111; }
+  .dd-reader-area { flex: 1; display: grid; grid-template-columns: 1fr 320px; overflow: hidden; }
+  .dd-text-area { padding: 28px 40px; font-family: Georgia, serif; font-size: 15px; line-height: 1.85; color: #222; overflow: hidden; border-right: 1px solid #eee; }
+  .dd-text-area p { margin-bottom: 16px; max-width: 60ch; }
+  .dd-panel-area { background: #fafafa; overflow: hidden; display: flex; flex-direction: column; }
+  .dd-panel-header { padding: 16px 18px 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .dd-panel-word { font-size: 18px; font-weight: 700; }
+  .dd-panel-btns { display: flex; gap: 6px; align-items: center; }
+  .dd-panel-tts { width: 30px; height: 30px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .dd-panel-save { padding: 5px 12px; background: #111; color: #fff; border-radius: 7px; font-size: 11px; }
+  .dd-panel-tabs { display: flex; border-bottom: 1px solid #eee; }
+  .dd-panel-tab { padding: 8px 14px; font-size: 11px; color: #999; border-bottom: 2px solid transparent; }
+  .dd-panel-tab.active { color: #111; border-bottom-color: #111; font-weight: 500; }
+  .dd-panel-content { padding: 14px 18px; flex: 1; overflow: hidden; }
+  .dd-panel-pos { font-size: 10px; text-transform: uppercase; color: #bbb; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .dd-panel-def { font-size: 13px; color: #333; line-height: 1.55; margin-bottom: 8px; }
+  .dd-panel-ex { font-size: 12px; color: #999; font-style: italic; }
+  .dd-mastery { padding: 12px 18px; border-top: 1px solid #eee; }
+  .dd-mastery-label { font-size: 10px; text-transform: uppercase; color: #bbb; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .dd-mastery-row { display: flex; gap: 4px; }
+  .dd-ml { flex: 1; height: 26px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; cursor: pointer; }
+  .dd-ml1 { background: rgba(234,179,8,0.15); color: #92400e; }
+  .dd-ml2 { background: rgba(249,115,22,0.12); color: #9a3412; }
+  .dd-ml3 { background: rgba(34,197,94,0.12); color: #166534; }
+  .dd-mlK { background: #111; color: #fff; }
+
+  /* ==================== DIRECTION E — Compact List ==================== */
+  .de { background: #fff; color: #111; height: 100%; display: flex; flex-direction: column; font-family: system-ui; }
+  .de-topbar { padding: 14px 16px 10px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+  .de-topbar h2 { font-size: 16px; font-weight: 600; }
+  .de-topbar-icons { display: flex; gap: 10px; font-size: 18px; color: #999; }
+  .de-filter { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid #f5f5f5; overflow-x: auto; }
+  .de-chip { padding: 4px 12px; border-radius: 20px; font-size: 11px; border: 1px solid #eee; color: #888; white-space: nowrap; }
+  .de-chip.active { background: #111; color: #fff; border-color: #111; }
+  .de-list { flex: 1; overflow: hidden; }
+  .de-item { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #f5f5f5; align-items: center; }
+  .de-cover { width: 36px; height: 50px; border-radius: 5px; flex-shrink: 0; }
+  .de-info { flex: 1; min-width: 0; }
+  .de-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .de-author { font-size: 11px; color: #aaa; margin-bottom: 5px; }
+  .de-prog { height: 2px; background: #f0f0f0; border-radius: 1px; }
+  .de-prog-fill { height: 100%; border-radius: 1px; background: #3b82f6; }
+  .de-pct { font-size: 10px; color: #bbb; margin-left: auto; flex-shrink: 0; padding-top: 6px; }
+  .de-bottom-nav { border-top: 1px solid #eee; padding: 8px 0 4px; display: flex; justify-content: space-around; }
+  .de-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: #bbb; }
+  .de-nav-item.active { color: #3b82f6; }
+  .de-nav-icon { font-size: 18px; }
+
+  /* Gradient covers for books */
+  .cover-1 { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .cover-2 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .cover-3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+  .cover-4 { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+  .cover-5 { background: linear-gradient(135deg, #fa709a, #fee140); }
+  .cover-6 { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>Lekto — Design Directions</h1>
+  <button class="nav-btn active" onclick="show('A')">A — Light Minimal</button>
+  <button class="nav-btn" onclick="show('B')">B — Dark Focused</button>
+  <button class="nav-btn" onclick="show('C')">C — Sepia Warm</button>
+  <button class="nav-btn" onclick="show('D')">D — Web Split</button>
+  <button class="nav-btn" onclick="show('E')">E — Compact List</button>
+  <button class="nav-btn" style="border-color:#7c5c38;color:#c4a882;" onclick="show('F')">★ Final Direction</button>
+</div>
+
+<!-- DIRECTION A -->
+<div class="direction active" id="dir-A">
+  <div class="direction-header">
+    <h2>A — Light Minimal</h2>
+    <p>Clean white interface, strong typography, bottom navigation. Neutral accent on black. Focuses on content whitespace and readability. Classic, familiar, safe.</p>
+  </div>
+  <div class="screens">
+
+    <div>
+      <div class="screen-label">Library</div>
+      <div class="phone">
+        <div class="da" style="position:relative;">
+          <div class="da-topbar">
+            <div class="da-topbar-title">Library</div>
+            <div class="da-topbar-icon">＋</div>
+          </div>
+          <div class="da-import-btn">Import a book</div>
+          <div class="da-section-title">Continue reading</div>
+          <div class="da-book-list">
+            <div class="da-book">
+              <div class="da-cover cover-1"></div>
+              <div class="da-book-info">
+                <div class="da-book-title">Crime and Punishment</div>
+                <div class="da-book-meta">Dostoevsky · Chapter 4</div>
+                <div class="da-progress-bar"><div class="da-progress-fill" style="width:34%"></div></div>
+              </div>
+            </div>
+            <div class="da-book">
+              <div class="da-cover cover-3"></div>
+              <div class="da-book-info">
+                <div class="da-book-title">El Quijote</div>
+                <div class="da-book-meta">Cervantes · Chapter 12</div>
+                <div class="da-progress-bar"><div class="da-progress-fill" style="width:61%"></div></div>
+              </div>
+            </div>
+            <div class="da-book">
+              <div class="da-cover cover-5"></div>
+              <div class="da-book-info">
+                <div class="da-book-title">Der Steppenwolf</div>
+                <div class="da-book-meta">Hesse · Chapter 2</div>
+                <div class="da-progress-bar"><div class="da-progress-fill" style="width:12%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="da-bottom-nav">
+            <div class="da-nav-item active"><div class="da-nav-icon">📚</div>Library</div>
+            <div class="da-nav-item"><div class="da-nav-icon">📝</div>Vocabulary</div>
+            <div class="da-nav-item"><div class="da-nav-icon">⚙️</div>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Reader</div>
+      <div class="phone">
+        <div class="da-reader">
+          <div class="da-reader-bar">
+            <div class="da-reader-back">← Library</div>
+            <div class="da-reader-title">Crime and Punishment</div>
+            <div class="da-reader-actions"><span>Aa</span><span>⋯</span></div>
+          </div>
+          <div class="da-text">
+            <p>Raskolnikov left his <span class="w0">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his <span class="w2">landlady's</span> door, which was open, on his way to the street.</p>
+            <p>The heat in the street was <span class="w3">stifling</span>. Not a breath of air. The lime dust, the plaster from the buildings, the smells from the shops — all contributed to the oppressive atmosphere.</p>
+            <p>He had already reached the street when he <span class="w0">recollected</span> that he had forgotten to fasten his door. He went back, thinking with <span class="w1">annoyance</span> of the trouble.</p>
+          </div>
+          <div class="da-reader-footer">
+            <div class="da-reader-page">Chapter 1 · p. 12</div>
+            <div class="da-reader-swipe">swipe to turn →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Translation Panel</div>
+      <div class="phone">
+        <div class="da-panel">
+          <div class="da-panel-reader">
+            <p>Raskolnikov left his <span class="w0" style="background:rgba(59,130,246,0.4);border-bottom-width:3px;">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his landlady's door.</p>
+            <p>The heat in the street was stifling. Not a breath of air. The lime dust, the plaster from the buildings.</p>
+          </div>
+          <div class="da-sheet">
+            <div class="da-sheet-handle"></div>
+            <div class="da-sheet-header">
+              <div class="da-sheet-word">garret</div>
+              <div class="da-sheet-actions">
+                <div class="da-tts-btn">🔊</div>
+                <div class="da-save-btn">Save</div>
+              </div>
+            </div>
+            <div class="da-tabs">
+              <div class="da-tab active">WordRef</div>
+              <div class="da-tab">Reverso</div>
+              <div class="da-tab">Google</div>
+              <div class="da-tab">Linguee</div>
+            </div>
+            <div class="da-dict-content">
+              <div class="da-dict-entry">
+                <div class="da-dict-pos">noun</div>
+                <div class="da-dict-def">A small, uncomfortable room at the top of a house, especially in the roof. <em>Mansarde, grenier.</em></div>
+                <div class="da-dict-example">"He lived in a tiny garret above the city."</div>
+              </div>
+            </div>
+            <div class="da-mastery">
+              <div class="da-m da-m1">1</div>
+              <div class="da-m da-m2">2</div>
+              <div class="da-m da-m3">3</div>
+              <div class="da-m da-m4">4</div>
+              <div class="da-m da-mK">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DIRECTION B -->
+<div class="direction" id="dir-B">
+  <div class="direction-header">
+    <h2>B — Dark Focused</h2>
+    <p>Dark-first interface with indigo accent. Grid library. Designed for evening reading sessions. High contrast between mastery colors and dark background.</p>
+  </div>
+  <div class="screens">
+
+    <div>
+      <div class="screen-label">Library</div>
+      <div class="phone">
+        <div class="db" style="position:relative;">
+          <div class="db-topbar">
+            <div class="db-title">Lekto</div>
+            <div class="db-icon">👤</div>
+          </div>
+          <div class="db-search">
+            <div class="db-search-icon">🔍</div>
+            <div class="db-search-text">Search your library...</div>
+          </div>
+          <div class="db-grid">
+            <div class="db-card">
+              <div class="db-card-cover cover-1"></div>
+              <div class="db-card-info">
+                <div class="db-card-title">Crime and Punishment</div>
+                <div class="db-card-prog"><div class="db-card-fill" style="width:34%"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-cover cover-3"></div>
+              <div class="db-card-info">
+                <div class="db-card-title">El Quijote</div>
+                <div class="db-card-prog"><div class="db-card-fill" style="width:61%"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-cover cover-5"></div>
+              <div class="db-card-info">
+                <div class="db-card-title">Der Steppenwolf</div>
+                <div class="db-card-prog"><div class="db-card-fill" style="width:12%"></div></div>
+              </div>
+            </div>
+            <div class="db-card">
+              <div class="db-card-cover cover-2"></div>
+              <div class="db-card-info">
+                <div class="db-card-title">La Regenta</div>
+                <div class="db-card-prog"><div class="db-card-fill" style="width:5%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="db-add-btn">＋</div>
+          <div class="db-bottom-nav">
+            <div class="db-nav-item active"><div class="db-nav-icon">📚</div>Library</div>
+            <div class="db-nav-item"><div class="db-nav-icon">📝</div>Vocab</div>
+            <div class="db-nav-item"><div class="db-nav-icon">⚙️</div>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Reader</div>
+      <div class="phone">
+        <div class="db-reader">
+          <div class="db-reader-bar">
+            <div class="db-reader-back">←</div>
+            <div style="font-size:12px;color:#555;">Chapter 1 · 34%</div>
+            <div class="db-reader-menu">⋯</div>
+          </div>
+          <div class="db-reader-text">
+            <p>Raskolnikov left his <span class="dbw0">garret</span> and went down the <span class="dbw1">staircase</span>. He passed quietly by his <span class="dbw2">landlady's</span> door, which was open.</p>
+            <p>The heat in the street was <span class="dbw3">stifling</span>. Not a breath of air. The lime dust, the plaster from the buildings, the smells — all contributed to the oppressive atmosphere.</p>
+            <p>He had already reached the street when he <span class="dbw0">recollected</span> that he had forgotten to fasten his door.</p>
+          </div>
+          <div class="db-reader-footer">
+            <div class="db-reader-prev">‹</div>
+            <div class="db-reader-page">p. 12 / 421</div>
+            <div class="db-reader-next">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Translation Panel</div>
+      <div class="phone">
+        <div class="db-panel">
+          <div class="db-panel-text">
+            <p>Raskolnikov left his <span class="dbw0" style="background:rgba(99,102,241,0.4);border-bottom-width:3px;">garret</span> and went down the <span class="dbw1">staircase</span>. He passed quietly by his landlady's door.</p>
+            <p>The heat in the street was stifling. Not a breath of air.</p>
+          </div>
+          <div class="db-sheet">
+            <div class="db-sheet-handle"></div>
+            <div class="db-sheet-header">
+              <div class="db-sheet-word">garret</div>
+              <div class="db-sheet-btns">
+                <div class="db-tts">🔊</div>
+                <div class="db-save">Save</div>
+              </div>
+            </div>
+            <div class="db-tabs">
+              <div class="db-tab active">WordRef</div>
+              <div class="db-tab">Reverso</div>
+              <div class="db-tab">Google</div>
+              <div class="db-tab">Linguee</div>
+            </div>
+            <div class="db-dict">
+              <div class="db-pos">noun</div>
+              <div class="db-def">A small, uncomfortable room at the top of a house. <em style="color:#8b9cf4;">Mansarde, grenier.</em></div>
+              <div class="db-ex">"He lived in a tiny garret above the city."</div>
+            </div>
+            <div class="db-mastery-row">
+              <div class="db-ml db-ml1">1</div>
+              <div class="db-ml db-ml2">2</div>
+              <div class="db-ml db-ml3">3</div>
+              <div class="db-ml db-mlK">✓ Known</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DIRECTION C -->
+<div class="direction" id="dir-C">
+  <div class="direction-header">
+    <h2>C — Sepia Warm</h2>
+    <p>Warm paper tones throughout the app — not just the reader. Brown accent. Evokes physical book reading. Differentiated visual identity, more distinctive personality.</p>
+  </div>
+  <div class="screens">
+
+    <div>
+      <div class="screen-label">Library</div>
+      <div class="phone">
+        <div class="dc">
+          <div class="dc-topbar">
+            <div class="dc-title">My Library</div>
+            <div class="dc-icon">＋</div>
+          </div>
+          <div class="dc-continue">
+            <div class="dc-continue-cover cover-1"></div>
+            <div class="dc-continue-info">
+              <div class="dc-continue-label">Continue reading</div>
+              <div class="dc-continue-title">Crime and Punishment</div>
+              <div class="dc-continue-prog">Chapter 4 · 34% complete</div>
+            </div>
+            <div style="font-size:20px;">▶</div>
+          </div>
+          <div class="dc-section">All books</div>
+          <div class="dc-list">
+            <div class="dc-item">
+              <div class="dc-item-cover cover-3"></div>
+              <div><div class="dc-item-title">El Quijote</div><div class="dc-item-meta">61% · Chapter 12</div></div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-item-cover cover-5"></div>
+              <div><div class="dc-item-title">Der Steppenwolf</div><div class="dc-item-meta">12% · Chapter 2</div></div>
+            </div>
+            <div class="dc-item">
+              <div class="dc-item-cover cover-2"></div>
+              <div><div class="dc-item-title">La Regenta</div><div class="dc-item-meta">5% · Chapter 1</div></div>
+            </div>
+          </div>
+          <div class="dc-bottom-nav">
+            <div class="dc-nav-item active"><div class="dc-nav-icon">📚</div>Library</div>
+            <div class="dc-nav-item"><div class="dc-nav-icon">📝</div>Vocab</div>
+            <div class="dc-nav-item"><div class="dc-nav-icon">⚙️</div>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Reader</div>
+      <div class="phone">
+        <div class="dc-reader">
+          <div class="dc-reader-bar">
+            <div class="dc-reader-back">← Library</div>
+            <div class="dc-reader-settings">Aa</div>
+          </div>
+          <div class="dc-reader-text">
+            <p>Raskolnikov left his <span class="dcw0">garret</span> and went down the <span class="dcw1">staircase</span>. He passed quietly by his <span class="dcw2">landlady's</span> door, which was open.</p>
+            <p>The heat in the street was <span class="dcw3">stifling</span>. Not a breath of air. The lime dust, the plaster from the buildings contributed to the oppressive atmosphere.</p>
+            <p>He had already reached the street when he <span class="dcw0">recollected</span> that he had forgotten to fasten his door. He went back, thinking with <span class="dcw1">annoyance</span> of the trouble.</p>
+          </div>
+          <div class="dc-reader-footer">
+            <div class="dc-reader-page">Chapter 1</div>
+            <div class="dc-reader-page">p. 12 / 421</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Translation Panel</div>
+      <div class="phone">
+        <div class="dc-reader" style="position:relative;">
+          <div class="dc-reader-bar">
+            <div class="dc-reader-back">← Library</div>
+            <div class="dc-reader-settings">Aa</div>
+          </div>
+          <div class="dc-reader-text" style="padding-bottom:0;">
+            <p>Raskolnikov left his <span class="dcw0" style="background:rgba(59,130,246,0.3);border-bottom-width:3px;">garret</span> and went down the staircase.</p>
+            <p style="color:#c0a88a;">The heat in the street was stifling.</p>
+          </div>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#ede4d0;border-radius:20px 20px 0 0;border-top:1px solid #d8ccb8;">
+            <div style="width:36px;height:4px;background:#c4b49a;border-radius:2px;margin:10px auto 0;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px 4px;">
+              <div style="font-size:20px;font-weight:700;color:#3d2b1a;">garret</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div style="width:32px;height:32px;background:#d8ccb8;border-radius:50%;display:flex;align-items:center;justify-content:center;">🔊</div>
+                <div style="padding:6px 14px;background:#7c5c38;color:#f5efe0;border-radius:8px;font-size:12px;font-weight:500;">Save</div>
+              </div>
+            </div>
+            <div style="display:flex;padding:6px 20px 0;border-bottom:1px solid #d8ccb8;gap:0;">
+              <div style="font-size:11px;padding:5px 12px 7px;color:#7c5c38;border-bottom:2px solid #7c5c38;font-weight:500;">WordRef</div>
+              <div style="font-size:11px;padding:5px 12px 7px;color:#c4a882;">Reverso</div>
+              <div style="font-size:11px;padding:5px 12px 7px;color:#c4a882;">Google</div>
+            </div>
+            <div style="padding:12px 20px;">
+              <div style="font-size:10px;text-transform:uppercase;color:#a89070;letter-spacing:0.06em;margin-bottom:3px;">noun</div>
+              <div style="font-size:13px;color:#4a3520;line-height:1.5;">Small room at the top of a house. <em>Mansarde, grenier.</em></div>
+            </div>
+            <div style="display:flex;gap:6px;padding:8px 20px 14px;">
+              <div style="flex:1;height:28px;border-radius:6px;background:rgba(234,179,8,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#92400e;">1</div>
+              <div style="flex:1;height:28px;border-radius:6px;background:rgba(234,88,12,0.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#9a3412;">2</div>
+              <div style="flex:1;height:28px;border-radius:6px;background:rgba(21,128,61,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#15803d;">3</div>
+              <div style="flex:1;height:28px;border-radius:6px;background:#7c5c38;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#f5efe0;">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DIRECTION D -->
+<div class="direction" id="dir-D">
+  <div class="direction-header">
+    <h2>D — Web Split Layout</h2>
+    <p>Desktop-optimized layout with persistent sidebar navigation and side-by-side reader + translation panel. No bottom sheet needed on large screens — panels are always visible.</p>
+  </div>
+  <div class="screens">
+
+    <div style="grid-column: 1 / -1;">
+      <div class="screen-label">Web Reader with Translation Panel</div>
+      <div class="web">
+        <div class="dd">
+          <div class="dd-sidebar">
+            <div class="dd-sidebar-header">
+              <div class="dd-sidebar-logo">Lekto</div>
+              <div class="dd-sidebar-nav">
+                <div class="dd-sidebar-item active"><span class="dd-sidebar-icon">📚</span>Library</div>
+                <div class="dd-sidebar-item"><span class="dd-sidebar-icon">📝</span>Vocabulary</div>
+                <div class="dd-sidebar-item"><span class="dd-sidebar-icon">⚙️</span>Settings</div>
+              </div>
+            </div>
+            <div class="dd-sidebar-books">
+              <div class="dd-sidebar-section">Recent</div>
+              <div class="dd-sidebar-book">
+                <div class="dd-sidebar-cover cover-1"></div>
+                <div class="dd-sidebar-title">Crime and Punishment</div>
+              </div>
+              <div class="dd-sidebar-book">
+                <div class="dd-sidebar-cover cover-3"></div>
+                <div class="dd-sidebar-title">El Quijote</div>
+              </div>
+              <div class="dd-sidebar-book">
+                <div class="dd-sidebar-cover cover-5"></div>
+                <div class="dd-sidebar-title">Der Steppenwolf</div>
+              </div>
+            </div>
+          </div>
+          <div class="dd-main">
+            <div class="dd-main-header">
+              <div class="dd-main-title">Crime and Punishment — Chapter 1</div>
+              <div class="dd-main-actions">
+                <div class="dd-main-btn">Aa</div>
+                <div class="dd-main-btn">☀️</div>
+                <div class="dd-main-btn primary">34% complete</div>
+              </div>
+            </div>
+            <div class="dd-reader-area">
+              <div class="dd-text-area">
+                <p>Raskolnikov left his <span class="w0" style="background:rgba(59,130,246,0.25);border-bottom:2px solid #3b82f6;border-radius:2px;">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his <span class="w2">landlady's</span> door, which was open, on his way to the street.</p>
+                <p>The heat in the street was <span class="w3">stifling</span>. Not a breath of air. The lime dust, the plaster from the buildings, the smells from the shops and taverns — all contributed to the oppressive atmosphere.</p>
+                <p>He had already reached the street when he <span class="w0" style="background:rgba(59,130,246,0.4);border-bottom:3px solid #3b82f6;border-radius:2px;">recollected</span> that he had forgotten to fasten his door.</p>
+              </div>
+              <div class="dd-panel-area">
+                <div class="dd-panel-header">
+                  <div class="dd-panel-word">recollected</div>
+                  <div class="dd-panel-btns">
+                    <div class="dd-panel-tts">🔊</div>
+                    <div class="dd-panel-save">Save</div>
+                  </div>
+                </div>
+                <div class="dd-panel-tabs">
+                  <div class="dd-panel-tab active">WordRef</div>
+                  <div class="dd-panel-tab">Reverso</div>
+                  <div class="dd-panel-tab">Google</div>
+                  <div class="dd-panel-tab">Linguee</div>
+                </div>
+                <div class="dd-panel-content">
+                  <div class="dd-panel-pos">verb (past)</div>
+                  <div class="dd-panel-def">To remember or recall something. <em>Se souvenir, se rappeler.</em></div>
+                  <div class="dd-panel-ex">"She recollected the events of that morning."</div>
+                </div>
+                <div class="dd-mastery">
+                  <div class="dd-mastery-label">Mastery level</div>
+                  <div class="dd-mastery-row">
+                    <div class="dd-ml dd-ml1">1</div>
+                    <div class="dd-ml dd-ml2">2</div>
+                    <div class="dd-ml dd-ml3">3</div>
+                    <div class="dd-ml dd-mlK">✓ Known</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DIRECTION E -->
+<div class="direction" id="dir-E">
+  <div class="direction-header">
+    <h2>E — Compact List</h2>
+    <p>Dense list library with filter chips. More information visible at once. Good for users with large libraries. Efficient rather than decorative.</p>
+  </div>
+  <div class="screens">
+
+    <div>
+      <div class="screen-label">Library (Compact List)</div>
+      <div class="phone">
+        <div class="de">
+          <div class="de-topbar">
+            <h2>Library</h2>
+            <div class="de-topbar-icons"><span>🔍</span><span>＋</span></div>
+          </div>
+          <div class="de-filter">
+            <div class="de-chip active">All</div>
+            <div class="de-chip">In progress</div>
+            <div class="de-chip">Spanish</div>
+            <div class="de-chip">German</div>
+            <div class="de-chip">Russian</div>
+          </div>
+          <div class="de-list">
+            <div class="de-item">
+              <div class="de-cover cover-1"></div>
+              <div class="de-info">
+                <div class="de-title">Crime and Punishment</div>
+                <div class="de-author">Fyodor Dostoevsky · Russian</div>
+                <div class="de-prog"><div class="de-prog-fill" style="width:34%"></div></div>
+              </div>
+              <div class="de-pct">34%</div>
+            </div>
+            <div class="de-item">
+              <div class="de-cover cover-3"></div>
+              <div class="de-info">
+                <div class="de-title">El ingenioso hidalgo</div>
+                <div class="de-author">Cervantes · Spanish</div>
+                <div class="de-prog"><div class="de-prog-fill" style="width:61%"></div></div>
+              </div>
+              <div class="de-pct">61%</div>
+            </div>
+            <div class="de-item">
+              <div class="de-cover cover-5"></div>
+              <div class="de-info">
+                <div class="de-title">Der Steppenwolf</div>
+                <div class="de-author">Hermann Hesse · German</div>
+                <div class="de-prog"><div class="de-prog-fill" style="width:12%"></div></div>
+              </div>
+              <div class="de-pct">12%</div>
+            </div>
+            <div class="de-item">
+              <div class="de-cover cover-2"></div>
+              <div class="de-info">
+                <div class="de-title">La Regenta</div>
+                <div class="de-author">Leopoldo Alas · Spanish</div>
+                <div class="de-prog"><div class="de-prog-fill" style="width:5%"></div></div>
+              </div>
+              <div class="de-pct">5%</div>
+            </div>
+            <div class="de-item">
+              <div class="de-cover cover-6"></div>
+              <div class="de-info">
+                <div class="de-title">Buddenbrooks</div>
+                <div class="de-author">Thomas Mann · German</div>
+                <div class="de-prog"><div class="de-prog-fill" style="width:0%"></div></div>
+              </div>
+              <div class="de-pct">New</div>
+            </div>
+          </div>
+          <div class="de-bottom-nav">
+            <div class="de-nav-item active"><div class="de-nav-icon">📚</div>Library</div>
+            <div class="de-nav-item"><div class="de-nav-icon">📝</div>Vocab</div>
+            <div class="de-nav-item"><div class="de-nav-icon">⚙️</div>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Reader (same as A/B)</div>
+      <div class="phone">
+        <div class="da-reader">
+          <div class="da-reader-bar">
+            <div class="da-reader-back">← Library</div>
+            <div class="da-reader-title">Crime and Punishment</div>
+            <div class="da-reader-actions"><span>Aa</span><span>⋯</span></div>
+          </div>
+          <div class="da-text">
+            <p>Raskolnikov left his <span class="w0">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his <span class="w2">landlady's</span> door.</p>
+            <p>The heat in the street was <span class="w3">stifling</span>. Not a breath of air. The lime dust and plaster contributed to the oppressive atmosphere.</p>
+            <p>He had already reached the street when he <span class="w0">recollected</span> that he had forgotten to fasten his door. He went back, thinking with <span class="w1">annoyance</span> of the trouble.</p>
+          </div>
+          <div class="da-reader-footer">
+            <div class="da-reader-page">Chapter 1 · p. 12</div>
+            <div class="da-reader-swipe">swipe →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen-label">Note: Translation panel identical to A</div>
+      <div class="phone">
+        <div class="da-panel">
+          <div class="da-panel-reader">
+            <p>Raskolnikov left his <span class="w0" style="background:rgba(59,130,246,0.4);border-bottom-width:3px;">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his landlady's door.</p>
+            <p>The heat in the street was stifling. Not a breath of air.</p>
+          </div>
+          <div class="da-sheet">
+            <div class="da-sheet-handle"></div>
+            <div class="da-sheet-header">
+              <div class="da-sheet-word">garret</div>
+              <div class="da-sheet-actions">
+                <div class="da-tts-btn">🔊</div>
+                <div class="da-save-btn">Save</div>
+              </div>
+            </div>
+            <div class="da-tabs">
+              <div class="da-tab active">WordRef</div>
+              <div class="da-tab">Reverso</div>
+              <div class="da-tab">Google</div>
+              <div class="da-tab">Linguee</div>
+            </div>
+            <div class="da-dict-content">
+              <div class="da-dict-entry">
+                <div class="da-dict-pos">noun</div>
+                <div class="da-dict-def">A small, uncomfortable room at the top of a house. <em>Mansarde, grenier.</em></div>
+              </div>
+            </div>
+            <div class="da-mastery">
+              <div class="da-m da-m1">1</div>
+              <div class="da-m da-m2">2</div>
+              <div class="da-m da-m3">3</div>
+              <div class="da-m da-m4">4</div>
+              <div class="da-m da-mK">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DIRECTION F — Final Direction -->
+<div class="direction" id="dir-F">
+  <div class="direction-header">
+    <h2>★ Final Direction — Chosen Design</h2>
+    <p>Sepia list library + Continue Reading hero + search bar + 4-item bottom nav (Import as nav item). Light reader theme. Translation bottom sheet. Web at 1440px: 3-column layout with persistent sidebar and side panel.</p>
+  </div>
+  <div class="screens">
+
+    <!-- Mobile Library -->
+    <div>
+      <div class="screen-label">Mobile — Library</div>
+      <div class="phone">
+        <div style="background:#f5efe0;color:#3d2b1a;height:100%;display:flex;flex-direction:column;font-family:system-ui;">
+          <!-- Header -->
+          <div style="padding:16px 18px 10px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:18px;font-weight:600;">Library</div>
+          </div>
+          <!-- Continue Reading hero -->
+          <div style="margin:0 16px 14px;background:#7c5c38;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;">
+            <div style="width:40px;height:56px;border-radius:8px;flex-shrink:0;" class="cover-1"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:rgba(245,239,224,0.6);margin-bottom:3px;">Continue reading</div>
+              <div style="font-size:13px;font-weight:600;color:#f5efe0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Crime and Punishment</div>
+              <div style="font-size:11px;color:rgba(245,239,224,0.6);">Chapter 4 · 34%</div>
+            </div>
+            <div style="font-size:22px;color:#f5efe0;opacity:0.8;">▶</div>
+          </div>
+          <!-- Search -->
+          <div style="margin:0 16px 12px;background:rgba(255,255,255,0.4);border-radius:10px;padding:9px 12px;display:flex;gap:8px;align-items:center;border:1px solid rgba(124,92,56,0.15);">
+            <div style="font-size:13px;color:#c4a882;">🔍</div>
+            <div style="font-size:13px;color:#c4a882;">Search your library...</div>
+          </div>
+          <!-- Book list -->
+          <div class="dc-list">
+            <div class="dc-item">
+            <div class="dc-item-cover cover-3"></div>
+            <div><div class="dc-item-title">El Quijote</div><div class="dc-item-meta">61% · Chapter 12</div></div>
+            </div>
+            <div class="dc-item">
+            <div class="dc-item-cover cover-5"></div>
+            <div><div class="dc-item-title">Der Steppenwolf</div><div class="dc-item-meta">12% · Chapter 2</div></div>
+            </div>
+            <div class="dc-item">
+            <div class="dc-item-cover cover-2"></div>
+            <div><div class="dc-item-title">La Regenta</div><div class="dc-item-meta">5% · Chapter 1</div></div>
+            </div>
+          </div>
+          <!-- Bottom nav — 4 items -->
+          <div style="border-top:1px solid rgba(124,92,56,0.12);padding:10px 0 6px;display:flex;justify-content:space-around;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:#7c5c38;font-weight:500;">
+              <div style="font-size:18px;">📚</div>Library
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:#c4a882;">
+              <div style="font-size:18px;">＋</div>Import
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:#c4a882;">
+              <div style="font-size:18px;">📝</div>Vocab
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:#c4a882;">
+              <div style="font-size:18px;">⚙️</div>Settings
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Reader -->
+    <div>
+      <div class="screen-label">Mobile — Reader (Light theme, default)</div>
+      <div class="phone">
+        <div class="da-reader">
+          <div class="da-reader-bar">
+            <div class="da-reader-back">← Library</div>
+            <div class="da-reader-title">Crime and Punishment</div>
+            <div class="da-reader-actions"><span>Aa</span></div>
+          </div>
+          <div class="da-text">
+            <p>Raskolnikov left his <span class="w0">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his <span class="w2">landlady's</span> door, which was open on his way to the street.</p>
+            <p>The heat in the street was <span class="w3">stifling</span>. Not a breath of air. The lime dust, the plaster from the buildings contributed to the oppressive atmosphere.</p>
+            <p>He had already reached the street when he <span class="w0">recollected</span> that he had forgotten to fasten his door. He went back, thinking with <span class="w1">annoyance</span> of the trouble.</p>
+          </div>
+          <div class="da-reader-footer">
+            <div class="da-reader-page">Chapter 1</div>
+            <div class="da-reader-page">p. 12 / 421</div>
+            <div class="da-reader-swipe">swipe →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Translation Panel -->
+    <div>
+      <div class="screen-label">Mobile — Translation Panel</div>
+      <div class="phone">
+        <div class="da-panel">
+          <div class="da-panel-reader">
+            <p>Raskolnikov left his <span class="w0" style="background:rgba(59,130,246,0.4);border-bottom-width:3px;">garret</span> and went down the <span class="w1">staircase</span>. He passed quietly by his landlady's door.</p>
+            <p>The heat in the street was stifling. Not a breath of air.</p>
+          </div>
+          <div class="da-sheet">
+            <div class="da-sheet-handle"></div>
+            <div class="da-sheet-header">
+              <div class="da-sheet-word">garret</div>
+              <div class="da-sheet-actions">
+                <div class="da-tts-btn" style="background:#f0ebe2;font-size:13px;display:flex;align-items:center;justify-content:center;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c5c38" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                </div>
+                <div class="da-save-btn" style="background:#7c5c38;">Save</div>
+              </div>
+            </div>
+            <div class="da-tabs">
+              <div class="da-tab active" style="border-bottom-color:#7c5c38;color:#7c5c38;">WordRef</div>
+              <div class="da-tab">Reverso</div>
+              <div class="da-tab">Google</div>
+              <div class="da-tab">Linguee</div>
+            </div>
+            <div class="da-dict-content">
+              <div class="da-dict-entry">
+                <div class="da-dict-pos">noun</div>
+                <div class="da-dict-def">A small, uncomfortable room at the top of a house. <em>Mansarde, grenier.</em></div>
+                <div class="da-dict-example">"He lived in a tiny garret above the city."</div>
+              </div>
+            </div>
+            <div class="da-mastery" style="gap:5px;">
+              <div class="da-m" style="background:rgba(234,179,8,0.15);color:#854d0e;border:none;font-size:11px;">1</div>
+              <div class="da-m" style="background:rgba(249,115,22,0.1);color:#9a3412;border:none;font-size:11px;">2</div>
+              <div class="da-m" style="background:rgba(34,197,94,0.1);color:#166534;border:none;font-size:11px;">3</div>
+              <div class="da-m" style="background:rgba(59,130,246,0.1);color:#1e3a8a;border:none;font-size:11px;">4</div>
+              <div class="da-m" style="background:#7c5c38;color:#fff;border:none;font-size:11px;">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Web 1440px -->
+  <div style="margin-top:40px;">
+    <div class="screen-label" style="margin-bottom:12px;">Web — 1440px — 3-column layout (Sidebar + Reader + Translation Panel)</div>
+    <div style="width:100%;background:#f8f2e6;border-radius:12px;border:2px solid #d8ccb8;overflow:hidden;display:grid;grid-template-columns:220px 1fr 300px;height:620px;font-family:system-ui;">
+
+      <!-- Sidebar -->
+      <div style="background:#f0e8d6;border-right:1px solid #d8ccb8;display:flex;flex-direction:column;">
+        <div style="padding:20px 18px 14px;border-bottom:1px solid #d8ccb8;">
+          <div style="font-size:18px;font-weight:700;color:#3d2b1a;margin-bottom:18px;">Lekto</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="padding:8px 12px;border-radius:8px;background:rgba(124,92,56,0.12);color:#3d2b1a;font-size:13px;font-weight:500;display:flex;gap:8px;align-items:center;">📚 Library</div>
+            <div style="padding:8px 12px;border-radius:8px;color:#9a8070;font-size:13px;display:flex;gap:8px;align-items:center;">➕ Import</div>
+            <div style="padding:8px 12px;border-radius:8px;color:#9a8070;font-size:13px;display:flex;gap:8px;align-items:center;">📝 Vocabulary</div>
+            <div style="padding:8px 12px;border-radius:8px;color:#9a8070;font-size:13px;display:flex;gap:8px;align-items:center;">⚙️ Settings</div>
+          </div>
+        </div>
+        <div style="padding:14px 18px;flex:1;overflow:hidden;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#b0a090;margin-bottom:10px;">Recent</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="width:28px;height:38px;border-radius:4px;flex-shrink:0;" class="cover-1"></div>
+              <div>
+                <div style="font-size:12px;color:#3d2b1a;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">Crime and Punishment</div>
+                <div style="font-size:10px;color:#9a8070;">34%</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="width:28px;height:38px;border-radius:4px;flex-shrink:0;" class="cover-3"></div>
+              <div>
+                <div style="font-size:12px;color:#3d2b1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">El Quijote</div>
+                <div style="font-size:10px;color:#9a8070;">61%</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="width:28px;height:38px;border-radius:4px;flex-shrink:0;" class="cover-5"></div>
+              <div>
+                <div style="font-size:12px;color:#3d2b1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">Der Steppenwolf</div>
+                <div style="font-size:10px;color:#9a8070;">12%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reader -->
+      <div style="display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #d8ccb8;">
+        <div style="padding:14px 28px;border-bottom:1px solid #ede4d0;display:flex;justify-content:space-between;align-items:center;background:#f8f2e6;">
+          <div style="font-size:13px;font-weight:500;color:#3d2b1a;">Crime and Punishment — Chapter 1</div>
+          <div style="display:flex;gap:8px;">
+            <div style="padding:5px 12px;border-radius:7px;font-size:12px;border:1px solid #d8ccb8;color:#9a8070;background:#f0e8d6;">Aa</div>
+            <div style="padding:5px 12px;border-radius:7px;font-size:12px;background:#7c5c38;color:#f5efe0;font-weight:500;">34% complete</div>
+          </div>
+        </div>
+        <div style="flex:1;padding:36px 60px;font-family:Georgia,serif;font-size:16px;line-height:1.9;color:#3d2b1a;overflow:hidden;">
+          <p style="margin-bottom:20px;max-width:62ch;">Raskolnikov left his <span style="background:rgba(59,130,246,0.18);border-bottom:2px solid #3b82f6;border-radius:2px;padding:1px 0;">garret</span> and went down the <span style="background:rgba(234,179,8,0.2);border-bottom:2px solid #ca8a04;border-radius:2px;padding:1px 0;">staircase</span>. He passed quietly by his <span style="background:rgba(234,88,12,0.12);border-bottom:2px solid #ea580c;border-radius:2px;padding:1px 0;">landlady's</span> door, which was open.</p>
+          <p style="margin-bottom:20px;max-width:62ch;">The heat in the street was <span style="background:rgba(21,128,61,0.1);border-bottom:2px solid #15803d;border-radius:2px;padding:1px 0;">stifling</span>. Not a breath of air. The lime dust, the plaster from the buildings, the smells from the shops and taverns — all contributed to the oppressive atmosphere of a Petersburg summer.</p>
+          <p style="max-width:62ch;">He had already reached the street when he <span style="background:rgba(59,130,246,0.35);border-bottom:3px solid #3b82f6;border-radius:2px;padding:1px 0;font-weight:500;">recollected</span> that he had forgotten to fasten his door. He went back, annoyed at the trouble.</p>
+        </div>
+        <div style="padding:12px 28px;border-top:1px solid #ede4d0;display:flex;justify-content:space-between;align-items:center;background:#f8f2e6;">
+          <div style="font-size:12px;color:#b0a090;">Chapter 1</div>
+          <div style="font-size:12px;color:#b0a090;">p. 12 / 421</div>
+          <div style="font-size:12px;color:#b0a090;">← swipe →</div>
+        </div>
+      </div>
+
+      <!-- Translation panel — persistent side panel on desktop -->
+      <div style="background:#f0e8d6;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:16px 18px 10px;border-bottom:1px solid #d8ccb8;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:20px;font-weight:700;color:#3d2b1a;">recollected</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="width:32px;height:32px;background:#e0d5c2;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c5c38" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            </div>
+            <div style="padding:6px 14px;background:#7c5c38;color:#f5efe0;border-radius:8px;font-size:12px;font-weight:500;">Save</div>
+          </div>
+        </div>
+        <div style="display:flex;border-bottom:1px solid #d8ccb8;">
+          <div style="font-size:11px;padding:7px 14px 9px;color:#7c5c38;border-bottom:2px solid #7c5c38;font-weight:500;">WordRef</div>
+          <div style="font-size:11px;padding:7px 14px 9px;color:#c4a882;">Reverso</div>
+          <div style="font-size:11px;padding:7px 14px 9px;color:#c4a882;">Google</div>
+          <div style="font-size:11px;padding:7px 14px 9px;color:#c4a882;">Linguee</div>
+        </div>
+        <div style="padding:14px 18px;flex:1;overflow:hidden;">
+          <div style="font-size:10px;text-transform:uppercase;color:#b0a090;letter-spacing:0.06em;margin-bottom:4px;">verb (past)</div>
+          <div style="font-size:13px;color:#3d2b1a;line-height:1.6;margin-bottom:10px;">To remember or recall something previously known or experienced. <em style="color:#7c5c38;">Se souvenir, se rappeler.</em></div>
+          <div style="font-size:12px;color:#9a8070;font-style:italic;margin-bottom:16px;">"She recollected the events of that morning with perfect clarity."</div>
+          <div style="font-size:10px;text-transform:uppercase;color:#b0a090;letter-spacing:0.06em;margin-bottom:8px;">Sentence context</div>
+          <div style="font-size:12px;color:#7c5c38;font-style:italic;padding:10px;background:rgba(124,92,56,0.08);border-radius:8px;border-left:3px solid #7c5c38;line-height:1.6;">"He had already reached the street when he <strong>recollected</strong> that he had forgotten to fasten his door."</div>
+        </div>
+        <div style="padding:12px 18px 16px;border-top:1px solid #d8ccb8;">
+          <div style="font-size:10px;text-transform:uppercase;color:#b0a090;letter-spacing:0.06em;margin-bottom:8px;">Mastery level</div>
+          <div style="display:flex;gap:5px;">
+            <div style="flex:1;height:30px;border-radius:7px;background:rgba(234,179,8,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#92400e;cursor:pointer;">1</div>
+            <div style="flex:1;height:30px;border-radius:7px;background:rgba(234,88,12,0.12);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#9a3412;cursor:pointer;">2</div>
+            <div style="flex:1;height:30px;border-radius:7px;background:rgba(21,128,61,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#15803d;cursor:pointer;">3</div>
+            <div style="flex:1;height:30px;border-radius:7px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#1e3a8a;cursor:pointer;">4</div>
+            <div style="flex:1.5;height:30px;border-radius:7px;background:#7c5c38;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#f5efe0;cursor:pointer;">✓ Known</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.direction').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('dir-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
