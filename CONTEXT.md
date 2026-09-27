@@ -7,10 +7,15 @@ phrases, and saves vocabulary. All user data lives on the user's device in a **V
 ## Language
 
 **Vault**:
-The portable collection of all of a user's Lekto data (books, vocabulary, reading
-progress). It is the unit of data ownership and the thing a user may relocate to a
-synced directory.
+The portable collection of everything the user authored or imported (vocabulary,
+reading progress, book originals). It is the unit of data ownership and the thing a
+user may relocate to a synced directory.
 _Avoid_: Library, data folder, workspace
+
+**Derived asset**:
+Anything Lekto can regenerate or re-download rather than something the user authored —
+parsed book text, the dictionary pack. Lives device-local and is never synced.
+_Avoid_: Cache, generated data
 
 **Book**:
 An imported piece of reading content — EPUB or TXT as first-class, PDF as best-effort
@@ -26,6 +31,11 @@ How well the user knows a word, on a five-point scale: 0 unknown, 1 familiar,
 2 recognized, 3 mastered, 4 known. Levels 0–3 are highlighted; level 4 is invisible
 (normal text).
 _Avoid_: Confidence level, difficulty, proficiency
+
+**Lemma**:
+The dictionary form of a word — "manger" for "mangeais". Used as the canonical key for
+mastery when known; otherwise the normalised surface form is used.
+_Avoid_: Root, stem, base form
 
 **Vocabulary entry**:
 A word or phrase the user saved, with its translation, a context sentence, and a
