@@ -77,6 +77,25 @@ because the domain holds no asynchronous code. `kotlinx-coroutines-test`
 supplies the virtual time (`runTest`, `TestScope`, `advanceUntilIdle`) for them
 when the sync engine lands; a hard-coded `Dispatchers.IO` would not see it.
 
+## Test levels
+
+A ticket states the **behaviour** it wants; the level that proves it comes from
+where the change lands:
+
+| Change surface                                                       | Level                                                   | Where it lives              |
+| -------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------- |
+| A domain invariant — merge, identity, tokenisation, serialise/parse   | property test over generated data                       | `core/commonTest`           |
+| A seam — `SyncTarget`, `VaultStore`, a provider adapter               | contract suite + in-memory fake                         | `testkit/commonMain`        |
+| A driver under `integrations/`                                        | that contract suite, plus a containerised integration run | `integrations/webdav/jvmTest` |
+| A parser — EPUB, TXT, PDF                                             | golden over a generated corpus, plus one awkward real fixture | `jvmTest`             |
+| UI behaviour in `app`                                                 | Compose UI-semantics test                               | `app/desktopTest`           |
+| A visual or layout change                                             | + screenshot golden                                     | `app`, on the PR lane       |
+| Android platform glue                                                 | Robolectric host test                                   | `androidHostTest`           |
+| A bug                                                                 | regression test at the seam the bug occurs              | wherever that seam lives    |
+
+Every change lands with a test at its level: `/deliver` holds each surface to its
+row and each demanded level to a red → green before the commit.
+
 ## Reproducing a failure
 
 A property failure prints the seed it used and writes it to

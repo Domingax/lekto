@@ -1,0 +1,5 @@
+interface:
+  display_name: "Deliver"
+  short_description: "Ticket to landed change, with tests and docs"
+policy:
+  allow_implicit_invocation: false
