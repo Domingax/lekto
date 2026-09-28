@@ -1,0 +1,3 @@
+interface:
+  display_name: "Sync Docs"
+  short_description: "Reconcile docs with a code change"

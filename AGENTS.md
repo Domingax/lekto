@@ -35,11 +35,12 @@ which that table does not state.
 ./gradlew check
 ```
 
-It builds every module and runs the JVM test suites — the domain suite in `core`,
-and the UI-semantics suite as it lands. A clean checkout needs only a JVM to
-run the wrapper — Gradle, the pinned JDK and all dependencies are provisioned by
-the build. The Android SDK is optional; without one the project builds as a
-desktop/JVM project. See `docs/build.md` for the pinned versions, the
+It builds every module and runs the JVM test suites — the domain suite in `core`
+and the UI-semantics suite in `app`. See [`docs/testing.md`](docs/testing.md) for
+the harness, the deterministic seams and the test levels. A clean checkout needs
+only a JVM to run the wrapper — Gradle, the pinned JDK and all dependencies are
+provisioned by the build. The Android SDK is optional; without one the project
+builds as a desktop/JVM project. See `docs/build.md` for the pinned versions, the
 Android/desktop commands, and the dictionary pipeline.
 
 `./gradlew check` also installs the git hooks that enforce the commit convention
