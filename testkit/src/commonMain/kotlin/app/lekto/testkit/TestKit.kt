@@ -1,11 +1,14 @@
 package app.lekto.testkit
 
 /**
- * Entry point for the shared test-support library.
+ * The shared test-support library.
  *
- * Contract suites (`SyncTarget`, `VaultStore`) and an in-memory fake for every
- * seam live here so that consumers exercise real behaviour rather than mock
- * call sequences. The seams themselves arrive with the harness (ticket #5).
+ * Every seam the domain injects — the clock, identifier generation, randomness,
+ * and the storage and sync seams as they land — has a deterministic, in-memory
+ * implementation here, so consumers exercise real behaviour rather than mock
+ * call sequences. Contract suites that every implementation of a seam must pass
+ * live here too, because a KMP `commonTest` source set cannot be published and
+ * shared any other way.
  */
 object TestKit {
     const val NAME: String = "lekto-testkit"

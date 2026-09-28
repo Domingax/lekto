@@ -19,6 +19,9 @@ without the other.
 | Compose Multiplatform| 1.11.1    | `gradle/libs.versions.toml` (`compose-multiplatform`) |
 | Compose Material 3   | 1.11.0-alpha07 | `gradle/libs.versions.toml` (`compose-material3`) |
 | Android compileSdk   | 36        | `gradle/libs.versions.toml` (`android-compileSdk`) |
+| Kotest (test)        | 6.2.5     | `gradle/libs.versions.toml` (`kotest`)          |
+| Turbine (test)       | 1.2.1     | `gradle/libs.versions.toml` (`turbine`)         |
+| Coroutines (test)    | 1.11.0    | `gradle/libs.versions.toml` (`kotlinx-coroutines`) |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -36,9 +39,10 @@ able to run the wrapper.
 ./gradlew check
 ```
 
-It builds every module and runs the JVM test suites. Today that is the domain
-suite in `core`; the full fast harness and its UI-semantics tests arrive with
-ticket #5. CI enforces the command on every push (ticket #7).
+It builds every module and runs the JVM test suites — the domain suite in
+`core` and the UI-semantics suite in `app`. See `docs/testing.md` for the
+harness, the seams and how to reproduce a failure. CI enforces the command on
+every push (ticket #7).
 
 ## Prerequisites
 

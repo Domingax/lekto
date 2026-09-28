@@ -54,6 +54,16 @@ kotlin {
         getByName("desktopMain").dependencies {
             implementation(compose.desktop.currentOs)
         }
+        // The UI-semantics suite runs on the JVM (desktop) in seconds, with no
+        // emulator. It lives in desktopTest rather than commonTest because the
+        // Compose Multiplatform common test API cannot run under Android's local
+        // (host) test configuration; instrumented coverage is a separate, slower
+        // lane. See docs/testing.md and docs/research/testing-harness.md §6.
+        getByName("desktopTest").dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.compose.ui.test)
+            implementation(compose.desktop.currentOs)
+        }
     }
 }
 
