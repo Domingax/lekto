@@ -21,51 +21,50 @@ import kotlin.test.assertFailsWith
  * a broken assertion fails, and a property failure reports a replayable seed.
  */
 @OptIn(ExperimentalKotest::class)
-class HarnessSelfTest : FunSpec({
+class HarnessSelfTest :
+    FunSpec({
 
-    test("kotlin.test assertions are on the classpath") {
-        assertEquals(4, 2 + 2)
-    }
-
-    test("Kotest matchers produce readable failures") {
-        "lekto" shouldContain "lek"
-    }
-
-    test("Kotest property testing runs, seeded") {
-        forAll<Int>(PropTestConfig(seed = 42)) { n ->
-            n + 0 == n
+        test("kotlin.test assertions are on the classpath") {
+            assertEquals(4, 2 + 2)
         }
-    }
 
-    test("Turbine asserts a flow to completion") {
-        flowOf(1, 2, 3).test {
-            awaitItem() shouldBe 1
-            awaitItem() shouldBe 2
-            awaitItem() shouldBe 3
-            awaitComplete()
+        test("Kotest matchers produce readable failures") {
+            "lekto" shouldContain "lek"
         }
-    }
 
-    test("a deliberately broken assertion fails reproducibly") {
-        suspend fun runOnce(): String =
-            assertFailsWith<AssertionError> { (1 + 1) shouldBe 3 }.message.orEmpty()
+        test("Kotest property testing runs, seeded") {
+            forAll<Int>(PropTestConfig(seed = 42)) { n ->
+                n + 0 == n
+            }
+        }
 
-        val first = runOnce()
-        first shouldContain "3"
-        first shouldContain "2"
-        runOnce() shouldBe first
-    }
+        test("Turbine asserts a flow to completion") {
+            flowOf(1, 2, 3).test {
+                awaitItem() shouldBe 1
+                awaitItem() shouldBe 2
+                awaitItem() shouldBe 3
+                awaitComplete()
+            }
+        }
 
-    test("a failing property reports a replayable seed") {
-        suspend fun runOnce(): String =
-            assertFailsWith<AssertionError> {
+        test("a deliberately broken assertion fails reproducibly") {
+            fun runOnce(): String = assertFailsWith<AssertionError> { (1 + 1) shouldBe 3 }.message.orEmpty()
+
+            val first = runOnce()
+            first shouldContain "3"
+            first shouldContain "2"
+            runOnce() shouldBe first
+        }
+
+        test("a failing property reports a replayable seed") {
+            suspend fun runOnce(): String = assertFailsWith<AssertionError> {
                 forAll<Int>(PropTestConfig(seed = 42)) { n ->
                     n * 0 == 1
                 }
             }.message.orEmpty()
 
-        val first = runOnce()
-        first shouldContain "seed 42"
-        runOnce() shouldBe first
-    }
-})
+            val first = runOnce()
+            first shouldContain "seed 42"
+            runOnce() shouldBe first
+        }
+    })

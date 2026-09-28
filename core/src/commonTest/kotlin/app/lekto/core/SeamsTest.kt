@@ -21,62 +21,63 @@ import kotlin.time.Instant
  * production wiring in `app.lekto.core` and a deterministic one in
  * `app.lekto.testkit`.
  */
-class SeamsTest : FunSpec({
+class SeamsTest :
+    FunSpec({
 
-    context("TestClock") {
-        test("reads the epoch until it is moved") {
-            TestClock().now() shouldBe Instant.fromEpochMilliseconds(0L)
-        }
+        context("TestClock") {
+            test("reads the epoch until it is moved") {
+                TestClock().now() shouldBe Instant.fromEpochMilliseconds(0L)
+            }
 
-        test("advances by the duration it is given, and only that") {
-            val clock = TestClock()
-            clock.advanceBy(5.seconds) shouldBe Instant.fromEpochMilliseconds(5_000L)
-            clock.now() shouldBe Instant.fromEpochMilliseconds(5_000L)
-        }
+            test("advances by the duration it is given, and only that") {
+                val clock = TestClock()
+                clock.advanceBy(5.seconds) shouldBe Instant.fromEpochMilliseconds(5_000L)
+                clock.now() shouldBe Instant.fromEpochMilliseconds(5_000L)
+            }
 
-        test("can be fixed to an instant") {
-            val clock = TestClock()
-            clock.set(Instant.fromEpochMilliseconds(1_700_000_000_000L))
-            clock.now() shouldBe Instant.fromEpochMilliseconds(1_700_000_000_000L)
-        }
-    }
-
-    context("SequentialIdGenerator") {
-        test("hands out consecutive ids from its start") {
-            val ids = SequentialIdGenerator(prefix = "vocab-", start = 7)
-            ids.newId() shouldBe "vocab-0007"
-            ids.newId() shouldBe "vocab-0008"
-        }
-
-        test("never repeats an id, however many it mints") {
-            forAll(Arb.int(1..1_000)) { count ->
-                val ids = SequentialIdGenerator()
-                val minted = List(count) { ids.newId() }
-                minted.toSet().size == count
+            test("can be fixed to an instant") {
+                val clock = TestClock()
+                clock.set(Instant.fromEpochMilliseconds(1_700_000_000_000L))
+                clock.now() shouldBe Instant.fromEpochMilliseconds(1_700_000_000_000L)
             }
         }
-    }
 
-    context("UuidIdGenerator") {
-        test("never repeats an id") {
-            List(1_000) { UuidIdGenerator.newId() }.toSet() shouldHaveSize 1_000
-        }
-    }
+        context("SequentialIdGenerator") {
+            test("hands out consecutive ids from its start") {
+                val ids = SequentialIdGenerator(prefix = "vocab-", start = 7)
+                ids.newId() shouldBe "vocab-0007"
+                ids.newId() shouldBe "vocab-0008"
+            }
 
-    context("randomness") {
-        test("the seam replays its stream for a given seed") {
-            val first = deterministicSeams(random = Random(seed = 7)).random
-            val second = deterministicSeams(random = Random(seed = 7)).random
-            List(20) { first.nextInt() } shouldBe List(20) { second.nextInt() }
+            test("never repeats an id, however many it mints") {
+                forAll(Arb.int(1..1_000)) { count ->
+                    val ids = SequentialIdGenerator()
+                    val minted = List(count) { ids.newId() }
+                    minted.toSet().size == count
+                }
+            }
         }
-    }
 
-    context("deterministicSeams") {
-        test("wires a controllable fake for every seam") {
-            val seams = deterministicSeams()
-            seams.clock.now() shouldBe Instant.fromEpochMilliseconds(0L)
-            seams.ids.newId() shouldBe "0001"
-            seams.random.nextInt() shouldBe Random(seed = 0).nextInt()
+        context("UuidIdGenerator") {
+            test("never repeats an id") {
+                List(1_000) { UuidIdGenerator.newId() }.toSet() shouldHaveSize 1_000
+            }
         }
-    }
-})
+
+        context("randomness") {
+            test("the seam replays its stream for a given seed") {
+                val first = deterministicSeams(random = Random(seed = 7)).random
+                val second = deterministicSeams(random = Random(seed = 7)).random
+                List(20) { first.nextInt() } shouldBe List(20) { second.nextInt() }
+            }
+        }
+
+        context("deterministicSeams") {
+            test("wires a controllable fake for every seam") {
+                val seams = deterministicSeams()
+                seams.clock.now() shouldBe Instant.fromEpochMilliseconds(0L)
+                seams.ids.newId() shouldBe "0001"
+                seams.random.nextInt() shouldBe Random(seed = 0).nextInt()
+            }
+        }
+    })

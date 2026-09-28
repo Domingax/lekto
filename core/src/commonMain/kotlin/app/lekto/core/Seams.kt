@@ -14,11 +14,7 @@ import kotlin.time.Clock
  * them: production wires [system], tests wire the deterministic implementations
  * in `app.lekto.testkit`.
  */
-data class Seams(
-    val clock: Clock,
-    val ids: IdGenerator,
-    val random: Random,
-) {
+data class Seams(val clock: Clock, val ids: IdGenerator, val random: Random) {
     companion object {
         /** The production wiring: the system clock, UUIDs and the default RNG. */
         fun system(): Seams = Seams(

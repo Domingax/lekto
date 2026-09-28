@@ -22,6 +22,9 @@ without the other.
 | Kotest (test)        | 6.2.5     | `gradle/libs.versions.toml` (`kotest`)          |
 | Turbine (test)       | 1.2.1     | `gradle/libs.versions.toml` (`turbine`)         |
 | Coroutines (test)    | 1.11.0    | `gradle/libs.versions.toml` (`kotlinx-coroutines`) |
+| ktlint               | 1.8.0     | `gradle/libs.versions.toml` (`ktlint`)          |
+| ktlint Gradle plugin | 14.2.0    | `gradle/libs.versions.toml` (`ktlint-gradle`)   |
+| detekt               | 2.0.0-alpha.6 | `gradle/libs.versions.toml` (`detekt`)       |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -39,10 +42,35 @@ able to run the wrapper.
 ./gradlew check
 ```
 
-It builds every module and runs the JVM test suites — the domain suite in
-`core` and the UI-semantics suite in `app`. See `docs/testing.md` for the
-harness, the seams and how to reproduce a failure. CI enforces the command on
-every push (ticket #7).
+It builds every module, runs the JVM test suites — the domain suite in
+`core` and the UI-semantics suite in `app` — and runs the quality gates
+(ktlint and detekt, below). See `docs/testing.md` for the harness, the seams
+and how to reproduce a failure. CI enforces the command on every push
+(ticket #7).
+
+## Quality gates
+
+`./gradlew check` fails the build on any formatting or static-analysis
+violation; neither tool is allowed to degrade to a warning. The gates are wired
+in the root `build.gradle.kts` and apply to every project, including the root
+`*.gradle.kts` scripts.
+
+- **ktlint** (MIT) formats and lints every Kotlin file.
+  `./gradlew ktlintFormat` rewrites the tree in place;
+  `./gradlew ktlintCheck` only reports. The engine is pinned in the version
+  catalog so the formatter does not drift under the Gradle plugin.
+- **detekt** (Apache-2.0) enforces `config/detekt/detekt.yml`, layered on top
+  of detekt's defaults. The tuned rules bound cyclomatic and cognitive
+  complexity, function and class size, ban dead code (unused private functions,
+  properties and variables, unreachable code) and reject orphaned
+  `TODO:`/`FIXME:`/`STOPSHIP:` markers. The Analysis-API rules need a
+  classpath, so they run once per Kotlin compilation — the only detekt tasks
+  that carry one.
+
+The code style is declared once in the committed **`.editorconfig`**
+(`ktlint_code_style = intellij_idea`); editors that understand EditorConfig
+pick it up with no further setup, and ktlint reads it as its source of truth.
+Both tools are AGPL-compatible (ADR-0011).
 
 ## Prerequisites
 

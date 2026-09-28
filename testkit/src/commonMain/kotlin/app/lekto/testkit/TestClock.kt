@@ -10,9 +10,7 @@ import kotlin.time.Instant
  *
  * Starts at the epoch by default; move it with [set] or [advanceBy].
  */
-class TestClock(
-    private var current: Instant = Instant.fromEpochMilliseconds(0L),
-) : Clock {
+class TestClock(private var current: Instant = Instant.fromEpochMilliseconds(0L)) : Clock {
 
     override fun now(): Instant = current
 

@@ -22,6 +22,14 @@ kotest = "6.2.5"
 turbine = "1.2.1"
 kotlinx-coroutines = "1.11.0"
 
+# Quality gates (ticket #6). ktlint formats and lints (MIT); detekt is the
+# static analyser (Apache-2.0). Both are AGPL-compatible (ADR-0011). detekt is
+# on the 2.0 line because that is the one built against Kotlin 2.4; see
+# docs/build.md.
+ktlint-gradle = "14.2.0"
+ktlint = "1.8.0"
+detekt = "2.0.0-alpha.6"
+
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 
@@ -44,3 +52,5 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
