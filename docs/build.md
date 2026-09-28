@@ -22,6 +22,9 @@ without the other.
 | Kotest (test)        | 6.2.5     | `gradle/libs.versions.toml` (`kotest`)          |
 | Turbine (test)       | 1.2.1     | `gradle/libs.versions.toml` (`turbine`)         |
 | Coroutines (test)    | 1.11.0    | `gradle/libs.versions.toml` (`kotlinx-coroutines`) |
+| Roborazzi (test)     | 1.75.0    | `gradle/libs.versions.toml` (`roborazzi`)       |
+| Testcontainers (test)| 2.0.5     | `gradle/libs.versions.toml` (`testcontainers`)  |
+| JUnit Jupiter (test) | 5.13.4    | `gradle/libs.versions.toml` (`junit-jupiter`)   |
 | ktlint               | 1.8.0     | `gradle/libs.versions.toml` (`ktlint`)          |
 | ktlint Gradle plugin | 14.2.0    | `gradle/libs.versions.toml` (`ktlint-gradle`)   |
 | detekt               | 2.0.0-alpha.6 | `gradle/libs.versions.toml` (`detekt`)       |
@@ -71,6 +74,46 @@ The code style is declared once in the committed **`.editorconfig`**
 (`ktlint_code_style = intellij_idea`); editors that understand EditorConfig
 pick it up with no further setup, and ktlint reads it as its source of truth.
 Both tools are AGPL-compatible (ADR-0011).
+
+### Dependency licences
+
+`./gradlew checkDependencyLicences` reads every dependency's declared licence and
+fails the build on one that is not AGPL-compatible (ADR-0011). The policy lives
+in `config/dependency-licences.txt`: the allowed ids, the test-only exceptions
+(EPL, for JUnit, which is never conveyed), and hand-reviewed overrides for the
+components whose own POM declares no licence. It runs as its own task, not from
+`check`, because it resolves dependency metadata at execution time — which the
+configuration cache cannot store — so `check` stays cache-friendly and fast. A
+licence-less dependency on a **production** classpath fails (it ships, so it must
+be reviewed); on a **test** classpath it warns, so the override list records
+decisions rather than gating every dependency bump. CI runs the task without the
+configuration cache; see below.
+
+## CI lanes
+
+The workflows live in `.github/workflows/`. Every push and pull request runs the
+fast lane and the licence gate; pull requests also run the WebDAV and golden
+lanes; the emulator lane is nightly and never on the critical path (ticket #7).
+
+| Lane | Trigger | Command |
+| ---- | ------- | ------- |
+| `fast` | push, pull request | `./gradlew check -x :integrations:webdav:jvmTest` |
+| `licences` | push, pull request | `./gradlew checkDependencyLicences --no-configuration-cache` |
+| `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
+| `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
+| `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
+
+`fast` and `licences` gate merging: branch protection on `main` must require them.
+The `webdav` lane needs Docker — present on GitHub's runners — and skips cleanly
+where it is absent; the `fast` lane excludes its test so the two do not overlap.
+The `instrumented` lane is the only one that needs an emulator; it is scheduled,
+so it never slows a change, and its instrumented tests arrive with the platform
+work (tickets #16, #21, #24). Vulnerability alerts are a repository setting,
+enabled once with
+`gh api --method PUT repos/<owner>/<repo>/vulnerability-alerts`.
+
+`tools/dictionaries` builds by its own workflow (ticket #17) and never sits on
+the application CI path.
 
 ## Prerequisites
 

@@ -1,0 +1,65 @@
+# The dependency-licence policy for `checkDependencyLicences` (ADR-0011).
+#
+# Every dependency Lekto resolves onto a runtime classpath must carry a licence
+# that is AGPL-3.0-compatible for the way we link it. This file is the allowlist;
+# the task fails the build on anything not named here. It is read by
+# `checkDependencyLicences` in the root build and by the `licences` CI job.
+#
+# Lines are one instruction each; blank lines and `#` comments are ignored.
+#
+#   licence <id>                 allowed on every classpath (production and test)
+#   test-licence <id>            allowed only on a test classpath, because the
+#                                licence is incompatible but the dependency is
+#                                never conveyed with the app (see below)
+#   override <group>:<name> <id> a reviewed licence for a component whose POM
+#                                declares none; keyed by group and name, not
+#                                version
+#
+# The ids are the SPDX-ish names the task normalises POM licences to. A component
+# passes when any one of its declared licences is allowed for the classpath it
+# appears on; a dependency that appears on any production classpath is held to
+# the production set only.
+
+# --- Allowlist ----------------------------------------------------------------
+# Apache-2.0 and MIT are the FSF's own examples of GPLv3 compatibility; the BSD
+# and Zlib licences are equally permissive, and AGPL-3.0 is this project's own
+# licence.
+licence Apache-2.0
+licence MIT
+licence BSD-2-Clause
+licence BSD-3-Clause
+licence Zlib
+licence AGPL-3.0
+
+# --- Test-only exceptions -----------------------------------------------------
+# JUnit 5 / Jupiter is EPL-2.0 and JUnit 4 is EPL-1.0: the FSF lists them as
+# GPL-incompatible. They are safe here only as test-scope dependencies — never
+# linked into the shipped AGPL app, never conveyed with it — which is exactly why
+# they are test-licensed rather than licensed. Keeping them here, rather than
+# omitting the rule, means a JUnit type promoted into production fails the gate.
+test-licence EPL-2.0
+test-licence EPL-1.0
+
+# --- Components whose POM declares no licence --------------------------------
+# Gradle reads a module's own POM, not Maven's effective POM, so a dependency
+# that declares its licence in a parent POM shows up here with none. Each is
+# reviewed by hand and named after the licence the project actually publishes.
+override com.google.guava:listenablefuture Apache-2.0
+override org.hamcrest:hamcrest-core BSD-3-Clause
+override io.github.java-diff-utils:java-diff-utils Apache-2.0
+override net.bytebuddy:byte-buddy Apache-2.0
+override net.bytebuddy:byte-buddy-agent Apache-2.0
+override com.github.docker-java:docker-java-api Apache-2.0
+override com.github.docker-java:docker-java-transport Apache-2.0
+override com.github.docker-java:docker-java-transport-zerodep Apache-2.0
+override commons-codec:commons-codec Apache-2.0
+override commons-io:commons-io Apache-2.0
+override org.apache.commons:commons-compress Apache-2.0
+override org.apache.commons:commons-lang3 Apache-2.0
+override org.slf4j:slf4j-api MIT
+override com.google.auto.value:auto-value-annotations Apache-2.0
+override com.google.guava:failureaccess Apache-2.0
+override com.google.guava:guava Apache-2.0
+override com.google.protobuf:protobuf-java BSD-3-Clause
+override com.google.truth:truth Apache-2.0
+override org.codehaus.mojo:animal-sniffer-annotations MIT

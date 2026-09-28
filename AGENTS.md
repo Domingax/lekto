@@ -38,9 +38,12 @@ which that table does not state.
 It builds every module, runs the JVM test suites — the domain suite in `core`
 and the UI-semantics suite in `app` — and enforces formatting (ktlint) and
 static analysis (detekt), so a code-style or rule violation fails the build.
-See [`docs/testing.md`](docs/testing.md) for the harness, the deterministic
-seams and the test levels, and [`docs/build.md`](docs/build.md#quality-gates)
-for the gates themselves. A clean checkout needs only a JVM to run the wrapper
+The dependency-licence gate (ADR-0011) is a sibling task, `./gradlew
+checkDependencyLicences`, because it resolves metadata the configuration cache
+cannot store; CI runs it in its own lane. See [`docs/testing.md`](docs/testing.md)
+for the harness, the deterministic seams and the test levels, and
+[`docs/build.md`](docs/build.md#quality-gates) for the gates themselves, including
+the [CI lanes](docs/build.md#ci-lanes). A clean checkout needs only a JVM to run the wrapper
 — Gradle, the pinned JDK and all dependencies are provisioned by the build. The
 Android SDK is optional; without one the project builds as a desktop/JVM
 project. See `docs/build.md` for the pinned versions, the Android/desktop

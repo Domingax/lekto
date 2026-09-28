@@ -26,16 +26,59 @@ Force a re-run when Gradle marks the task up-to-date:
 
 ## What runs where
 
-| Suite                | Source set        | Task                  | Needs        |
-| -------------------- | ----------------- | --------------------- | ------------ |
-| Domain + properties  | `core/commonTest` | `:core:jvmTest`       | a JVM        |
-| UI semantics         | `app/desktopTest` | `:app:desktopTest`    | a JVM        |
+| Suite                | Source set                     | Task                            | Needs        |
+| -------------------- | ------------------------------ | ------------------------------- | ------------ |
+| Domain + properties  | `core/commonTest`              | `:core:jvmTest`                 | a JVM        |
+| UI semantics         | `app/desktopTest`              | `:app:desktopTest`              | a JVM        |
+| UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
+| WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
+| Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 
 The UI-semantics suite lives in `desktopTest`, not `commonTest`, because the
 Compose Multiplatform common test API cannot run under Android's local (host)
-test configuration. The slower lanes — screenshot goldens, a containerised
-WebDAV driver and instrumented end-to-end runs — are added by later tickets and
-never sit on this fast path.
+test configuration. The slower lanes — screenshot goldens, the containerised
+WebDAV driver and instrumented end-to-end runs — run on pull requests or nightly;
+the CI fast lane excludes the WebDAV test so the two lanes do not overlap.
+`docs/build.md#ci-lanes` lists the workflow jobs that run each one.
+
+## Golden images
+
+The goldens are Roborazzi images recorded from `app/desktopTest` and committed
+under `app/src/desktopTest/goldens/`. The desktop target renders with the host's
+Skia, so the first golden is deliberately text-free: a golden that renders text
+would depend on the fonts installed where it was recorded and would not verify on
+another machine. Record or update with
+
+```sh
+./gradlew :app:recordRoborazziDesktop
+```
+
+and verify with `./gradlew :app:verifyRoborazziDesktop`, the task the `golden` CI
+lane runs. `app/build.gradle.kts` turns on `separateOutputDirs` so the record and
+verify tasks cannot race over one directory.
+
+## WebDAV integration lane
+
+`integrations/webdav/src/jvmTest` starts an Apache `mod_dav` server through
+Testcontainers and drives it over the network; it is the lane the `SyncTarget`
+driver contract (ticket #27) will run against. The image is pinned by digest —
+the server publishes no version tags — so a green build does not move under it.
+The test class is annotated `@Testcontainers(disabledWithoutDocker = true)`, so a
+machine or runner without Docker skips it instead of failing: the lane is green
+everywhere and simply proves more where Docker is present.
+
+The nightly instrumented lane is wired but still has no instrumented tests to run;
+they arrive with the platform work (tickets #16, #21, #24). The lane exists and
+stays off the critical path so those tickets only have to add tests, not CI.
+
+## Dependency licences
+
+`./gradlew checkDependencyLicences` enforces ADR-0011 across every runtime
+classpath, test-scope included. The policy and the hand-reviewed overrides live in
+`config/dependency-licences.txt`; the task's verdict for every dependency is
+written to `build/reports/dependency-licences.txt`. It is a task of its own, not
+part of `check`, and CI runs it without the configuration cache. See
+`docs/build.md#dependency-licences`.
 
 ## The framework
 
