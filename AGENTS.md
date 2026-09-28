@@ -141,6 +141,12 @@ Five canonical roles, default strings. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Project skills
+
+The skills this project ships, defers and rejects live in `docs/agents/skills.md`,
+which is also the standard for adding one.
+
 ## Licence
 
 Source is **AGPL-3.0** (ADR-0011). Every dependency, including test-scope, must be

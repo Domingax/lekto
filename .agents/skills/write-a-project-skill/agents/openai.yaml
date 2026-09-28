@@ -1,0 +1,5 @@
+interface:
+  display_name: "Write a Project Skill"
+  short_description: "Add, change or drop a Lekto project skill"
+policy:
+  allow_implicit_invocation: true
