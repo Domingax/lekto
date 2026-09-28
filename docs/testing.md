@@ -10,8 +10,9 @@ Docker. Non-determinism enters only through injected seams.
 ./gradlew check
 ```
 
-It builds every module and runs the domain suite (`core`) and the UI-semantics
-suite (`app`). The narrow version for the inner loop is:
+It builds every module, runs the domain suite (`core`) and the UI-semantics
+suite (`app`), and runs the formatting and static-analysis gates
+(`docs/build.md#quality-gates`). The narrow version for the inner loop is:
 
 ```sh
 ./gradlew :core:jvmTest :app:desktopTest

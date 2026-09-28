@@ -1,0 +1,28 @@
+# The editor contract for every file in the repository. ktlint reads this as its
+# source of truth for Kotlin style, and an editor that understands EditorConfig
+# matches it without per-editor configuration (ticket #6). See docs/build.md.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+# Pinned so the formatter and the lint rules agree on one style. The IntelliJ
+# style is what this codebase was already written in and what an IDE applies by
+# default; ktlint's own `ktlint_official` would reformat it further for no gain.
+ktlint_code_style = intellij_idea
+# Compose UI functions are PascalCase by convention.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+max_line_length = 120
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.md]
+# Trailing spaces are significant in Markdown (a hard line break).
+trim_trailing_whitespace = false

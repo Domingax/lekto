@@ -1,0 +1,67 @@
+# Lekto's static-analysis rule set.
+#
+# The root build layers this on top of detekt's default configuration
+# (`buildUponDefaultConfig = true`), so a rule not named here keeps detekt's
+# default. This file names only the rules the ticket tunes: bounded complexity,
+# bounded function size, no dead code and no orphaned TODO. Detekt's own config
+# validation stays on; a finding fails the build via the task's `failOnSeverity`
+# and `ignoreFailures`, set in the root `build.gradle.kts`. Formatting is
+# ktlint's job, not detekt's. See docs/build.md.
+complexity:
+  # An agent's first draft is a long, deeply nested function; bound both.
+  CyclomaticComplexMethod:
+    allowedComplexity: 10
+  CognitiveComplexMethod:
+    active: true
+    allowedComplexity: 12
+  LongMethod:
+    allowedLines: 40
+  LargeClass:
+    allowedLines: 400
+  LongParameterList:
+    allowedFunctionParameters: 4
+    allowedConstructorParameters: 5
+  NestedBlockDepth:
+    allowedDepth: 3
+
+naming:
+  # Compose UI functions are PascalCase, and ktlint's `function-naming` rule
+  # already enforces the convention with the @Composable exception. detekt 2.0's
+  # rule has no such exception, so it would flag every composable; leave naming
+  # to ktlint.
+  FunctionNaming:
+    active: false
+
+style:
+  # No orphaned TODO: record the work as an issue instead of leaving a marker
+  # for the next agent to trip over. `TODO:` (with the colon) is the marker,
+  # so prose that merely mentions "TODO" is not caught.
+  ForbiddenComment:
+    comments:
+      - value: 'TODO:'
+        reason: 'Orphaned work: file an issue instead of leaving a TODO.'
+      - value: 'FIXME:'
+        reason: 'Fix it now or file an issue; do not leave a FIXME behind.'
+      - value: 'STOPSHIP:'
+        reason: 'STOPSHIP must be resolved before the code lands.'
+
+  # Dead code: an unused import, private declaration, parameter or variable
+  # fails the build rather than lingering.
+  UnusedImport:
+    active: true
+  UnusedVariable:
+    active: true
+  UnusedParameter:
+    active: true
+  UnusedPrivateClass:
+    active: true
+  UnusedPrivateFunction:
+    active: true
+  UnusedPrivateProperty:
+    active: true
+
+potential-bugs:
+  UnreachableCode:
+    active: true
+  UnusedUnaryOperator:
+    active: true
