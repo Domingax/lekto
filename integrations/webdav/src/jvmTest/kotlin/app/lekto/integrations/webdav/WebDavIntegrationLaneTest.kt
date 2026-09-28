@@ -40,7 +40,8 @@ class WebDavIntegrationLaneTest {
 
     @Test
     fun `serves the WebDAV protocol over authenticated OPTIONS`() {
-        val url = "http://${server.host}:${server.getMappedPort(80)}/"
+        // The image mounts the DAV-enabled location at `/webdav`, not at the root.
+        val url = "http://${server.host}:${server.getMappedPort(80)}/webdav"
         val connection = URI(url).toURL().openConnection() as HttpURLConnection
         connection.requestMethod = "OPTIONS"
         val credentials = Base64.getEncoder().encodeToString("lekto:lekto".toByteArray())
@@ -48,10 +49,11 @@ class WebDavIntegrationLaneTest {
 
         try {
             connection.connect()
+            val status = connection.responseCode
             val dav = connection.getHeaderField("DAV")
             assertTrue(
                 dav != null && "1" in dav,
-                "OPTIONS should advertise DAV compliance classes, but DAV header was '$dav'",
+                "OPTIONS $url should advertise DAV compliance classes, but returned HTTP $status with DAV='$dav'",
             )
         } finally {
             connection.disconnect()
