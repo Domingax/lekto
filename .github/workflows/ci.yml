@@ -1,10 +1,10 @@
 # The lanes that gate every change (ticket #7).
 #
-# On every push and pull request: the fast, hermetic JVM lane (`fast`) and the
-# dependency-licence check (`licences`). On pull requests only: the WebDAV
-# integration lane (`webdav`) and the golden-image lane (`golden`). The nightly
-# emulator lane lives in nightly.yml and never touches the critical path. See
-# docs/build.md#ci-lanes.
+# On every push and pull request: the fast, hermetic JVM lane (`fast`), the
+# dependency-licence check (`licences`) and the coverage + SonarCloud lane
+# (`sonar`). On pull requests only: the WebDAV integration lane (`webdav`) and
+# the golden-image lane (`golden`). The nightly emulator lane lives in
+# nightly.yml and never touches the critical path. See docs/build.md#ci-lanes.
 name: ci
 
 on:
@@ -113,3 +113,44 @@ jobs:
             app/build/outputs/roborazzi/**
             app/build/test-results/**
           if-no-files-found: ignore
+
+  # Coverage and the SonarCloud quality gate (ticket #8, ADR-0012). Produces the
+  # Kover coverage report and the ktlint and detekt findings, uploads them, and -
+  # when a SONAR_TOKEN is present - scans with SonarCloud. The scan waits for the
+  # quality gate on the change's new code and fails on it (`sonar.qualitygate.wait`
+  # in sonar-project.properties), so this job blocks the merge once branch
+  # protection requires it. A fork carries no secret, so its scan is skipped; the
+  # reports are still produced and uploaded there.
+  sonar:
+    # The gate is for the change under review, so analyse pull requests and the
+    # main branch that is their baseline — not every feature-branch push. A fork
+    # carries no secret, so its scan is skipped; the reports are still produced.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # SonarCloud reads the history to tell new code from the baseline.
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Generate the coverage and linter reports
+        run: ./gradlew check koverXmlReport --no-daemon
+      - name: Upload the coverage and linter reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            **/build/reports/kover/**
+            **/build/reports/detekt/*.xml
+            **/build/reports/ktlint/**/*.xml
+          if-no-files-found: ignore
+      - name: Analyse with SonarCloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v8

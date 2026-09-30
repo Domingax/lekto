@@ -28,6 +28,7 @@ without the other.
 | ktlint               | 1.8.0     | `gradle/libs.versions.toml` (`ktlint`)          |
 | ktlint Gradle plugin | 14.2.0    | `gradle/libs.versions.toml` (`ktlint-gradle`)   |
 | detekt               | 2.0.0-alpha.6 | `gradle/libs.versions.toml` (`detekt`)       |
+| Kover (coverage)     | 0.9.9     | `gradle/libs.versions.toml` (`kover`)           |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -61,7 +62,9 @@ in the root `build.gradle.kts` and apply to every project, including the root
 - **ktlint** (MIT) formats and lints every Kotlin file.
   `./gradlew ktlintFormat` rewrites the tree in place;
   `./gradlew ktlintCheck` only reports. The engine is pinned in the version
-  catalog so the formatter does not drift under the Gradle plugin.
+  catalog so the formatter does not drift under the Gradle plugin. Alongside the
+  console report it writes a Checkstyle XML report under
+  `build/reports/ktlint/` for SonarCloud to ingest (below).
 - **detekt** (Apache-2.0) enforces `config/detekt/detekt.yml`, layered on top
   of detekt's defaults. The tuned rules bound cyclomatic and cognitive
   complexity, function and class size, ban dead code (unused private functions,
@@ -89,6 +92,46 @@ be reviewed); on a **test** classpath it warns, so the override list records
 decisions rather than gating every dependency bump. CI runs the task without the
 configuration cache; see below.
 
+### Coverage and the quality gate
+
+Coverage is measured with **Kover** (Apache-2.0), JetBrains' Kotlin coverage
+engine and the KMP-native alternative to JaCoCo. The root project is Kover's
+*merging* module, so one report covers `core`, `integrations/webdav` and `app`:
+
+```sh
+./gradlew koverXmlReport
+```
+
+It runs the JVM tests it needs and writes a JaCoCo-compatible report to
+`build/reports/kover/report.xml`. Applying Kover instruments the JVM test runs,
+so `./gradlew check` measures coverage as it goes; the report is written only
+when the report task is invoked. `testkit` and `tools/dictionaries` are
+deliberately not aggregated — the first is test scaffolding that never ships, the
+second is standalone.
+
+**SonarCloud** is the static-analysis service. It ingests that coverage report
+plus the ktlint and detekt findings, then evaluates its **quality gate on new
+code** — new-code coverage, duplicated lines and code smells. The `sonar` CI job
+generates all three reports and then scans (ticket #8); `sonar-project.properties`
+tells the scanner where each one lives, and `sonar.qualitygate.wait=true` makes
+the scan wait for the gate and fail the job when it fails. That job blocks a pull
+request once branch protection on `main` requires it.
+
+The scanner runs as a GitHub action, not a Gradle plugin, so nothing SonarCloud
+owns enters the build; Kover is the only new build dependency (AGPL-compatible,
+ADR-0011). A fork carries no `SONAR_TOKEN`, so the scan is skipped there and only
+the reports are produced. `docs/adr/0012` records the decision.
+
+#### The quality-gate drill
+
+The gate is only trustworthy if a regression trips it. To reproduce, on a branch:
+
+1. Add a public function with an obvious code smell and no test, e.g. a long,
+   deeply nested function that nothing calls.
+2. Open the pull request and watch the `sonar` lane: the scan waits for the gate,
+   the gate fails on new-code coverage and on the new smell, and the job exits
+   non-zero. `git revert` the commit and the lane goes green.
+
 ## CI lanes
 
 The workflows live in `.github/workflows/`. Every push and pull request runs the
@@ -99,13 +142,17 @@ lanes; the emulator lane is nightly and never on the critical path (ticket #7).
 | ---- | ------- | ------- |
 | `fast` | push, pull request | `./gradlew check -x :integrations:webdav:jvmTest` |
 | `licences` | push, pull request | `./gradlew checkDependencyLicences --no-configuration-cache` |
+| `sonar` | push, pull request | `./gradlew check koverXmlReport` then the SonarCloud scan |
 | `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
 | `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
-`fast` and `licences` gate merging: branch protection on `main` must require them.
-The `webdav` lane needs Docker — present on GitHub's runners — and skips cleanly
-where it is absent; the `fast` lane excludes its test so the two do not overlap.
+`fast`, `licences` and `sonar` gate merging: branch protection on `main` must
+require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
+pull request has no secret, so the scan is skipped there and only the coverage and
+linter reports are produced. The `webdav` lane needs Docker — present on GitHub's
+runners — and skips cleanly where it is absent; the `fast` lane excludes its test
+so the two do not overlap.
 The `instrumented` lane is the only one that needs an emulator; it is scheduled,
 so it never slows a change, and its instrumented tests arrive with the platform
 work (tickets #16, #21, #24). Vulnerability alerts are a repository setting,

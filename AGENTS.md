@@ -40,7 +40,9 @@ and the UI-semantics suite in `app` — and enforces formatting (ktlint) and
 static analysis (detekt), so a code-style or rule violation fails the build.
 The dependency-licence gate (ADR-0011) is a sibling task, `./gradlew
 checkDependencyLicences`, because it resolves metadata the configuration cache
-cannot store; CI runs it in its own lane. See [`docs/testing.md`](docs/testing.md)
+cannot store; CI runs it in its own lane. Coverage is its own task,
+`./gradlew koverXmlReport` (Kover), and SonarCloud gates the change's new code in
+the `sonar` CI lane (ADR-0012). See [`docs/testing.md`](docs/testing.md)
 for the harness, the deterministic seams and the test levels, and
 [`docs/build.md`](docs/build.md#quality-gates) for the gates themselves, including
 the [CI lanes](docs/build.md#ci-lanes). A clean checkout needs only a JVM to run the wrapper

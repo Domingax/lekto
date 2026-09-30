@@ -38,6 +38,13 @@ ktlint-gradle = "14.2.0"
 ktlint = "1.8.0"
 detekt = "2.0.0-alpha.6"
 
+# Measurement (ticket #8). Kover (Apache-2.0) is JetBrains' Kotlin coverage
+# engine and the KMP-native alternative to JaCoCo; it writes a
+# JaCoCo-compatible XML report. SonarCloud is a hosted service, not a build
+# dependency, so it does not appear here. See ADR-0012 and
+# docs/build.md#coverage-and-the-quality-gate.
+kover = "0.9.9"
+
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 
@@ -72,3 +79,4 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
