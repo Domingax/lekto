@@ -1,12 +1,14 @@
 import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.extensions.DetektExtension
 import dev.detekt.gradle.extensions.FailOnSeverity
+import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 // The five modules of Lekto. See docs/build.md and docs/adr/0007.
 // core      — the domain (vault, records, merge, tokenisation, sync engine, parsers)
@@ -24,6 +26,9 @@ plugins {
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.roborazzi) apply false
+    // Applied, not `apply false`: the root project is Kover's merging module and
+    // owns the aggregated report tasks. See the measurement section below.
+    alias(libs.plugins.kover)
 }
 
 // --- Quality gates -------------------------------------------------------------
@@ -49,9 +54,16 @@ val detektConfigFile = rootProject.file("config/detekt/detekt.yml")
 allprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "dev.detekt")
+    apply(plugin = "org.jetbrains.kotlinx.kover")
 
     extensions.configure<KtlintExtension> {
         version.set(ktlintEngineVersion)
+        // Emit Checkstyle XML alongside the human-readable report: SonarCloud
+        // ingests ktlint findings through it (sonar.kotlin.ktlint.reportPaths in
+        // sonar-project.properties). The plain-text report stays for the console.
+        reporters {
+            reporter(ReporterType.CHECKSTYLE)
+        }
     }
 
     extensions.configure<DetektExtension> {
@@ -62,6 +74,20 @@ allprojects {
         // the build, it is never just a warning.
         ignoreFailures.set(false)
         failOnSeverity.set(FailOnSeverity.Error)
+    }
+
+    // Measurement is a task of its own (ticket #8): no Kover verification rule
+    // exists, so `koverVerify` must not ride along on `check`. The plugin still
+    // instruments the test runs — that is the price of coverage — but writes a
+    // report only when `koverXmlReport` is asked for.
+    extensions.configure<KoverProjectExtension> {
+        reports {
+            total {
+                verify {
+                    onCheck.set(false)
+                }
+            }
+        }
     }
 
     // detekt registers the aggregate `detekt` task — which `check` depends on —
@@ -77,6 +103,35 @@ allprojects {
     }
     detektTasks.matching { it.name == "detekt" }.configureEach {
         dependsOn(compilationDetektTasks)
+    }
+}
+
+// --- Coverage (ticket #8) ------------------------------------------------------
+// Kover measures line coverage for the JVM/desktop test runs and writes a single
+// JaCoCo-compatible XML report that SonarCloud ingests as the project's coverage
+// (ADR-0012). The root project is the merging module, so `:koverXmlReport`
+// produces one report covering every module a shipped line lives in, and
+// triggers those modules' tests first. `testkit` and `tools/dictionaries` are
+// deliberately not aggregated: the first is test scaffolding and never ships,
+// the second is standalone and off the application CI path. See
+// docs/build.md#coverage-and-the-quality-gate.
+dependencies {
+    kover(project(":core"))
+    kover(project(":integrations:webdav"))
+    kover(project(":app"))
+}
+
+kover {
+    reports {
+        total {
+            xml {
+                // Name the merged report. Its default path,
+                // build/reports/kover/report.xml, is the one
+                // sonar-project.properties points SonarCloud at; it is written
+                // only when `koverXmlReport` is invoked.
+                title.set("Lekto")
+            }
+        }
     }
 }
 

@@ -33,6 +33,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
 | WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
+| Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
 
 The UI-semantics suite lives in `desktopTest`, not `commonTest`, because the
 Compose Multiplatform common test API cannot run under Android's local (host)
@@ -79,6 +80,18 @@ classpath, test-scope included. The policy and the hand-reviewed overrides live 
 written to `build/reports/dependency-licences.txt`. It is a task of its own, not
 part of `check`, and CI runs it without the configuration cache. See
 `docs/build.md#dependency-licences`.
+
+## Coverage
+
+`./gradlew koverXmlReport` runs the JVM suites and writes one merged,
+JaCoCo-compatible coverage report to `build/reports/kover/report.xml` (Kover;
+`docs/build.md#coverage-and-the-quality-gate`). The root project is the merging
+module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`
+and `tools/dictionaries` are not aggregated. The report is a measurement, not a
+gate on its own — the `sonar` CI lane feeds it, with the ktlint and detekt
+findings, to SonarCloud, whose quality gate on new code (coverage, duplication,
+smells) blocks the pull request. Reproduce a gate failure with the drill in
+`docs/build.md#the-quality-gate-drill`.
 
 ## The framework
 
