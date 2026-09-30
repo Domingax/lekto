@@ -47,8 +47,9 @@ able to run the wrapper.
 ```
 
 It builds every module, runs the JVM test suites — the domain suite in
-`core` and the UI-semantics suite in `app` — and runs the quality gates
-(ktlint and detekt, below). See `docs/testing.md` for the harness, the seams
+`core`, the UI-semantics suite in `app` and the architecture suite in
+`architecture` — and runs the quality gates (ktlint and detekt, below). See
+`docs/testing.md` for the harness, the seams
 and how to reproduce a failure. CI enforces the command on every push
 (ticket #7).
 
@@ -78,6 +79,26 @@ The code style is declared once in the committed **`.editorconfig`**
 pick it up with no further setup, and ktlint reads it as its source of truth.
 Both tools are AGPL-compatible (ADR-0011).
 
+### Architecture tests
+
+The module boundaries and naming conventions are themselves tested, so a
+violation fails `./gradlew check` instead of waiting for a human review
+(ticket #9). The suite lives in the test-only `architecture` module. It reads
+`settings.gradle.kts`, each module's `build.gradle.kts` and every Kotlin file
+into a pure model, then asserts: the module dependency graph (the domain depends
+on no module, only the application may depend on an integration, nothing depends
+on the application), import purity (the domain names neither the application,
+nor an integration, nor Android; the testkit never reaches production), and
+naming and placement (a package matches its directory, a source sits under its
+module's package root, a test class is `*Test.kt` in a test source set).
+
+The rules are hand-rolled rather than Konsist or ArchUnit, so the suite adds no
+dependency and can read the Gradle module graph, which a bytecode analyser
+cannot; ADR-0013 records the decision. Each rule is proven against a deliberately
+broken repository in `ArchitectureViolationTest`, and the real tree is asserted
+by `LektoArchitectureTest` — a boundary can only be relaxed by editing
+`LektoArchitecture.policies`.
+
 ### Dependency licences
 
 `./gradlew checkDependencyLicences` reads every dependency's declared licence and
@@ -105,9 +126,9 @@ engine and the KMP-native alternative to JaCoCo. The root project is Kover's
 It runs the JVM tests it needs and writes a JaCoCo-compatible report to
 `build/reports/kover/report.xml`. Applying Kover instruments the JVM test runs,
 so `./gradlew check` measures coverage as it goes; the report is written only
-when the report task is invoked. `testkit` and `tools/dictionaries` are
-deliberately not aggregated — the first is test scaffolding that never ships, the
-second is standalone.
+when the report task is invoked. `testkit`, `tools/dictionaries` and
+`architecture` are deliberately not aggregated — the first two never ship or are
+standalone, and the last is test scaffolding.
 
 **SonarCloud** is the static-analysis service. It ingests that coverage report
 plus the ktlint and detekt findings, then evaluates its **quality gate on new
@@ -212,10 +233,12 @@ It never sits on the application CI path.
 | `integrations/webdav`   | The first sync driver, isolated from the domain.                    |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |
 | `tools/dictionaries`    | The offline dictionary-pack pipeline, built by its own CI workflow.  |
+| `architecture`          | The architecture tests (ticket #9): the module boundaries and naming conventions as tests. Test-only, never published. |
 
 The module boundaries are a decision, not an accident: the domain never depends
-on the application, and integrations never leak into the domain. Ticket #9 turns
-that into tests.
+on the application, and integrations never leak into the domain. The
+`architecture` suite asserts both, and the naming and placement conventions with
+them, so `check` fails where a review would otherwise have to notice (ticket #9).
 
 ## Known build noise
 

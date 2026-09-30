@@ -67,3 +67,7 @@ include(":testkit")
 include(":integrations:webdav")
 include(":app")
 include(":tools:dictionaries")
+// The architecture suite (ticket #9): the module boundaries and naming
+// conventions expressed as tests. Test-scoped and never shipped, so it sits
+// beside `:testkit` on the verification side of the graph.
+include(":architecture")

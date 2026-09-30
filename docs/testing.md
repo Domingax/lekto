@@ -10,12 +10,13 @@ Docker. Non-determinism enters only through injected seams.
 ./gradlew check
 ```
 
-It builds every module, runs the domain suite (`core`) and the UI-semantics
-suite (`app`), and runs the formatting and static-analysis gates
+It builds every module, runs the domain suite (`core`), the UI-semantics
+suite (`app`) and the architecture suite (`architecture`), and runs the
+formatting and static-analysis gates
 (`docs/build.md#quality-gates`). The narrow version for the inner loop is:
 
 ```sh
-./gradlew :core:jvmTest :app:desktopTest
+./gradlew :core:jvmTest :app:desktopTest :architecture:test
 ```
 
 Force a re-run when Gradle marks the task up-to-date:
@@ -31,6 +32,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | Domain + properties  | `core/commonTest`              | `:core:jvmTest`                 | a JVM        |
 | UI semantics         | `app/desktopTest`              | `:app:desktopTest`              | a JVM        |
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
+| Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
 | WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 | Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
@@ -148,6 +150,7 @@ where the change lands:
 | UI behaviour in `app`                                                 | Compose UI-semantics test                               | `app/desktopTest`           |
 | A visual or layout change                                             | + screenshot golden                                     | `app`, on the PR lane       |
 | Android platform glue                                                 | Robolectric host test                                   | `androidHostTest`           |
+| An architectural boundary or naming convention                       | architecture rule test, plus a synthetic violation it must catch | `architecture/src/test` |
 | A bug                                                                 | regression test at the seam the bug occurs              | wherever that seam lives    |
 
 Every change lands with a test at its level: `/deliver` holds each surface to its

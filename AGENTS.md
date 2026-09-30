@@ -24,8 +24,9 @@ satisfy. Read the sources below before changing behaviour.
 
 `core/` (the domain), `testkit/` (contract suites and fakes, shared by tests),
 `integrations/webdav/` (the first sync driver), `app/` (the Compose Multiplatform
-application, Android + desktop) and `tools/dictionaries/` (the offline
-dictionary-pack pipeline). Each module's responsibility is tabled in
+application, Android + desktop), `tools/dictionaries/` (the offline dictionary-pack
+pipeline) and `architecture/` (the architecture tests, test-only). Each module's
+responsibility is tabled in
 [`docs/build.md`](docs/build.md#modules); what follows is the boundary between them,
 which that table does not state.
 
@@ -63,6 +64,7 @@ an ADR.
 app ──────────────► core
 integrations/* ───► core
 testkit ──────────► core        (shared contract surface)
+architecture                    (test-only; reads the tree, depends on nothing)
 tools/dictionaries              (standalone)
 core ─────────────► nothing     (no app module, no Android)
 ```
@@ -73,6 +75,9 @@ core ─────────────► nothing     (no app module, no A
 - Everything may depend on `core`; nothing depends on `app`.
 - `testkit` exists because a KMP `commonTest` set cannot be shared by any other
   means; it is test-scoped and must never reach production code.
+- `architecture` is the test-only module that turns these boundaries into tests
+  (ticket #9); it reads the working tree and depends on no module, so it sits
+  outside the graph it polices.
 - `tools/dictionaries` is standalone and stays off the application CI path.
 
 Architecture tests enforce these rules.
@@ -92,7 +97,7 @@ docs(adr): record the sync seam
 
 Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`,
 `ci`, `chore`, `revert`. The scope is optional and names the module or area (`core`,
-`testkit`, `webdav`, `app`, `dictionaries`, `build`, `ci`, `docs`). A breaking change
+`testkit`, `webdav`, `app`, `dictionaries`, `architecture`, `build`, `ci`, `docs`). A breaking change
 takes a `!` before the colon and a `BREAKING CHANGE:` footer.
 
 **Enforced** by `.githooks/commit-msg`, which checks the shape above: type, optional
