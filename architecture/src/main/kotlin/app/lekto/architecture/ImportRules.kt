@@ -1,14 +1,16 @@
 package app.lekto.architecture
 
 /**
- * What a source file may name: the domain never reaches for the application, an
- * integration or Android; an integration is invisible outside the composition
- * root; and the testkit never reaches production code (AGENTS.md, "Module
- * boundaries you must not cross"; ticket #9).
+ * What a **production** source file may name: the domain never reaches for the
+ * application, an integration or Android; an integration may reach `core` but
+ * not another integration (only the composition root wires them); and the
+ * testkit never reaches production code (AGENTS.md, "Module boundaries you must
+ * not cross"; ticket #9).
  *
- * These are the same boundaries as [LektoArchitecture]'s module policies, but
- * checked at the import, so a leak is caught even when the module dependency
- * graph would still resolve.
+ * Test sources are governed by the module policies instead: `core`'s tests may
+ * depend on `testkit`, and may not depend on `app`, because the build file says
+ * so. These rules are the same boundaries checked at the import, so a leak is
+ * caught even where the module dependency graph would still resolve.
  */
 object ImportRules {
 
@@ -51,24 +53,21 @@ object ImportRules {
     private fun withinAllowedPackages(policy: ModulePolicy, import: String): Boolean =
         allowedLektoRoots(policy).any { root -> import == root || import.startsWith("$root.") }
 
+    /**
+     * The module's own package root, plus the package root of every module it
+     * may depend on. Deriving the reachable packages from the module policies
+     * keeps this in step with them: `testkit` may reach `core`, and `architecture`
+     * — which depends on nothing — may reach nothing but itself.
+     */
     private fun allowedLektoRoots(policy: ModulePolicy): Set<String> = buildSet {
-        // The module itself, plus the domain it is allowed to reach. For an
-        // integration that is `core` alone: another integration is wired only by
-        // the composition root (issue #9), so it is not importable here.
         add(policy.packageRoot)
-        when (policy.kind) {
-            ModuleKind.DOMAIN, ModuleKind.APPLICATION, ModuleKind.TOOL -> Unit
-            ModuleKind.INTEGRATION, ModuleKind.TEST_SUPPORT -> add(CORE_PACKAGE_ROOT)
-        }
+        policy.mainDependencies.mapNotNullTo(this) { module -> LektoArchitecture.policy(module)?.packageRoot }
     }
 
     private fun isAndroid(import: String): Boolean = import.startsWith("android.") || import.startsWith("androidx.")
 
     private const val LEKTO_PACKAGE = "app.lekto"
-    private const val TESTKIT_PACKAGE = "app.lekto.testkit"
-    private const val TESTKIT_MODULE = ":testkit"
 
-    // The domain's package root, read from the policy so a rename touches one
-    // place. `core` always exists, so the invariant holds at load.
-    private val CORE_PACKAGE_ROOT: String = requireNotNull(LektoArchitecture.policy(":core")).packageRoot
+    private val TESTKIT_MODULE: String = Modules.TESTKIT
+    private val TESTKIT_PACKAGE: String = requireNotNull(LektoArchitecture.policy(Modules.TESTKIT)).packageRoot
 }

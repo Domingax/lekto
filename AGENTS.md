@@ -80,7 +80,8 @@ core ─────────────► nothing     (no app module, no A
   outside the graph it polices.
 - `tools/dictionaries` is standalone and stays off the application CI path.
 
-Architecture tests enforce these rules.
+Architecture tests enforce these rules, and the naming and placement conventions
+in [`docs/testing.md#naming-and-placement`](docs/testing.md#naming-and-placement).
 
 ## Contributing
 

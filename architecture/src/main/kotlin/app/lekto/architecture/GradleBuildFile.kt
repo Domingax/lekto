@@ -86,7 +86,13 @@ object GradleBuildFile {
         return output.toString()
     }
 
-    private fun String.namesATestSourceSet(): Boolean = contains("test", ignoreCase = true)
+    /**
+     * A source set or configuration is test-scoped when its camel-case name
+     * carries `Test` (`commonTest`, `desktopTest`) or it is one of the lower-case
+     * JVM test configurations (`test`, `testImplementation`). Matching that shape
+     * rather than any substring keeps `latestVersion` from reading as a test.
+     */
+    private fun String.namesATestSourceSet(): Boolean = contains("Test") || startsWith("test")
 
     private const val PROJECT = "project("
     private val INCLUDE_PATTERN = Regex("""include\("(:[^"]+)"\)""")

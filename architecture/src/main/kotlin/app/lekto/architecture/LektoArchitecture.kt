@@ -28,6 +28,19 @@ object Rules {
 }
 
 /**
+ * The Gradle module paths, named once so a policy, a rule and a test can refer
+ * to the same module without restating the string. A rename is one edit here.
+ */
+object Modules {
+    const val CORE = ":core"
+    const val TESTKIT = ":testkit"
+    const val WEBDAV = ":integrations:webdav"
+    const val APP = ":app"
+    const val DICTIONARIES = ":tools:dictionaries"
+    const val ARCHITECTURE = ":architecture"
+}
+
+/**
  * Lekto's architecture, expressed as checks over a [Repository] (ticket #9;
  * AGENTS.md, "Module boundaries you must not cross").
  *
@@ -47,42 +60,42 @@ object LektoArchitecture {
     /** Every module the repository is allowed to have, and what it may reach. */
     val policies: List<ModulePolicy> = listOf(
         ModulePolicy(
-            path = ":core",
+            path = Modules.CORE,
             kind = ModuleKind.DOMAIN,
             packageRoot = "app.lekto.core",
             mainDependencies = emptySet(),
-            testDependencies = setOf(":testkit"),
+            testDependencies = setOf(Modules.TESTKIT),
         ),
         ModulePolicy(
-            path = ":testkit",
+            path = Modules.TESTKIT,
             kind = ModuleKind.TEST_SUPPORT,
             packageRoot = "app.lekto.testkit",
-            mainDependencies = setOf(":core"),
+            mainDependencies = setOf(Modules.CORE),
             testDependencies = emptySet(),
         ),
         ModulePolicy(
-            path = ":integrations:webdav",
+            path = Modules.WEBDAV,
             kind = ModuleKind.INTEGRATION,
             packageRoot = "app.lekto.integrations.webdav",
-            mainDependencies = setOf(":core"),
-            testDependencies = setOf(":testkit"),
+            mainDependencies = setOf(Modules.CORE),
+            testDependencies = setOf(Modules.TESTKIT),
         ),
         ModulePolicy(
-            path = ":app",
+            path = Modules.APP,
             kind = ModuleKind.APPLICATION,
             packageRoot = "app.lekto",
-            mainDependencies = setOf(":core", ":integrations:webdav"),
-            testDependencies = setOf(":testkit"),
+            mainDependencies = setOf(Modules.CORE, Modules.WEBDAV),
+            testDependencies = setOf(Modules.TESTKIT),
         ),
         ModulePolicy(
-            path = ":tools:dictionaries",
+            path = Modules.DICTIONARIES,
             kind = ModuleKind.TOOL,
             packageRoot = "app.lekto.tools.dictionaries",
             mainDependencies = emptySet(),
             testDependencies = emptySet(),
         ),
         ModulePolicy(
-            path = ":architecture",
+            path = Modules.ARCHITECTURE,
             kind = ModuleKind.TEST_SUPPORT,
             packageRoot = "app.lekto.architecture",
             mainDependencies = emptySet(),

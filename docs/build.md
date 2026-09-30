@@ -83,7 +83,8 @@ Both tools are AGPL-compatible (ADR-0011).
 
 The module boundaries and naming conventions are themselves tested, so a
 violation fails `./gradlew check` instead of waiting for a human review
-(ticket #9). The suite lives in the test-only `architecture` module. It reads
+(ticket #9). The suite lives in the test-only `architecture` module — the rule
+engine in `src/main`, its tests in `src/test`. It reads
 `settings.gradle.kts`, each module's `build.gradle.kts` and every Kotlin file
 into a pure model, then asserts: the module dependency graph (the domain depends
 on no module, only the application may depend on an integration, nothing depends

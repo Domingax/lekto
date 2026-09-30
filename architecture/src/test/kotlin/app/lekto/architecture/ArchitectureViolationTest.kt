@@ -51,7 +51,9 @@ class ArchitectureViolationTest :
         }
 
         test("a policy with no module is a violation") {
-            val modules = LektoArchitecture.policies.drop(1).map { policy -> Module(policy.path, emptyList()) }
+            val modules = LektoArchitecture.policies
+                .filter { policy -> policy.path != Modules.CORE }
+                .map { policy -> Module(policy.path, emptyList()) }
 
             rules(Repository(modules, emptyList())) shouldContain Rules.MODULE_POLICY
         }
