@@ -1,5 +1,5 @@
 interface:
   display_name: "Deliver"
-  short_description: "Ticket to landed change, with tests and docs"
+  short_description: "Ticket to a landed change, tests, docs and a plain summary"
 policy:
   allow_implicit_invocation: false
