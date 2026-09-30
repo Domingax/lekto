@@ -1,3 +1,5 @@
+@file:OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The Compose Multiplatform application. The same `App()` composable runs on
@@ -12,6 +14,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.androidApplication) apply false
+    alias(libs.plugins.roborazzi)
 }
 
 val androidEnabled: Boolean =
@@ -63,6 +66,10 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.compose.ui.test)
             implementation(compose.desktop.currentOs)
+            // UI screenshot goldens (ticket #7); recorded and verified by the
+            // Roborazzi desktop tasks. See docs/testing.md.
+            implementation(libs.roborazzi.core)
+            implementation(libs.roborazzi.compose.desktop)
         }
     }
 }
@@ -97,4 +104,13 @@ compose.desktop {
     application {
         mainClass = "app.lekto.MainKt"
     }
+}
+
+// UI screenshot goldens (ticket #7). `separateOutputDirs` gives each KMP target
+// its own goldens directory so the record/compare/verify tasks cannot race; the
+// committed goldens live beside the tests rather than under the ignored build
+// directory.
+roborazzi {
+    outputDir.set(layout.projectDirectory.dir("src/desktopTest/goldens"))
+    separateOutputDirs.set(true)
 }

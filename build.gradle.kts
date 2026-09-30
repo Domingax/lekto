@@ -2,6 +2,10 @@ import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.extensions.DetektExtension
 import dev.detekt.gradle.extensions.FailOnSeverity
 import org.gradle.api.artifacts.VersionCatalogsExtension
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 
 // The five modules of Lekto. See docs/build.md and docs/adr/0007.
@@ -19,6 +23,7 @@ plugins {
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.roborazzi) apply false
 }
 
 // --- Quality gates -------------------------------------------------------------
@@ -72,6 +77,170 @@ allprojects {
     }
     detektTasks.matching { it.name == "detekt" }.configureEach {
         dependsOn(compilationDetektTasks)
+    }
+}
+
+// --- Dependency licences -------------------------------------------------------
+// ADR-0011 requires every dependency, test-scope included, to be AGPL-compatible.
+// This gate resolves each module's runtime classpaths, reads the licences the
+// dependencies declare in their POMs, and fails the build on a licence that is not
+// in config/dependency-licences.txt. It needs dependency metadata at execution
+// time, which the configuration cache cannot store, so it is a task of its own
+// (run without the cache) rather than part of `check`; CI runs it as the
+// `licences` job. See docs/build.md.
+//
+// The policy is data, not code: config/dependency-licences.txt holds the allowed
+// ids and the hand-reviewed overrides for components whose POMs declare none.
+//
+// Gradle reads a module's own POM, not Maven's effective one, so a dependency
+// that declares its licence in a parent POM arrives with none. A licence-less
+// dependency on a production classpath therefore fails (it ships, so it must be
+// reviewed), while one on a test classpath warns: it is never conveyed, and the
+// override list stays a record of decisions rather than a gate on every bump.
+
+data class LicencePolicy(val allowed: Set<String>, val testAllowed: Set<String>, val overrides: Map<String, String>)
+
+fun readLicencePolicy(file: File): LicencePolicy {
+    val allowed = mutableSetOf<String>()
+    val testAllowed = mutableSetOf<String>()
+    val overrides = mutableMapOf<String, String>()
+    file.readLines().forEach { raw ->
+        val line = raw.substringBefore('#').trim()
+        if (line.isEmpty()) return@forEach
+        val parts = line.split(Regex("\\s+"))
+        when (parts[0]) {
+            "licence" -> allowed += parts[1]
+            "test-licence" -> testAllowed += parts[1]
+            "override" -> overrides[parts[1]] = parts[2]
+            else -> error("${file.name}: unknown instruction '${parts[0]}'")
+        }
+    }
+    return LicencePolicy(allowed, testAllowed, overrides)
+}
+
+fun readPomLicences(pom: File): List<Pair<String, String>> =
+    Regex("<license>(.*?)</license>", RegexOption.DOT_MATCHES_ALL).findAll(pom.readText()).map { match ->
+        val block = match.groupValues[1]
+        fun inner(tag: String): String =
+            Regex("<$tag>(.*?)</$tag>", RegexOption.DOT_MATCHES_ALL).find(block)?.groupValues?.get(1)?.trim().orEmpty()
+        inner("name") to inner("url")
+    }.toList()
+
+fun normaliseLicence(name: String, url: String): String? {
+    val text = "$name $url".lowercase()
+    return when {
+        "apache" in text -> "Apache-2.0"
+        "bouncy castle" in text -> "MIT"
+        "agpl" in text -> "AGPL-3.0"
+        "eclipse public license" in text && "2.0" in text -> "EPL-2.0"
+        "eclipse public license" in text -> "EPL-1.0"
+        "lgpl" in text && "2.1" in text -> "LGPL-2.1-or-later"
+        "lgpl" in text -> "LGPL-3.0"
+        "gpl" in text && "2" in text -> "GPL-2.0"
+        "gpl" in text -> "GPL-3.0"
+        "bsd" in text && ("3" in text || "three" in text) -> "BSD-3-Clause"
+        "bsd" in text -> "BSD-2-Clause"
+        "zlib" in text -> "Zlib"
+        Regex("\\bmit\\b").containsMatchIn(text) -> "MIT"
+        else -> null
+    }
+}
+
+val licencePolicyFile = file("config/dependency-licences.txt")
+val licenceReportFile = layout.buildDirectory.file("reports/dependency-licences.txt")
+
+val checkDependencyLicences by tasks.registering {
+    group = "verification"
+    description = "Fail the build when a dependency's licence is not AGPL-compatible (ADR-0011)."
+    notCompatibleWithConfigurationCache("reads resolved dependency metadata at execution time")
+    inputs.file(licencePolicyFile)
+    outputs.file(licenceReportFile)
+    // The dependency graph is not a declared input (it cannot be captured without
+    // resolving at configuration time), so the gate always evaluates rather than
+    // risk reporting a stale `UP-TO-DATE` after a dependency change.
+    outputs.upToDateWhen { false }
+    doLast {
+        val policy = readLicencePolicy(licencePolicyFile)
+        val declared = mutableMapOf<String, List<Pair<String, String>>>()
+        val origins = mutableMapOf<String, MutableSet<String>>()
+        val production = mutableSetOf<String>()
+
+        for (target in project.allprojects.sortedBy { it.path }) {
+            // `tools/` is standalone and never ships with the app, so its
+            // dependencies are outside the application licence gate.
+            if (target.path.startsWith(":tools")) continue
+            val configs = target.configurations.filter {
+                it.isCanBeResolved && it.name.endsWith("RuntimeClasspath") && !it.name.startsWith("composeHotReload")
+            }
+            for (config in configs) {
+                val isTest = "test" in config.name.lowercase()
+                val components = config.incoming.resolutionResult.allComponents
+                    .filterNot { it.id is ProjectComponentIdentifier }
+                    .distinctBy { it.id.displayName }
+                if (components.isEmpty()) continue
+                for (component in components) {
+                    origins.getOrPut(component.id.displayName) { mutableSetOf() } += "${target.path}:${config.name}"
+                    if (!isTest) production += component.id.displayName
+                }
+
+                val unknown = components.filter { it.id.displayName !in declared }
+                if (unknown.isEmpty()) continue
+                val query = target.dependencies.createArtifactResolutionQuery()
+                query.forComponents(unknown.map { it.id })
+                    .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
+                for (component in query.execute().resolvedComponents) {
+                    val pom = component.getArtifacts(MavenPomArtifact::class.java)
+                        .filterIsInstance<ResolvedArtifactResult>().firstOrNull()?.file
+                    val licences = pom?.takeIf { it.isFile }?.let(::readPomLicences).orEmpty()
+                    declared[component.id.displayName] = licences
+                }
+                for (component in unknown) declared.getOrPut(component.id.displayName) { emptyList() }
+            }
+        }
+
+        val lines = mutableListOf<String>()
+        val failures = mutableListOf<String>()
+        val warnings = mutableListOf<String>()
+        for ((coordinate, licences) in declared.entries.sortedBy { it.key }) {
+            val onProduction = coordinate in production
+            val ids = licences.mapNotNull { (name, url) -> normaliseLicence(name, url) }
+            val override = policy.overrides[coordinate.substringBeforeLast(':')]
+            val effective = ids.ifEmpty { listOfNotNull(override) }
+            val allowlist = if (onProduction) policy.allowed else policy.allowed + policy.testAllowed
+            val names = licences.map { it.first }.ifEmpty { listOf(override ?: "<none declared>") }
+            val verdict = when {
+                effective.any { it in allowlist } -> "ok  "
+                licences.isNotEmpty() || override != null -> "FAIL"
+                onProduction -> "FAIL"
+                else -> "warn"
+            }
+            val origin = origins[coordinate].orEmpty().joinToString()
+            val classpath = if (onProduction) "production" else "test"
+            lines += "$verdict  $coordinate  ${names.joinToString()}  [$classpath]  $origin"
+            when (verdict) {
+                "FAIL" -> failures += "$coordinate (${names.joinToString()})"
+                "warn" -> warnings += coordinate
+            }
+        }
+
+        val report = licenceReportFile.get().asFile
+        report.parentFile.mkdirs()
+        report.writeText(lines.joinToString("\n", postfix = "\n"))
+        lines.forEach { logger.lifecycle("dependency-licences: $it") }
+        warnings.forEach { coordinate ->
+            logger.warn(
+                "dependency-licences: $coordinate declares no licence of its own and is test-only; add an override",
+            )
+        }
+
+        if (failures.isNotEmpty()) {
+            throw GradleException(
+                "Dependencies with a licence outside the AGPL-compatible policy (ADR-0011):\n" +
+                    failures.joinToString("\n") { "  - $it" } +
+                    "\nReview config/dependency-licences.txt or replace the dependency. " +
+                    "Full verdicts: ${licenceReportFile.get().asFile}",
+            )
+        }
     }
 }
 

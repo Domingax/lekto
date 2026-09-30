@@ -1,0 +1,45 @@
+# The lanes that are too slow for every change, run on a schedule so they never
+# sit on the critical path (ticket #7). Nothing here gates a merge; a failure is
+# a signal to fix before the next release. See docs/build.md#ci-lanes.
+name: nightly
+
+on:
+  schedule:
+    # 03:00 UTC daily.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Real Android platform integrations — SAF, TTS, Keystore — on an emulator.
+  # The fast lane cannot reach these, so they run nightly and never block a PR.
+  instrumented:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [29, 34]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Run the instrumented tests on an emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          script: ./gradlew :app:connectedCheck --no-daemon

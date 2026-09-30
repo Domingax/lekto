@@ -1,0 +1,115 @@
+# The lanes that gate every change (ticket #7).
+#
+# On every push and pull request: the fast, hermetic JVM lane (`fast`) and the
+# dependency-licence check (`licences`). On pull requests only: the WebDAV
+# integration lane (`webdav`) and the golden-image lane (`golden`). The nightly
+# emulator lane lives in nightly.yml and never touches the critical path. See
+# docs/build.md#ci-lanes.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # The fast lane. Builds every module, runs the domain and UI-semantics suites,
+  # and enforces ktlint and detekt — no emulator, no Docker. The containerised
+  # WebDAV test is excluded: it needs Docker and has its own `webdav` lane, so
+  # running it here would both slow this lane and duplicate that one. This is the
+  # job branch protection requires before a pull request can merge.
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Build, test and lint
+        run: ./gradlew check -x :integrations:webdav:jvmTest --no-daemon
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-reports
+          path: |
+            **/build/reports/**
+            **/build/test-results/**
+          if-no-files-found: ignore
+
+  # Every dependency, test-scope included, must be AGPL-compatible (ADR-0011).
+  # The task resolves dependency metadata at execution time, which the
+  # configuration cache cannot store, so it runs without the cache.
+  licences:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Check dependency licences
+        run: ./gradlew checkDependencyLicences --no-configuration-cache --no-daemon
+      - name: Upload the licence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-licences
+          path: build/reports/dependency-licences.txt
+          if-no-files-found: ignore
+
+  # A real WebDAV server through Testcontainers. Docker is present on the runner;
+  # where it is not, the test class skips instead of failing.
+  webdav:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Run the WebDAV integration tests
+        run: ./gradlew :integrations:webdav:jvmTest --no-daemon
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webdav-reports
+          path: |
+            integrations/webdav/build/reports/**
+            integrations/webdav/build/test-results/**
+          if-no-files-found: ignore
+
+  # The committed UI goldens, verified headlessly on the JVM.
+  golden:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Verify the UI goldens
+        run: ./gradlew :app:verifyRoborazziDesktop --no-daemon
+      - name: Upload the diff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-diff
+          path: |
+            app/build/outputs/roborazzi/**
+            app/build/test-results/**
+          if-no-files-found: ignore
