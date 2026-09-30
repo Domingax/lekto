@@ -10,12 +10,13 @@ Docker. Non-determinism enters only through injected seams.
 ./gradlew check
 ```
 
-It builds every module, runs the domain suite (`core`) and the UI-semantics
-suite (`app`), and runs the formatting and static-analysis gates
+It builds every module, runs the domain suite (`core`), the UI-semantics
+suite (`app`) and the architecture suite (`architecture`), and runs the
+formatting and static-analysis gates
 (`docs/build.md#quality-gates`). The narrow version for the inner loop is:
 
 ```sh
-./gradlew :core:jvmTest :app:desktopTest
+./gradlew :core:jvmTest :app:desktopTest :architecture:test
 ```
 
 Force a re-run when Gradle marks the task up-to-date:
@@ -31,6 +32,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | Domain + properties  | `core/commonTest`              | `:core:jvmTest`                 | a JVM        |
 | UI semantics         | `app/desktopTest`              | `:app:desktopTest`              | a JVM        |
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
+| Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
 | WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 | Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
@@ -86,8 +88,9 @@ part of `check`, and CI runs it without the configuration cache. See
 `./gradlew koverXmlReport` runs the JVM suites and writes one merged,
 JaCoCo-compatible coverage report to `build/reports/kover/report.xml` (Kover;
 `docs/build.md#coverage-and-the-quality-gate`). The root project is the merging
-module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`
-and `tools/dictionaries` are not aggregated. The report is a measurement, not a
+module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`,
+`tools/dictionaries` and `architecture` are not aggregated. The report is a
+measurement, not a
 gate on its own — the `sonar` CI lane feeds it, with the ktlint and detekt
 findings, to SonarCloud, whose quality gate on new code (coverage, duplication,
 smells) blocks the pull request. Reproduce a gate failure with the drill in
@@ -148,10 +151,24 @@ where the change lands:
 | UI behaviour in `app`                                                 | Compose UI-semantics test                               | `app/desktopTest`           |
 | A visual or layout change                                             | + screenshot golden                                     | `app`, on the PR lane       |
 | Android platform glue                                                 | Robolectric host test                                   | `androidHostTest`           |
+| An architectural boundary or naming convention                       | architecture rule test, plus a synthetic violation it must catch | `architecture/src/test` |
 | A bug                                                                 | regression test at the seam the bug occurs              | wherever that seam lives    |
 
 Every change lands with a test at its level: `/deliver` holds each surface to its
 row and each demanded level to a red → green before the commit.
+
+## Naming and placement
+
+A few conventions the compiler cannot check are asserted by the `architecture`
+suite (ticket #9), so a drift fails `check` rather than the next review:
+
+- A Kotlin file lives at `<module>/src/<sourceSet>/kotlin/<package path>.kt`.
+- A package matches the directory it sits in, and sits under its module's package
+  root (`core` under `app.lekto.core`, an integration under
+  `app.lekto.integrations.<name>`, the application under `app.lekto`).
+- A test class lives in a test source set and its file is named `<Class>Test.kt`;
+  a production file is never named `*Test.kt`. Shared fakes and fixtures belong in
+  `testkit`, not in a test source set, so a test source set holds tests only.
 
 ## Reproducing a failure
 

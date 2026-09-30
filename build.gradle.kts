@@ -10,12 +10,13 @@ import org.gradle.maven.MavenPomArtifact
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
-// The five modules of Lekto. See docs/build.md and docs/adr/0007.
+// The six modules of Lekto. See docs/build.md and docs/adr/0007.
 // core      — the domain (vault, records, merge, tokenisation, sync engine, parsers)
 // testkit   — contract suites and in-memory fakes, shared by the other modules' tests
 // integrations/webdav — the first sync driver, isolated from the domain
 // app       — the Compose Multiplatform application (Android + desktop)
 // tools/dictionaries — the offline dictionary-pack pipeline, built by its own CI job
+// architecture — the architecture tests (ticket #9), test-only and never shipped
 plugins {
     base
     alias(libs.plugins.androidApplication) apply false
