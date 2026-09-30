@@ -36,8 +36,7 @@ object PlacementRules {
         }
 
     private fun checkPackageOwnership(repository: Repository): List<Violation> = repository.sources.flatMap { source ->
-        val policy = LektoArchitecture.policies.firstOrNull { it.path == source.module }
-            ?: return@flatMap emptyList()
+        val policy = LektoArchitecture.policy(source.module) ?: return@flatMap emptyList()
         val root = policy.packageRoot
         if (source.packageName == root || source.packageName.startsWith("$root.")) return@flatMap emptyList()
         listOf(

@@ -1,20 +1,32 @@
 package app.lekto.architecture
 
 /**
- * The small text walk a Gradle build file needs: skip comments and strings, and
- * name the block a `{` opens. It exists so [GradleBuildFile] can find
- * `project(…)` references without being fooled by one inside a comment or a
- * string literal, which the repository's own build scripts do contain.
+ * The small text walk a Gradle build file needs: skip comments and strings, name
+ * the block a `{` opens, and name the configuration a `project(…)` call sits in.
+ *
+ * It exists so [GradleBuildFile] can find `project(…)` references without being
+ * fooled by one inside a comment or a string literal, and can tell a test-scoped
+ * declaration (`commonTest.dependencies { … }`, `testImplementation(…)`) from a
+ * production one. The repository's own build scripts exercise both forms.
  */
 internal object TextScan {
 
-    /** The dotted name immediately before a `{`, e.g. `commonTest.dependencies`. */
-    fun precedingName(text: String, braceIndex: Int): String {
-        var end = braceIndex - 1
-        while (end >= 0 && text[end].isWhitespace()) end--
-        var start = end
-        while (start >= 0 && text[start].isDottedNameChar()) start--
-        return text.substring(start + 1, end + 1)
+    /** The text of the line a `{` opens on, e.g. `getByName("desktopTest").dependencies`. */
+    fun blockHeader(text: String, braceIndex: Int): String {
+        val lineStart = text.lastIndexOf('\n', braceIndex - 1) + 1
+        return text.substring(lineStart, braceIndex).trim()
+    }
+
+    /** The identifier of the call a value sits in, e.g. `testImplementation`. */
+    fun callName(text: String, index: Int): String {
+        var cursor = index - 1
+        while (cursor >= 0 && text[cursor].isWhitespace()) cursor--
+        if (cursor < 0 || text[cursor] != '(') return ""
+        cursor--
+        while (cursor >= 0 && text[cursor].isWhitespace()) cursor--
+        var start = cursor
+        while (start >= 0 && (text[start].isLetterOrDigit() || text[start] == '_')) start--
+        return text.substring(start + 1, cursor + 1)
     }
 
     fun skipLine(text: String, start: Int): Int {
@@ -46,8 +58,6 @@ internal object TextScan {
         }
         return text.length
     }
-
-    private fun Char.isDottedNameChar(): Boolean = isLetterOrDigit() || this == '_' || this == '.'
 
     private const val TRIPLE_QUOTE = "\"\"\""
     private const val COMMENT_OPENER_LENGTH = 2

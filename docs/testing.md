@@ -88,8 +88,9 @@ part of `check`, and CI runs it without the configuration cache. See
 `./gradlew koverXmlReport` runs the JVM suites and writes one merged,
 JaCoCo-compatible coverage report to `build/reports/kover/report.xml` (Kover;
 `docs/build.md#coverage-and-the-quality-gate`). The root project is the merging
-module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`
-and `tools/dictionaries` are not aggregated. The report is a measurement, not a
+module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`,
+`tools/dictionaries` and `architecture` are not aggregated. The report is a
+measurement, not a
 gate on its own — the `sonar` CI lane feeds it, with the ktlint and detekt
 findings, to SonarCloud, whose quality gate on new code (coverage, duplication,
 smells) blocks the pull request. Reproduce a gate failure with the drill in
@@ -155,6 +156,19 @@ where the change lands:
 
 Every change lands with a test at its level: `/deliver` holds each surface to its
 row and each demanded level to a red → green before the commit.
+
+## Naming and placement
+
+A few conventions the compiler cannot check are asserted by the `architecture`
+suite (ticket #9), so a drift fails `check` rather than the next review:
+
+- A Kotlin file lives at `<module>/src/<sourceSet>/kotlin/<package path>.kt`.
+- A package matches the directory it sits in, and sits under its module's package
+  root (`core` under `app.lekto.core`, an integration under
+  `app.lekto.integrations.<name>`, the application under `app.lekto`).
+- A test class lives in a test source set and its file is named `<Class>Test.kt`;
+  a production file is never named `*Test.kt`. Shared fakes and fixtures belong in
+  `testkit`, not in a test source set, so a test source set holds tests only.
 
 ## Reproducing a failure
 

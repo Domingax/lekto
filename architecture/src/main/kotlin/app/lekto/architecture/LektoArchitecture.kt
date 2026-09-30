@@ -123,7 +123,7 @@ object LektoArchitecture {
 
     private fun checkModuleDependencies(repository: Repository): List<Violation> =
         repository.modules.flatMap { module ->
-            val policy = policyOrNull(module.path) ?: return@flatMap emptyList()
+            val policy = policy(module.path) ?: return@flatMap emptyList()
             module.dependencies.mapNotNull { dependency -> dependencyViolation(policy, dependency) }
         }
 
@@ -138,5 +138,6 @@ object LektoArchitecture {
         )
     }
 
-    private fun policyOrNull(module: String): ModulePolicy? = policies.firstOrNull { it.path == module }
+    /** The policy for [module], or null if the module is not part of the architecture. */
+    fun policy(module: String): ModulePolicy? = policies.firstOrNull { it.path == module }
 }

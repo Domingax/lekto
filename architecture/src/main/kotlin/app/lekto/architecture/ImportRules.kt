@@ -20,8 +20,7 @@ object ImportRules {
     private fun checkProductionImports(repository: Repository): List<Violation> = repository.sources
         .filter { source -> source.isProduction }
         .flatMap { source ->
-            val policy = LektoArchitecture.policies.firstOrNull { it.path == source.module }
-                ?: return@flatMap emptyList()
+            val policy = LektoArchitecture.policy(source.module) ?: return@flatMap emptyList()
             source.imports.mapNotNull { import -> purityViolation(policy, source, import) }
         }
 
@@ -53,20 +52,13 @@ object ImportRules {
         allowedLektoRoots(policy).any { root -> import == root || import.startsWith("$root.") }
 
     private fun allowedLektoRoots(policy: ModulePolicy): Set<String> = buildSet {
+        // The module itself, plus the domain it is allowed to reach. For an
+        // integration that is `core` alone: another integration is wired only by
+        // the composition root (issue #9), so it is not importable here.
         add(policy.packageRoot)
         when (policy.kind) {
-            ModuleKind.DOMAIN -> Unit
-
-            ModuleKind.INTEGRATION -> {
-                add("app.lekto.core")
-                add("app.lekto.integrations")
-            }
-
-            ModuleKind.TEST_SUPPORT -> add("app.lekto.core")
-
-            ModuleKind.APPLICATION -> add("app.lekto")
-
-            ModuleKind.TOOL -> Unit
+            ModuleKind.DOMAIN, ModuleKind.APPLICATION, ModuleKind.TOOL -> Unit
+            ModuleKind.INTEGRATION, ModuleKind.TEST_SUPPORT -> add(CORE_PACKAGE_ROOT)
         }
     }
 
@@ -75,4 +67,8 @@ object ImportRules {
     private const val LEKTO_PACKAGE = "app.lekto"
     private const val TESTKIT_PACKAGE = "app.lekto.testkit"
     private const val TESTKIT_MODULE = ":testkit"
+
+    // The domain's package root, read from the policy so a rename touches one
+    // place. `core` always exists, so the invariant holds at load.
+    private val CORE_PACKAGE_ROOT: String = requireNotNull(LektoArchitecture.policy(":core")).packageRoot
 }

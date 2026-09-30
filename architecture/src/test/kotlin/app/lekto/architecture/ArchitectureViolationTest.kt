@@ -94,6 +94,21 @@ class ArchitectureViolationTest :
             rules(repository) shouldContain Rules.IMPORT_PURITY
         }
 
+        test("an integration may not import another integration") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "integrations/webdav/src/commonMain/kotlin/app/lekto/integrations/webdav/WebDav.kt",
+                        "commonMain",
+                        "app.lekto.integrations.webdav",
+                        "app.lekto.integrations.dropbox.Dropbox",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldContain Rules.IMPORT_PURITY
+        }
+
         test("the domain may not import Android") {
             val repository = repository(sources = listOf(domainSource("androidx.compose.runtime.Composable")))
 

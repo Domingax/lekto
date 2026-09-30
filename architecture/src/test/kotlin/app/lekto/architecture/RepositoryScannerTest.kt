@@ -57,6 +57,46 @@ class RepositoryScannerTest :
             )
         }
 
+        test("tags a test dependency declared by its configuration") {
+            val build = """
+                dependencies {
+                    implementation(project(":core"))
+                    testImplementation(project(":testkit"))
+                }
+            """.trimIndent()
+
+            GradleBuildFile.declaredDependencies(build) shouldContainExactly listOf(
+                DeclaredDependency(":core", testScoped = false),
+                DeclaredDependency(":testkit", testScoped = true),
+            )
+        }
+
+        test("tags a test dependency inside a getByName source set") {
+            val build = """
+                kotlin {
+                    sourceSets {
+                        getByName("desktopTest").dependencies {
+                            implementation(project(":testkit"))
+                        }
+                    }
+                }
+            """.trimIndent()
+
+            GradleBuildFile.declaredDependencies(build) shouldContainExactly listOf(
+                DeclaredDependency(":testkit", testScoped = true),
+            )
+        }
+
+        test("reads includes but not the ones in comments") {
+            val settings = """
+                include(":core")
+                // include(":ignored")
+                include(":integrations:webdav")
+            """.trimIndent()
+
+            GradleBuildFile.includedModules(settings) shouldContainExactly listOf(":core", ":integrations:webdav")
+        }
+
         test("ignores project references in comments and strings") {
             val build = """
                 dependencies {
