@@ -1,0 +1,9 @@
+Chapter One
+An awkward book with nested inline markup—and a line break. After the break.
+Whitespace is collapsed, and spans are ignored but kept.
+A quoted paragraph with an italic turn.
+First item & entity
+Second item éaccent
+Trailing link text ends it.
+第二章
+日本語の文章です。これはテストです。

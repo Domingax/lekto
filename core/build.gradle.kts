@@ -25,6 +25,13 @@ kotlin {
     }
 
     sourceSets {
+        jvmMain.dependencies {
+            // The EPUB parser and the ICU segmenter are JVM-only: java.util.zip
+            // and jsoup build the [StructuredText], ICU4J segments it. They live
+            // in jvmMain so commonMain stays pure Kotlin (see the spike report).
+            implementation(libs.jsoup)
+            implementation(libs.icu4j)
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotest.framework.engine)

@@ -38,6 +38,14 @@ ktlint-gradle = "14.2.0"
 ktlint = "1.8.0"
 detekt = "2.0.0-alpha.6"
 
+# Reader spike (ticket #10). ICU4J segments text into words with dictionary-based
+# CJK support, the desktop twin of `android.icu.text.BreakIterator` (ADR-0007);
+# jsoup parses XHTML leniently, because real EPUBs carry HTML entities and
+# unclosed tags a strict XML parser rejects. ICU4J is Unicode-3.0, jsoup MIT;
+# both are AGPL-compatible (ADR-0011). See docs/research/epub-to-tokens-spike.md.
+icu4j = "78.3"
+jsoup = "1.23.2"
+
 # Measurement (ticket #8). Kover (Apache-2.0) is JetBrains' Kotlin coverage
 # engine and the KMP-native alternative to JaCoCo; it writes a
 # JaCoCo-compatible XML report. SonarCloud is a hosted service, not a build
@@ -69,6 +77,10 @@ roborazzi-core = { module = "io.github.takahirom.roborazzi:roborazzi-core", vers
 roborazzi-compose-desktop = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop", version.ref = "roborazzi" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+
+# Reader spike (ticket #10): see the versions block above.
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -30,6 +30,10 @@ licence BSD-2-Clause
 licence BSD-3-Clause
 licence Zlib
 licence AGPL-3.0
+# The Unicode licence (ICU4J, ticket #10) is a permissive, MIT-style licence and
+# is GPL-compatible; ICU4J declares it as `Unicode-3.0` with a URL the normaliser
+# does not map, so it is both allowed here and recorded as an override below.
+licence Unicode-3.0
 
 # --- Test-only exceptions -----------------------------------------------------
 # JUnit 5 / Jupiter is EPL-2.0 and JUnit 4 is EPL-1.0: the FSF lists them as
@@ -63,3 +67,7 @@ override com.google.guava:guava Apache-2.0
 override com.google.protobuf:protobuf-java BSD-3-Clause
 override com.google.truth:truth Apache-2.0
 override org.codehaus.mojo:animal-sniffer-annotations MIT
+# ICU4J (ticket #10) declares `Unicode-3.0` in its POM; the task's normaliser
+# recognises only the licences in the allowlist above, so the reviewed id is
+# recorded here.
+override com.ibm.icu:icu4j Unicode-3.0
