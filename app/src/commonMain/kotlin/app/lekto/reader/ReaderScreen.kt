@@ -50,9 +50,14 @@ fun ReaderScreen(
     modifier: Modifier = Modifier,
     onWordTap: (WordToken) -> Unit = {},
 ) {
-    val latestTap by rememberUpdatedState(onWordTap)
+    // The token layer is built once (its keys are the chapter and renderer), so
+    // the word tap callback is read through a State instead of being captured:
+    // `latestTap.value` always calls the current `onWordTap` without rebuilding
+    // the text. Written as an explicit State (not `by`) because SonarCloud's
+    // S1481 false-positives on a delegated local read inside a lambda.
+    val latestTap = rememberUpdatedState(onWordTap)
     val tokens = remember(chapter, renderer.segmenter, renderer.mastery, renderer.styles) {
-        buildReaderTokens(chapter, renderer) { word -> latestTap(word) }
+        buildReaderTokens(chapter, renderer) { word -> latestTap.value(word) }
     }
     var pageIndex by remember(tokens) { mutableStateOf(0) }
 
