@@ -1,10 +1,13 @@
 import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.extensions.DetektExtension
 import dev.detekt.gradle.extensions.FailOnSeverity
+import dev.detekt.gradle.report.ReportMergeTask
 import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.file.FileTree
+import org.gradle.api.provider.Provider
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
@@ -105,6 +108,106 @@ allprojects {
     detektTasks.matching { it.name == "detekt" }.configureEach {
         dependsOn(compilationDetektTasks)
     }
+}
+
+// --- Sonar report paths --------------------------------------------------------
+// SonarCloud's Kotlin importer reads `sonar.kotlin.detekt.reportPaths` and
+// `sonar.kotlin.ktlint.reportPaths` as a comma-separated list of report *files*.
+// It does not expand wildcards: it turns each entry into a File verbatim and warns
+// "The report file(s) can not be found" when one does not exist (sonar-analyzer-
+// commons ExternalReportProvider). Both plugins write one report per source set or
+// Kotlin compilation, so a single glob cannot name them and listing every file
+// would rot as source sets come and go. Merge each tool's reports into one
+// Checkstyle XML at a stable path and name that in sonar-project.properties.
+//
+// Only the modules SonarCloud indexes are merged — the same three named in
+// sonar.sources. testkit, architecture and tools/dictionaries are outside the
+// Sonar project (they never ship or are standalone), so their findings must not be
+// fed to it.
+val sonarKotlinModules = listOf(project(":core"), project(":app"), project(":integrations:webdav"))
+
+// detekt writes `<task>.xml` directly under the directory; ktlint nests its report
+// one level down, per source set. Both are Checkstyle XML, so the detekt merger
+// (which also de-duplicates detekt's overlapping compilation reports) reads either.
+// The Kotlin-script report is excluded: `*.gradle.kts` is excluded from the Sonar
+// sources, so its findings could never attach to an indexed file.
+fun Project.sonarDetektReports(): Provider<FileTree> = layout.buildDirectory.dir("reports/detekt")
+    .map { dir -> dir.asFileTree.matching { include("*.xml") } }
+
+fun Project.sonarKtlintReports(): Provider<FileTree> = layout.buildDirectory.dir("reports/ktlint")
+    .map { dir -> dir.asFileTree.matching { include("ktlint*SourceSetCheck/*.xml") } }
+
+val sonarReportsDir = layout.buildDirectory.dir("reports/sonar")
+
+val mergeDetektReports by tasks.registering(ReportMergeTask::class) {
+    group = "verification"
+    description = "Merge the per-compilation detekt reports into one Checkstyle XML for SonarCloud."
+    input.from(sonarKotlinModules.map { it.sonarDetektReports() })
+    output.set(sonarReportsDir.map { it.file("detekt.xml") })
+    dependsOn(sonarKotlinModules.flatMap { module -> module.tasks.withType<Detekt>() })
+}
+
+val mergeKtlintReports by tasks.registering(ReportMergeTask::class) {
+    group = "verification"
+    description = "Merge the per-source-set ktlint reports into one Checkstyle XML for SonarCloud."
+    input.from(sonarKotlinModules.map { it.sonarKtlintReports() })
+    output.set(sonarReportsDir.map { it.file("ktlint.xml") })
+    dependsOn(
+        sonarKotlinModules.flatMap { module ->
+            module.tasks.matching { it.name.startsWith("ktlint") && it.name.endsWith("SourceSetCheck") }
+        },
+    )
+}
+
+// The reports above are the contract with SonarCloud, so assert it the way the
+// scanner will read it: every path in the two properties is a concrete file that
+// exists and parses as Checkstyle XML. A wildcard here is the exact defect this
+// guards against, so it is reported by name. Runs from `check`, so a misconfigured
+// sonar-project.properties fails the fast lane instead of the sonar lane.
+val verifySonarReportPaths by tasks.registering {
+    group = "verification"
+    description = "Fail when sonar-project.properties names a SonarCloud report it cannot read."
+    dependsOn(mergeDetektReports, mergeKtlintReports)
+    val propertiesFile = rootProject.file("sonar-project.properties")
+    val projectBaseDir = rootProject.layout.projectDirectory.asFile
+    inputs.file(propertiesFile)
+    doLast {
+        val properties = java.util.Properties().apply {
+            propertiesFile.inputStream().use { load(it) }
+        }
+        val problems = mutableListOf<String>()
+        for (key in listOf("sonar.kotlin.detekt.reportPaths", "sonar.kotlin.ktlint.reportPaths")) {
+            val value = properties.getProperty(key) ?: continue
+            for (entry in value.split(',').map { it.trim() }.filter { it.isNotEmpty() }) {
+                val report = projectBaseDir.resolve(entry)
+                when {
+                    entry.any { it in "*?[" } ->
+                        problems += "$key: '$entry' is a wildcard; SonarCloud does not expand it"
+
+                    !report.isFile ->
+                        problems += "$key: '$entry' does not exist"
+
+                    else -> {
+                        val root = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+                            .newDocumentBuilder().parse(report).documentElement
+                        if (root.tagName != "checkstyle") {
+                            problems += "$key: '$entry' is not a Checkstyle report (root is <${root.tagName}>)"
+                        }
+                    }
+                }
+            }
+        }
+        check(problems.isEmpty()) {
+            "sonar-project.properties names reports SonarCloud cannot import:\n" +
+                problems.joinToString("\n") { "  - $it" }
+        }
+    }
+}
+
+// The guard rides on `check` so a report-path regression fails where a developer
+// sees it, not only in the sonar lane.
+tasks.named("check") {
+    dependsOn(verifySonarReportPaths)
 }
 
 // --- Coverage (ticket #8) ------------------------------------------------------
