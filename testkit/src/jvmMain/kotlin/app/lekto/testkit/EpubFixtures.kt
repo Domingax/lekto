@@ -22,7 +22,7 @@ object EpubFixtures {
     /** A deliberately awkward but valid EPUB, used for the extraction golden. */
     fun awkward(): ByteArray = archive(
         "META-INF/container.xml" to CONTAINER,
-        "OEBPS/content.opf" to AWFKWARD_OPF,
+        "OEBPS/content.opf" to AWKWARD_OPF,
         "OEBPS/nav.xhtml" to NAV,
         "OEBPS/cover.xhtml" to COVER,
         "OEBPS/text/chapter1.xhtml" to CHAPTER_ONE,
@@ -95,7 +95,7 @@ object EpubFixtures {
         </container>
     """.trimIndent()
 
-    private val AWFKWARD_OPF = """
+    private val AWKWARD_OPF = """
         <?xml version="1.0" encoding="UTF-8"?>
         <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
           <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">

@@ -1,6 +1,7 @@
 package app.lekto.core.epub
 
 import app.lekto.testkit.EpubFixtures
+import app.lekto.testkit.TestResources
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -16,11 +17,6 @@ class EpubGoldenTest :
         test("the awkward EPUB extracts to the pinned text") {
             val extracted = EpubParser().parse(EpubFixtures.awkward()).plainText()
 
-            extracted shouldBe golden()
+            extracted shouldBe TestResources.text("/golden/awkward-epub.txt")
         }
     })
-
-private fun golden(): String =
-    checkNotNull(EpubGoldenTest::class.java.getResourceAsStream("/golden/awkward-epub.txt")) {
-        "Missing golden resource /golden/awkward-epub.txt"
-    }.bufferedReader().readText().trimEnd('\n', '\r')
