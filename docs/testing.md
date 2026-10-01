@@ -44,6 +44,14 @@ WebDAV driver and instrumented end-to-end runs — run on pull requests or night
 the CI fast lane excludes the WebDAV test so the two lanes do not overlap.
 `docs/build.md#ci-lanes` lists the workflow jobs that run each one.
 
+The EPUB parser and ICU segmenter (ticket #10) are JVM-backed, so their tests
+run in `core/src/jvmTest` and their inputs are committed fixtures under
+`core/src/jvmTest/resources` — a generated awkward EPUB and a real Project
+Gutenberg book — read through `TestResources` in `testkit`. The extraction
+goldens in `resources/golden/` pin the parser's output; a change that alters the
+text fails until the golden is deliberately updated. See
+`docs/research/epub-to-tokens-spike.md`.
+
 ## Golden images
 
 The goldens are Roborazzi images recorded from `app/desktopTest` and committed

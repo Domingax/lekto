@@ -17,10 +17,11 @@ segmenter are real code on the fast JVM loop, not sketches.
 > inline markup, whitespace runs, a container around a paragraph, and a CJK
 > chapter — parses into ordered blocks whose runs preserve `<em>`/`<strong>`,
 > and ICU segments the text into words, dictionary-based for Japanese and
-> Chinese. The two risky choices are settled: a **lenient HTML parser (jsoup)**
+> Chinese. A second golden runs the same parser over a **real Project Gutenberg
+> book**. The two risky choices are settled: a **lenient HTML parser (jsoup)**
 > for XHTML content, and **ICU4J** for segmentation. What remains is bounded,
-> ordinary production work — per-span language, a real-book corpus, and the
-> non-reflowable/edge features listed below — not a missing capability.
+> ordinary production work — per-span language, a broader real-book corpus, and
+> the non-reflowable/edge features listed below — not a missing capability.
 
 ## What was built
 
@@ -38,10 +39,18 @@ implementations sit in `jvmMain` so `commonMain` stays free of a platform.
 | `core/src/jvmMain/.../epub/XhtmlBlocks.kt` | jsoup walk of one content document into blocks and runs. |
 | `core/src/jvmMain/.../text/IcuTextSegmenter.kt` | ICU4J word segmentation; drops whitespace and punctuation. |
 | `testkit/src/jvmMain/.../EpubFixtures.kt` | Builds real, deliberately awkward EPUB archives in memory. |
+| `testkit/src/jvmMain/.../TestResources.kt` | Reads a committed resource (a golden, an EPUB fixture) off the test classpath. |
 
-Tests: `EpubParserTest`, `EpubGoldenTest`, `EpubArchiveTest`,
-`EpubTokenisationTest` and `IcuTextSegmenterTest` in `core/src/jvmTest`, and the
-extraction golden at `core/src/jvmTest/resources/golden/awkward-epub.txt`.
+Tests, all in `core/src/jvmTest`:
+
+- `EpubParserTest`, `EpubArchiveTest`, `EpubTokenisationTest` — structure,
+  container resolution and the parser→segmenter join.
+- `IcuTextSegmenterTest` and `IcuTextSegmenterPropertyTest` — the word examples
+  and the offsets invariant, as a property over generated text.
+- `EpubGoldenTest` — the generated awkward fixture against
+  `resources/golden/awkward-epub.txt`.
+- `RealEpubGoldenTest` — *The Yellow Wallpaper* (`resources/epub/pg1952.epub`,
+  public domain, with a README beside it) against `resources/golden/pg1952.txt`.
 
 ## What worked
 
@@ -76,8 +85,9 @@ Ordered roughly by how soon it will bite.
 
 | Gap | Effect | Notes |
 | --- | --- | --- |
+| **A broader real-book corpus** | One real book (Project Gutenberg #1952) is pinned as a golden; the generated fixture covers the awkward constructs. | The testing decision asks for a corpus. Adding two or three more public-domain books (Standard Ebooks / Gutenberg) with different producers is the honest next step; one is committed now so the pipeline is proven against real, not only synthetic, input. |
 | **Per-document and per-span language** | The whole book is segmented in the OPF's one `dc:language`. A French novel quoting Japanese is segmented as French. | EPUB carries `xml:lang`/`lang` on `<html>`, and on any element/span. The model needs a language per block (and eventually per run), and the parser must read it. This is the first follow-up. |
-| **A real-book corpus** | The golden runs on a generated — though genuinely structured and deliberately awkward — EPUB. | The testing decision prefers generated fixtures and small licence-clean ones. Adding two or three real public-domain books (Standard Ebooks / Gutenberg) to `jvmTest` is cheap and is the honest next step; none is committed here to avoid vendoring third-party content in a spike. |
+| **EPUB container not validated** | A ZIP that is not an EPUB (no stored `mimetype`, no `container.xml`) fails with a generic message rather than "this is not an EPUB". | `EpubArchive` reads any ZIP; only an empty archive is rejected outright. A cheap validation pass belongs in the error taxonomy below. |
 | **Images, figures, tables, footnotes** | Dropped: `<img>` is skipped, table cells become paragraphs, no figure/figcaption semantics, no footnote/target links. | Fine for a first reader of prose; a fidelity backlog. |
 | **Fixed-layout EPUB, media overlays, SVG, MathML** | Not read. Fixed-layout books will render as a single text stream or fail. | A decision, not a bug: the MVP reader is reflowable-first (ADR-0007). |
 | **CSS-derived emphasis** | Only tag-based inline styles are detected; `style="font-style: italic"` and a CSS class are ignored. | Rare in EPUBs (they prefer `<em>`), but real. A later pass could read the CSS or the computed style. |
@@ -95,7 +105,7 @@ with the gaps above closed to the level the MVP needs.
 | Work | Estimate |
 | --- | --- |
 | Per-document/span language through the model and parser | 0.5–1 day |
-| Real-book corpus and parsing it green (`jvmTest`) | 1 day |
+| Broader real-book corpus (a second and third public-domain book) | 0.5–1 day |
 | Href hardening (percent-decoding, case, missing-entry messages) | 0.5 day |
 | Footnote/link targets, `<br>`/`<pre>`/whitespace fidelity, table structure | 2–3 days |
 | Error taxonomy (distinct messages for not-a-zip, no-rootfile, no-OPF, encrypted) | 0.5 day |
@@ -133,6 +143,7 @@ not map it.
 ./gradlew :core:koverXmlReport          # core's coverage report
 ```
 
-The golden is regenerated by editing `golden/awkward-epub.txt` **only** when the
-extraction is deliberately changed; a change to the parser that alters the text
-fails `EpubGoldenTest` until then.
+The goldens are updated by editing `golden/awkward-epub.txt` or
+`golden/pg1952.txt` **only** when the extraction is deliberately changed; a
+change to the parser that alters the text fails `EpubGoldenTest` or
+`RealEpubGoldenTest` until then.
