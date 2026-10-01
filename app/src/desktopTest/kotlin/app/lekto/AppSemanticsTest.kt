@@ -4,6 +4,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.v2.runComposeUiTest
+import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
 
 /**
@@ -18,9 +19,10 @@ import kotlin.test.Test
 class AppSemanticsTest {
 
     @Test
-    fun showsTheGreeting() = runComposeUiTest {
-        setContent { App() }
+    fun showsTheReader() = runComposeUiTest {
+        setContent { App(segmenter = WhitespaceTextSegmenter()) }
 
-        onNodeWithText("Hello from Lekto").assertIsDisplayed()
+        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        onNodeWithText("Next page").assertIsDisplayed()
     }
 }
