@@ -69,7 +69,10 @@ tools/dictionaries              (standalone)
 core ─────────────► nothing     (no app module, no Android)
 ```
 
-- `core` depends on no other Lekto module. It is pure Kotlin in `commonMain`.
+- `core` depends on no other Lekto module. Its model and seams are pure Kotlin
+  in `commonMain`; the platform-backed implementations behind those seams (the
+  EPUB parser, the ICU segmenter) live in a JVM source set and still depend on
+  no other Lekto module (ADR-0007, "Update — EPUB→tokens spike").
 - `integrations/*` depend on `core` through its published seams; `core` never
   names an integration.
 - Everything may depend on `core`; nothing depends on `app`.

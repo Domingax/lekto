@@ -29,6 +29,8 @@ without the other.
 | ktlint Gradle plugin | 14.2.0    | `gradle/libs.versions.toml` (`ktlint-gradle`)   |
 | detekt               | 2.0.0-alpha.6 | `gradle/libs.versions.toml` (`detekt`)       |
 | Kover (coverage)     | 0.9.9     | `gradle/libs.versions.toml` (`kover`)           |
+| ICU4J (segmentation) | 78.3      | `gradle/libs.versions.toml` (`icu4j`)           |
+| jsoup (XHTML)        | 1.23.2    | `gradle/libs.versions.toml` (`jsoup`)           |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -39,6 +41,12 @@ The Gradle wrapper is committed, so a clean checkout does not need Gradle
 installed. The Foojay toolchain resolver provisions the pinned JDK if it is
 missing, so a clean checkout does not need JDK 21 installed either — only a JVM
 able to run the wrapper.
+
+ICU4J and jsoup are the reader pipeline's production dependencies (ticket #10):
+ICU4J segments text into words with dictionary-based CJK support, and jsoup
+parses EPUB content documents leniently. ICU4J is Unicode-3.0 and jsoup MIT;
+both are AGPL-compatible and recorded in `config/dependency-licences.txt`
+(ADR-0011). See `docs/research/epub-to-tokens-spike.md`.
 
 ## The one command
 

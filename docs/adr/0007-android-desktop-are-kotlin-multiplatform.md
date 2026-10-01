@@ -53,3 +53,29 @@ Consequences absorbed:
    composed are excluded from selection. The reader's selection model must be designed around it.
 4. **Use ICU for segmentation everywhere** (`android.icu.text.BreakIterator` on Android, ICU4J on
    desktop) so CJK matches what `Intl.Segmenter` gives the DOM.
+
+## Update — EPUB→tokens spike (issue #10)
+
+The first reader spike ran before feature work; its outcome is recorded in
+`docs/research/epub-to-tokens-spike.md`. It confirms this decision and sharpens
+where the code lives:
+
+- The **model and the seams** — `StructuredText`/`TextBlock`/`TextRun`,
+  `WordToken`, `BookTextParser`, `TextSegmenter` — live in `core`'s `commonMain`
+  and are pure Kotlin.
+- The **implementations** — the ZIP/OPF/XHTML parser and the ICU4J segmenter —
+  live in a JVM source set (`core/src/jvmMain`), because they are backed by the
+  platform: `java.util.zip`, a DOM parser, jsoup and ICU4J. "In `commonMain`"
+  above means "in the shared domain, shared by both clients"; a JVM source set
+  is the only shared set that exists until `core` declares an Android target.
+- **Android still segments with `android.icu.text.BreakIterator`**, as this ADR
+  requires, behind the same `TextSegmenter` seam. Until `core` has an Android
+  target the Android app consumes the JVM artifact, so ICU4J would reach the
+  APK; adding that target (or a platform segmenter in the application) removes
+  it.
+- **jsoup** (MIT) parses the content documents rather than a strict XML parser:
+  real EPUB XHTML carries named entities and unclosed tags that a strict parser
+  rejects.
+
+Neither the substrate nor the "own EPUB pipeline" decision changed, so no
+superseding ADR is written; this update records where the pipeline landed.

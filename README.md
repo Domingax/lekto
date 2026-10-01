@@ -30,7 +30,7 @@ APK with `./gradlew :app:assembleDebug`.
 
 | Path                    | What it is                                                       |
 | ----------------------- | ---------------------------------------------------------------- |
-| `core`                  | The domain — vault, records, merge, tokenisation, sync engine.   |
+| `core`                  | The domain — vault, records, merge, parsers, tokenisation, sync engine. |
 | `testkit`               | Contract suites and in-memory fakes for the other modules' tests.|
 | `integrations/webdav`   | The first sync driver.                                            |
 | `app`                   | The Compose Multiplatform application (Android + desktop).        |
