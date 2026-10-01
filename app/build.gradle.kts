@@ -63,6 +63,7 @@ kotlin {
         // (host) test configuration; instrumented coverage is a separate, slower
         // lane. See docs/testing.md and docs/research/testing-harness.md §6.
         getByName("desktopTest").dependencies {
+            implementation(project(":testkit"))
             implementation(kotlin("test"))
             implementation(libs.compose.ui.test)
             implementation(compose.desktop.currentOs)

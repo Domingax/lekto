@@ -44,6 +44,11 @@ WebDAV driver and instrumented end-to-end runs — run on pull requests or night
 the CI fast lane excludes the WebDAV test so the two lanes do not overlap.
 `docs/build.md#ci-lanes` lists the workflow jobs that run each one.
 
+The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
+`testkit` — a deterministic letter/digit splitter — so they do not depend on the
+machine's ICU dictionaries. Production segmentation stays behind the
+`TextSegmenter` seam (`IcuTextSegmenter` on the JVM, `android.icu` on Android).
+
 The EPUB parser and ICU segmenter (ticket #10) are JVM-backed, so their tests
 run in `core/src/jvmTest` and their inputs are committed fixtures under
 `core/src/jvmTest/resources` — a generated awkward EPUB and a real Project
@@ -56,9 +61,14 @@ text fails until the golden is deliberately updated. See
 
 The goldens are Roborazzi images recorded from `app/desktopTest` and committed
 under `app/src/desktopTest/goldens/`. The desktop target renders with the host's
-Skia, so the first golden is deliberately text-free: a golden that renders text
-would depend on the fonts installed where it was recorded and would not verify on
-another machine. Record or update with
+Skia, so the goldens are deliberately text-free: a golden that renders text would
+depend on the fonts installed where it was recorded and would not verify on
+another machine. The theme golden records the colour scheme as swatches; the
+reader adds `mastery-palette.png`, the mastery palette and the reader page's
+word layer as coloured blocks — the same layout a page of text produces, without
+the glyphs. A text-bearing reader golden waits on pinned reading typography (a
+bundled font); until then, typography is pinned by `ReaderStyles` and the word
+layer by `ReaderTextTest`. Record or update with
 
 ```sh
 ./gradlew :app:recordRoborazziDesktop

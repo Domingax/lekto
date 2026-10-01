@@ -79,3 +79,28 @@ where the code lives:
 
 Neither the substrate nor the "own EPUB pipeline" decision changed, so no
 superseding ADR is written; this update records where the pipeline landed.
+
+## Update — paginated reader spike (issue #11)
+
+The second reader spike — the paginator plus the `WordToken` layer this ADR's
+reader-substrate update named as the MVP workstream — ran next; its outcome is
+`docs/research/paginated-reader-spike.md`. It confirms the substrate and sharpens
+the plan:
+
+- The word layer is built on `AnnotatedString` + `SpanStyle` + `LinkAnnotation.
+  Clickable`: per-word colour, tap handling and a focusable accessibility node,
+  with no custom hit-testing. The prediction that this is compositional work on
+  first-party APIs holds.
+- Pagination measures a chapter once and cuts at line boundaries into character
+  ranges the UI renders as slices. `SelectionContainer` sits over a **non-lazy**
+  page, so every visible word is composed and selectable; the documented
+  lazy-layout selection caveat is avoided within a page, at the cost of no
+  cross-page selection and no lazy scrolling.
+- The recorded limitations stand and are now measured: no keep-with-next, no
+  hyphenation, a whole-chapter layout whose cost grows with the chapter
+  (~0.3 s for ~58k characters), and the desktop a11y limits (macOS yes; Windows
+  Java Access Bridge, opt-in; Linux none).
+- Per-level non-colour indicators and cross-page selection are unfinished; both
+  are recorded as productionising work in the spike report.
+
+The substrate and the own-EPUB-pipeline decisions do not change.
