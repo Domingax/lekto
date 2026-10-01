@@ -71,9 +71,9 @@ in the root `build.gradle.kts` and apply to every project, including the root
 - **ktlint** (MIT) formats and lints every Kotlin file.
   `./gradlew ktlintFormat` rewrites the tree in place;
   `./gradlew ktlintCheck` only reports. The engine is pinned in the version
-  catalog so the formatter does not drift under the Gradle plugin. Alongside the
-  console report it writes a Checkstyle XML report under
-  `build/reports/ktlint/` for SonarCloud to ingest (below).
+  catalog so the formatter does not drift under the Gradle plugin. It writes one
+  Checkstyle XML report per source set under `build/reports/ktlint/`; the build
+  merges them for SonarCloud to ingest (below).
 - **detekt** (Apache-2.0) enforces `config/detekt/detekt.yml`, layered on top
   of detekt's defaults. The tuned rules bound cyclomatic and cognitive
   complexity, function and class size, ban dead code (unused private functions,
@@ -143,9 +143,16 @@ standalone, and the last is test scaffolding.
 plus the ktlint and detekt findings, then evaluates its **quality gate on new
 code** — new-code coverage, duplicated lines and code smells. The `sonar` CI job
 generates all three reports and then scans (ticket #8); `sonar-project.properties`
-tells the scanner where each one lives, and `sonar.qualitygate.wait=true` makes
-the scan wait for the gate and fail the job when it fails. That job blocks a pull
-request once branch protection on `main` requires it.
+tells the scanner where each one lives. SonarCloud's Kotlin importer takes a
+comma-separated list of report **files** and does not expand wildcards, while
+detekt and ktlint each write one report per Kotlin compilation or source set, so
+`mergeDetektReports` and `mergeKtlintReports` fold each tool's reports into a
+single Checkstyle XML under `build/reports/sonar/` for the scanner to read.
+`verifySonarReportPaths` — part of `check` — fails if a configured path is missing
+or hides behind a wildcard, so a misconfiguration trips the fast lane rather than
+the sonar one. `sonar.qualitygate.wait=true` makes the scan wait for the gate and
+fail the job when it fails. That job blocks a pull request once branch protection
+on `main` requires it.
 
 The scanner runs as a GitHub action, not a Gradle plugin, so nothing SonarCloud
 owns enters the build; Kover is the only new build dependency (AGPL-compatible,
