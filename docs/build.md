@@ -31,6 +31,7 @@ without the other.
 | Kover (coverage)     | 0.9.9     | `gradle/libs.versions.toml` (`kover`)           |
 | ICU4J (segmentation) | 78.3      | `gradle/libs.versions.toml` (`icu4j`)           |
 | jsoup (XHTML)        | 1.23.2    | `gradle/libs.versions.toml` (`jsoup`)           |
+| kotlinx.serialization (vault) | 1.9.0 | `gradle/libs.versions.toml` (`kotlinx-serialization`) |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -47,6 +48,11 @@ ICU4J segments text into words with dictionary-based CJK support, and jsoup
 parses EPUB content documents leniently. ICU4J is Unicode-3.0 and jsoup MIT;
 both are AGPL-compatible and recorded in `config/dependency-licences.txt`
 (ADR-0011). See `docs/research/epub-to-tokens-spike.md`.
+
+kotlinx.serialization (Apache-2.0) is the vault's dependency (ticket #12): records
+are one JSON file each (ADR-0003), so the domain encodes and decodes them with
+`kotlinx-serialization-json`. It is AGPL-compatible; ADR-0014 records why the
+format is a versioned JSON bundle and where the platform file seam sits.
 
 ## The one command
 

@@ -46,6 +46,11 @@ detekt = "2.0.0-alpha.6"
 icu4j = "78.3"
 jsoup = "1.23.2"
 
+# Vault (ticket #12). Records are one JSON file each (ADR-0003), so the domain
+# serialises with kotlinx.serialization (Apache-2.0, AGPL-compatible). The
+# Kotlin compiler plugin is versioned with Kotlin itself.
+kotlinx-serialization = "1.9.0"
+
 # Measurement (ticket #8). Kover (Apache-2.0) is JetBrains' Kotlin coverage
 # engine and the KMP-native alternative to JaCoCo; it writes a
 # JaCoCo-compatible XML report. SonarCloud is a hosted service, not a build
@@ -82,10 +87,14 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-jun
 icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
+# Vault (ticket #12): see the versions block above.
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }

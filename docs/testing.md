@@ -175,6 +175,11 @@ where the change lands:
 Every change lands with a test at its level: `/deliver` holds each surface to its
 row and each demanded level to a red → green before the commit.
 
+`VaultStore` is the first seam to use the pattern: `testkit` holds
+`VaultStoreContract` and the `InMemoryVaultStore` fake, `core/commonTest` runs the
+contract against the fake, and `core/jvmTest` runs the same contract against the
+real directory-backed store — so the two cannot drift (ticket #12, ADR-0014).
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

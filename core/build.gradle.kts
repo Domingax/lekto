@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // jvm target configures `useJUnitPlatform()` and pulls the JUnit 5 runner.
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -25,6 +26,13 @@ kotlin {
     }
 
     sourceSets {
+        commonMain.dependencies {
+            // Records are one JSON file each (ADR-0003), so the domain encodes
+            // and decodes records with kotlinx.serialization. `api`, because a
+            // record's body is a `JsonObject` and therefore part of the public
+            // model the testkit and the application both handle.
+            api(libs.kotlinx.serialization.json)
+        }
         jvmMain.dependencies {
             // The EPUB parser and the ICU segmenter are JVM-only: java.util.zip
             // and jsoup build the [StructuredText], ICU4J segments it. They live

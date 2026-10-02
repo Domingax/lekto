@@ -7,9 +7,9 @@ phrases, and saves vocabulary. All user data lives on the user's device in a **V
 ## Language
 
 **Vault**:
-The portable collection of everything the user authored or imported (vocabulary,
-reading progress, book originals). It is the unit of data ownership and the thing a
-user may relocate to a synced directory.
+The collection of everything the user authored or imported (vocabulary, reading
+progress, book originals). It is the unit of data ownership, app-private on every
+client, and moves between devices by export and import.
 _Avoid_: Library, data folder, workspace
 
 **Derived asset**:
