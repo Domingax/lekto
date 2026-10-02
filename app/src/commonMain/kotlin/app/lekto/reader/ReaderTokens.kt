@@ -13,6 +13,7 @@ import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.WordToken
+import app.lekto.core.text.tokenise
 
 /**
  * A chapter rendered as text plus the words in it. [text] concatenates the
@@ -50,8 +51,8 @@ fun buildReaderTokens(
         appendBlock(builder, block, blockStart, renderer.styles)
         cursor += block.text.length
 
-        renderer.segmenter.words(block.text, chapter.language).forEach { token ->
-            val word = WordToken(token.surface, blockStart + token.start, blockStart + token.end)
+        tokenise(block.text, chapter.language, renderer.segmenter).words.forEach { token ->
+            val word = token.shifted(blockStart)
             words += word
             writer.write(word, renderer.mastery.levelOf(word.surface, chapter.language))
         }
