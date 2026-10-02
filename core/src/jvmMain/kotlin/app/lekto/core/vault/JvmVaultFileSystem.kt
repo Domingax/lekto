@@ -34,7 +34,12 @@ class JvmVaultFileSystem(private val root: File) : VaultFileSystem {
     }
 
     override fun delete(path: String) {
-        resolve(path).delete()
+        val file = resolve(path)
+        // An absent path is already deleted, not an error (VaultFileSystem);
+        // a present path that will not delete is a real failure.
+        if (!file.delete() && file.exists()) {
+            throw IOException("could not delete '${file.path}'")
+        }
     }
 
     override fun listFiles(): List<String> = root.walkTopDown()

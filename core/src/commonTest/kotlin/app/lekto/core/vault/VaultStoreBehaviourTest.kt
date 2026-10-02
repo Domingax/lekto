@@ -93,6 +93,12 @@ class VaultStoreBehaviourTest :
             derived.paths() shouldBe emptyList()
         }
 
+        test("derived assets refuse a path that escapes the store root") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+
+            assertFailsWith<IllegalArgumentException> { derived.put("../escape", byteArrayOf()) }
+        }
+
         test("import refuses a bundle whose manifest and records disagree") {
             val bundle = VaultBundle(
                 manifest = VaultManifest(records = listOf(RecordRef.of(testVaultRecord("b")))),

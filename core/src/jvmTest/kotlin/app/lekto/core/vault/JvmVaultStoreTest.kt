@@ -5,6 +5,7 @@ import app.lekto.testkit.testVaultRecord
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
@@ -48,6 +49,38 @@ class JvmVaultStoreTest :
             val files = JvmVaultFileSystem(newRoot())
 
             assertFailsWith<IllegalArgumentException> { files.writeAtomically("../escape.json", byteArrayOf()) }
+        }
+
+        test("an atomic write falls back when a rename cannot land on the target") {
+            val root = newRoot()
+            val files = JvmVaultFileSystem(root)
+            // A directory in the target's place makes the first rename fail, as
+            // it does where renaming over an existing file is refused.
+            root.resolve("a/b.json").mkdirs()
+
+            files.writeAtomically("a/b.json", "bytes".encodeToByteArray())
+
+            files.read("a/b.json")!!.decodeToString() shouldBe "bytes"
+        }
+
+        test("an atomic write fails when it cannot replace the target") {
+            val root = newRoot()
+            val files = JvmVaultFileSystem(root)
+            root.resolve("a/b.json/child").apply { parentFile.mkdirs() }.writeText("occupies the target")
+
+            assertFailsWith<IOException> { files.writeAtomically("a/b.json", byteArrayOf()) }
+        }
+
+        test("deleting an absent path is not an error") {
+            JvmVaultFileSystem(newRoot()).delete("nothing.json")
+        }
+
+        test("deleting a path that will not delete fails") {
+            val root = newRoot()
+            val files = JvmVaultFileSystem(root)
+            root.resolve("a/b.json/child").apply { parentFile.mkdirs() }.writeText("occupies the target")
+
+            assertFailsWith<IOException> { files.delete("a/b.json") }
         }
 
         test("the export is a single file that restores the vault") {

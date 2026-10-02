@@ -27,8 +27,6 @@ object VaultCodec {
 
     fun encodeManifest(manifest: VaultManifest): String = json.encodeToString(VaultManifest.serializer(), manifest)
 
-    fun decodeManifest(text: String): VaultManifest = json.decodeFromString(VaultManifest.serializer(), text)
-
     fun encodeBundle(bundle: VaultBundle): String = json.encodeToString(VaultBundle.serializer(), bundle)
 
     fun decodeBundle(text: String): VaultBundle = json.decodeFromString(VaultBundle.serializer(), text)
