@@ -17,6 +17,16 @@ a tombstone cheap enough to retain past the longest offline window, and it means
 a deletion never leaves the content the user asked to remove lying in a
 tombstone.
 
+**Tombstones are retained, then purged.** A tombstone is kept for at least the
+longest offline window the product supports — a device that has been away that
+long may still hold the live record and must be told the item was deleted, not
+left to copy it back. Past that window the engine may drop the tombstone: a
+device returning later is treated as a **new device** and starts from a full
+resync, so there is no stale live copy left to resurrect. This merge does not
+implement either half — no clock and no store — so the retention duration and the
+purge are the engine's to decide and record when it lands; the shape here only
+guarantees a tombstone is small enough to keep for as long as that needs.
+
 The merge reads no clock and writes nothing, so the properties the product needs
 fall out of the comparison being a total order over versions with distinct
 device ids: merging is idempotent, commutative when the device ids differ, and a
