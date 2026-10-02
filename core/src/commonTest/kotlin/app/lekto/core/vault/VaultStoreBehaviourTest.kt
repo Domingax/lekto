@@ -104,4 +104,18 @@ class VaultStoreBehaviourTest :
                     .importBundle(VaultCodec.encodeBundle(bundle).encodeToByteArray())
             }
         }
+
+        test("import refuses a bundle carrying two records with the same id") {
+            val first = testVaultRecord("a", kind = "vocabulary")
+            val second = testVaultRecord("a", kind = "progress")
+            val bundle = VaultBundle(
+                manifest = VaultManifest(records = listOf(RecordRef.of(first), RecordRef.of(second))),
+                records = listOf(first, second),
+            )
+
+            assertFailsWith<VaultFormatException> {
+                JsonVaultStore(InMemoryVaultFileSystem())
+                    .importBundle(VaultCodec.encodeBundle(bundle).encodeToByteArray())
+            }
+        }
     })

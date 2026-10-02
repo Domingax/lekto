@@ -38,17 +38,24 @@ class JsonVaultStore(private val files: VaultFileSystem) : VaultStore {
 
     override fun importBundle(bytes: ByteArray) {
         val bundle = VaultCodec.decodeBundle(bytes.decodeToString())
-        if (bundle.formatVersion != VaultFormat.VERSION) {
-            throw VaultFormatException(
-                "unsupported vault format ${bundle.formatVersion}; this build reads ${VaultFormat.VERSION}",
-            )
-        }
-        if (bundle.manifest.records.toSet() != bundle.records.map(RecordRef::of).toSet()) {
-            throw VaultFormatException("the export's manifest and records disagree")
-        }
+        bundleProblem(bundle)?.let { throw VaultFormatException(it) }
         bundle.records.forEach(index::writeRecord)
         val ids = bundle.records.map { it.id }.toSet()
         index.records().filter { it.id !in ids }.forEach { files.delete(index.pathOf(it.kind, it.id)) }
         index.replaceManifest(bundle.manifest.records)
+    }
+
+    /** Why [bundle] cannot be imported, or `null` when it is sound. */
+    private fun bundleProblem(bundle: VaultBundle): String? = when {
+        bundle.formatVersion != VaultFormat.VERSION ->
+            "unsupported vault format ${bundle.formatVersion}; this build reads ${VaultFormat.VERSION}"
+
+        bundle.manifest.records.toSet() != bundle.records.map(RecordRef::of).toSet() ->
+            "the export's manifest and records disagree"
+
+        bundle.records.map { it.id }.toSet().size != bundle.records.size ->
+            "the export carries more than one record with the same id"
+
+        else -> null
     }
 }
