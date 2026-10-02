@@ -1,7 +1,7 @@
 package app.lekto.testkit
 
 import app.lekto.core.text.TextSegmenter
-import app.lekto.core.text.WordToken
+import app.lekto.core.text.WordSpan
 
 /**
  * A deterministic [TextSegmenter] for tests: a word is a run of letters, digits
@@ -10,8 +10,8 @@ import app.lekto.core.text.WordToken
  */
 class WhitespaceTextSegmenter : TextSegmenter {
 
-    override fun words(text: String, language: String?): List<WordToken> = WORD.findAll(text).map { match ->
-        WordToken(surface = match.value, start = match.range.first, end = match.range.last + 1)
+    override fun words(text: String, language: String?): List<WordSpan> = WORD.findAll(text).map { match ->
+        WordSpan(surface = match.value, start = match.range.first, end = match.range.last + 1)
     }.toList()
 
     private companion object {

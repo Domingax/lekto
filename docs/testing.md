@@ -180,6 +180,17 @@ row and each demanded level to a red → green before the commit.
 contract against the fake, and `core/jvmTest` runs the same contract against the
 real directory-backed store — so the two cannot drift (ticket #12, ADR-0014).
 
+Word identity and tokenisation (ticket #13, ADR-0006) are a domain invariant, so
+their properties live in `core/commonTest`: the same surface form in the same
+language always keys the same, the language separates them, a known lemma
+collapses inflections to one key, a missing lemma falls back to the normalised
+surface form, and concatenating a text's tokens with their separators
+reconstructs it. Normalisation's idempotence and Unicode canonical equivalence
+need a platform normaliser, so those two run in `core/jvmTest` beside the JVM
+`normaliseSurface` actual. Both suites generate arbitrary code points, so
+combining marks and other awkward Unicode are exercised; `testkit` supplies
+`InMemoryLemmaLookup` and the deterministic `WhitespaceTextSegmenter`.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

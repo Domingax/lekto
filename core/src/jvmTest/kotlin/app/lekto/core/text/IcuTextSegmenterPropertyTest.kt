@@ -7,7 +7,7 @@ import io.kotest.property.forAll
 
 /**
  * The tokenisation invariant as a property (ticket #10; docs/testing.md, "Test
- * levels"): whatever the text, a [WordToken] is a non-blank, in-bounds slice
+ * levels"): whatever the text, a [WordSpan] is a non-blank, in-bounds slice
  * that matches the text it offsets, and the words stay in reading order and do
  * not overlap. Example tests pin the interesting cases; this pins the contract
  * the reader relies on — a tap's offsets must always address the right characters.

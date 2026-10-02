@@ -24,7 +24,15 @@ _Avoid_: Document, text
 
 **Word token**:
 A single tappable unit of text in the reader — the unit of lookup and colouring.
+Each carries its **Word key**, the identity mastery and vocabulary hang off.
 _Avoid_: Word, term
+
+**Word key**:
+A word's identity: `(language, lemma)` when the dictionary pack knows the lemma,
+and `(language, normalised surface form)` otherwise. Two spellings that share a
+key share one mastery level and one vocabulary entry.
+_Avoid_: Word id, hash
+
 
 **Mastery level**:
 How well the user knows a word, on a five-point scale: 0 unknown, 1 familiar,
@@ -34,7 +42,8 @@ _Avoid_: Confidence level, difficulty, proficiency
 
 **Lemma**:
 The dictionary form of a word — "manger" for "mangeais". Used as the canonical key for
-mastery when known; otherwise the normalised surface form is used.
+mastery when known; otherwise the normalised surface form is used. The dictionary
+pack stores lemmas already canonicalised, so the domain uses one as-is.
 _Avoid_: Root, stem, base form
 
 **Vocabulary entry**:

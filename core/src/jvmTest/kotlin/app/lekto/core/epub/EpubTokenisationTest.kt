@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 
 /**
  * The spike end to end (ticket #10): the parsed blocks are the input the
- * segmenter turns into [app.lekto.core.text.WordToken]s, so a paragraph that
+ * segmenter turns into [app.lekto.core.text.WordSpan]s, so a paragraph that
  * came out of the EPUB container is checked all the way to its words.
  */
 class EpubTokenisationTest :

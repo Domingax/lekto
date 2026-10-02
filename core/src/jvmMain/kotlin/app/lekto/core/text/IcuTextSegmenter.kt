@@ -14,25 +14,25 @@ import java.util.Locale
  * so the two platforms segment alike; only the implementation differs.
  *
  * A word break iterator also returns the whitespace and punctuation between
- * words, tagged [BreakIterator.WORD_NONE], which are dropped: a [WordToken] is a
+ * words, tagged [BreakIterator.WORD_NONE], which are dropped: a [WordSpan] is a
  * word the reader can colour and tap.
  */
 class IcuTextSegmenter : TextSegmenter {
 
-    override fun words(text: String, language: String?): List<WordToken> {
+    override fun words(text: String, language: String?): List<WordSpan> {
         if (text.isEmpty()) return emptyList()
         val iterator = BreakIterator.getWordInstance(locale(language))
         iterator.setText(text)
         return wordsOf(iterator, text)
     }
 
-    private fun wordsOf(iterator: BreakIterator, text: String): List<WordToken> {
-        val words = mutableListOf<WordToken>()
+    private fun wordsOf(iterator: BreakIterator, text: String): List<WordSpan> {
+        val words = mutableListOf<WordSpan>()
         var start = iterator.first()
         var end = iterator.next()
         while (end != BreakIterator.DONE) {
             if (iterator.ruleStatus != BreakIterator.WORD_NONE) {
-                words += WordToken(surface = text.substring(start, end), start = start, end = end)
+                words += WordSpan(surface = text.substring(start, end), start = start, end = end)
             }
             start = end
             end = iterator.next()
