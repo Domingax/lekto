@@ -191,6 +191,18 @@ need a platform normaliser, so those two run in `core/jvmTest` beside the JVM
 combining marks and other awkward Unicode are exercised; `testkit` supplies
 `InMemoryLemmaLookup` and the deterministic `WhitespaceTextSegmenter`.
 
+Merging is the third domain invariant (ticket #14, ADR-0004), so its properties
+also live in `core/commonTest`. `RecordMerge` is the pure comparison and fold: a
+version with a later `updatedAt` wins, a tie breaks on the greater `deviceId`,
+and the fold of one record's versions is order-independent. `VaultMerge` lifts
+that to the whole vault, naming what each side must write or delete. The
+properties are idempotence, commutativity for distinct device ids, order
+independence, tombstone dominance and convergence after the outcome is applied;
+a tombstone with a later timestamp out-votes a live record, and a live record
+with a later timestamp out-votes an older tombstone. `testkit` supplies
+`testTombstone`, and `testVaultRecord` gained a `device` parameter so a case can
+tell two writers apart.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

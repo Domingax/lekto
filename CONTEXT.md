@@ -17,6 +17,12 @@ Anything Lekto can regenerate or re-download rather than something the user auth
 parsed book text, the dictionary pack. Lives device-local and is never synced.
 _Avoid_: Cache, generated data
 
+**Tombstone**:
+The mark a deleted item leaves behind so the deletion itself can sync: the item's
+identity and update metadata without its content. A tombstone with a later update
+timestamp beats a live copy, so a deletion does not resurrect on the next sync.
+_Avoid_: Delete marker, soft delete, tomb
+
 **Book**:
 An imported piece of reading content — EPUB or TXT as first-class, PDF as best-effort
 text extraction. Comprises an original file plus the text Lekto renders.
