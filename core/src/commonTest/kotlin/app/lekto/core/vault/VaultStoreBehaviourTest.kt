@@ -6,6 +6,8 @@ import app.lekto.testkit.SimulatedWriteFailure
 import app.lekto.testkit.testVaultRecord
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.test.assertFailsWith
 
 /**
@@ -68,7 +70,9 @@ class VaultStoreBehaviourTest :
         test("derived assets are absent from the vault and from its export") {
             val vaultFiles = InMemoryVaultFileSystem()
             val vault = JsonVaultStore(vaultFiles)
-            vault.put(testVaultRecord("a", text = "user-authored"))
+            vault.put(
+                testVaultRecord("a").copy(body = buildJsonObject { put("text", "user-authored") }),
+            )
 
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             derived.put("parsed/book.txt", "parsed book text".encodeToByteArray())

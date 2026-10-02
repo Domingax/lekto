@@ -10,20 +10,21 @@ import kotlin.time.Instant
  * A [VaultRecord] for tests: deterministic in every field, so a record built in
  * one suite equals one built in another, and a failure always reproduces.
  *
- * The device id and schema version are fixed because no behaviour under test
- * varies them; [text] is the record's own body, which a test uses to tell two
- * versions of the same record apart.
+ * The schema version is fixed because no behaviour under test varies it; the
+ * kind, timestamp and device id are the fields whose variation a store or a
+ * merge (ticket #14) needs, so each is a parameter. The body names the id, which
+ * is enough for a test to tell two records apart.
  */
 fun testVaultRecord(
     id: String,
     kind: String = "vocabulary",
     updatedAtMillis: Long = 0,
-    text: String = id,
+    device: String = "device-a",
 ): VaultRecord = VaultRecord(
     id = id,
     kind = kind,
     schemaVersion = 1,
     updatedAt = Instant.fromEpochMilliseconds(updatedAtMillis),
-    deviceId = DeviceId("device-a"),
-    body = buildJsonObject { put("text", text) },
+    deviceId = DeviceId(device),
+    body = buildJsonObject { put("text", id) },
 )
