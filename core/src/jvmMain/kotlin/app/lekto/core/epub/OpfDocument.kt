@@ -5,8 +5,6 @@ import org.w3c.dom.Element
 import org.xml.sax.InputSource
 import java.io.ByteArrayInputStream
 import java.io.StringReader
-import javax.xml.XMLConstants
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * The OPF package document: the book's metadata and the reading order.
@@ -82,16 +80,19 @@ internal class OpfDocument(val title: String?, val language: String?, val spine:
         /**
          * A hardened, namespace-aware XML parser. External entity and DTD loading
          * is off and a blank resolver is installed, so a document cannot make the
-         * build fetch a URL — the classic XXE trap in a parser that reads
+         * parser fetch a URL — the classic XXE trap in a parser that reads
          * untrusted files.
+         *
+         * The hardening features are **platform-optional**: `FEATURE_SECURE_PROCESSING`
+         * is the JAXP-standard one, but `http://apache.org/xml/features/…` is a
+         * Xerces name that Android's parser does not know and throws on. Each
+         * feature is enabled only when the parser accepts it, so the same document
+         * parses on desktop and on Android. The portable defences — no entity
+         * expansion and a blank entity resolver — are always applied and do not
+         * depend on any feature name.
          */
         private fun parseXml(xml: ByteArray): Document {
-            val factory = DocumentBuilderFactory.newInstance().apply {
-                isNamespaceAware = true
-                isExpandEntityReferences = false
-                setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-                setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            }
+            val factory = XmlHardening.hardenedFactory()
             return factory.newDocumentBuilder()
                 .apply { setEntityResolver { _, _ -> InputSource(StringReader("")) } }
                 .parse(ByteArrayInputStream(xml))

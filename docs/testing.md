@@ -58,6 +58,13 @@ goldens in `resources/golden/` pin the EPUB parser's output; a change that alter
 the text fails until the golden is deliberately updated. See
 `docs/research/epub-to-tokens-spike.md`.
 
+`XmlHardeningTest` (`core/jvmTest`) guards the one place the parser was **not
+portable**: `DocumentBuilderFactory` feature names outside the JAXP standard are
+Xerces-specific, and Android's parser throws on them, so a real EPUB imported on
+desktop and failed on Android (ticket #15). The test sets a feature the parser
+does not know and asserts the parse still succeeds — the same rejection Android
+raised — so the hardening can never again become a reason to refuse a book.
+
 The library that imports a book and opens a reading session (ticket #15) is a
 domain service in `core/book`: `VaultBookLibrary` composes a `VaultStore`, a
 `DerivedAssetStore` and the parser map, so its fast-loop tests run against the
