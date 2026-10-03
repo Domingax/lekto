@@ -1,5 +1,6 @@
 package app.lekto.core.epub
 
+import app.lekto.testkit.EpubFixtures
 import app.lekto.testkit.TestResources
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,12 +26,12 @@ import javax.xml.parsers.DocumentBuilderFactory
  * factory would otherwise hide the difference — hence the explicit instantiation.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
 class EpubParserAndroidHostTest {
 
     @Test
     fun `a real EPUB imports through the Android XML parser`() {
-        val book = EpubParser(androidOpfReader()).parse(TestResources.bytes("/epub/pg1952.epub"))
+        val book = EpubParser(OpfXmlReader(androidFactory())).parse(TestResources.bytes("/epub/pg1952.epub"))
 
         assertEquals("The Yellow Wallpaper", book.title)
         assertEquals("en", book.language)
@@ -38,42 +39,23 @@ class EpubParserAndroidHostTest {
     }
 
     /**
-     * The regression guard: if `XmlHardening` stops tolerating a feature Android
-     * does not know, constructing the reader for the parsing test above — or this
-     * call — throws `ParserConfigurationException`, and the host suite fails.
+     * The focused regression guard: if `XmlHardening` stops tolerating a feature
+     * Android does not know, `androidFactory()` throws `ParserConfigurationException`
+     * here and in the parsing test above, and the host suite fails.
      */
     @Test
     fun `the hardened factory tolerates a parser that rejects Xerces-only features`() {
-        val factory = XmlHardening.hardenedFactory(androidDocumentBuilderFactory())
-
-        val reader = OpfXmlReader(factory)
-        val title = OpfDocument.parse(OPF_DOCUMENT, reader).title
+        val title = OpfDocument.parse(EpubFixtures.opfDocument(), OpfXmlReader(androidFactory())).title
 
         assertEquals("Resilient", title)
     }
 }
 
-/** Android's own `DocumentBuilderFactory`, the one a device uses. */
-private fun androidDocumentBuilderFactory(): DocumentBuilderFactory {
+/** Android's own parser, hardened the way production hardens the host JVM's. */
+private fun androidFactory(): DocumentBuilderFactory {
     val type = Class.forName(ANDROID_FACTORY)
-    return type.getDeclaredConstructor().newInstance() as DocumentBuilderFactory
-}
-
-/** The production reader wired to Android's parser. */
-private fun androidOpfReader(): OpfXmlReader {
-    val factory = XmlHardening.hardenedFactory(androidDocumentBuilderFactory())
-    return OpfXmlReader(factory)
+    val parser = type.getDeclaredConstructor().newInstance() as DocumentBuilderFactory
+    return XmlHardening.hardenedFactory(parser)
 }
 
 private const val ANDROID_FACTORY = "org.apache.harmony.xml.parsers.DocumentBuilderFactoryImpl"
-
-private val OPF_DOCUMENT = """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
-      <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-        <dc:identifier id="bookid">urn:isbn:9780000000099</dc:identifier>
-        <dc:title>Resilient</dc:title>
-        <dc:language>en</dc:language>
-      </metadata>
-    </package>
-""".trimIndent().byteInputStream().readBytes()

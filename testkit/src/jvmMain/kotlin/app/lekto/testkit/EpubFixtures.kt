@@ -53,6 +53,14 @@ object EpubFixtures {
     )
 
     /**
+     * A bare OPF package with a title and a language and no manifest or spine,
+     * so an XML-portability test parses the package document itself rather than
+     * the whole book. Shared by the JVM and Android host suites, which both
+     * assert `XmlHardening` tolerates the parser they run on.
+     */
+    fun opfDocument(): ByteArray = OPF_DOCUMENT.toByteArray(UTF_8)
+
+    /**
      * Assembles a ZIP with a stored `mimetype` first — the one structural rule
      * every EPUB must satisfy — and the remaining entries deflated.
      */
@@ -118,6 +126,17 @@ object EpubFixtures {
             <itemref idref="ch1"/>
             <itemref idref="ch2"/>
           </spine>
+        </package>
+    """.trimIndent()
+
+    private val OPF_DOCUMENT = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000099</dc:identifier>
+            <dc:title>Resilient</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
         </package>
     """.trimIndent()
 

@@ -49,7 +49,10 @@ the CI fast lane excludes the WebDAV test so the two lanes do not overlap.
 The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
 `testkit` — a deterministic letter/digit splitter — so they do not depend on the
 machine's ICU dictionaries. Production segmentation stays behind the
-`TextSegmenter` seam (`IcuTextSegmenter` on the JVM, `android.icu` on Android).
+`TextSegmenter` seam (`IcuTextSegmenter`, the ICU4J implementation). ADR-0007
+plans an `android.icu` actual for Android; until it lands the Android target
+runs the same ICU4J code, so the two clients agree but the APK still carries
+ICU4J (ticket #16).
 
 The parser seam has two implementations now: the JVM-backed `EpubParser` (ticket
 #10), whose tests run in `core/src/jvmTest` with their inputs committed fixtures

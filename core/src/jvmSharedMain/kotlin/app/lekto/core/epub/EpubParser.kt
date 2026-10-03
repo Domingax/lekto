@@ -20,7 +20,7 @@ class EpubParseException(message: String) : IllegalArgumentException(message)
  * through a platform parser — Android's, under Robolectric — rather than the
  * host JVM's Xerces. Production takes the tolerant default (ticket #49).
  */
-class EpubParser internal constructor(private val opfXml: OpfXmlReader = OpfXmlReader()) : BookTextParser {
+class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTextParser {
 
     constructor() : this(OpfXmlReader())
 
