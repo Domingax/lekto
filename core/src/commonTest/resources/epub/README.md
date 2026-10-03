@@ -12,4 +12,4 @@ carries the quirks the golden guards: a Project Gutenberg boilerplate chunk in
 the spine, a DTD reference, a cover item, nested `div`s and a `<br/>`.
 
 **Do not edit the file.** It is an input, not a fixture to reformat: changing it
-invalidates `core/src/jvmTest/resources/golden/pg1952.txt`.
+invalidates `core/src/commonTest/resources/golden/pg1952.txt`.

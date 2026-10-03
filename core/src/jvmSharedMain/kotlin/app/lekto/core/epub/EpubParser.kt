@@ -15,13 +15,19 @@ class EpubParseException(message: String) : IllegalArgumentException(message)
  * the package document, [XhtmlBlocks] the content documents. See
  * `docs/research/epub-to-tokens-spike.md` for what this covers and what it does
  * not yet.
+ *
+ * The XML reader is injectable so a host test can drive the whole pipeline
+ * through a platform parser — Android's, under Robolectric — rather than the
+ * host JVM's Xerces. Production takes the tolerant default (ticket #49).
  */
-class EpubParser : BookTextParser {
+class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTextParser {
+
+    constructor() : this(OpfXmlReader())
 
     override fun parse(bytes: ByteArray): StructuredText {
         val archive = EpubArchive.of(bytes)
-        val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER))
-        val packageDocument = OpfDocument.parse(archive.read(opfPath))
+        val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER), opfXml)
+        val packageDocument = OpfDocument.parse(archive.read(opfPath), opfXml)
         val baseDirectory = opfPath.substringBeforeLast('/', missingDelimiterValue = "")
         val blocks = packageDocument.spine.flatMap { item ->
             XhtmlBlocks.of(archive.read(EpubArchive.resolve(baseDirectory, item.href)))

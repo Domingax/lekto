@@ -10,7 +10,8 @@ Docker. Non-determinism enters only through injected seams.
 ./gradlew check
 ```
 
-It builds every module, runs the domain suite (`core`), the UI-semantics
+It builds every module, runs the domain suite (`core`), the Android host suite
+(`core`'s `androidHostTest`, when an Android SDK is present), the UI-semantics
 suite (`app`) and the architecture suite (`architecture`), and runs the
 formatting and static-analysis gates
 (`docs/build.md#quality-gates`). The narrow version for the inner loop is:
@@ -30,6 +31,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | Suite                | Source set                     | Task                            | Needs        |
 | -------------------- | ------------------------------ | ------------------------------- | ------------ |
 | Domain + properties  | `core/commonTest`              | `:core:jvmTest`                 | a JVM        |
+| Android host tests   | `core/androidHostTest`         | `:core:testAndroidHostTest`     | a JVM + an Android SDK (Robolectric downloads its runtime once) |
 | UI semantics         | `app/desktopTest`              | `:app:desktopTest`              | a JVM        |
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
 | Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
@@ -47,16 +49,26 @@ the CI fast lane excludes the WebDAV test so the two lanes do not overlap.
 The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
 `testkit` — a deterministic letter/digit splitter — so they do not depend on the
 machine's ICU dictionaries. Production segmentation stays behind the
-`TextSegmenter` seam (`IcuTextSegmenter` on the JVM, `android.icu` on Android).
+`TextSegmenter` seam (`IcuTextSegmenter`, the ICU4J implementation). ADR-0007
+plans an `android.icu` actual for Android; until it lands the Android target
+runs the same ICU4J code, so the two clients agree but the APK still carries
+ICU4J (ticket #16).
 
 The parser seam has two implementations now: the JVM-backed `EpubParser` (ticket
 #10), whose tests run in `core/src/jvmTest` with their inputs committed fixtures
-under `core/src/jvmTest/resources` — a generated awkward EPUB and a real Project
-Gutenberg book — read through `TestResources` in `testkit`, and the pure-Kotlin
-`TxtParser` (ticket #15), whose tests run in `core/commonTest`. The extraction
-goldens in `resources/golden/` pin the EPUB parser's output; a change that alters
-the text fails until the golden is deliberately updated. See
+under `core/src/commonTest/resources` — a generated awkward EPUB and a real
+Project Gutenberg book — read through `TestResources` in `testkit`, and the
+pure-Kotlin `TxtParser` (ticket #15), whose tests run in `core/commonTest`. The
+extraction goldens in `resources/golden/` pin the EPUB parser's output; a change
+that alters the text fails until the golden is deliberately updated. See
 `docs/research/epub-to-tokens-spike.md`.
+
+The platform-backed implementation lives in `core/src/jvmSharedMain`, a source
+set shared by the JVM target and the Android target, so `EpubParser`,
+`IcuTextSegmenter` and the directory-backed vault run on both. `core`'s Android
+target is applied only when an Android SDK is discoverable
+(`docs/build.md#prerequisites`); the `jvm` target alone is enough for the JVM
+suite.
 
 `XmlHardeningTest` (`core/jvmTest`) guards the one place the parser was **not
 portable**: `DocumentBuilderFactory` feature names outside the JAXP standard are
@@ -65,9 +77,9 @@ desktop and failed on Android (ticket #15). The test runs the **whole OPF parse*
 through a factory that rejects every non-JAXP feature — the exact Android
 condition — and asserts it succeeds, so a future change that sets an optional
 feature without tolerating rejection fails here even though the desktop JDK would
-accept it. The structural fix, running platform code on a real Android runtime,
-is ticket #49 (Robolectric `androidHostTest`); this test is the fast guard until
-that lane exists.
+accept it. The structural guard is the Robolectric lane below (ticket #49), which
+runs the pipeline through Android's own parser; `XmlHardeningTest` stays as the
+fast, SDK-free twin.
 
 The library that imports a book and opens a reading session (ticket #15) is a
 domain service in `core/book`: `VaultBookLibrary` composes a `VaultStore`, a
@@ -114,6 +126,33 @@ everywhere and simply proves more where Docker is present.
 The nightly instrumented lane is wired but still has no instrumented tests to run;
 they arrive with the platform work (tickets #16, #21, #24). The lane exists and
 stays off the critical path so those tickets only have to add tests, not CI.
+
+## Android host lane
+
+`core/src/androidHostTest` runs `core`'s platform code on a **simulated Android
+runtime** through Robolectric, on the host JVM and with no emulator (ticket #49).
+The source set exists only because the KMP Android library plugin is told to
+create it (`withHostTest { … }` in `core/build.gradle.kts`); otherwise the module
+compiles and runs **zero** host tests. `:core:testAndroidHostTest` is part of
+`check`, so the lane runs in the `fast` CI job (it needs an Android SDK, which the
+GitHub runners carry; without one `core` builds as a JVM module and the lane is
+skipped).
+
+The suite drives the whole `EpubParser` pipeline through
+`org.apache.harmony.xml.parsers.DocumentBuilderFactoryImpl` — Android's own XML
+parser, taken from the `android-all` runtime Robolectric loads — and imports a
+real book (`pg1952.epub`). Robolectric never shadows `javax.*`, so the host JDK's
+Xerces would hide the difference; the test instantiates Android's factory
+explicitly. Replacing the tolerant `XmlHardening.setFeatureIfSupported` with a
+plain `setFeature` fails this suite, which is the regression guard for ticket
+#15's Android import failure.
+
+Robolectric (MIT) and JUnit 4 (EPL-1.0) are test-scope only and never linked into
+the shipped application (`config/dependency-licences.txt`). The first run
+downloads Robolectric's `android-all` runtime from Maven Central, so the initial
+host run is slower than later ones; the task itself is a few seconds. The common
+suite (`commonTest`) rides along on the same compilation, so its JUnit-4 tests run
+here too; its Kotest/Kotlin-specs are covered by the JVM lane.
 
 ## Dependency licences
 

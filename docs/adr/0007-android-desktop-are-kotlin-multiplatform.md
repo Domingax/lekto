@@ -104,3 +104,19 @@ the plan:
   are recorded as productionising work in the spike report.
 
 The substrate and the own-EPUB-pipeline decisions do not change.
+
+## Update — Android host tests (issue #49)
+
+`core` now declares an Android target, so the platform-backed code — the EPUB
+parser, the ICU4J segmenter, the directory-backed vault — is shared by the JVM
+and Android targets in a `jvmSharedMain` source set instead of being a JVM-only
+artifact Android happened to consume. The target exists so a **Robolectric host
+lane** can run that code on a simulated Android runtime (`docs/testing.md#android-host-lane`);
+it is applied only when an Android SDK is available, so a JVM-only checkout still
+builds and tests without one.
+
+The target does **not** yet switch segmentation to `android.icu`: the shared
+segmenter is still ICU4J, so ICU4J remains on the Android classpath. The
+`android.icu` actual this ADR requires is still open (ticket #16); when it lands
+it replaces ICU4J for Android and drops it from the APK, as the spike update
+above anticipated.

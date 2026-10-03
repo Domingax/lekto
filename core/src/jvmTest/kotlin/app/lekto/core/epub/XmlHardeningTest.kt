@@ -1,5 +1,6 @@
 package app.lekto.core.epub
 
+import app.lekto.testkit.EpubFixtures
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import javax.xml.parsers.DocumentBuilder
@@ -41,7 +42,7 @@ class XmlHardeningTest :
             // and still hand back a parser that reads the document.
             val reader = OpfXmlReader(XmlHardening.hardenedFactory(AndroidLikeFactory()))
 
-            OpfDocument.parse(OPF_DOCUMENT, reader).title shouldBe "Resilient"
+            OpfDocument.parse(EpubFixtures.opfDocument(), reader).title shouldBe "Resilient"
             OpfDocument.containerRootfile(CONTAINER, reader) shouldBe "OEBPS/content.opf"
         }
 
@@ -89,17 +90,6 @@ private val CONTAINER = """
         <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
       </rootfiles>
     </container>
-""".trimIndent().byteInputStream().readBytes()
-
-private val OPF_DOCUMENT = """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
-      <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-        <dc:identifier id="bookid">urn:isbn:9780000000099</dc:identifier>
-        <dc:title>Resilient</dc:title>
-        <dc:language>en</dc:language>
-      </metadata>
-    </package>
 """.trimIndent().byteInputStream().readBytes()
 
 /**
