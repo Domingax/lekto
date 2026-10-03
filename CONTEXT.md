@@ -28,6 +28,29 @@ An imported piece of reading content — EPUB or TXT as first-class, PDF as best
 text extraction. Comprises an original file plus the text Lekto renders.
 _Avoid_: Document, text
 
+**Book original**:
+The file the user imported — an EPUB or a TXT — stored in the vault as the book's
+attachment so export carries it. Parsed text is a **Derived asset** re-derivable from
+it; the original is not reproducible and is never left device-local.
+_Avoid_: Source file, raw file
+
+**Import**:
+Getting a book original into the vault: read the file, parse it to text, store the
+book and its original, and list it in the library. An occasional action that reports
+progress and surfaces failure rather than blocking.
+_Avoid_: Scan, upload, add
+
+**Library**:
+The list of books in the vault, ordered by title; the app's starting screen and the
+way back from a reading session. Distinct from the **Vault**, which is the storage it
+reads: the library is the view, not the store.
+_Avoid_: Shelf, collection
+
+**Reading session**:
+The act of opening a book to read it: a book plus the text Lekto renders for it, from
+which the reader draws its pages.
+_Avoid_: Opening, view
+
 **Word token**:
 A single tappable unit of text in the reader — the unit of lookup and colouring.
 Each carries its **Word key**, the identity mastery and vocabulary hang off.

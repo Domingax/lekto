@@ -52,7 +52,11 @@ both are AGPL-compatible and recorded in `config/dependency-licences.txt`
 kotlinx.serialization (Apache-2.0) is the vault's dependency (ticket #12): records
 are one JSON file each (ADR-0003), so the domain encodes and decodes them with
 `kotlinx-serialization-json`. It is AGPL-compatible; ADR-0014 records why the
-format is a versioned JSON bundle and where the platform file seam sits.
+format is a versioned JSON bundle and where the platform file seam sits. Version 2
+of that format adds binary **attachments** — a book's original file — so the
+import work (ticket #15) needed no new dependency: ADR-0016 records the decision,
+and the parsed-text model serialises with the same library as a derived asset
+(ADR-0005).
 
 ## The one command
 
@@ -250,7 +254,7 @@ It never sits on the application CI path.
 
 | Module                  | What it is                                                          |
 | ----------------------- | ------------------------------------------------------------------- |
-| `core`                  | The domain: vault, records, merge, tokenisation, word identity, sync engine, parsers. |
+| `core`                  | The domain: vault, records, merge, tokenisation, word identity, import and library, sync engine, parsers. |
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
 | `integrations/webdav`   | The first sync driver, isolated from the domain.                    |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |

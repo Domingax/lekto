@@ -35,4 +35,13 @@ enum class MasteryLevel(val level: Int, val highlighted: Boolean) {
  */
 fun interface MasteryLookup {
     fun levelOf(word: String, language: String?): MasteryLevel
+
+    companion object {
+        /**
+         * A lookup that knows every word, so nothing is highlighted. It stands in
+         * for the user's vocabulary until ticket #22 wires mastery to the vault;
+         * unlike a demo map it makes no claim about which words are known.
+         */
+        val AllKnown: MasteryLookup = MasteryLookup { _, _ -> MasteryLevel.KNOWN }
+    }
 }

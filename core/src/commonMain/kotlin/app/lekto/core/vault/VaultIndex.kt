@@ -47,6 +47,7 @@ internal class VaultIndex(private val files: VaultFileSystem) {
 
     private fun recordPaths(): List<String> = files.listFiles()
         .filter { it.endsWith(".${VaultFormat.RECORD_EXTENSION}") && it != MANIFEST_FILE }
+        .filterNot { it.startsWith("${VaultFormat.ATTACHMENT_DIRECTORY}/") }
 
     private fun read(path: String): VaultRecord? = files.read(path)?.let {
         VaultCodec.decodeRecord(it.decodeToString())

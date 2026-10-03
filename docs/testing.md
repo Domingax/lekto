@@ -49,13 +49,25 @@ The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
 machine's ICU dictionaries. Production segmentation stays behind the
 `TextSegmenter` seam (`IcuTextSegmenter` on the JVM, `android.icu` on Android).
 
-The EPUB parser and ICU segmenter (ticket #10) are JVM-backed, so their tests
-run in `core/src/jvmTest` and their inputs are committed fixtures under
-`core/src/jvmTest/resources` — a generated awkward EPUB and a real Project
-Gutenberg book — read through `TestResources` in `testkit`. The extraction
-goldens in `resources/golden/` pin the parser's output; a change that alters the
-text fails until the golden is deliberately updated. See
+The parser seam has two implementations now: the JVM-backed `EpubParser` (ticket
+#10), whose tests run in `core/src/jvmTest` with their inputs committed fixtures
+under `core/src/jvmTest/resources` — a generated awkward EPUB and a real Project
+Gutenberg book — read through `TestResources` in `testkit`, and the pure-Kotlin
+`TxtParser` (ticket #15), whose tests run in `core/commonTest`. The extraction
+goldens in `resources/golden/` pin the EPUB parser's output; a change that alters
+the text fails until the golden is deliberately updated. See
 `docs/research/epub-to-tokens-spike.md`.
+
+The library that imports a book and opens a reading session (ticket #15) is a
+domain service in `core/book`: `VaultBookLibrary` composes a `VaultStore`, a
+`DerivedAssetStore` and the parser map, so its fast-loop tests run against the
+in-memory fakes in `core/commonTest`, and a real-EPUB run over a temporary
+directory lives in `core/jvmTest`. The vault's binary **attachments** (ADR-0016)
+are proven in the shared `VaultStoreContract`, so the in-memory and on-disk
+stores cannot drift, and a property in `VaultCodecPropertyTest` round-trips
+arbitrary bytes through export and import. The library UI is a UI-semantics test
+in `app/desktopTest`, and the `LibraryController`'s async import is driven with
+`kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
 
 ## Golden images
 
@@ -178,7 +190,10 @@ row and each demanded level to a red → green before the commit.
 `VaultStore` is the first seam to use the pattern: `testkit` holds
 `VaultStoreContract` and the `InMemoryVaultStore` fake, `core/commonTest` runs the
 contract against the fake, and `core/jvmTest` runs the same contract against the
-real directory-backed store — so the two cannot drift (ticket #12, ADR-0014).
+real directory-backed store — so the two cannot drift (ticket #12, ADR-0014). The
+contract covers record storage and, since ticket #15, the binary **attachments**
+ADR-0016 adds, so a store cannot quietly lose a book's original on export or on
+removal.
 
 Word identity and tokenisation (ticket #13, ADR-0006) are a domain invariant, so
 their properties live in `core/commonTest`: the same surface form in the same

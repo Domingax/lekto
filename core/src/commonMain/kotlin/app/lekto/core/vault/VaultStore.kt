@@ -5,9 +5,12 @@ package app.lekto.core.vault
  * (CONTEXT.md, "Vault"; ADR-0010).
  *
  * Records live one JSON file each — `vocabulary/<id>.json`,
- * `progress/<bookId>.json` — indexed by a `manifest.json` (ADR-0003). This is
- * the seam the rest of the domain talks to; the platform supplies a
- * [VaultFileSystem] and never leaks a folder assumption into `commonMain`.
+ * `progress/<bookId>.json` — indexed by a `manifest.json` (ADR-0003). A record
+ * may also carry one binary **attachment** under `_attachments/`, for content
+ * that is not JSON — a book's original file (ADR-0016) — stored and removed with
+ * the record. This is the seam the rest of the domain talks to; the platform
+ * supplies a [VaultFileSystem] and never leaks a folder assumption into
+ * `commonMain`.
  *
  * Derived assets do not pass through here at all: parsed text and the dictionary
  * pack belong in a [DerivedAssetStore], which is device-local and never
@@ -21,11 +24,24 @@ interface VaultStore {
     /** The record with [id], or `null` when the vault holds none. */
     fun get(id: String): VaultRecord?
 
-    /** Deletes the record with [id]; an absent id is not an error. */
+    /** Deletes the record with [id] and any attachment stored under it; an absent id is not an error. */
     fun remove(id: String)
 
     /** Every record in the vault. */
     fun all(): List<VaultRecord>
+
+    /**
+     * Stores [bytes] as [id]'s binary attachment — the record's content that is
+     * not JSON, such as a book's original file (ADR-0016). Overwrites any
+     * previous attachment for [id].
+     */
+    fun putAttachment(id: String, bytes: ByteArray)
+
+    /** [id]'s attachment bytes, or `null` when the vault holds none. */
+    fun getAttachment(id: String): ByteArray?
+
+    /** Removes [id]'s attachment; an absent one is not an error. */
+    fun removeAttachment(id: String)
 
     /** The vault index. */
     fun manifest(): VaultManifest

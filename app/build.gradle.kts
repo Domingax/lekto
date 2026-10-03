@@ -67,6 +67,10 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.compose.ui.test)
             implementation(compose.desktop.currentOs)
+            // kotlinx-coroutines-test supplies runTest and virtual time, so the
+            // library controller's asynchronous import is driven deterministically
+            // (docs/testing.md, "Deterministic seams").
+            implementation(libs.kotlinx.coroutines.test)
             // UI screenshot goldens (ticket #7); recorded and verified by the
             // Roborazzi desktop tasks. See docs/testing.md.
             implementation(libs.roborazzi.core)

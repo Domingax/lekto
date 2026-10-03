@@ -32,6 +32,10 @@ class VaultStoreContract(private val newStore: () -> VaultStore) {
         ContractCase("put replaces an existing record") { replacesRecord() },
         ContractCase("remove deletes the record and its manifest entry") { removesRecord() },
         ContractCase("the manifest indexes one entry per record") { indexesManifest() },
+        ContractCase("an unknown attachment reads as null") { readsUnknownAttachmentAsNull(newStore()) },
+        ContractCase("an attachment reads back as its exact bytes") { readsWrittenAttachment(newStore()) },
+        ContractCase("removing a record removes its attachment") { removesAttachmentWithRecord(newStore()) },
+        ContractCase("attachments survive export then import") { roundTripsAttachments(newStore(), newStore()) },
         ContractCase("export then import restores the vault exactly") { roundTripsBundle() },
         ContractCase("import replaces the vault's existing content") { importReplacesContent() },
         ContractCase("import rejects an unknown format version") { rejectsUnknownFormat() },
@@ -121,6 +125,43 @@ class VaultStoreContract(private val newStore: () -> VaultStore) {
 
         expectTrue(failure is VaultFormatException, "an unknown format must be rejected, but threw <$failure>")
     }
+}
+
+/** Sample bytes with a leading zero, a high bit and a negative byte, so encoding is exercised. */
+private val SAMPLE_ATTACHMENT = byteArrayOf(0, 1, 2, 3, -1, 127)
+
+/** An unknown id has no attachment. */
+private fun readsUnknownAttachmentAsNull(store: VaultStore) {
+    expectTrue(store.getAttachment("absent") == null, "an absent attachment must read as null")
+}
+
+/** An attachment is stored and read back byte for byte, including nulls and high bits. */
+private fun readsWrittenAttachment(store: VaultStore) {
+    store.put(testVaultRecord("a"))
+    store.putAttachment("a", SAMPLE_ATTACHMENT)
+
+    expectTrue(store.getAttachment("a")?.contentEquals(SAMPLE_ATTACHMENT) == true, "the attachment read back")
+}
+
+/** An attachment has no identity of its own: removing the record removes it too. */
+private fun removesAttachmentWithRecord(store: VaultStore) {
+    store.put(testVaultRecord("a"))
+    store.putAttachment("a", SAMPLE_ATTACHMENT)
+    store.remove("a")
+
+    expectTrue(store.getAttachment("a") == null, "a removed record's attachment must be gone")
+}
+
+/** An attachment is part of what an export carries and an import restores. */
+private fun roundTripsAttachments(source: VaultStore, restored: VaultStore) {
+    source.put(testVaultRecord("a"))
+    source.put(testVaultRecord("b", kind = "progress"))
+    source.putAttachment("a", SAMPLE_ATTACHMENT)
+
+    restored.importBundle(source.exportBundle())
+
+    expectTrue(restored.getAttachment("a")?.contentEquals(SAMPLE_ATTACHMENT) == true, "the restored attachment")
+    expectTrue(restored.getAttachment("b") == null, "an attachment with no record")
 }
 
 private const val MISMATCH = "contract violation"
