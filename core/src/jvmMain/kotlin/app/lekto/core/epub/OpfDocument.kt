@@ -2,11 +2,6 @@ package app.lekto.core.epub
 
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import org.xml.sax.InputSource
-import java.io.ByteArrayInputStream
-import java.io.StringReader
-import javax.xml.XMLConstants
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * The OPF package document: the book's metadata and the reading order.
@@ -15,6 +10,10 @@ import javax.xml.parsers.DocumentBuilderFactory
  * manifest (id to href) and spine (ordered idrefs). Spine items marked
  * `linear="no"` — covers, navigation — are dropped, and so is any item that is
  * not an XHTML content document.
+ *
+ * XML parsing goes through an [OpfXmlReader], which is injectable so a test can
+ * run the whole parse against a parser that rejects the Xerces-only feature
+ * names — the Android behaviour that broke a real import (issue #15).
  */
 internal class OpfDocument(val title: String?, val language: String?, val spine: List<ManifestItem>) {
 
@@ -28,8 +27,8 @@ internal class OpfDocument(val title: String?, val language: String?, val spine:
         private const val DC_NAMESPACE = "http://purl.org/dc/elements/1.1/"
 
         /** The OPF path named by the first rootfile in `container.xml`. */
-        fun containerRootfile(containerXml: ByteArray): String {
-            val rootfiles = parseXml(containerXml).getElementsByTagNameNS(CONTAINER_NAMESPACE, "rootfile")
+        fun containerRootfile(containerXml: ByteArray, reader: OpfXmlReader = OpfXmlReader()): String {
+            val rootfiles = reader.read(containerXml).getElementsByTagNameNS(CONTAINER_NAMESPACE, "rootfile")
             for (index in 0 until rootfiles.length) {
                 val path = (rootfiles.item(index) as Element).getAttribute("full-path")
                 if (path.isNotEmpty()) return path
@@ -38,8 +37,8 @@ internal class OpfDocument(val title: String?, val language: String?, val spine:
         }
 
         /** Parses the OPF: its title, language and linear reading order. */
-        fun parse(opfXml: ByteArray): OpfDocument {
-            val document = parseXml(opfXml)
+        fun parse(opfXml: ByteArray, reader: OpfXmlReader = OpfXmlReader()): OpfDocument {
+            val document = reader.read(opfXml)
             val manifest = manifest(document)
             return OpfDocument(
                 title = text(document, DC_NAMESPACE, "title"),
@@ -78,23 +77,5 @@ internal class OpfDocument(val title: String?, val language: String?, val spine:
                 ?.textContent
                 ?.trim()
                 ?.ifEmpty { null }
-
-        /**
-         * A hardened, namespace-aware XML parser. External entity and DTD loading
-         * is off and a blank resolver is installed, so a document cannot make the
-         * build fetch a URL — the classic XXE trap in a parser that reads
-         * untrusted files.
-         */
-        private fun parseXml(xml: ByteArray): Document {
-            val factory = DocumentBuilderFactory.newInstance().apply {
-                isNamespaceAware = true
-                isExpandEntityReferences = false
-                setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-                setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            }
-            return factory.newDocumentBuilder()
-                .apply { setEntityResolver { _, _ -> InputSource(StringReader("")) } }
-                .parse(ByteArrayInputStream(xml))
-        }
     }
 }

@@ -96,6 +96,7 @@ Ordered roughly by how soon it will bite.
 | **Encrypted/DRM'd EPUB, remote resources** | Will fail to read. | Acceptable for MVP; the failure should be a clear message rather than a stack trace. |
 | **TXT and PDF** | Not built. | They go behind the same `BookTextParser` seam (PDF best-effort, per ADR-0007 / the spec's out-of-scope note). |
 | **Android ICU actual** | Not written; `core` has no Android target yet. | ICU4J is the desktop/JVM implementation; Android should use the platform's `android.icu`. **Consequence today:** because `core` declares only a JVM target, the Android app consumes core's JVM artifact and ICU4J currently reaches `:app:debugRuntimeClasspath` — it would ship in the APK. Adding an Android target (or a platform segmenter in `app/androidMain` over the `TextSegmenter` seam) removes it. jsoup is fine on Android and can stay. |
+| **JAXP feature portability** | The OPF parser set Xerces-only hardening features, which Android's parser rejects — a real EPUB imported on desktop and failed on Android (ticket #15). | Fixed: `XmlHardening` sets every non-standard feature only when the parser accepts it, and `XmlHardeningTest` pins the tolerance. The lesson for the Android target: any `DocumentBuilderFactory`/`SAXParserFactory` feature outside JAXP must be treated as optional. |
 
 ## Estimated cost to productionise
 

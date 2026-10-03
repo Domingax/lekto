@@ -34,6 +34,12 @@ private val ChromeHeight = 48.dp
 private val PageBarHeight = 64.dp
 
 /**
+ * The reader's callbacks, bundled so the screen's signature stays small: a tap on
+ * a word and a way back to the library.
+ */
+data class ReaderActions(val onWordTap: (WordToken) -> Unit = {}, val onBack: (() -> Unit)? = null)
+
+/**
  * The reader screen: a chapter paginated to the viewport, every word coloured by
  * mastery and tappable, with page navigation in both directions.
  *
@@ -42,20 +48,24 @@ private val PageBarHeight = 64.dp
  * [ReaderRenderer] carry the parsed text and the word layer; the chrome is
  * deliberately fixed-height so the measured content extent matches the laid-out
  * one and pagination stays honest.
+ *
+ * [ReaderActions.onBack] is the single affordance to leave the session;
+ * [ReaderActions.onWordTap] is the reader's first-class interaction and is
+ * called with the tapped token.
  */
 @Composable
 fun ReaderScreen(
     chapter: ReaderChapter,
     renderer: ReaderRenderer,
     modifier: Modifier = Modifier,
-    onWordTap: (WordToken) -> Unit = {},
+    actions: ReaderActions = ReaderActions(),
 ) {
     // The token layer is built once (its keys are the chapter and renderer), so
     // the word tap callback is read through a State instead of being captured:
     // `latestTap.value` always calls the current `onWordTap` without rebuilding
     // the text. Written as an explicit State (not `by`) because SonarCloud's
     // S1481 false-positives on a delegated local read inside a lambda.
-    val latestTap = rememberUpdatedState(onWordTap)
+    val latestTap = rememberUpdatedState(actions.onWordTap)
     val tokens = remember(chapter, renderer.segmenter, renderer.mastery, renderer.styles) {
         buildReaderTokens(chapter, renderer) { word -> latestTap.value(word) }
     }
@@ -77,7 +87,7 @@ fun ReaderScreen(
         val index = pageIndex.coerceIn(0, pages.lastIndex)
 
         Column(Modifier.fillMaxSize()) {
-            ReaderTitle(chapter.title)
+            ReaderTitle(chapter.title, actions.onBack)
             ReaderPageView(tokens.text, pages[index], renderer.styles.body)
             ReaderPageBar(
                 page = index,
@@ -90,12 +100,18 @@ fun ReaderScreen(
 }
 
 @Composable
-private fun ReaderTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
+private fun ReaderTitle(title: String, onBack: (() -> Unit)?) {
+    Row(
         modifier = Modifier.fillMaxWidth().height(ChromeHeight).padding(horizontal = HorizontalMargin),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        onBack?.let { back -> TextButton(onClick = back) { Text("Library") } }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(start = if (onBack == null) 0.dp else 8.dp),
+        )
+    }
 }
 
 /** The visible page: one non-lazy [Box], selectable, holding the sliced text. */

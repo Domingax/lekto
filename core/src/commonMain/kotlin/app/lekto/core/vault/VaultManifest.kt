@@ -8,14 +8,25 @@ import kotlin.time.Instant
  * export and the tests cannot drift apart (ADR-0003).
  */
 object VaultFormat {
-    /** The vault format this build reads and writes. */
-    const val VERSION: Int = 1
+    /**
+     * The vault format this build reads and writes. Version 2 carries binary
+     * attachments (a book's original file) alongside the JSON records; ADR-0014
+     * anticipated the bump when book originals needed carrying (ADR-0016).
+     */
+    const val VERSION: Int = 2
 
     /** The vault index every vault carries alongside its record directories. */
     const val MANIFEST_FILE: String = "manifest.json"
 
     /** The extension of every record file. */
     const val RECORD_EXTENSION: String = "json"
+
+    /**
+     * The reserved directory binary attachments live under. It starts with `_`,
+     * which a record `kind` may not (see [VaultPaths.requireSegment]), so no
+     * record can ever collide with it.
+     */
+    const val ATTACHMENT_DIRECTORY: String = "_attachments"
 }
 
 /**

@@ -52,4 +52,14 @@ internal object VaultPaths {
             "'$path' is not a safe vault-relative path"
         }
     }
+
+    /**
+     * The vault path of the attachment for record [id]. The `_attachments`
+     * directory is not a legal record `kind`, so a record file can never sit at
+     * the same path.
+     */
+    fun attachmentPath(id: String): String {
+        requireSegment(id, "attachment id")
+        return "${VaultFormat.ATTACHMENT_DIRECTORY}/$id"
+    }
 }
