@@ -26,13 +26,14 @@ internal object XmlHardening {
     const val DISALLOW_DOCTYPE_FEATURE: String = "http://apache.org/xml/features/disallow-doctype-decl"
 
     /** A `DocumentBuilderFactory` with namespace awareness on, hardening on where supported. */
-    fun hardenedFactory(): DocumentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
-        isNamespaceAware = true
-        isExpandEntityReferences = false
-        setFeatureIfSupported(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-        setFeatureIfSupported(EXTERNAL_DTD_FEATURE, false)
-        setFeatureIfSupported(DISALLOW_DOCTYPE_FEATURE, true)
-    }
+    fun hardenedFactory(base: DocumentBuilderFactory = DocumentBuilderFactory.newInstance()): DocumentBuilderFactory =
+        base.apply {
+            isNamespaceAware = true
+            isExpandEntityReferences = false
+            setFeatureIfSupported(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            setFeatureIfSupported(EXTERNAL_DTD_FEATURE, false)
+            setFeatureIfSupported(DISALLOW_DOCTYPE_FEATURE, true)
+        }
 
     /**
      * Sets [name] to [value], ignoring the platform's rejection of a feature it

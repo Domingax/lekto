@@ -61,9 +61,13 @@ the text fails until the golden is deliberately updated. See
 `XmlHardeningTest` (`core/jvmTest`) guards the one place the parser was **not
 portable**: `DocumentBuilderFactory` feature names outside the JAXP standard are
 Xerces-specific, and Android's parser throws on them, so a real EPUB imported on
-desktop and failed on Android (ticket #15). The test sets a feature the parser
-does not know and asserts the parse still succeeds — the same rejection Android
-raised — so the hardening can never again become a reason to refuse a book.
+desktop and failed on Android (ticket #15). The test runs the **whole OPF parse**
+through a factory that rejects every non-JAXP feature — the exact Android
+condition — and asserts it succeeds, so a future change that sets an optional
+feature without tolerating rejection fails here even though the desktop JDK would
+accept it. The structural fix, running platform code on a real Android runtime,
+is ticket #49 (Robolectric `androidHostTest`); this test is the fast guard until
+that lane exists.
 
 The library that imports a book and opens a reading session (ticket #15) is a
 domain service in `core/book`: `VaultBookLibrary` composes a `VaultStore`, a
