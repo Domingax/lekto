@@ -23,6 +23,7 @@ import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 plugins {
     base
     alias(libs.plugins.androidApplication) apply false
+    alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinSerialization) apply false
@@ -286,6 +287,9 @@ fun readPomLicences(pom: File): List<Pair<String, String>> =
         inner("name") to inner("url")
     }.toList()
 
+// GPLv2 with the Classpath Exception is the FSF's GPL-compatible form, used by
+// javax.annotation-api (a Robolectric transitive). It must be read before the
+// plain GPLv2 branch below, which would otherwise classify it as GPL-2.0.
 fun normaliseLicence(name: String, url: String): String? {
     val text = "$name $url".lowercase()
     return when {
@@ -296,6 +300,7 @@ fun normaliseLicence(name: String, url: String): String? {
         "eclipse public license" in text -> "EPL-1.0"
         "lgpl" in text && "2.1" in text -> "LGPL-2.1-or-later"
         "lgpl" in text -> "LGPL-3.0"
+        "gpl" in text && "classpath exception" in text -> "GPL-2.0-with-classpath-exception"
         "gpl" in text && "2" in text -> "GPL-2.0"
         "gpl" in text -> "GPL-3.0"
         "bsd" in text && ("3" in text || "three" in text) -> "BSD-3-Clause"

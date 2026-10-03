@@ -43,6 +43,12 @@ licence Unicode-3.0
 # omitting the rule, means a JUnit type promoted into production fails the gate.
 test-licence EPL-2.0
 test-licence EPL-1.0
+# Robolectric (ticket #49) pulls javax.annotation-api, dual-licensed CDDL-1.0 or
+# GPLv2 with the Classpath Exception. The GPL arm is the FSF's GPL-compatible
+# form, and the dependency is test-scope — it runs Robolectric on the host and is
+# never linked into the shipped app or conveyed with it — so it is test-licensed
+# rather than licensed, like JUnit above.
+test-licence GPL-2.0-with-classpath-exception
 
 # --- Components whose POM declares no licence --------------------------------
 # Gradle reads a module's own POM, not Maven's effective POM, so a dependency
@@ -67,6 +73,9 @@ override com.google.guava:guava Apache-2.0
 override com.google.protobuf:protobuf-java BSD-3-Clause
 override com.google.truth:truth Apache-2.0
 override org.codehaus.mojo:animal-sniffer-annotations MIT
+# Robolectric's test-parameter-injector (ticket #49) declares no licence in its
+# own POM; the project publishes Apache-2.0.
+override com.google.testparameterinjector:test-parameter-injector Apache-2.0
 # ICU4J (ticket #10) declares `Unicode-3.0` in its POM; the task's normaliser
 # recognises only the licences in the allowlist above, so the reviewed id is
 # recorded here.

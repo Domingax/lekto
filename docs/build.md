@@ -25,6 +25,8 @@ without the other.
 | Roborazzi (test)     | 1.75.0    | `gradle/libs.versions.toml` (`roborazzi`)       |
 | Testcontainers (test)| 2.0.5     | `gradle/libs.versions.toml` (`testcontainers`)  |
 | JUnit Jupiter (test) | 5.13.4    | `gradle/libs.versions.toml` (`junit-jupiter`)   |
+| Robolectric (test)   | 4.16.1    | `gradle/libs.versions.toml` (`robolectric`)      |
+| JUnit 4 (test)       | 4.13.2    | `gradle/libs.versions.toml` (`junit4`)          |
 | ktlint               | 1.8.0     | `gradle/libs.versions.toml` (`ktlint`)          |
 | ktlint Gradle plugin | 14.2.0    | `gradle/libs.versions.toml` (`ktlint-gradle`)   |
 | detekt               | 2.0.0-alpha.6 | `gradle/libs.versions.toml` (`detekt`)       |
@@ -49,6 +51,13 @@ parses EPUB content documents leniently. ICU4J is Unicode-3.0 and jsoup MIT;
 both are AGPL-compatible and recorded in `config/dependency-licences.txt`
 (ADR-0011). See `docs/research/epub-to-tokens-spike.md`.
 
+Robolectric (MIT) runs `core`'s platform code on a simulated Android runtime on
+the JVM, with no emulator (ticket #49): it is test-scope only, and its JUnit 4
+runner (EPL-1.0) is likewise never conveyed. The `androidHostTest` source set
+exists only when `core`'s Android target is applied, under the KMP Android
+library plugin (`com.android.kotlin.multiplatform.library`). See
+`docs/testing.md#android-host-lane`.
+
 kotlinx.serialization (Apache-2.0) is the vault's dependency (ticket #12): records
 are one JSON file each (ADR-0003), so the domain encodes and decodes them with
 `kotlinx-serialization-json`. It is AGPL-compatible; ADR-0014 records why the
@@ -65,11 +74,11 @@ and the parsed-text model serialises with the same library as a derived asset
 ```
 
 It builds every module, runs the JVM test suites — the domain suite in
-`core`, the UI-semantics suite in `app` and the architecture suite in
-`architecture` — and runs the quality gates (ktlint and detekt, below). See
-`docs/testing.md` for the harness, the seams
-and how to reproduce a failure. CI enforces the command on every push
-(ticket #7).
+`core`, the Android host suite in `core`'s `androidHostTest` (when an Android SDK
+is present, ticket #49), the UI-semantics suite in `app` and the architecture
+suite in `architecture` — and runs the quality gates (ktlint and detekt, below).
+See `docs/testing.md` for the harness, the seams and how to reproduce a failure.
+CI enforces the command on every push (ticket #7).
 
 ## Quality gates
 
@@ -216,9 +225,10 @@ the application CI path.
 - **The Android SDK — optional.** It is only needed for the Android client.
   The build detects an SDK in `ANDROID_HOME`, `ANDROID_SDK_ROOT`,
   `local.properties` (`sdk.dir`) or `~/Android/Sdk`. When one is present the
-  Android target activates; when none is present the project still builds and
-  tests as a desktop/JVM project. Force either behaviour with
-  `-Plekto.android=true` or `-Plekto.android=false`.
+  Android targets activate — the `app` client and `core`'s Android target, which
+  brings the `androidHostTest` Robolectric lane into `check` — and when none is
+  present the project still builds and tests as a desktop/JVM project. Force
+  either behaviour with `-Plekto.android=true` or `-Plekto.android=false`.
 
 ```sh
 ./gradlew check -Plekto.android=false   # JVM/desktop only, no SDK needed

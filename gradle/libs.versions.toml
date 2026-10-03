@@ -22,6 +22,16 @@ kotest = "6.2.5"
 turbine = "1.2.1"
 kotlinx-coroutines = "1.11.0"
 
+# Android host tests (ticket #49). Robolectric (MIT) runs Android platform code on
+# a simulated Android runtime on the JVM, with no emulator. It is test-scope only
+# and never ships; 4.16.1 is the release whose built-with Gradle/AGP line matches
+# this repository's, and it covers API 36. See docs/testing.md#android-host-lane.
+robolectric = "4.16.1"
+# Robolectric's runner is JUnit 4; declared explicitly so the host test compiles
+# against it rather than borrowing a transitive. JUnit 4 is EPL-1.0, test-only
+# (ADR-0011; config/dependency-licences.txt).
+junit4 = "4.13.2"
+
 # CI lanes (ticket #7). Roborazzi records the UI goldens (Apache-2.0); the JUnit
 # 5 API drives the WebDAV integration test, and Testcontainers (MIT) starts the
 # server. JUnit is EPL-2.0 and therefore test-only — it is never linked into the
@@ -75,6 +85,9 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit4 = { module = "junit:junit", version.ref = "junit4" }
+# Android host tests (ticket #49): see the versions block above.
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 # Roborazzi's KMP artifacts. The desktop target uses the JVM `-core` and
 # `-compose-desktop` modules; the plain `roborazzi`/`roborazzi-compose` are the
 # Android (AAR) ones.
@@ -92,6 +105,10 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
+# The Android library target for a Kotlin Multiplatform module (AGP's KMP
+# support). Unlike `com.android.application`, it provides the `androidHostTest`
+# source set Robolectric runs in (ticket #49).
+androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
