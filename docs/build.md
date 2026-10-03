@@ -208,7 +208,9 @@ require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
 pull request has no secret, so the scan is skipped there and only the coverage and
 linter reports are produced. The `webdav` lane needs Docker — present on GitHub's
 runners — and skips cleanly where it is absent; the `fast` lane excludes its test
-so the two do not overlap.
+so the two do not overlap. The `fast` lane also runs `core`'s Android host suite
+(`:core:testAndroidHostTest`), which needs the Android SDK the GitHub runners
+carry — no emulator (`docs/testing.md#android-host-lane`).
 The `instrumented` lane is the only one that needs an emulator; it is scheduled,
 so it never slows a change, and its instrumented tests arrive with the platform
 work (tickets #16, #21, #24). Vulnerability alerts are a repository setting,
