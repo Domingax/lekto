@@ -92,6 +92,19 @@ arbitrary bytes through export and import. The library UI is a UI-semantics test
 in `app/desktopTest`, and the `LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
 
+The reader on a real book and its **resume** (issue #16) are proven at the same
+levels. The reading position — a character offset, so it survives a reflow — is a
+domain behaviour over the in-memory vault in `core/commonTest` and the directory
+vault in `core/jvmTest`, so a book cannot lose its place on export, import or a
+re-parse. The reader's UI semantics — opening at a saved offset, paging forward
+and back, and a tap on the reading surface receding the chrome — live in
+`app/desktopTest/.../ReaderScreenSemanticsTest`, and the whole loop (open, turn,
+leave, reopen at the same page) in `AppSemanticsTest` against an in-memory
+library. Pagination is lazy: `paginateChapter` yields one page at a time, so
+opening a book lays out its first page and not its every page, and
+`LongChapterPerformanceTest` pins the shape on a book sized to 300 pages.
+
+
 ## Golden images
 
 The goldens are Roborazzi images recorded from `app/desktopTest` and committed

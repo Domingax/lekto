@@ -6,6 +6,7 @@ import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportException
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ImportStage
+import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -102,4 +103,8 @@ private class FakeLibrary(private val progress: Float = 0f, private val failure:
     }
 
     override fun open(id: String): ReadingSession? = null
+
+    override fun position(bookId: String): ReadingPosition? = null
+
+    override fun savePosition(position: ReadingPosition) = Unit
 }

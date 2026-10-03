@@ -23,41 +23,80 @@ data class ReaderPage(val start: Int, val end: Int) {
  */
 data class ReaderLayout(val measurer: TextMeasurer, val style: TextStyle, val width: Int, val height: Int)
 
+/** The first window to measure when looking for one page's worth of text. */
+private const val FIRST_WINDOW = 1024
+
 /**
- * Splits [text] into viewport-sized pages for [layout].
+ * Splits [text] into viewport-sized pages for [layout], **one page at a time**.
  *
- * The chapter is laid out once at the layout's width with unbounded height, then
- * cut at line boundaries: lines are accumulated until the next would overflow
- * the height. Measuring the whole chapter once keeps pages stable as the
- * viewport scrolls, at the cost of a layout proportional to the chapter — the
- * spike report records the measured cost and when chunking becomes necessary. A
- * line taller than the viewport is never split: it gets a page of its own rather
- * than looping forever.
+ * Each element is found by measuring only a bounded run of text from the
+ * previous page's end — never the whole chapter — so opening a long book lays
+ * out its first page, not its every page (issue #16; the chunking the
+ * paginated-reader spike names as the production path). The caller that wants
+ * the whole book can still `toList()` the sequence.
+ *
+ * Pages are cut at line boundaries: a line taller than the viewport gets a page
+ * of its own rather than looping forever. Measuring a run longer than the page
+ * guarantees the cut line is a natural wrap and not the end of the measured
+ * window, so the result is the same as laying out the whole chapter at once.
  */
-fun paginateChapter(text: AnnotatedString, layout: ReaderLayout): List<ReaderPage> = when {
-    text.isEmpty() -> listOf(ReaderPage(0, 0))
-    layout.width <= 0 || layout.height <= 0 -> listOf(ReaderPage(0, text.length))
-    else -> splitIntoPages(measure(text, layout), text.length, layout.height)
-}
+fun paginateChapter(text: AnnotatedString, layout: ReaderLayout): Sequence<ReaderPage> = sequence {
+    when {
+        text.isEmpty() -> yield(ReaderPage(0, 0))
 
-private fun measure(text: AnnotatedString, layout: ReaderLayout): TextLayoutResult = layout.measurer.measure(
-    text = text,
-    style = layout.style,
-    constraints = Constraints(maxWidth = layout.width, maxHeight = Int.MAX_VALUE),
-)
+        layout.width <= 0 || layout.height <= 0 -> yield(ReaderPage(0, text.length))
 
-/** Walks the lines and cuts a page whenever the next line would overflow the height. */
-private fun splitIntoPages(layout: TextLayoutResult, textLength: Int, height: Int): List<ReaderPage> {
-    val pages = mutableListOf<ReaderPage>()
-    var pageFirstLine = 0
-    var pageTop = layout.getLineTop(0)
-    for (line in 1 until layout.lineCount) {
-        if (layout.getLineBottom(line) - pageTop > height) {
-            pages += ReaderPage(layout.getLineStart(pageFirstLine), layout.getLineStart(line))
-            pageFirstLine = line
-            pageTop = layout.getLineTop(line)
+        else -> {
+            var start = 0
+            while (start < text.length) {
+                val page = nextPage(text, layout, start)
+                yield(page)
+                start = page.end
+            }
         }
     }
-    pages += ReaderPage(layout.getLineStart(pageFirstLine), textLength)
-    return pages
+}
+
+/**
+ * The index of the page in [pages] that contains character [offset], or the last
+ * page once [offset] is past everything measured so far — which lets a reader
+ * opening a partially paginated book at a saved offset show the best page it has.
+ */
+internal fun pageIndexFor(pages: List<ReaderPage>, offset: Int): Int {
+    if (pages.isEmpty()) return 0
+    val containing = pages.indexOfFirst { page -> offset < page.end }
+    return if (containing == -1) pages.lastIndex else containing
+}
+
+/**
+ * The page that begins at [start]: grow a window until it overflows the viewport
+ * (or reaches the text's end), then cut at the first line that does not fit.
+ */
+private fun nextPage(text: AnnotatedString, layout: ReaderLayout, start: Int): ReaderPage {
+    var window = FIRST_WINDOW
+    while (true) {
+        val end = (start + window).coerceAtMost(text.length)
+        val result = layout.measurer.measure(
+            text = text.subSequence(start, end),
+            style = layout.style,
+            constraints = Constraints(maxWidth = layout.width, maxHeight = Int.MAX_VALUE),
+        )
+        if (end == text.length || result.size.height > layout.height) {
+            return cutPage(result, start, end, layout.height)
+        }
+        window *= 2
+    }
+}
+
+/** The first line that would overflow [height], kept as a page range. */
+private fun cutPage(result: TextLayoutResult, start: Int, end: Int, height: Int): ReaderPage {
+    val pageTop = result.getLineTop(0)
+    for (line in 1 until result.lineCount) {
+        if (result.getLineBottom(line) - pageTop > height) {
+            val cut = result.getLineStart(line)
+            if (cut > 0) return ReaderPage(start, start + cut)
+            break
+        }
+    }
+    return ReaderPage(start, end)
 }

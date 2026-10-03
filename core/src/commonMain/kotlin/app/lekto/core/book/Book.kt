@@ -24,5 +24,8 @@ data class Book(
 /**
  * A book opened for reading: the [book] and the [text] the reader renders. The
  * reader consumes this and never learns where either came from.
+ *
+ * [position] is the saved reading position, or `null` when the book has never
+ * been opened; the reader may restore it to open where the user left off.
  */
-data class ReadingSession(val book: Book, val text: StructuredText)
+data class ReadingSession(val book: Book, val text: StructuredText, val position: ReadingPosition? = null)

@@ -19,3 +19,11 @@ data class ReaderRenderer(
     val mastery: MasteryLookup,
     val styles: ReaderStyles = ReaderStyles.Reading,
 )
+
+/**
+ * What the reader shows: the parsed [chapter], the [renderer] that colours it,
+ * and the character [initialOffset] a resumed session opens at (0 for a book
+ * read from the start). The offset is a position into the text the [renderer]'s
+ * word layer builds; the reader restores it from the book's saved progress.
+ */
+data class ReaderDocument(val chapter: ReaderChapter, val renderer: ReaderRenderer, val initialOffset: Int = 0)

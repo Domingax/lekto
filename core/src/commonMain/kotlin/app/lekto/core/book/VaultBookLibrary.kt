@@ -61,7 +61,15 @@ class VaultBookLibrary(
 
     override fun open(id: String): ReadingSession? {
         val book = vault.get(id)?.let { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
-        return book?.let { (cache.textOf(it.id) ?: reparse(it))?.let { text -> ReadingSession(it, text) } }
+        val text = book?.let { cache.textOf(it.id) ?: reparse(it) }
+        return if (book != null && text != null) ReadingSession(book, text, position(book.id)) else null
+    }
+
+    override fun position(bookId: String): ReadingPosition? = vault.get(ReadingPositionRecord.idOf(bookId))
+        ?.let { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }
+
+    override fun savePosition(position: ReadingPosition) {
+        vault.put(ReadingPositionRecord.of(position, seams.clock.now(), deviceId))
     }
 
     /** Writes the record, its original attachment and the parsed-text cache. */

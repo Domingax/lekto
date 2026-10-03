@@ -2,12 +2,13 @@ package app.lekto.core.book
 
 /**
  * The library: the vault's books, imported and opened (CONTEXT.md, "Book";
- * issue #15).
+ * issues #15 and #16).
  *
  * Import parses a file and stores it; [books] lists what is stored; [open]
- * starts a reading session. The seam is synchronous — parsing and file writes
- * are blocking — so a caller that must not block (the UI) runs it off the main
- * thread and forwards [ImportProgress] to its own state.
+ * starts a reading session carrying the saved [ReadingPosition]; [position] and
+ * [savePosition] read and write that position. The seam is synchronous — parsing
+ * and file writes are blocking — so a caller that must not block (the UI) runs
+ * it off the main thread and forwards [ImportProgress] to its own state.
  */
 interface BookLibrary {
 
@@ -23,6 +24,16 @@ interface BookLibrary {
      */
     fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit = {}): Book
 
-    /** The reading session for the book with [id], or `null` when it is unknown. */
+    /**
+     * The reading session for the book with [id], or `null` when it is unknown.
+     * The session carries the saved [ReadingPosition], or `null` when the book
+     * was never opened.
+     */
     fun open(id: String): ReadingSession?
+
+    /** Where the user left off in the book with [bookId], or `null` when unread. */
+    fun position(bookId: String): ReadingPosition?
+
+    /** Stores [position] as the book's reading position. */
+    fun savePosition(position: ReadingPosition)
 }

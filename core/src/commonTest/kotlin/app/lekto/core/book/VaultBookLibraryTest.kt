@@ -89,6 +89,53 @@ class VaultBookLibraryTest :
             newLibrary().open("absent") shouldBe null
         }
 
+        test("a book that was never opened has no saved position and opens at the start") {
+            val library = newLibrary()
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            library.position(book.id) shouldBe null
+            library.open(book.id)?.position shouldBe null
+        }
+
+        test("a saved position round-trips through the vault and the session") {
+            val vault = InMemoryVaultStore()
+            val library = newLibrary(vault)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            library.savePosition(ReadingPosition(book.id, offset = 1234))
+
+            library.position(book.id) shouldBe ReadingPosition(book.id, 1234)
+            library.open(book.id)?.position shouldBe ReadingPosition(book.id, 1234)
+            vault.get(ReadingPositionRecord.idOf(book.id))?.kind shouldBe ReadingPositionRecord.KIND
+        }
+
+        test("the reading position is its own record and never replaces the book") {
+            val vault = InMemoryVaultStore()
+            val library = newLibrary(vault)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            library.savePosition(ReadingPosition(book.id, offset = 10))
+
+            vault.get(book.id)?.kind shouldBe BookRecord.KIND
+            library.books() shouldContainExactly listOf(book)
+        }
+
+        test("a book with an unreadable progress record still opens") {
+            val vault = InMemoryVaultStore()
+            val library = newLibrary(vault)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            val broken = ReadingPositionRecord.of(
+                ReadingPosition(book.id, 5),
+                deterministicSeams().clock.now(),
+                DeviceId("device-a"),
+            ).copy(body = kotlinx.serialization.json.JsonObject(emptyMap()))
+            vault.put(broken)
+
+            library.position(book.id) shouldBe null
+            library.open(book.id)?.position shouldBe null
+            library.open(book.id)?.book shouldBe book
+        }
+
         test("opening re-parses and re-caches when the derived cache is gone") {
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val library = newLibrary(derived = derived)
