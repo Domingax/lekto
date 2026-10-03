@@ -18,20 +18,16 @@ import app.lekto.core.text.tokenise
 /**
  * A chapter rendered as text plus the words in it. [text] concatenates the
  * blocks with a blank line between them; each [WordToken] in [words] carries
- * absolute offsets into [text], so a tap maps back to its word and a page slice
- * keeps its styling.
+ * offsets into [text], so a tap maps back to its word and a page slice keeps its
+ * styling.
  */
 class ReaderTokens(val text: AnnotatedString, val words: List<WordToken>)
 
 /**
- * The word-token layer: turns the parser's [chapter] into one [AnnotatedString]
- * in which every word found by the [renderer]'s segmenter is coloured by its
- * mastery level and is tappable ([onWordTap]), every run keeps its inline
- * emphasis, and every block carries its heading or body style.
- *
- * Pure and free of composition, so it is unit tested directly: the semantics of
- * "every word coloured and tappable" are asserted on the returned string, not
- * through a rendered frame.
+ * The whole chapter's word layer: every word coloured by mastery and tappable.
+ * Used where the whole chapter is wanted at once (the sample, the golden, the
+ * tokenisation tests); the reader builds only the visible page's layer with
+ * [buildPageTokens], so opening a book does not tokenise every word in it.
  */
 fun buildReaderTokens(
     chapter: ReaderChapter,
@@ -39,25 +35,73 @@ fun buildReaderTokens(
     onWordTap: (WordToken) -> Unit = {},
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
+    val blockStarts = appendBlocks(builder, chapter, renderer.styles)
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, renderer.styles, onWordTap)
+    chapter.blocks.forEachIndexed { index, block ->
+        tokenise(block.text, chapter.language, renderer.segmenter).words.forEach { token ->
+            val word = token.shifted(blockStarts[index])
+            words += word
+            writer.write(word, renderer.mastery.levelOf(word.surface, chapter.language))
+        }
+    }
+    return ReaderTokens(builder.toAnnotatedString(), words)
+}
+
+/**
+ * The chapter as one styled [AnnotatedString] with **no word layer**. It is what
+ * pagination measures: colouring and links do not change a glyph's width, so the
+ * line breaks are the same as the tokenised text's, and building it costs a
+ * string copy rather than a tokenisation per word.
+ */
+fun buildChapterText(chapter: ReaderChapter, styles: ReaderStyles): AnnotatedString {
+    val builder = AnnotatedString.Builder()
+    appendBlocks(builder, chapter, styles)
+    return builder.toAnnotatedString()
+}
+
+/**
+ * The word layer for one [page]: [page] sliced out of [chapterText] — keeping
+ * its block and inline styles — with every word in the slice coloured and
+ * tappable ([onWordTap]). The returned offsets are local to the slice, so the
+ * reader tokenises one page's words, not the whole book's.
+ *
+ * Pages are cut at line boundaries, so a word is never split across two of them;
+ * tokenising the slice finds the same words tokenising the chapter would.
+ */
+@Suppress("LongParameterList") // The chapter and its renderer are a dyad; bundling them would only hide that.
+fun buildPageTokens(
+    chapterText: AnnotatedString,
+    page: ReaderPage,
+    renderer: ReaderRenderer,
+    chapter: ReaderChapter,
+    onWordTap: (WordToken) -> Unit = {},
+): ReaderTokens {
+    val slice = chapterText.subSequence(page.start, page.end)
+    val builder = AnnotatedString.Builder(slice)
+    val words = mutableListOf<WordToken>()
+    val writer = WordWriter(builder, renderer.styles, onWordTap)
+    tokenise(slice.text, chapter.language, renderer.segmenter).words.forEach { token ->
+        words += token
+        writer.write(token, renderer.mastery.levelOf(token.surface, chapter.language))
+    }
+    return ReaderTokens(builder.toAnnotatedString(), words)
+}
+
+/** Appends each block, its block-level style and its runs' inline styles; returns each block's start offset. */
+private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderChapter, styles: ReaderStyles): List<Int> {
+    val blockStarts = mutableListOf<Int>()
     var cursor = 0
     chapter.blocks.forEachIndexed { index, block ->
         if (index > 0) {
             builder.append("\n\n")
             cursor += 2
         }
-        val blockStart = cursor
-        appendBlock(builder, block, blockStart, renderer.styles)
+        blockStarts += cursor
+        appendBlock(builder, block, cursor, styles)
         cursor += block.text.length
-
-        tokenise(block.text, chapter.language, renderer.segmenter).words.forEach { token ->
-            val word = token.shifted(blockStart)
-            words += word
-            writer.write(word, renderer.mastery.levelOf(word.surface, chapter.language))
-        }
     }
-    return ReaderTokens(text = builder.toAnnotatedString(), words = words)
+    return blockStarts
 }
 
 /** Appends a block's text, its block-level style and its runs' inline styles. */

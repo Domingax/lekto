@@ -117,6 +117,26 @@ builds and tests without one.
 
 The target does **not** yet switch segmentation to `android.icu`: the shared
 segmenter is still ICU4J, so ICU4J remains on the Android classpath. The
-`android.icu` actual this ADR requires is still open (ticket #16); when it lands
-it replaces ICU4J for Android and drops it from the APK, as the spike update
-above anticipated.
+`android.icu` actual this ADR requires is still open (a later ticket); when it
+lands it replaces ICU4J for Android and drops it from the APK, as the spike
+update above anticipated.
+
+## Update — reader on a real book: lazy pagination and tokenisation (issue #16)
+
+The reader now runs on a real imported book (issue #16), so the two "chunking is
+the production path" gaps the reader spike recorded are closed, both keeping the
+ADR-0007 substrate:
+
+- **Pagination is lazy.** `paginateChapter` returns a `Sequence<ReaderPage>` and
+  finds each page by measuring a bounded run from the previous page's end, so
+  opening a book lays out its **first page**, not its every page. A background
+  fill lays out the rest for the page counter, one yield every few pages.
+- **The word layer is per page.** The chapter is built once **unstyled by
+  mastery** (a colour or a link does not change a glyph's width), pagination
+  measures that, and only the visible page is tokenised and coloured. Opening a
+  300-page book therefore tokenises the first page, not ten thousand words.
+
+Neither the substrate nor the "own EPUB pipeline" decision changes; this records
+where the production reader landed, and supersedes the "whole-chapter layout"
+note in `docs/research/paginated-reader-spike.md`.
+

@@ -1,6 +1,5 @@
 package app.lekto.reader
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,7 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,10 +27,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -42,11 +42,11 @@ private val HorizontalMargin = 24.dp
 private val ChromeHeight = 48.dp
 private val PageBarHeight = 64.dp
 
-/** The reading surface, tappable outside a word to toggle the chrome. */
-private const val READING_SURFACE = "Reading surface"
-
 /** How many pages to lay out between yields, so the first page is shown at once. */
 private const val PAGE_YIELD_EVERY = 8
+
+/** The test tag on the page, so the UI tests can inject a tap at a zone's coordinates. */
+internal const val READER_PAGE_TAG = "reader-page"
 
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
@@ -63,83 +63,139 @@ data class ReaderActions(
  * mastery and tappable, with page navigation in both directions, resumed at the
  * saved [ReaderDocument.initialOffset], and chrome that recedes (issue #16).
  *
- * A tap on the reading surface outside a word toggles the chrome: while reading,
- * the title bar and page bar give way to the text, and a tap brings them back.
- * The page is a plain (non-lazy) [SelectionContainer] so every visible word is
- * composed and selectable; pagination is incremental, so a long book shows its
- * first page without laying out the whole book.
+ * A tap is a **tap zone** (the model Moon+ Reader and the UX spec's "tap zones"
+ * describe): the left third turns to the previous page, the right third to the
+ * next, and the middle toggles the chrome. A tap on a word is always word lookup,
+ * wherever it lands. The page is a plain (non-lazy) [SelectionContainer] so every
+ * visible word is composed and selectable; pagination and tokenisation are
+ * incremental, so a long book shows its first page without processing the rest.
  *
  * [ReaderActions.onPositionChange] is called with the character offset of each
  * page the reader turns to, so the caller can persist the reading position.
  */
 @Composable
 fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, actions: ReaderActions = ReaderActions()) {
-    val tokens = rememberReaderTokens(document, actions.onWordTap)
-    var chromeVisible by remember(tokens) { mutableStateOf(true) }
-    Box(modifier.fillMaxSize()) {
-        // The reading surface sits behind the text: a tap on it, but not on a
-        // word (which the word layer consumes), recedes or returns the chrome.
-        Box(
-            Modifier
-                .matchParentSize()
-                .clickable { chromeVisible = !chromeVisible }
-                .semantics { contentDescription = READING_SURFACE },
-        )
-        ReaderViewport(document, tokens, actions, chromeVisible)
+    val chapterText = remember(document.chapter, document.renderer.styles) {
+        buildChapterText(document.chapter, document.renderer.styles)
     }
-}
-
-/** Builds the word layer once per chapter and renderer, reading the tap callback live. */
-@Composable
-private fun rememberReaderTokens(document: ReaderDocument, onWordTap: (WordToken) -> Unit): ReaderTokens {
-    val latestTap = rememberUpdatedState(onWordTap)
-    val renderer = document.renderer
-    return remember(document.chapter, renderer.segmenter, renderer.mastery, renderer.styles) {
-        buildReaderTokens(document.chapter, renderer) { word -> latestTap.value(word) }
-    }
-}
-
-/** The viewport-sized page, its chrome, and the anchor the reader navigates by. */
-@Composable
-private fun ReaderViewport(
-    document: ReaderDocument,
-    tokens: ReaderTokens,
-    actions: ReaderActions,
-    chromeVisible: Boolean,
-) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val pages = rememberReaderPages(tokens, document.renderer.styles.body)
-        val anchor = remember(tokens) { mutableStateOf(document.initialOffset.coerceIn(0, tokens.text.length)) }
-        val paging = readerPaging(pages, anchor.value, tokens.text.length)
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val pages = rememberReaderPages(chapterText, document.renderer.styles.body)
+        val state = remember(pages, chapterText, document.initialOffset, actions.onPositionChange) {
+            ReaderState(pages, chapterText.length, document.initialOffset, actions.onPositionChange)
+        }
         Column(Modifier.fillMaxSize()) {
-            if (chromeVisible) ReaderTitle(document.chapter.title, actions.onBack)
-            ReaderPageView(tokens.text, paging.page, document.renderer.styles.body)
-            if (chromeVisible && paging.page != null) {
-                ReaderPageBar(
-                    page = paging.index,
-                    total = paging.total,
-                    onPrevious = { navigate(pages, paging.index - 1, anchor, actions.onPositionChange) },
-                    onNext = { navigate(pages, paging.index + 1, anchor, actions.onPositionChange) },
+            if (state.chromeVisible) ReaderTitle(document.chapter.title, actions.onBack)
+            ReaderPage(document, chapterText, state, actions.onWordTap)
+            if (state.chromeVisible && state.page != null) {
+                ReaderPageBar(state.index, state.total, state::previous, state::next)
+            }
+        }
+    }
+}
+
+/** The reader's page state: where the anchor is, which page that is, and the chrome's visibility. */
+@Stable
+private class ReaderState(
+    private val pages: List<ReaderPage>,
+    private val textLength: Int,
+    initialOffset: Int,
+    private val onPositionChange: (Int) -> Unit,
+) {
+    var chromeVisible by mutableStateOf(true)
+        private set
+    private var anchor by mutableStateOf(initialOffset.coerceIn(0, textLength))
+
+    /** True once the page holding the anchor is measured, so a resumed session never flashes past its place. */
+    private val reached: Boolean
+        get() = pages.lastOrNull()?.let { last -> last.end > anchor || last.end >= textLength } == true
+
+    val index: Int get() = if (reached) pageIndexFor(pages, anchor) else 0
+    val total: Int get() = pages.size
+    val page: ReaderPage? get() = if (reached) pages.getOrNull(index) else null
+
+    fun previous() = goTo(index - 1)
+
+    fun next() = goTo(index + 1)
+
+    /** Applies a tap on the middle third: hide or show the chrome. */
+    fun toggleChrome() {
+        chromeVisible = !chromeVisible
+    }
+
+    private fun goTo(target: Int) {
+        if (pages.isEmpty()) return
+        anchor = pages[target.coerceIn(0, pages.lastIndex)].start
+        onPositionChange(anchor)
+    }
+}
+
+/** The page, its word layer built for this page only, and the tap zones over it. */
+@Composable
+private fun ColumnScope.ReaderPage(
+    document: ReaderDocument,
+    chapterText: AnnotatedString,
+    state: ReaderState,
+    onWordTap: (WordToken) -> Unit,
+) {
+    val tokens = rememberPageTokens(document, chapterText, state.page, onWordTap)
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val marginPx = with(LocalDensity.current) { HorizontalMargin.roundToPx() }
+    val latestTap = rememberUpdatedState(readerSurfaceTap(marginPx, tokens, layout, state))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .testTag(READER_PAGE_TAG)
+            .readerTapInput(latestTap)
+            .padding(horizontal = HorizontalMargin),
+    ) {
+        if (tokens != null) {
+            SelectionContainer {
+                Text(
+                    text = tokens.text,
+                    style = document.renderer.styles.body,
+                    modifier = Modifier.fillMaxSize(),
+                    onTextLayout = { result -> layout = result },
                 )
             }
         }
     }
 }
 
-/** What the viewport shows: the current [page] (null until the anchor is measured), its [index], and the [total]. */
-private data class ReaderPaging(val index: Int, val total: Int, val page: ReaderPage?)
-
-/**
- * Resolves the page holding [anchor]. Until the page measuring it exists, [ReaderPaging.page]
- * is null, so a resumed session never flashes through the pages before its place.
- */
-private fun readerPaging(pages: List<ReaderPage>, anchor: Int, textLength: Int): ReaderPaging {
-    val end = pages.lastOrNull()?.end
-    if (end == null || (anchor >= end && end < textLength)) {
-        return ReaderPaging(index = 0, total = pages.size, page = null)
+/** The page's word layer, rebuilt only when the page or the chapter changes. */
+@Composable
+private fun rememberPageTokens(
+    document: ReaderDocument,
+    chapterText: AnnotatedString,
+    page: ReaderPage?,
+    onWordTap: (WordToken) -> Unit,
+): ReaderTokens? {
+    val latestTap = rememberUpdatedState(onWordTap)
+    return remember(chapterText, page, document.chapter, document.renderer) {
+        page?.let { slice ->
+            buildPageTokens(chapterText, slice, document.renderer, document.chapter) { word ->
+                latestTap.value(word)
+            }
+        }
     }
-    val index = pageIndexFor(pages, anchor)
-    return ReaderPaging(index = index, total = pages.size, page = pages.getOrNull(index))
+}
+
+/** The tap the page handles: a word's link wins, otherwise the tap's zone decides. */
+private fun readerSurfaceTap(
+    marginPx: Int,
+    tokens: ReaderTokens?,
+    layout: TextLayoutResult?,
+    state: ReaderState,
+): (Offset, Float) -> Unit = { position, width ->
+    val zone = readerTapZone(position.x, width.toInt())
+    // A tap on a word is left to the word's link, wherever it lands.
+    val onWord = wordAt(position, marginPx, tokens?.words.orEmpty(), layout) != null
+    when {
+        onWord -> Unit
+        zone == ReaderTapZone.CHROME -> state.toggleChrome()
+        zone == ReaderTapZone.PREVIOUS -> state.previous()
+        zone == ReaderTapZone.NEXT -> state.next()
+    }
 }
 
 /**
@@ -148,18 +204,21 @@ private fun readerPaging(pages: List<ReaderPage>, anchor: Int, textLength: Int):
  * list's snapshot reads drive recomposition as pages arrive.
  */
 @Composable
-private fun BoxWithConstraintsScope.rememberReaderPages(tokens: ReaderTokens, style: TextStyle): List<ReaderPage> {
+private fun BoxWithConstraintsScope.rememberReaderPages(
+    chapterText: AnnotatedString,
+    style: TextStyle,
+): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val contentWidth = with(density) { (maxWidth - HorizontalMargin * 2).roundToPx() }.coerceAtLeast(0)
     val contentHeight = with(density) { (maxHeight - ChromeHeight - PageBarHeight).roundToPx() }.coerceAtLeast(0)
-    val pages = remember(tokens, contentWidth, contentHeight, density.density, density.fontScale) {
+    val pages = remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale) {
         mutableStateListOf<ReaderPage>()
     }
     val layout = remember(measurer, style, contentWidth, contentHeight) {
         ReaderLayout(measurer, style, contentWidth, contentHeight)
     }
-    LaunchedEffect(layout) { fillPages(tokens.text, layout, pages) }
+    LaunchedEffect(layout) { fillPages(chapterText, layout, pages) }
     return pages
 }
 
@@ -176,14 +235,6 @@ private suspend fun fillPages(text: AnnotatedString, layout: ReaderLayout, pages
     }
 }
 
-/** Moves [anchor] to the start of page [target] and reports the new reading position. */
-private fun navigate(pages: List<ReaderPage>, target: Int, anchor: MutableState<Int>, onPositionChange: (Int) -> Unit) {
-    if (pages.isEmpty()) return
-    val bounded = target.coerceIn(0, pages.lastIndex)
-    anchor.value = pages[bounded].start
-    onPositionChange(anchor.value)
-}
-
 @Composable
 private fun ReaderTitle(title: String, onBack: (() -> Unit)?) {
     Row(
@@ -196,18 +247,6 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?) {
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(start = if (onBack == null) 0.dp else 8.dp),
         )
-    }
-}
-
-/** The visible page: one non-lazy [Box], selectable, holding the sliced text. */
-@Composable
-private fun ColumnScope.ReaderPageView(text: AnnotatedString, page: ReaderPage?, style: TextStyle) {
-    Box(modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = HorizontalMargin)) {
-        if (page != null) {
-            SelectionContainer {
-                Text(text = text.subSequence(page.start, page.end), style = style, modifier = Modifier.fillMaxSize())
-            }
-        }
     }
 }
 

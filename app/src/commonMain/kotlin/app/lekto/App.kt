@@ -63,6 +63,9 @@ fun App(environment: AppEnvironment) {
     val state by controller.state.collectAsState()
     var reading by remember { mutableStateOf<ReadingSession?>(null) }
     val scope = rememberCoroutineScope()
+    val progress = remember(environment.library, environment.dispatcher, scope) {
+        ReadingProgressWriter(scope, environment.dispatcher) { position -> environment.library.savePosition(position) }
+    }
 
     MaterialTheme {
         val session = reading
@@ -71,19 +74,10 @@ fun App(environment: AppEnvironment) {
                 session = session,
                 environment = environment,
                 onBack = { reading = null },
-                onPositionChange = { offset -> persistPosition(scope, environment, session.book.id, offset) },
+                onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
             )
         } else {
             LibraryScreen(state, libraryActions(environment, controller, scope) { opened -> reading = opened })
-        }
-    }
-}
-
-/** Writes [offset] as a book's reading position, off the composition thread. */
-private fun persistPosition(scope: CoroutineScope, environment: AppEnvironment, bookId: String, offset: Int) {
-    scope.launch {
-        withContext(environment.dispatcher) {
-            environment.library.savePosition(ReadingPosition(bookId, offset))
         }
     }
 }
