@@ -80,4 +80,16 @@ class JvmBookLibraryTest :
             root.resolve("books/${book.id}.json").isFile shouldBe true
             root.resolve("_attachments/${book.id}").isFile shouldBe true
         }
+
+        test("the reading position round-trips through the directory vault") {
+            val root = newRoot()
+            val library = libraryOver(root)
+            val book = library.import("awkward.epub", EpubFixtures.awkward())
+
+            library.savePosition(ReadingPosition(book.id, offset = 987))
+
+            root.resolve("progress/${ReadingPositionRecord.idOf(book.id)}.json").isFile shouldBe true
+            library.position(book.id) shouldBe ReadingPosition(book.id, 987)
+            library.open(book.id)?.position shouldBe ReadingPosition(book.id, 987)
+        }
     })

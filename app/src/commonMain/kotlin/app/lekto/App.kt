@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.text.TextSegmenter
 import app.lekto.library.LibraryActions
@@ -17,9 +18,11 @@ import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
 import app.lekto.reader.ReaderActions
 import app.lekto.reader.ReaderChapter
+import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,55 +63,71 @@ fun App(environment: AppEnvironment) {
     val state by controller.state.collectAsState()
     var reading by remember { mutableStateOf<ReadingSession?>(null) }
     val scope = rememberCoroutineScope()
+    val progress = remember(environment.library, environment.dispatcher, scope) {
+        ReadingProgressWriter(scope, environment.dispatcher) { position -> environment.library.savePosition(position) }
+    }
 
     MaterialTheme {
         val session = reading
         if (session != null) {
-            ReaderSession(session, environment.segmenter, environment.mastery) { reading = null }
-        } else {
-            LibraryScreen(
-                state = state,
-                actions = LibraryActions(
-                    onImport = {
-                        environment.pickFile?.let { pick ->
-                            scope.launch {
-                                val file = pick() ?: return@launch
-                                controller.import(file.name, file.bytes)
-                            }
-                        }
-                    },
-                    onOpen = { book ->
-                        scope.launch {
-                            withContext(environment.dispatcher) { environment.library.open(book.id) }
-                                ?.let { opened -> reading = opened }
-                        }
-                    },
-                    onDismissError = controller::dismissError,
-                ),
+            ReaderSession(
+                session = session,
+                environment = environment,
+                onBack = { reading = null },
+                onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
             )
+        } else {
+            LibraryScreen(state, libraryActions(environment, controller, scope) { opened -> reading = opened })
         }
     }
 }
+
+/** The library's actions: import through the platform picker, open a book, dismiss a failure. */
+private fun libraryActions(
+    environment: AppEnvironment,
+    controller: LibraryController,
+    scope: CoroutineScope,
+    onOpen: (ReadingSession) -> Unit,
+): LibraryActions = LibraryActions(
+    onImport = {
+        environment.pickFile?.let { pick ->
+            scope.launch {
+                val file = pick() ?: return@launch
+                controller.import(file.name, file.bytes)
+            }
+        }
+    },
+    onOpen = { book ->
+        scope.launch {
+            withContext(environment.dispatcher) { environment.library.open(book.id) }?.let(onOpen)
+        }
+    },
+    onDismissError = controller::dismissError,
+)
 
 /** The reader over an opened [session], with a way back to the library. */
 @Composable
 private fun ReaderSession(
     session: ReadingSession,
-    segmenter: TextSegmenter,
-    mastery: MasteryLookup,
+    environment: AppEnvironment,
     onBack: () -> Unit,
+    onPositionChange: (Int) -> Unit,
 ) {
     // The reader shows one chapter at a time; this build renders a book's blocks
-    // as a single chapter and the chrome carries the book's title.
+    // as a single chapter and the chrome carries the book's title. It opens at
+    // the saved reading position, or the start for a book never opened.
     val chapter = ReaderChapter(
         title = session.book.title,
         language = session.book.language,
         blocks = session.text.blocks,
     )
     ReaderScreen(
-        chapter = chapter,
-        renderer = ReaderRenderer(segmenter = segmenter, mastery = mastery),
-        actions = ReaderActions(onBack = onBack),
+        document = ReaderDocument(
+            chapter = chapter,
+            renderer = ReaderRenderer(segmenter = environment.segmenter, mastery = environment.mastery),
+            initialOffset = session.position?.offset ?: 0,
+        ),
+        actions = ReaderActions(onBack = onBack, onPositionChange = onPositionChange),
     )
 }
 

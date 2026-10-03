@@ -52,7 +52,7 @@ machine's ICU dictionaries. Production segmentation stays behind the
 `TextSegmenter` seam (`IcuTextSegmenter`, the ICU4J implementation). ADR-0007
 plans an `android.icu` actual for Android; until it lands the Android target
 runs the same ICU4J code, so the two clients agree but the APK still carries
-ICU4J (ticket #16).
+ICU4J (a later ticket; ADR-0007's platform update records it as still open).
 
 The parser seam has two implementations now: the JVM-backed `EpubParser` (ticket
 #10), whose tests run in `core/src/jvmTest` with their inputs committed fixtures
@@ -91,6 +91,25 @@ stores cannot drift, and a property in `VaultCodecPropertyTest` round-trips
 arbitrary bytes through export and import. The library UI is a UI-semantics test
 in `app/desktopTest`, and the `LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
+
+The reader on a real book and its **resume** (issue #16) are proven at the same
+levels. The reading position — a character offset, so it survives a reflow — is a
+domain behaviour over the in-memory vault in `core/commonTest` and the directory
+vault in `core/jvmTest`, so a book cannot lose its place on export, import or a
+re-parse; its serialise/parse is a property in
+`core/commonTest/.../ReadingPositionRecordPropertyTest`. The reader's UI
+semantics — opening at a saved offset, paging with the buttons and the
+left/right tap zones, and a tap on the middle receding the chrome — live in
+`app/desktopTest/.../ReaderScreenSemanticsTest`, injected with the Compose test
+API's pointer injection (`performTouchInput`), and the whole loop (open, turn,
+leave, reopen at the same page) in `AppSemanticsTest` against an in-memory
+library. Pagination is lazy and tokenisation is per page: `paginateChapter`
+yields one page at a time and `buildPageTokens` colours only the visible page, so
+opening a book lays out and tokenises its first page and not its every page;
+`LongChapterPerformanceTest` pins the shape on a book sized to 300 pages, and
+`ReadingProgressWriterTest` pins that rapid page turns coalesce to one vault
+write rather than racing it.
+
 
 ## Golden images
 

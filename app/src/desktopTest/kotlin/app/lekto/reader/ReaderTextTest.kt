@@ -17,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * The word-token layer, tested on the [ReaderTokens] it produces rather than
@@ -133,15 +134,61 @@ class ReaderTextTest {
         assertEquals(ReaderStyles.Reading.heading.fontSize, titleSpan.item.fontSize)
     }
 
-    private fun tap(tokens: ReaderTokens, word: WordToken) {
-        val range = tokens.text.getLinkAnnotations(word.start, word.end).firstOrNull()
-        assertNotNull(range, "word '${word.surface}' has no link")
-        val clickable = range.item as LinkAnnotation.Clickable
-        clickable.linkInteractionListener?.onClick(clickable)
+    @Test
+    fun theChapterTextHasNoWordLayer() {
+        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+
+        assertEquals("the lantern glows", chapterText.text)
+        assertTrue(chapterText.getLinkAnnotations(0, chapterText.length).isEmpty(), "chapter text must carry no links")
     }
 
-    private fun styleOf(tokens: ReaderTokens, surface: String): SpanStyle {
-        val word = tokens.words.first { it.surface == surface }
-        return tokens.text.spanStyles.first { span -> span.start == word.start && span.end == word.end }.item
+    @Test
+    fun aPageCarriesItsStylesAndItsWordsOnly() {
+        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val page = ReaderPage(0, chapterText.length)
+        var tapped: WordToken? = null
+
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter) { word -> tapped = word }
+
+        assertEquals("the lantern glows", tokens.text.text)
+        assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
+        val lantern = tokens.words.first { word -> word.surface == "lantern" }
+        assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
+        tap(tokens, lantern)
+        assertEquals(lantern, tapped)
     }
+
+    @Test
+    fun aPageSliceKeepsHeadingAndEmphasisStyles() {
+        val styled = ReaderChapter(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("A Title"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("plain "), TextRun("loud", setOf(InlineStyle.STRONG)))),
+            ),
+        )
+        val chapterText = buildChapterText(styled, ReaderStyles.Reading)
+        val whole = ReaderPage(0, chapterText.length)
+
+        val tokens = buildPageTokens(chapterText, whole, renderer, styled)
+
+        val titleSpan = tokens.text.spanStyles.first { span -> span.start == 0 && span.end == 7 }
+        assertEquals(ReaderStyles.Reading.heading.fontSize, titleSpan.item.fontSize)
+        assertEquals(FontWeight.Bold, styleOf(tokens, "loud").fontWeight)
+    }
+}
+
+/** Fires the link under [word], so a test can assert the tap reaches the word's handler. */
+private fun tap(tokens: ReaderTokens, word: WordToken) {
+    val range = tokens.text.getLinkAnnotations(word.start, word.end).firstOrNull()
+    assertNotNull(range, "word '${word.surface}' has no link")
+    val clickable = range.item as LinkAnnotation.Clickable
+    clickable.linkInteractionListener?.onClick(clickable)
+}
+
+/** The span style applied to [surface]'s range. */
+private fun styleOf(tokens: ReaderTokens, surface: String): SpanStyle {
+    val word = tokens.words.first { it.surface == surface }
+    return tokens.text.spanStyles.first { span -> span.start == word.start && span.end == word.end }.item
 }

@@ -51,6 +51,12 @@ The act of opening a book to read it: a book plus the text Lekto renders for it,
 which the reader draws its pages.
 _Avoid_: Opening, view
 
+**Reading position**:
+Where the user left off in a book: a character offset into the text the reader
+renders, chosen so the place survives a reflow onto a different screen size or font.
+Saved per book in the vault and restored when the book is reopened.
+_Avoid_: Page number, bookmark, scroll position
+
 **Word token**:
 A single tappable unit of text in the reader — the unit of lookup and colouring.
 Each carries its **Word key**, the identity mastery and vocabulary hang off.
