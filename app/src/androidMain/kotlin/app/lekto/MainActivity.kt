@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            val vaultTransfer = rememberAndroidVaultTransfer(this@MainActivity, scope)
             App(
                 AppEnvironment(
                     segmenter = segmenter,
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
                     dictionary = dictionary,
                     pronouncer = speech,
                     openUrl = { url -> openInBrowser(this@MainActivity, url) },
+                    vaultTransfer = vaultTransfer,
                 ),
             )
         }
@@ -70,4 +72,4 @@ class MainActivity : ComponentActivity() {
  * `Dispatchers.IO` inside the coroutine would be untestable.
  */
 @Suppress("InjectDispatcher") // The composition root is where a real dispatcher belongs; tests inject their own.
-private fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO
+internal fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO

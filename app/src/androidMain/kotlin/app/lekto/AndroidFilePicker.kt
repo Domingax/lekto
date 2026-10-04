@@ -14,8 +14,14 @@ import kotlinx.coroutines.CompletableDeferred
  * [begin] *before* the activity is launched, so the result callback can never
  * race a later [await]. A cancelled or unreadable pick resolves to `null`, so the
  * app stays usable.
+ *
+ * The [mimeTypes] default to books; the vault import passes JSON instead
+ * (issue #20).
  */
-class AndroidFilePicker {
+class AndroidFilePicker(
+    /** The MIME types the picker offers. */
+    val mimeTypes: Array<String> = arrayOf("application/epub+zip", "text/plain", "*/*"),
+) {
 
     private var pending: CompletableDeferred<PickedFile?>? = null
 
@@ -35,9 +41,6 @@ class AndroidFilePicker {
         pending?.complete(file)
         pending = null
     }
-
-    /** The MIME types the picker offers: EPUB, plain text, and everything else. */
-    val mimeTypes: Array<String> = arrayOf("application/epub+zip", "text/plain", "*/*")
 }
 
 /** Reads the picked [uri] through the content resolver, or `null` when it cannot be read. */

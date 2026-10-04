@@ -3,6 +3,7 @@ package app.lekto
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.core.vault.VaultStore
+import app.lekto.settings.VaultTransfer
 import java.io.File
 
 /**
@@ -22,6 +23,19 @@ fun desktopVaultRoot(): File = File(appDataDirectory("lekto"), "vault")
  * temporary directory.
  */
 fun desktopVaultStore(root: File = desktopVaultRoot()): VaultStore = JsonVaultStore(JvmVaultFileSystem(root))
+
+/**
+ * The vault's whole-file transfer (issue #20) over [root], with the platform's
+ * [save] and [open] dialogs. The store is rooted the same as
+ * [desktopBookLibrary]'s, so an import is what the library next lists and an
+ * export carries what the library wrote. The dialogs live in
+ * `DesktopFilePicker.kt`; they are parameters so this wiring is testable.
+ */
+fun desktopVaultTransfer(
+    root: File = desktopVaultRoot(),
+    save: suspend (String, ByteArray) -> Boolean,
+    open: suspend () -> PickedFile?,
+): VaultTransfer = VaultTransfer(desktopVaultStore(root), save, open)
 
 private fun appDataDirectory(appName: String): File {
     val home = File(System.getProperty("user.home"))
