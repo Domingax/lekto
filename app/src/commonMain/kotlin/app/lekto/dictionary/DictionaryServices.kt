@@ -12,6 +12,13 @@ import app.lekto.core.dictionary.DictionaryPackInstaller
 object DictionaryRelease {
     const val URL: String =
         "https://github.com/Domingax/lekto/releases/latest/download/lekto-dictionary-en-fr.sqlite.gz"
+
+    /**
+     * The language the published pack translates into. The source half is the
+     * book's own language, so the lookup panel's reference shortcuts follow the
+     * book — English word, French translation — just as the offline lookup does.
+     */
+    const val TARGET_LANGUAGE: String = "fr"
 }
 
 /**

@@ -1,7 +1,12 @@
 package app.lekto
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -23,6 +28,7 @@ import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 /**
  * The application's reading-loop flow through semantics (issues #15 and #16): it
@@ -73,6 +79,57 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun tappingAWordOpensTheLookupPanelWithTheShortcuts() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+
+        onNodeWithText("Look it up online").assertIsDisplayed()
+        // No pack is wired, so the panel degrades to the honest message and the
+        // reference shortcuts (issue #19).
+        onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
+        onNodeWithText("Reverso").assertIsDisplayed()
+    }
+
+    @Test
+    fun aReferenceShortcutOpensTheCanonicalPageInTheBrowser() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        var opened: String? = null
+        setContent { App(environment(library, openUrl = { url -> opened = url })) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+        onNodeWithText("Reverso").performClick()
+
+        assertTrue(
+            opened.orEmpty().startsWith("https://context.reverso.net/translation/english-french/"),
+            "the shortcut must open Reverso's canonical page: $opened",
+        )
+    }
+
+    @Test
+    fun closingTheLookupPanelReturnsToTheSameReadingPosition() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        tapFirstWord()
+        onNodeWithText("Look it up online").assertIsDisplayed()
+        // The reader stays put behind the panel, at the same page.
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        onNodeWithText("Close").performClick()
+
+        onNodeWithText("Look it up online").assertDoesNotExist()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun reachesSettingsAndAttributionFromTheLibrary() = runComposeUiTest {
         setContent { App(environment(InMemoryLibrary(), dictionary = dictionaryServices())) }
 
@@ -100,13 +157,22 @@ class AppSemanticsTest {
         library: BookLibrary,
         pickFile: (suspend () -> PickedFile?)? = null,
         dictionary: DictionaryServices? = null,
+        openUrl: (String) -> Unit = {},
     ) = AppEnvironment(
         segmenter = WhitespaceTextSegmenter(),
         library = library,
         mastery = MasteryLookup.AllKnown,
         pickFile = pickFile,
         dictionary = dictionary,
+        openUrl = openUrl,
     )
+
+    /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
+    private fun ComposeUiTest.tapFirstWord() {
+        onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+            .onFirst()
+            .performClick()
+    }
 
     private fun dictionaryServices(): DictionaryServices {
         val derived = DerivedAssetStore(InMemoryVaultFileSystem())

@@ -31,7 +31,7 @@ class WordTapHandlerTest {
     fun `without a dictionary it reports the lookup unavailable`() {
         var result: WordLookup? = null
 
-        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), { lookup -> result = lookup })(token)
+        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), { _, lookup -> result = lookup })(token)
 
         assertEquals(WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED), result)
     }
@@ -45,8 +45,17 @@ class WordTapHandlerTest {
         val controller = DictionaryController(DictionaryServices(installer), UnconfinedTestDispatcher())
         var result: WordLookup? = null
 
-        wordTapHandler(controller, CoroutineScope(UnconfinedTestDispatcher()), { lookup -> result = lookup })(token)
+        wordTapHandler(controller, CoroutineScope(UnconfinedTestDispatcher()), { _, lookup -> result = lookup })(token)
 
         assertTrue(result is WordLookup.NotInDictionary, "the empty fake pack does not know the word: $result")
+    }
+
+    @Test
+    fun `the handler carries the tapped token back with the result`() {
+        var tapped: WordToken? = null
+
+        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), { word, _ -> tapped = word })(token)
+
+        assertEquals(token, tapped)
     }
 }

@@ -17,6 +17,7 @@ fun main() = application {
                 mastery = MasteryLookup.AllKnown,
                 pickFile = ::pickFileToImport,
                 dictionary = dictionary,
+                openUrl = ::openInBrowser,
             ),
         )
     }

@@ -22,8 +22,15 @@ data class ReaderRenderer(
 
 /**
  * What the reader shows: the parsed [chapter], the [renderer] that colours it,
- * and the character [initialOffset] a resumed session opens at (0 for a book
- * read from the start). The offset is a position into the text the [renderer]'s
- * word layer builds; the reader restores it from the book's saved progress.
+ * the character [initialOffset] a resumed session opens at (0 for a book read
+ * from the start), and the [selectedRange] of the word whose lookup panel is
+ * open, washed with the selection highlight so the word stays visible behind the
+ * panel. The offset is a position into the text the [renderer]'s word layer
+ * builds; the reader restores it from the book's saved progress.
  */
-data class ReaderDocument(val chapter: ReaderChapter, val renderer: ReaderRenderer, val initialOffset: Int = 0)
+data class ReaderDocument(
+    val chapter: ReaderChapter,
+    val renderer: ReaderRenderer,
+    val initialOffset: Int = 0,
+    val selectedRange: IntRange? = null,
+)

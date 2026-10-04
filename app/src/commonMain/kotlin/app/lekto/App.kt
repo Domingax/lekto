@@ -19,12 +19,14 @@ import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
+import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.text.TextSegmenter
 import app.lekto.core.text.WordToken
 import app.lekto.dictionary.DictionaryController
+import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.DictionaryUiState
-import app.lekto.dictionary.WordLookupCard
+import app.lekto.dictionary.WordLookupPanel
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
@@ -46,9 +48,10 @@ import kotlinx.coroutines.withContext
 /**
  * The pieces a platform entry point supplies to the [App]: the [segmenter], the
  * vault-backed [library], the wording palette's [mastery], the file [pickFile],
- * the dictionary [dictionary] services (issue #18) and the [dispatcher] blocking
- * work runs on. Bundled so the root composable's signature stays small and grows
- * in one named place.
+ * the dictionary [dictionary] services (issue #18), the [openUrl] the lookup
+ * panel's reference shortcuts open in the platform browser (issue #19) and the
+ * [dispatcher] blocking work runs on. Bundled so the root composable's signature
+ * stays small and grows in one named place.
  */
 data class AppEnvironment(
     val segmenter: TextSegmenter,
@@ -56,6 +59,7 @@ data class AppEnvironment(
     val mastery: MasteryLookup,
     val pickFile: (suspend () -> PickedFile?)? = null,
     val dictionary: DictionaryServices? = null,
+    val openUrl: (String) -> Unit = {},
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
 
@@ -149,7 +153,10 @@ private fun AppScreens(
     }
 }
 
-/** The reader destination over an opened session, with the lookup card it owns. */
+/** The word whose lookup panel is open: the tapped token and its offline result. */
+private data class WordSelection(val token: WordToken, val result: WordLookup)
+
+/** The reader destination over an opened session, with the lookup panel it owns. */
 @Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.
 @Composable
 private fun ReaderDestination(
@@ -160,13 +167,13 @@ private fun ReaderDestination(
     progress: ReadingProgressWriter,
     onBack: () -> Unit,
 ) {
-    var lookup by remember { mutableStateOf<WordLookup?>(null) }
+    var selection by remember { mutableStateOf<WordSelection?>(null) }
     ReaderSession(
         session = session,
         environment = environment,
-        lookup = lookup,
-        onWordTap = wordTapHandler(dictionary, scope) { result -> lookup = result },
-        onDismissLookup = { lookup = null },
+        selection = selection,
+        onWordTap = wordTapHandler(dictionary, scope) { token, result -> selection = WordSelection(token, result) },
+        onDismissLookup = { selection = null },
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
@@ -211,16 +218,18 @@ private fun LibraryDestination(
 /**
  * The tap handler for a word: resolve it with the dictionary on a background
  * dispatcher, or report the offline dictionary unavailable when none is wired.
+ * The token is carried back so the panel knows the word it is showing and the
+ * reader can keep it highlighted behind the panel (issue #19).
  */
 internal fun wordTapHandler(
     dictionary: DictionaryController?,
     scope: CoroutineScope,
-    onLookup: (WordLookup) -> Unit,
+    onLookup: (WordToken, WordLookup) -> Unit,
 ): (WordToken) -> Unit = { token ->
     if (dictionary == null) {
-        onLookup(WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED))
+        onLookup(token, WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED))
     } else {
-        scope.launch { onLookup(dictionary.lookUp(token.surface, token.key.language)) }
+        scope.launch { onLookup(token, dictionary.lookUp(token.surface, token.key.language)) }
     }
 }
 
@@ -251,13 +260,13 @@ private fun libraryActions(
 /** Where the library's taps lead, bundled so [libraryActions] stays within the parameter bound. */
 private class LibraryNavigation(val onOpenSettings: () -> Unit, val onOpen: (ReadingSession) -> Unit)
 
-/** The reader over an opened [session], with a way back to the library and the lookup card. */
+/** The reader over an opened [session], with a way back to the library and the lookup panel. */
 @Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.
 @Composable
 private fun ReaderSession(
     session: ReadingSession,
     environment: AppEnvironment,
-    lookup: WordLookup?,
+    selection: WordSelection?,
     onWordTap: (WordToken) -> Unit,
     onDismissLookup: () -> Unit,
     onBack: () -> Unit,
@@ -277,13 +286,41 @@ private fun ReaderSession(
                 chapter = chapter,
                 renderer = ReaderRenderer(segmenter = environment.segmenter, mastery = environment.mastery),
                 initialOffset = session.position?.offset ?: 0,
+                selectedRange = selection?.let { selected -> selected.token.start..selected.token.end },
             ),
             actions = ReaderActions(onWordTap = onWordTap, onBack = onBack, onPositionChange = onPositionChange),
         )
-        lookup?.let { result ->
-            WordLookupCard(result, onDismiss = onDismissLookup, modifier = Modifier.align(Alignment.BottomCenter))
+        selection?.let { selected ->
+            LookupPanel(
+                selected = selected,
+                openUrl = environment.openUrl,
+                onDismiss = onDismissLookup,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
+}
+
+/** The lookup panel for [selected], with the book's reference shortcuts built for its language. */
+@Composable
+private fun LookupPanel(
+    selected: WordSelection,
+    openUrl: (String) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val language = selected.token.key.language?.let { code -> DictionaryLookup.baseLanguage(code) }
+    val shortcuts = remember(selected.token, language) {
+        dictionaryShortcuts(selected.token.surface, language, DictionaryRelease.TARGET_LANGUAGE)
+    }
+    WordLookupPanel(
+        result = selected.result,
+        term = selected.token.surface,
+        shortcuts = shortcuts,
+        onOpenShortcut = { shortcut -> openUrl(shortcut.url) },
+        onDismiss = onDismiss,
+        modifier = modifier,
+    )
 }
 
 /** A platform-picked file: its name and bytes, read before it reaches the domain. */

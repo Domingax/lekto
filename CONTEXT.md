@@ -104,6 +104,12 @@ An external reference service (WordReference, Reverso, Google Translate, Linguee
 to look up a single word.
 _Avoid_: Provider
 
+**Dictionary shortcut**:
+An outbound link from the lookup panel to a word's canonical page on a
+**Dictionary source**. Lekto never embeds or scrapes the source; opening the
+shortcut hands the page to the platform browser.
+_Avoid_: Dictionary tab, deep link
+
 **LLM provider**:
 The user's own language-model service (OpenAI, Anthropic, Gemini, Ollama), connected
 BYOK, used for phrase translation.

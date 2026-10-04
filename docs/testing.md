@@ -309,7 +309,23 @@ installer's lifecycle — download, the format-handshake refusal, corruption, an
 the pack's exclusion from the vault's export — is a `core/commonTest` behaviour
 over the fakes in `testkit`, and the JVM downloader's stream-and-decompress path
 runs in `core/jvmTest` against a local HTTP server. The settings, attribution and
-lookup-card UI are `app/desktopTest` semantics.
+lookup-panel UI are `app/desktopTest` semantics.
+
+The word lookup panel (issue #19) completes that interaction. The reference
+shortcuts are a pure transform in `core`: `DictionarySource.canonicalUrl` builds
+each site's canonical page for a word — WordReference, Reverso, Linguee and
+Google Translate — and `dictionaryShortcuts` drops a source that cannot address
+the language pair rather than hand it a wrong page, so those tests live in
+`core/commonTest`. The panel itself, its offline result and its graceful
+degradation to the shortcuts and an honest message when no pack is installed are
+`app/desktopTest` semantics. The reader's selection wash, which keeps the tapped
+word visible behind the panel, is pinned on the word layer in `ReaderTextTest`,
+and the whole loop — turn a page, tap a word, open Reverso through the injected
+browser opener, close, and find the reader still on the same page — is driven
+through `AppSemanticsTest`. Opening a shortcut is a platform action: the desktop
+opener takes its browse call as a parameter so it is unit-tested, and the Android
+glue sits behind the coverage exclusion like the rest of the platform entry
+points.
 
 ## Naming and placement
 
