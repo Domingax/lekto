@@ -36,8 +36,12 @@ Commit your work to the current branch. *Done when the working tree is clean.*
 Open the pull request and wait on it. Push the branch and open the pull request
 against `main`, with the body `.github/pull_request_template.md` prescribes and
 `Closes #<n>`. Then wait for every check to settle, and take each failure back
-through the steps above — the build, the SonarCloud gate, a review comment — and
-wait again. *Done when every check is green and no finding is outstanding.*
+through the steps above — the build, a review comment — and wait again. *Done
+when every check is green and no finding is outstanding.*
+
+Read the SonarQube report for the pull request — the detailed analysis, not just
+the check status — and confirm it is clean. Fix or explicitly accept each
+finding. *Done when the report has no new issue, hotspot or duplication.*
 
 Close with a novice summary, in the user's language. A short summary a
 non-engineer can follow: what changed, why it matters, and what they must still
