@@ -11,10 +11,13 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
+import app.lekto.core.vocabulary.VaultVocabulary
+import app.lekto.core.vocabulary.Vocabulary
 import java.io.File
 
 /**
- * The desktop wiring of the reading loop: the vault-backed library.
+ * The desktop wiring of the reading loop: the vault-backed library and the
+ * user's vocabulary.
  *
  * The vault and derived stores sit under the app-private data directory
  * (ADR-0010); the parser set and the device id are the two pieces the domain
@@ -28,6 +31,18 @@ fun desktopBookLibrary(root: File = desktopVaultRoot()): BookLibrary = VaultBook
     vault = JsonVaultStore(JvmVaultFileSystem(root)),
     derived = DerivedAssetStore(JvmVaultFileSystem(File(root.parentFile, "derived"))),
     parsers = desktopParsers(),
+    seams = Seams.system(),
+    deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
+)
+
+/**
+ * The desktop vocabulary (issue #22) over [root], defaulting to
+ * [desktopVaultRoot]. The manifest is derived from the record files, so this
+ * store is the same vault [desktopBookLibrary] writes to even though each builds
+ * its own view of it.
+ */
+fun desktopVocabulary(root: File = desktopVaultRoot()): Vocabulary = VaultVocabulary(
+    vault = JsonVaultStore(JvmVaultFileSystem(root)),
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )

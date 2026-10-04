@@ -12,6 +12,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ReadingPosition
@@ -22,14 +23,17 @@ import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
+import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.TextSegmenter
-import app.lekto.core.text.WordToken
 import app.lekto.core.text.baseLanguage
+import app.lekto.core.vocabulary.Vocabulary
+import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryController
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.dictionary.Pronunciation
+import app.lekto.dictionary.VocabularyPanel
 import app.lekto.dictionary.WordLookupPanel
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
@@ -40,6 +44,7 @@ import app.lekto.reader.ReaderChapter
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
+import app.lekto.reader.WordTap
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
@@ -47,6 +52,7 @@ import app.lekto.settings.SettingsUiState
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
+import app.lekto.vocabulary.VocabularyController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,14 +65,17 @@ import kotlinx.coroutines.withContext
  * the dictionary [dictionary] services (issue #18), the [pronouncer] the lookup
  * panel speaks through (issue #21), the [openUrl] the lookup panel's reference
  * shortcuts open in the platform browser (issue #19), the [vaultTransfer] that
- * exports and imports the vault (issue #20) and the [dispatcher] blocking work
- * runs on. Bundled so the root composable's signature stays small and grows in
- * one named place.
+ * exports and imports the vault (issue #20), the saved [vocabulary] the reader
+ * colours by and the lookup panel saves into (issue #22), the [lemmas] that give
+ * each word its identity, and the [dispatcher] blocking work runs on. Bundled so
+ * the root composable's signature stays small and grows in one named place.
  */
 data class AppEnvironment(
     val segmenter: TextSegmenter,
     val library: BookLibrary,
-    val mastery: MasteryLookup,
+    val mastery: MasteryLookup = MasteryLookup.AllKnown,
+    val lemmas: LemmaLookup = LemmaLookup.None,
+    val vocabulary: Vocabulary? = null,
     val pickFile: (suspend () -> PickedFile?)? = null,
     val dictionary: DictionaryServices? = null,
     val pronouncer: Pronouncer? = null,
@@ -117,13 +126,16 @@ fun App(environment: AppEnvironment) {
         environment.vaultTransfer?.let { transfer -> VaultTransferController(transfer, environment.dispatcher, scope) }
     }
     val vaultState = vaultTransfer?.state?.collectAsState()?.value ?: VaultUiState()
+    val vocabulary = remember(environment.vocabulary) {
+        environment.vocabulary?.let { store -> VocabularyController(store) }
+    }
     val settings = Settings(
         dictionary = dictionary,
         vaultTransfer = vaultTransfer,
         state = SettingsUiState(dictionaryState, vaultState),
     )
 
-    AppScreens(environment, controller, state, scope, progress, settings)
+    AppScreens(environment, controller, state, scope, progress, settings, vocabulary)
 }
 
 /** The app's destinations, so [App] stays a wiring function and each screen is small. */
@@ -136,6 +148,7 @@ private fun AppScreens(
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
     settings: Settings,
+    vocabulary: VocabularyController?,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -147,6 +160,7 @@ private fun AppScreens(
                 settings.dictionary,
                 scope,
                 progress,
+                vocabulary,
                 onBack = { destination = Destination.Library },
             )
 
@@ -174,8 +188,8 @@ private fun AppScreens(
     }
 }
 
-/** The word whose lookup panel is open: the tapped token and its offline result. */
-private data class WordSelection(val token: WordToken, val result: WordLookup)
+/** The word whose lookup panel is open: the tapped word and its offline result. */
+private data class WordSelection(val tap: WordTap, val result: WordLookup)
 
 /** The reader destination over an opened session, with the lookup panel it owns. */
 @Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.
@@ -186,19 +200,26 @@ private fun ReaderDestination(
     dictionary: DictionaryController?,
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
+    vocabulary: VocabularyController?,
     onBack: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
+    val mastery = vocabulary?.mastery ?: environment.mastery
+    val spoken = selection?.tap?.token
     val lookup = Lookup(
         selection = selection,
         pronunciation = Pronunciation(
-            onSpeak = { selection?.let { selected -> speak(selected.token.surface, selected.token.key.language) } },
+            onSpeak = { spoken?.let { word -> speak(word.surface, word.key.language) } },
             result = speech,
         ),
-        onWordTap = wordTapHandler(dictionary, scope) { token, result ->
-            selection = WordSelection(token, result)
+        vocabulary = VocabularyPanel(
+            entry = selection?.let { selected -> vocabulary?.entryFor(selected.tap.token.key) },
+            onSave = { level -> selection?.let { chosen -> saveWord(vocabulary, scope, environment, chosen, level) } },
+        ),
+        onWordTap = wordTapHandler(dictionary, scope) { tap, result ->
+            selection = WordSelection(tap, result)
             speech = null
         },
         onDismiss = { selection = null },
@@ -206,6 +227,8 @@ private fun ReaderDestination(
     ReaderSession(
         session = session,
         environment = environment,
+        mastery = mastery,
+        masteryRevision = vocabulary?.revision ?: 0,
         lookup = lookup,
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
@@ -213,14 +236,46 @@ private fun ReaderDestination(
 }
 
 /**
+ * Saves the word behind [selection] at [level] (issue #22): the entry carries the
+ * token's identity — the lemma when the dictionary knew one — its translation
+ * and context sentence, so an inflected form updates its lemma's entry. The vault
+ * write is blocking, so it runs on the environment's dispatcher.
+ */
+@Suppress("LongParameterList") // The save's inputs are the reader's own pieces; a bundle would only hide that.
+private fun saveWord(
+    vocabulary: VocabularyController?,
+    scope: CoroutineScope,
+    environment: AppEnvironment,
+    selection: WordSelection,
+    level: MasteryLevel,
+) {
+    vocabulary ?: return
+    val entry = VocabularyEntry(
+        key = selection.tap.token.key,
+        surface = selection.tap.token.surface,
+        translation = translationOf(selection.result),
+        contextSentence = selection.tap.contextSentence,
+        mastery = level,
+    )
+    scope.launch { withContext(environment.dispatcher) { vocabulary.save(entry) } }
+}
+
+/** The translation an offline lookup found, or `null` when it found none. */
+internal fun translationOf(result: WordLookup): String? = (result as? WordLookup.Found)
+    ?.entries
+    ?.firstNotNullOfOrNull { entry -> entry.translations.firstOrNull() }
+    ?.takeIf { translation -> translation.isNotBlank() }
+
+/**
  * The lookup panel's live state and events, bundled so the reader's signature
- * stays small: the word whose panel is open, its pronunciation control, and the
- * taps that open and close it (issues #19 and #21).
+ * stays small: the word whose panel is open, its pronunciation and vocabulary
+ * controls, and the taps that open and close it (issues #19, #21 and #22).
  */
 private class Lookup(
     val selection: WordSelection?,
     val pronunciation: Pronunciation,
-    val onWordTap: (WordToken) -> Unit,
+    val vocabulary: VocabularyPanel,
+    val onWordTap: (WordTap) -> Unit,
     val onDismiss: () -> Unit,
 )
 
@@ -276,18 +331,19 @@ private fun LibraryDestination(
 /**
  * The tap handler for a word: resolve it with the dictionary on a background
  * dispatcher, or report the offline dictionary unavailable when none is wired.
- * The token is carried back so the panel knows the word it is showing and the
- * reader can keep it highlighted behind the panel (issue #19).
+ * The tapped word is carried back so the panel knows the word it is showing, its
+ * context sentence and the reader can keep it highlighted behind the panel
+ * (issues #19 and #22).
  */
 internal fun wordTapHandler(
     dictionary: DictionaryController?,
     scope: CoroutineScope,
-    onLookup: (WordToken, WordLookup) -> Unit,
-): (WordToken) -> Unit = { token ->
+    onLookup: (WordTap, WordLookup) -> Unit,
+): (WordTap) -> Unit = { tap ->
     if (dictionary == null) {
-        onLookup(token, WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED))
+        onLookup(tap, WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED))
     } else {
-        scope.launch { onLookup(token, dictionary.lookUp(token.surface, token.key.language)) }
+        scope.launch { onLookup(tap, dictionary.lookUp(tap.token.surface, tap.token.key.language)) }
     }
 }
 
@@ -343,6 +399,8 @@ private class LibraryNavigation(val onOpenSettings: () -> Unit, val onOpen: (Rea
 private fun ReaderSession(
     session: ReadingSession,
     environment: AppEnvironment,
+    mastery: MasteryLookup,
+    masteryRevision: Int,
     lookup: Lookup,
     onBack: () -> Unit,
     onPositionChange: (Int) -> Unit,
@@ -359,9 +417,16 @@ private fun ReaderSession(
         ReaderScreen(
             document = ReaderDocument(
                 chapter = chapter,
-                renderer = ReaderRenderer(segmenter = environment.segmenter, mastery = environment.mastery),
+                renderer = ReaderRenderer(
+                    segmenter = environment.segmenter,
+                    mastery = mastery,
+                    lemmas = environment.lemmas,
+                ),
                 initialOffset = session.position?.offset ?: 0,
-                selectedRange = lookup.selection?.let { selected -> selected.token.start..selected.token.end },
+                selectedRange = lookup.selection?.let { selected ->
+                    selected.tap.token.start..selected.tap.token.end
+                },
+                masteryRevision = masteryRevision,
             ),
             actions = ReaderActions(
                 onWordTap = lookup.onWordTap,
@@ -373,6 +438,7 @@ private fun ReaderSession(
             LookupPanel(
                 selected = selected,
                 pronunciation = lookup.pronunciation,
+                vocabulary = lookup.vocabulary,
                 openUrl = environment.openUrl,
                 onDismiss = lookup.onDismiss,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -387,21 +453,24 @@ private fun ReaderSession(
 private fun LookupPanel(
     selected: WordSelection,
     pronunciation: Pronunciation,
+    vocabulary: VocabularyPanel,
     openUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val language = selected.token.key.language?.let { code -> baseLanguage(code) }
-    val shortcuts = remember(selected.token, language) {
-        dictionaryShortcuts(selected.token.surface, language, DictionaryRelease.TARGET_LANGUAGE)
+    val token = selected.tap.token
+    val language = token.key.language?.let { code -> baseLanguage(code) }
+    val shortcuts = remember(token, language) {
+        dictionaryShortcuts(token.surface, language, DictionaryRelease.TARGET_LANGUAGE)
     }
     WordLookupPanel(
         result = selected.result,
-        term = selected.token.surface,
+        term = token.surface,
         shortcuts = shortcuts,
         onOpenShortcut = { shortcut -> openUrl(shortcut.url) },
         onDismiss = onDismiss,
         pronunciation = pronunciation,
+        vocabulary = vocabulary,
         modifier = modifier,
     )
 }

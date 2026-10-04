@@ -306,7 +306,7 @@ is held to the licence gate like any other. See ADR-0017, ADR-0018 and
 
 | Module                  | What it is                                                          |
 | ----------------------- | ------------------------------------------------------------------- |
-| `core`                  | The domain: vault, records, merge, tokenisation, word identity, import and library, sync engine, parsers, the dictionary-pack reader. |
+| `core`                  | The domain: vault, records, merge, tokenisation, word identity, vocabulary, import and library, sync engine, parsers, the dictionary-pack reader. |
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
 | `integrations/webdav`   | The first sync driver, isolated from the domain.                    |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |

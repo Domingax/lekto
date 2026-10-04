@@ -7,9 +7,11 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
+import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
@@ -21,16 +23,25 @@ import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
+import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DerivedAssetStore
+import app.lekto.core.vault.DeviceId
+import app.lekto.core.vocabulary.VaultVocabulary
+import app.lekto.core.vocabulary.Vocabulary
+import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryServices
+import app.lekto.dictionary.masteryTag
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.WhitespaceTextSegmenter
+import app.lekto.testkit.deterministicSeams
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -42,6 +53,7 @@ import kotlin.test.assertTrue
  * resumes at the page the reader left.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One flow, one test per step; splitting the class hides the whole path.
 class AppSemanticsTest {
 
     @Test
@@ -200,6 +212,84 @@ class AppSemanticsTest {
         onNodeWithText("Attribution").performClick()
         onNodeWithText("Wiktionary contributors").assertIsDisplayed()
     }
+
+    @Test
+    fun savingAWordFromThePanelStoresItWithItsContextAndLevel() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+        onNodeWithText("Save").performClick()
+
+        waitUntil { vocabulary.all().isNotEmpty() }
+        val entry = vocabulary.all().single()
+        assertEquals("on", entry.key.key)
+        assertTrue(
+            entry.contextSentence.orEmpty().contains("On"),
+            "the context sentence is kept: ${entry.contextSentence}",
+        )
+        assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
+        // No toast, no dialog: the saved state on the panel is the confirmation.
+        onNodeWithText("Saved").assertIsDisplayed()
+    }
+
+    @Test
+    fun theMasteryLevelCanBeChangedAfterSaving() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+        onNodeWithText("Save").performClick()
+        waitUntil { vocabulary.all().isNotEmpty() }
+
+        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performClick()
+
+        waitUntil { vocabulary.all().single().mastery == MasteryLevel.MASTERED }
+        assertEquals(1, vocabulary.all().size, "changing the level must not add a second entry")
+    }
+
+    @Test
+    fun aWordSavedInAnEarlierSessionIsShownAsSaved() = runComposeUiTest {
+        val vault = InMemoryVaultStore()
+        val vocabulary = VaultVocabulary(vault, deterministicSeams(), DeviceId("device-a"))
+        vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.MASTERED))
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+
+        // The entry survived the restart: the panel opens already saved.
+        onNodeWithText("Saved").assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).assertIsDisplayed()
+    }
+
+    @Test
+    fun savingAnInflectedFormDoesNotCreateASecondEntryForTheLemma() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        // The pack knows "lanterns" resolves to "lantern", so the two spellings
+        // share one key.
+        val lemmas = LemmaLookup { surface, _ -> if (surface == "lanterns") "lantern" else null }
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, vocabulary = vocabulary, lemmas = lemmas)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+        onNodeWithText("Save").performClick()
+        waitUntil { vocabulary.all().isNotEmpty() }
+
+        onNodeWithText("Next page").performClick()
+        tapFirstWord()
+        // The same word (page two starts with "On.", so its key is "on"), so its
+        // entry updates in place rather than adding a second one.
+        onNodeWithText("Saved").assertIsDisplayed()
+        onNodeWithText("Save").assertDoesNotExist()
+        assertEquals(1, vocabulary.all().size)
+    }
 }
 
 @Suppress("LongParameterList") // The environment's inputs are independent; a bundle would only hide that.
@@ -210,16 +300,24 @@ internal fun environment(
     pronouncer: Pronouncer? = null,
     openUrl: (String) -> Unit = {},
     vaultTransfer: VaultTransfer? = null,
+    vocabulary: Vocabulary? = null,
+    lemmas: LemmaLookup = LemmaLookup.None,
 ) = AppEnvironment(
     segmenter = WhitespaceTextSegmenter(),
     library = library,
     mastery = MasteryLookup.AllKnown,
+    lemmas = lemmas,
+    vocabulary = vocabulary,
     pickFile = pickFile,
     dictionary = dictionary,
     pronouncer = pronouncer,
     openUrl = openUrl,
     vaultTransfer = vaultTransfer,
 )
+
+/** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
+private fun inMemoryVocabulary(): Vocabulary =
+    VaultVocabulary(InMemoryVaultStore(), deterministicSeams(), DeviceId("device-a"))
 
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
 @OptIn(ExperimentalTestApi::class)

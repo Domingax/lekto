@@ -13,11 +13,13 @@ import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
+import app.lekto.core.vocabulary.VaultVocabulary
+import app.lekto.core.vocabulary.Vocabulary
 import java.io.File
 
 /**
- * The Android wiring of the reading loop: the vault-backed library over
- * `Context.filesDir` (ADR-0010).
+ * The Android wiring of the reading loop: the vault-backed library and the
+ * user's vocabulary, over `Context.filesDir` (ADR-0010).
  *
  * The parser set and the stable device id are the pieces the domain cannot reach
  * for; the vault and derived stores sit in app-private storage, so nothing here
@@ -27,6 +29,17 @@ fun androidBookLibrary(context: Context): BookLibrary = VaultBookLibrary(
     vault = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context))),
     derived = DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived"))),
     parsers = androidParsers(),
+    seams = Seams.system(),
+    deviceId = androidDeviceId(context),
+)
+
+/**
+ * The Android vocabulary (issue #22) over `Context.filesDir`. The manifest is
+ * derived from the record files, so this store is the same vault
+ * [androidBookLibrary] writes to even though each builds its own view of it.
+ */
+fun androidVocabulary(context: Context): Vocabulary = VaultVocabulary(
+    vault = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context))),
     seams = Seams.system(),
     deviceId = androidDeviceId(context),
 )

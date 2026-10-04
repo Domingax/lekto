@@ -59,8 +59,8 @@ object SampleChapter {
      * known. The colouring rule is the product's; the map stands in for the
      * user's vocabulary until the vault exists.
      */
-    val mastery: MasteryLookup = MasteryLookup { word, _ ->
-        when (word.lowercase()) {
+    val mastery: MasteryLookup = MasteryLookup { key ->
+        when (key.key) {
             "lantern", "harbour", "keeper", "ledger" -> MasteryLevel.UNKNOWN
             "quiet" -> MasteryLevel.FAMILIAR
             "evening", "remarkable" -> MasteryLevel.RECOGNIZED

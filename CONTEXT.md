@@ -80,7 +80,8 @@ _Avoid_: Word id, hash
 **Mastery level**:
 How well the user knows a word, on a five-point scale: 0 unknown, 1 familiar,
 2 recognized, 3 mastered, 4 known. Levels 0–3 are highlighted; level 4 is invisible
-(normal text).
+(normal text). Held per **Word key**, so inflected forms share one level, and stored on
+the **Vocabulary entry** that key names.
 _Avoid_: Confidence level, difficulty, proficiency
 
 **Lemma**:
@@ -91,12 +92,13 @@ _Avoid_: Root, stem, base form
 
 **Vocabulary entry**:
 A word or phrase the user saved, with its translation, a context sentence, and a
-mastery level.
+mastery level. Keyed by the word's **Word key**, so inflected forms share one entry;
+stored per record in the **Vault**, so a save survives a restart.
 _Avoid_: Card, item, saved word
 
 **Context sentence**:
 The sentence a vocabulary entry was saved from, kept so the word can be reviewed in
-context.
+context. Cut from the reader's chapter text, so it is not truncated by a page break.
 _Avoid_: Example, snippet
 
 **Dictionary source**:

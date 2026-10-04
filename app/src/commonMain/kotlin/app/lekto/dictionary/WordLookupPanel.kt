@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -15,11 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryEntry
 import app.lekto.core.dictionary.DictionaryShortcut
 import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
+import app.lekto.core.vocabulary.VocabularyEntry
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
@@ -27,12 +30,33 @@ internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-sourc
 /** The test tag on the pronunciation button, so a UI test can click it unambiguously. */
 internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
 
+/** The test tag on the Save button. */
+internal const val SAVE_TAG: String = "lookup-save"
+
+/** The test tag on a mastery level's button, so a UI test can click exactly one. */
+internal fun masteryTag(level: MasteryLevel): String = "lookup-mastery-${level.name}"
+
 /**
  * The lookup panel's pronunciation control (issue #21): the action the Listen
  * button runs and the last honest [result], so a language with no voice renders
  * its message instead of staying silent.
  */
 data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = null)
+
+/**
+ * The lookup panel's vocabulary controls (issue #22): the saved [entry] for the
+ * tapped word (`null` until it is saved) and the [onSave] that saves it or moves
+ * it to another level. [defaultLevel] is the level a fresh save starts at, so
+ * one tap on Save visibly promotes an unknown word.
+ */
+data class VocabularyPanel(
+    val entry: VocabularyEntry?,
+    val onSave: (MasteryLevel) -> Unit,
+    val defaultLevel: MasteryLevel = MasteryLevel.FAMILIAR,
+) {
+    /** The level the selector marks: the saved one, or the fresh default. */
+    val level: MasteryLevel get() = entry?.mastery ?: defaultLevel
+}
 
 /**
  * The word lookup panel (issue #19): the signature interaction. It opens on the
@@ -43,11 +67,12 @@ data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = nu
  * to the exact reading position (docs/ux-design-specification.md, "Success
  * Criteria").
  *
- * Since issue #21 it also carries the pronunciation control: [pronunciation]'s
- * action speaks the tapped word and its result is the honest outcome, so a
- * language with no installed voice says so instead of failing.
+ * Since issue #21 it also carries the pronunciation control, and since issue #22
+ * the [vocabulary] controls: one tap on Save stores the word with its
+ * translation, context sentence and level, and the selector moves a saved word
+ * between levels — the reader's colour updating is the only confirmation.
  */
-@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts and pronunciation.
+@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts, pronunciation and vocabulary.
 @Composable
 fun WordLookupPanel(
     result: WordLookup,
@@ -56,6 +81,7 @@ fun WordLookupPanel(
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
     pronunciation: Pronunciation,
+    vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
 ) {
     Card(modifier.fillMaxWidth().padding(8.dp)) {
@@ -63,7 +89,7 @@ fun WordLookupPanel(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Header(term, pronunciation.onSpeak, onDismiss)
+            Header(term, pronunciation.onSpeak, vocabulary, onDismiss)
             SpeechMessage(pronunciation.result)
             when (result) {
                 is WordLookup.Found -> Found(result, term)
@@ -76,19 +102,60 @@ fun WordLookupPanel(
                 is WordLookup.Unavailable -> Text(result.message, style = MaterialTheme.typography.bodyLarge)
             }
             Shortcuts(shortcuts, onOpenShortcut)
+            MasterySelector(vocabulary)
         }
     }
 }
 
 @Composable
-private fun Header(term: String, onSpeak: () -> Unit, onDismiss: () -> Unit) {
+private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPanel, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Text(term, style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) { Text("Listen") }
+            TextButton(
+                onClick = { vocabulary.onSave(vocabulary.level) },
+                modifier = Modifier.testTag(SAVE_TAG),
+            ) {
+                Text(if (vocabulary.entry == null) "Save" else "Saved")
+            }
             TextButton(onClick = onDismiss) { Text("Close") }
         }
     }
+}
+
+/**
+ * The five-point selector (issue #22): tapping a level saves the word there, or
+ * moves an already-saved word, so mastery can be changed after saving. The
+ * current level is the filled chip.
+ */
+@Composable
+private fun MasterySelector(vocabulary: VocabularyPanel) {
+    Text("Mastery", style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        MasteryLevel.entries.forEach { level ->
+            if (level == vocabulary.level) {
+                FilledTonalButton(
+                    onClick = { vocabulary.onSave(level) },
+                    modifier = Modifier.testTag(masteryTag(level)),
+                ) { Text(level.label()) }
+            } else {
+                TextButton(
+                    onClick = { vocabulary.onSave(level) },
+                    modifier = Modifier.testTag(masteryTag(level)),
+                ) { Text(level.label()) }
+            }
+        }
+    }
+}
+
+/** A mastery level's name, for the selector's compact buttons. */
+private fun MasteryLevel.label(): String = when (this) {
+    MasteryLevel.UNKNOWN -> "Unknown"
+    MasteryLevel.FAMILIAR -> "Familiar"
+    MasteryLevel.RECOGNIZED -> "Recognized"
+    MasteryLevel.MASTERED -> "Mastered"
+    MasteryLevel.KNOWN -> "Known"
 }
 
 /** The honest outcome of the last pronunciation attempt: a failure is a message, success is silent. */
