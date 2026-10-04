@@ -1,0 +1,12 @@
+{"word":"blorple","lang_code":"en","pos":"verb","sounds":[{"tags":["Received-Pronunciation"],"ipa":"/ˈblɔːpəl/"},{"audio":"En-us-blorple.ogg","ogg_url":"https://upload.wikimedia.org/wikipedia/commons/x/En-us-blorple.ogg","mp3_url":"https://upload.wikimedia.org/wikipedia/commons/transcoded/x/En-us-blorple.ogg/En-us-blorple.ogg.mp3"}],"senses":[{"glosses":["To move swiftly."]},{"glosses":["To flow."]}],"translations":[{"lang_code":"fr","word":"blorper","sense":"To move swiftly."},{"lang_code":"fr","word":"fluxer","sense":"To flow."}],"forms":[{"form":"blorpled"},{"form":"blorples"},{"form":"having blorple"}]}
+{"word":"blorpled","lang_code":"en","pos":"verb","senses":[{"glosses":["simple past of blorple"]}],"translations":[{"lang_code":"fr","word":"blorpla"}],"form_of":[{"word":"blorple"}]}
+{"word":"Frungé","lang_code":"en","pos":"noun","sounds":[{"ipa":"/ˈfrʌŋeɪ/"}],"senses":[{"glosses":["A coffeehouse."]}],"translations":[{"lang_code":"fr","word":"frungé"}],"forms":[{"form":"frungés"}]}
+{"word":"glim glom","lang_code":"en","pos":"noun","senses":[{"glosses":["A frozen dessert."]}],"translations":[{"lang_code":"fr","word":"glim glom glacé"}]}
+{"word":"zork","lang_code":"fr","pos":"noun","senses":[{"glosses":["zork"]}],"translations":[{"lang_code":"en","word":"zork"}]}
+{"word":"quib","lang_code":"en","pos":"interj","senses":[{"glosses":["A greeting."]}],"translations":[{"lang_code":"de","word":"quib"}]}
+{"word":"blorple","lang_code":"en","pos":"verb","senses":[{"glosses":["To move swiftly."]},{"glosses":["A point scored."]}],"translations":[{"lang_code":"fr","word":"blorpoint","sense":"A point scored."}]}
+{"word":"glik","lang_code":"en","pos":"noun","senses":[{"glosses":["A tool with a toothed blade."]}],"translations":[{"lang_code":"fr","word":"glika"}]}
+{"word":"quor","lang_code":"en","pos":"verb","senses":[{"glosses":["To perceive with the eyes."]}],"translations":[{"lang_code":"fr","word":"quora"}],"forms":[{"form":"glik"}]}
+{"word":"plim","lang_code":"en","pos":"adj","senses":[{"glosses":["Beneficial."]}],"translations":[{"lang_code":"fr","word":"plima"}],"forms":[{"form":"plimmer"}]}
+{"word":"plom","lang_code":"en","pos":"adv","senses":[{"glosses":["In a good manner."]}],"translations":[{"lang_code":"fr","word":"ploma"}],"forms":[{"form":"plimmer"}]}
+{"word":"vrok","lang_code":"en","pos":"noun","senses":[],"translations":[{"lang_code":"fr","word":"vrok"}]}

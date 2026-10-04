@@ -68,6 +68,13 @@ kotlinx-serialization = "1.9.0"
 # docs/build.md#coverage-and-the-quality-gate.
 kover = "0.9.9"
 
+# Dictionary-pack pipeline (ticket #17). xerial sqlite-jdbc (Apache-2.0,
+# AGPL-compatible) builds the read-only SQLite pack ADR-0017 opens by path. The
+# `tools/dictionaries` module is standalone and off the application CI path, so
+# this dependency never reaches the application's licence gate. See
+# docs/build.md#dictionary-pipeline.
+sqlite-jdbc = "3.53.4.0"
+
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 
@@ -102,6 +109,9 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 # Vault (ticket #12): see the versions block above.
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# Dictionary-pack pipeline (ticket #17): see the versions block above.
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
