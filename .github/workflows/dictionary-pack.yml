@@ -118,11 +118,36 @@ jobs:
           cd "$RUNNER_TEMP"
           sha256sum "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" > SHA256SUMS
 
+      # A short, generated release body (provenance + counts + verification),
+      # not the full NOTICE: the legal text stays in the NOTICE asset and inside
+      # the pack's metadata (`license_text`). The template is committed so the
+      # wording is reviewed like code.
+      - name: Write the release notes
+        run: |
+          manifest="$RUNNER_TEMP/manifest.json"
+          gz="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
+          bytes="$(numfmt --grouping "$(stat -c%s "$gz")") bytes"
+          sed \
+            -e "s|{{ASSET}}|$(basename "$gz")|g" \
+            -e "s|{{SIZE}}|$bytes|g" \
+            -e "s|{{FORMAT_VERSION}}|$(jq -r '.formatVersion' "$manifest")|g" \
+            -e "s|{{LEMMAS}}|$(jq -r '.stats.lemmaCount' "$manifest" | numfmt --grouping)|g" \
+            -e "s|{{ENTRIES}}|$(jq -r '.stats.entryCount' "$manifest" | numfmt --grouping)|g" \
+            -e "s|{{FORMS}}|$(jq -r '.stats.formCount' "$manifest" | numfmt --grouping)|g" \
+            -e "s|{{TRANSLATIONS}}|$(jq -r '.stats.translationCount' "$manifest" | numfmt --grouping)|g" \
+            -e "s|{{SOURCE_URL}}|$(jq -r '.provenance.sourceUrl' "$manifest")|g" \
+            -e "s|{{SOURCE_SHA256}}|$(jq -r '.provenance.sourceSha256' "$manifest")|g" \
+            -e "s|{{EXTRACTION_DATE}}|$(jq -r '.provenance.extractionDate' "$manifest")|g" \
+            -e "s|{{ASSET_SHA256}}|$(cut -d' ' -f1 "$RUNNER_TEMP/SHA256SUMS")|g" \
+            .github/release-notes/dictionary-pack.md > "$RUNNER_TEMP/RELEASE_NOTES.md"
+          cat "$RUNNER_TEMP/RELEASE_NOTES.md"
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="dictionary-en-fr-${{ steps.release.outputs.date }}"
+          notes="$RUNNER_TEMP/RELEASE_NOTES.md"
           assets=(
             "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
             "$RUNNER_TEMP/SHA256SUMS"
@@ -130,9 +155,10 @@ jobs:
             "$RUNNER_TEMP/manifest.json"
           )
           if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --notes-file "$notes"
             gh release upload "$tag" "${assets[@]}" --clobber
           else
             gh release create "$tag" "${assets[@]}" \
               --title "Dictionary pack EN→FR ${{ steps.release.outputs.date }}" \
-              --notes-file "$RUNNER_TEMP/NOTICE"
+              --notes-file "$notes"
           fi

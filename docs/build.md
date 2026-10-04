@@ -278,12 +278,16 @@ writes a `NOTICE` (attribution) and a `manifest.json` (provenance and counts).
 The pack is a **Derived asset**: it is never committed.
 `.github/workflows/dictionary-pack.yml` downloads the source, runs the CLI and
 publishes a GitHub Release tagged `dictionary-en-fr-<YYYYMMDD>` with the pack, a
-`SHA256SUMS` and the `NOTICE`. The workflow runs on `workflow_dispatch` and a
-monthly `schedule`, so it can never block application CI. The build is
-deterministic — fixed row ordering, no timestamps, gzip `-n` — and
-`DictionaryPackGoldenTest` proves the transform on a committed fixture; a sanity
-gate fails a run only on a changed source schema or a coverage collapse below 80%
-of the previous build's lemma count.
+`SHA256SUMS`, the `NOTICE` and a `manifest.json`. The release body is rendered
+from the committed template `.github/release-notes/dictionary-pack.md` and the
+manifest — provenance, counts, hashes and a verification line — while the full
+CC BY-SA 4.0 text stays in the `NOTICE` asset and in the pack's `license_text`
+metadata. The workflow runs on `workflow_dispatch` and a monthly `schedule`, so
+it can never block application CI. The build is deterministic — fixed row
+ordering, no timestamps, gzip `-n` — and `DictionaryPackGoldenTest` proves the
+transform on a committed fixture; a sanity gate fails a run only on a changed
+source schema or a coverage collapse below 80% of the previous build's lemma
+count.
 
 The CLI builds the pack with **xerial sqlite-jdbc** (Apache-2.0,
 AGPL-compatible). `tools/dictionaries` is outside the application licence gate —
