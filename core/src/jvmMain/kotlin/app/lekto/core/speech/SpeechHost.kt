@@ -1,5 +1,7 @@
 package app.lekto.core.speech
 
+import app.lekto.core.text.baseLanguage
+
 /**
  * The operating system's synthesizer behind [JvmPronouncer]: it lists the
  * voices the platform has and builds the command that speaks with one. One host
@@ -29,11 +31,25 @@ internal interface SpeechHost {
             else -> null
         }
 
-        /** Linux prefers `espeak-ng` and falls back to the older `espeak`. */
-        private fun linuxHost(runner: ProcessRunner): SpeechHost? =
-            listOf("espeak-ng", "espeak").firstNotNullOfOrNull { binary ->
-                runOrNull(runner, listOf(binary, "--voices"))?.let { LinuxSpeechHost(runner, binary) }
+        /**
+         * Linux prefers speech-dispatcher's `spd-say` when installed, so the
+         * user's configured synthesizer and default voice are used rather than
+         * the `espeak-ng` voice chosen for them; a better installed voice such as
+         * Piper is otherwise unreachable. `espeak-ng` (then the older `espeak`)
+         * stays as the fallback and still supplies the voice listing (issue #21).
+         * Null when neither exists, so the engine reports "no engine".
+         */
+        internal fun linuxHost(runner: ProcessRunner): SpeechHost? {
+            val espeakBinary = listOf("espeak-ng", "espeak").firstOrNull { binary ->
+                runOrNull(runner, listOf(binary, "--voices")) != null
             }
+            val hasDispatcher = runOrNull(runner, listOf("spd-say", "--version")) != null
+            return if (espeakBinary == null && !hasDispatcher) {
+                null
+            } else {
+                LinuxSpeechHost(runner, espeakBinary, preferDispatcher = hasDispatcher)
+            }
+        }
     }
 }
 
@@ -53,13 +69,35 @@ private class MacSpeechHost(private val runner: ProcessRunner) : SpeechHost {
     override fun command(voice: SpeechVoice, text: String): List<String> = listOf("say", "-v", voice.id, text)
 }
 
-/** Linux `espeak-ng` (or `espeak`), whose `--voices` table is parsed into one voice per language. */
-private class LinuxSpeechHost(private val runner: ProcessRunner, private val binary: String) : SpeechHost {
+/**
+ * Linux's synthesizer, preferring the user's speech-dispatcher configuration
+ * over a directly-driven `espeak-ng` (issue #21).
+ *
+ * [voices] stays `espeak`-based even when `spd-say` is preferred: espeak's
+ * `--voices` table is the near-universal per-language catalogue that lets
+ * [JvmPronouncer] tell a supported language from an unsupported one, whereas the
+ * dispatcher's own list (`spd-say -L`) is synthesis voices, not that catalogue.
+ * A machine with only `spd-say` installed therefore lists no voices and reports
+ * "no voice"; that is an accepted edge, not a reason to rearchitect the seam.
+ */
+internal class LinuxSpeechHost(
+    private val runner: ProcessRunner,
+    private val espeakBinary: String?,
+    private val preferDispatcher: Boolean,
+) : SpeechHost {
 
-    override fun voices(): List<SpeechVoice> =
-        runOrNull(runner, listOf(binary, "--voices"))?.let(::parseEspeakVoices).orEmpty()
+    override fun voices(): List<SpeechVoice> = espeakBinary
+        ?.let { binary -> runOrNull(runner, listOf(binary, "--voices"))?.let(::parseEspeakVoices) }
+        .orEmpty()
 
-    override fun command(voice: SpeechVoice, text: String): List<String> = listOf(binary, "-v", voice.id, text)
+    override fun command(voice: SpeechVoice, text: String): List<String> = if (preferDispatcher) {
+        // spd-say speaks through the user's configured synthesizer and default
+        // voice; -l sets the ISO language, -w defers the exit code until the
+        // utterance finishes, as espeak's does.
+        listOf("spd-say", "-l", baseLanguage(voice.language), "-w", text)
+    } else {
+        listOfNotNull(espeakBinary, "-v", voice.id, text)
+    }
 }
 
 /** Windows PowerShell over `System.Speech`, the only synthesizer desktop Windows ships. */

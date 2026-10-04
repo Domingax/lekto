@@ -32,10 +32,10 @@ object SystemProcessRunner : ProcessRunner {
 /**
  * The desktop [Pronouncer] (issue #21): a JVM binding to the operating system's
  * speech synthesizer, driven as a short-lived process (`say` on macOS,
- * `espeak-ng` on Linux, `System.Speech` on Windows). Lekto ships no engine and
- * bundles no voices (ADR-0019): the OS owns synthesis, so a platform with no
- * engine is [SpeechResult.Unavailable] and a language with no installed voice is
- * [SpeechResult.NoVoice] — never a crash.
+ * `spd-say` on Linux with an `espeak-ng` fallback, `System.Speech` on Windows).
+ * Lekto ships no engine and bundles no voices (ADR-0019): the OS owns synthesis,
+ * so a platform with no engine is [SpeechResult.Unavailable] and a language with
+ * no installed voice is [SpeechResult.NoVoice] — never a crash.
  *
  * The platform's synthesizer is resolved once, lazily, at the first utterance,
  * and its voices are read then and reused. [runner] and [host] are the seams a
