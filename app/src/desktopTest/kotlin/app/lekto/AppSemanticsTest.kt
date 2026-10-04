@@ -12,10 +12,15 @@ import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
+import app.lekto.core.vault.DerivedAssetStore
+import app.lekto.dictionary.DictionaryServices
+import app.lekto.testkit.FakeDictionaryPackFiles
+import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
 
@@ -67,12 +72,49 @@ class AppSemanticsTest {
         onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
     }
 
-    private fun environment(library: BookLibrary, pickFile: (suspend () -> PickedFile?)? = null) = AppEnvironment(
+    @Test
+    fun reachesSettingsAndAttributionFromTheLibrary() = runComposeUiTest {
+        setContent { App(environment(InMemoryLibrary(), dictionary = dictionaryServices())) }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithText("Dictionary").assertIsDisplayed()
+
+        onNodeWithText("Attribution").performClick()
+
+        onNodeWithText("CC BY-SA 4.0", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsShowAnInstalledDictionaryAndItsAttribution() = runComposeUiTest {
+        val installed = dictionaryServices().also { services -> services.installer.install() }
+        setContent { App(environment(InMemoryLibrary(), dictionary = installed)) }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithText("is installed", substring = true).assertIsDisplayed()
+
+        onNodeWithText("Attribution").performClick()
+        onNodeWithText("Wiktionary contributors").assertIsDisplayed()
+    }
+
+    private fun environment(
+        library: BookLibrary,
+        pickFile: (suspend () -> PickedFile?)? = null,
+        dictionary: DictionaryServices? = null,
+    ) = AppEnvironment(
         segmenter = WhitespaceTextSegmenter(),
         library = library,
         mastery = MasteryLookup.AllKnown,
         pickFile = pickFile,
+        dictionary = dictionary,
     )
+
+    private fun dictionaryServices(): DictionaryServices {
+        val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+        val files = FakeDictionaryPackFiles(derived)
+        return DictionaryServices(
+            DictionaryPackInstaller(derived, files, files, "https://example.test/pack.sqlite.gz"),
+        )
+    }
 }
 
 /** Enough paragraphs to span several pages at any test viewport. */

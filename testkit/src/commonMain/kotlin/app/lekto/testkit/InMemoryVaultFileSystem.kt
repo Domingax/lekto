@@ -26,4 +26,6 @@ class InMemoryVaultFileSystem : VaultFileSystem {
     }
 
     override fun listFiles(): List<String> = files.keys.toList()
+
+    override fun storedPath(path: String): String = path
 }

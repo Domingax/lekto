@@ -27,6 +27,14 @@ interface VaultFileSystem {
 
     /** Every file under the root, as `/`-separated paths relative to it. */
     fun listFiles(): List<String>
+
+    /**
+     * An opaque, platform-specific path for [path] under this store's root, so a
+     * large derived asset can be opened in place rather than materialised as
+     * bytes (ADR-0017). `commonMain` treats the value as opaque and only hands
+     * it back to the platform that produced it.
+     */
+    fun storedPath(path: String): String
 }
 
 /**

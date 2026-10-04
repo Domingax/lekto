@@ -26,6 +26,8 @@ class FlakyVaultFileSystem(private val delegate: VaultFileSystem = InMemoryVault
     }
 
     override fun listFiles(): List<String> = delegate.listFiles()
+
+    override fun storedPath(path: String): String = delegate.storedPath(path)
 }
 
 /** The failure [FlakyVaultFileSystem] throws in place of a real I/O error. */

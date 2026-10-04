@@ -3,6 +3,7 @@ package app.lekto.library
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -32,7 +34,14 @@ import app.lekto.core.book.Book
 @Composable
 fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryActions(), modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Text("Library", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Library", style = MaterialTheme.typography.headlineMedium)
+            TextButton(onClick = actions.onOpenSettings) { Text("Settings") }
+        }
 
         state.error?.let { message -> ImportError(message, actions.onDismissError) }
         if (state.importing) Importing(state.progress)

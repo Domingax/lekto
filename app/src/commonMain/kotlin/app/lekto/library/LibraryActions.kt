@@ -10,4 +10,5 @@ data class LibraryActions(
     val onImport: () -> Unit = {},
     val onOpen: (Book) -> Unit = {},
     val onDismissError: () -> Unit = {},
+    val onOpenSettings: () -> Unit = {},
 )

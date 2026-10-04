@@ -7,6 +7,13 @@ package app.lekto.architecture
  * testkit never reaches production code (AGENTS.md, "Module boundaries you must
  * not cross"; ticket #9).
  *
+ * The Android ban applies to the domain's **shared** sources (`commonMain`,
+ * `jvmMain`, `jvmSharedMain`), not to its `androidMain`: an `expect`/`actual`
+ * platform-backed implementation lives in the platform source set and by
+ * definition names the platform API it backs (ADR-0007, "the platform-backed
+ * implementations … live in a JVM source set"). Only `androidMain` may name
+ * Android, so the shared domain stays portable.
+ *
  * Test sources are governed by the module policies instead: `core`'s tests may
  * depend on `testkit`, and may not depend on `app`, because the build file says
  * so. These rules are the same boundaries checked at the import, so a leak is
@@ -27,8 +34,12 @@ object ImportRules {
         }
 
     private fun purityViolation(policy: ModulePolicy, source: KotlinSource, import: String): Violation? = when {
-        isAndroid(import) && policy.kind == ModuleKind.DOMAIN ->
-            Violation(Rules.IMPORT_PURITY, source.path, "the domain must not depend on Android ('$import')")
+        isAndroid(import) && policy.kind == ModuleKind.DOMAIN && source.sourceSet != ANDROID_PLATFORM ->
+            Violation(
+                Rules.IMPORT_PURITY,
+                source.path,
+                "the domain's shared sources must not depend on Android ('$import')",
+            )
 
         import.startsWith(LEKTO_PACKAGE) && !withinAllowedPackages(policy, import) ->
             Violation(Rules.IMPORT_PURITY, source.path, "'$import' is outside the packages ${policy.path} may import")
@@ -65,6 +76,8 @@ object ImportRules {
     }
 
     private fun isAndroid(import: String): Boolean = import.startsWith("android.") || import.startsWith("androidx.")
+
+    private const val ANDROID_PLATFORM = "androidMain"
 
     private const val LEKTO_PACKAGE = "app.lekto"
 

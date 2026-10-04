@@ -47,6 +47,8 @@ class JvmVaultFileSystem(private val root: File) : VaultFileSystem {
         .map { it.relativeTo(root).invariantSeparatorsPath }
         .toList()
 
+    override fun storedPath(path: String): String = resolve(path).path
+
     /** Resolves [path] under the root and refuses anything that escapes it. */
     private fun resolve(path: String): File {
         val base = root.canonicalFile

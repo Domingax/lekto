@@ -69,10 +69,11 @@ kotlinx-serialization = "1.9.0"
 kover = "0.9.9"
 
 # Dictionary-pack pipeline (ticket #17). xerial sqlite-jdbc (Apache-2.0,
-# AGPL-compatible) builds the read-only SQLite pack ADR-0017 opens by path. The
-# `tools/dictionaries` module is standalone and off the application CI path, so
-# this dependency never reaches the application's licence gate. See
-# docs/build.md#dictionary-pipeline.
+# AGPL-compatible) builds the read-only SQLite pack ADR-0017 opens by path. It is
+# used by the standalone `tools/dictionaries` CLI *and*, since issue #18, by
+# `core`'s JVM target as the desktop pack reader, so it is on a production
+# classpath and held to the licence gate like any other dependency. The Android
+# client reads the pack with the framework's SQLite instead (ADR-0018).
 sqlite-jdbc = "3.53.4.0"
 
 [libraries]

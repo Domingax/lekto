@@ -104,6 +104,15 @@ kotlin {
         jvmTest.dependencies {
             implementation(libs.kotest.runner.junit5)
         }
+        // The JVM dictionary reader opens the pre-built SQLite pack in place
+        // (ADR-0017); xerial sqlite-jdbc (Apache-2.0, AGPL-compatible) is
+        // desktop-only, because its bundled natives do not run on Android — the
+        // Android app supplies the framework SQLite behind the same seam.
+        named("jvmMain").configure {
+            dependencies {
+                implementation(libs.sqlite.jdbc)
+            }
+        }
         if (androidEnabled) {
             // Robolectric runs the platform code on a simulated Android runtime
             // (ticket #49). Test-scope only; JUnit 4 drives the Robolectric
