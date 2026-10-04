@@ -34,6 +34,16 @@ class DerivedAssetStore(private val files: VaultFileSystem) {
     /** Every derived path currently stored. */
     fun paths(): List<String> = files.listFiles()
 
+    /**
+     * The app-private platform path of [path], for a derived asset opened in
+     * place rather than read into memory (ADR-0017). The value is opaque to the
+     * domain; a platform implementation interprets it.
+     */
+    fun storedPath(path: String): String {
+        VaultPaths.requireRelativePath(path)
+        return files.storedPath(path)
+    }
+
     /** Drops every derived asset, as a rebuild or a re-download would. */
     fun clear() {
         files.listFiles().forEach(files::delete)

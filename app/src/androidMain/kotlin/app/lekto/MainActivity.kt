@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             val segmenter = remember { IcuTextSegmenter() }
             val picker = remember { AndroidFilePicker() }
+            val dictionary = remember { androidDictionary(this@MainActivity) }
             val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 if (uri == null) {
                     picker.resolve(null)
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
                         launcher.launch(picker.mimeTypes)
                         picker.await()
                     },
+                    dictionary = dictionary,
                 ),
             )
         }

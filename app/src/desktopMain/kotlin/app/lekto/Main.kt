@@ -8,6 +8,7 @@ import app.lekto.core.text.IcuTextSegmenter
 
 fun main() = application {
     val library = remember { desktopBookLibrary() }
+    val dictionary = remember { desktopDictionary() }
     Window(onCloseRequest = ::exitApplication, title = "Lekto") {
         App(
             AppEnvironment(
@@ -15,6 +16,7 @@ fun main() = application {
                 library = library,
                 mastery = MasteryLookup.AllKnown,
                 pickFile = ::pickFileToImport,
+                dictionary = dictionary,
             ),
         )
     }

@@ -1,6 +1,7 @@
 Offline **English → French** dictionary pack built from Wiktionary.
 
 - **Asset:** `{{ASSET}}` ({{SIZE}})
+- **Stable download (latest):** <{{STABLE_URL}}>
 - **Format version:** {{FORMAT_VERSION}}
 - **Coverage:** {{LEMMAS}} lemmas · {{ENTRIES}} entries · {{FORMS}} forms · {{TRANSLATIONS}} translations
 - **Source:** raw Wiktextract extract — <{{SOURCE_URL}}>

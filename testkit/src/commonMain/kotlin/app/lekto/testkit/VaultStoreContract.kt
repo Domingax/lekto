@@ -163,13 +163,3 @@ private fun roundTripsAttachments(source: VaultStore, restored: VaultStore) {
     expectTrue(restored.getAttachment("a")?.contentEquals(SAMPLE_ATTACHMENT) == true, "the restored attachment")
     expectTrue(restored.getAttachment("b") == null, "an attachment with no record")
 }
-
-private const val MISMATCH = "contract violation"
-
-private fun expectEquals(expected: Any?, actual: Any?, what: String) {
-    if (expected != actual) throw AssertionError("$MISMATCH: $what: expected <$expected> but was <$actual>")
-}
-
-private fun expectTrue(condition: Boolean, what: String) {
-    if (!condition) throw AssertionError("$MISMATCH: $what")
-}

@@ -299,6 +299,18 @@ run in `check` like any other module's, but the module sits outside the
 application's coverage, licence and publication graph, so nothing it builds ships
 with the app.
 
+The pack's **consumption in the app** (issue #18) is proved at the same levels.
+The `DictionaryPack` contract in `testkit` runs against the in-memory fake in
+`core/commonTest`, against the **real SQLite pack** the pipeline built — committed
+as `dictionary/en-fr-sample.sqlite` under `core/src/commonTest/resources` — in
+`core/jvmTest`, and against the Android framework's SQLite in the Robolectric
+`androidHostTest` lane, so the two clients cannot answer a query differently. The
+installer's lifecycle — download, the format-handshake refusal, corruption, and
+the pack's exclusion from the vault's export — is a `core/commonTest` behaviour
+over the fakes in `testkit`, and the JVM downloader's stream-and-decompress path
+runs in `core/jvmTest` against a local HTTP server. The settings, attribution and
+lookup-card UI are `app/desktopTest` semantics.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

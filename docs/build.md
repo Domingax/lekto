@@ -116,8 +116,9 @@ engine in `src/main`, its tests in `src/test`. It reads
 `settings.gradle.kts`, each module's `build.gradle.kts` and every Kotlin file
 into a pure model, then asserts: the module dependency graph (the domain depends
 on no module, only the application may depend on an integration, nothing depends
-on the application), import purity (the domain names neither the application,
-nor an integration, nor Android; the testkit never reaches production), and
+on the application), import purity (the domain's shared sources name neither the
+application, nor an integration, nor Android — its `androidMain` platform set may
+name the Android API it backs; the testkit never reaches production), and
 naming and placement (a package matches its directory, a source sits under its
 module's package root, a test class is `*Test.kt` in a test source set).
 
@@ -278,28 +279,34 @@ writes a `NOTICE` (attribution) and a `manifest.json` (provenance and counts).
 The pack is a **Derived asset**: it is never committed.
 `.github/workflows/dictionary-pack.yml` downloads the source, runs the CLI and
 publishes a GitHub Release tagged `dictionary-en-fr-<YYYYMMDD>` with the pack, a
-`SHA256SUMS`, the `NOTICE` and a `manifest.json`. The release body is rendered
-from the committed template `.github/release-notes/dictionary-pack.md` and the
-manifest — provenance, counts, hashes and a verification line — while the full
-CC BY-SA 4.0 text stays in the `NOTICE` asset and in the pack's `license_text`
-metadata. The workflow runs on `workflow_dispatch` and a monthly `schedule`, so
-it can never block application CI. The build is deterministic — fixed row
-ordering, no timestamps, gzip `-n` — and `DictionaryPackGoldenTest` proves the
-transform on a committed fixture; a sanity gate fails a run only on a changed
-source schema or a coverage collapse below 80% of the previous build's lemma
-count.
+`SHA256SUMS`, the `NOTICE` and a `manifest.json`. It also uploads a **date-free
+alias** (`lekto-dictionary-en-fr.sqlite.gz`) beside the dated asset, so the app
+can fetch the latest pack from one stable URL,
+`releases/latest/download/lekto-dictionary-en-fr.sqlite.gz` (issue #18). The
+release body is rendered from the committed template
+`.github/release-notes/dictionary-pack.md` and the manifest — provenance, counts,
+hashes and a verification line — while the full CC BY-SA 4.0 text stays in the
+`NOTICE` asset and in the pack's `license_text` metadata. The workflow runs on
+`workflow_dispatch` and a monthly `schedule`, so it can never block application
+CI. The build is deterministic — fixed row ordering, no timestamps, gzip `-n` —
+and `DictionaryPackGoldenTest` proves the transform on a committed fixture; a
+sanity gate fails a run only on a changed source schema or a coverage collapse
+below 80% of the previous build's lemma count.
 
-The CLI builds the pack with **xerial sqlite-jdbc** (Apache-2.0,
-AGPL-compatible). `tools/dictionaries` is outside the application licence gate —
-it never ships — so the dependency is not in `config/dependency-licences.txt`.
-See ADR-0017 (`docs/adr/0017-large-derived-assets-open-by-path.md`) and
+The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
+the alias into the device-local **derived store**, validates the format handshake
+and opens the SQLite file in place — `sqlite-jdbc` on the JVM, the Android
+framework's SQLite on Android (ADR-0018). The CLI and the JVM reader use
+**xerial sqlite-jdbc** (Apache-2.0, AGPL-compatible); it is now a production
+dependency of `core`'s JVM target (desktop) as well as the standalone tool, so it
+is held to the licence gate like any other. See ADR-0017, ADR-0018 and
 `docs/research/open-dictionaries.md`.
 
 ## Modules
 
 | Module                  | What it is                                                          |
 | ----------------------- | ------------------------------------------------------------------- |
-| `core`                  | The domain: vault, records, merge, tokenisation, word identity, import and library, sync engine, parsers. |
+| `core`                  | The domain: vault, records, merge, tokenisation, word identity, import and library, sync engine, parsers, the dictionary-pack reader. |
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
 | `integrations/webdav`   | The first sync driver, isolated from the domain.                    |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |

@@ -109,14 +109,21 @@ jobs:
           "$cli" "${args[@]}"
 
       # `-n` omits the gzip timestamp and filename, so compression adds no
-      # non-determinism of its own.
+      # non-determinism of its own. A date-free alias is published alongside the
+      # dated asset so the app can fetch the latest pack from the stable
+      # `releases/latest/download/lekto-dictionary-en-fr.sqlite.gz` URL (issue #18).
       - name: Compress the pack deterministically
-        run: gzip -9 -n "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
+        run: |
+          dated="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
+          gzip -9 -n "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
+          cp "$dated" "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
 
       - name: Write the checksums
         run: |
           cd "$RUNNER_TEMP"
-          sha256sum "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" > SHA256SUMS
+          sha256sum \
+            "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" \
+            "lekto-dictionary-en-fr.sqlite.gz" > SHA256SUMS
 
       # A short, generated release body (provenance + counts + verification),
       # not the full NOTICE: the legal text stays in the NOTICE asset and inside
@@ -129,6 +136,7 @@ jobs:
           bytes="$(numfmt --grouping "$(stat -c%s "$gz")") bytes"
           sed \
             -e "s|{{ASSET}}|$(basename "$gz")|g" \
+            -e "s|{{STABLE_URL}}|https://github.com/${{ github.repository }}/releases/latest/download/lekto-dictionary-en-fr.sqlite.gz|g" \
             -e "s|{{SIZE}}|$bytes|g" \
             -e "s|{{FORMAT_VERSION}}|$(jq -r '.formatVersion' "$manifest")|g" \
             -e "s|{{LEMMAS}}|$(jq -r '.stats.lemmaCount' "$manifest" | numfmt --grouping)|g" \
@@ -150,6 +158,7 @@ jobs:
           notes="$RUNNER_TEMP/RELEASE_NOTES.md"
           assets=(
             "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
+            "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
             "$RUNNER_TEMP/SHA256SUMS"
             "$RUNNER_TEMP/NOTICE"
             "$RUNNER_TEMP/manifest.json"

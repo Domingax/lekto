@@ -117,6 +117,36 @@ class ArchitectureViolationTest :
             rules(repository) shouldContain Rules.IMPORT_PURITY
         }
 
+        test("the domain's shared JVM sources may not import Android") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "core/src/jvmSharedMain/kotlin/app/lekto/core/Shared.kt",
+                        "jvmSharedMain",
+                        "app.lekto.core",
+                        "android.content.Context",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldContain Rules.IMPORT_PURITY
+        }
+
+        test("the domain's Android source set may name Android") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "core/src/androidMain/kotlin/app/lekto/core/AndroidBacked.kt",
+                        "androidMain",
+                        "app.lekto.core",
+                        "android.database.sqlite.SQLiteDatabase",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldNotContain Rules.IMPORT_PURITY
+        }
+
         test("a production source may not import the testkit") {
             val repository = repository(
                 sources = listOf(
