@@ -117,8 +117,13 @@ fun App(environment: AppEnvironment) {
         environment.vaultTransfer?.let { transfer -> VaultTransferController(transfer, environment.dispatcher, scope) }
     }
     val vaultState = vaultTransfer?.state?.collectAsState()?.value ?: VaultUiState()
+    val settings = Settings(
+        dictionary = dictionary,
+        vaultTransfer = vaultTransfer,
+        state = SettingsUiState(dictionaryState, vaultState),
+    )
 
-    AppScreens(environment, controller, state, scope, progress, dictionary, dictionaryState, vaultTransfer, vaultState)
+    AppScreens(environment, controller, state, scope, progress, settings)
 }
 
 /** The app's destinations, so [App] stays a wiring function and each screen is small. */
@@ -130,10 +135,7 @@ private fun AppScreens(
     libraryState: LibraryUiState,
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
-    dictionary: DictionaryController?,
-    dictionaryState: DictionaryUiState,
-    vaultTransfer: VaultTransferController?,
-    vaultState: VaultUiState,
+    settings: Settings,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -142,22 +144,19 @@ private fun AppScreens(
             is Destination.Reading -> ReaderDestination(
                 current.session,
                 environment,
-                dictionary,
+                settings.dictionary,
                 scope,
                 progress,
                 onBack = { destination = Destination.Library },
             )
 
             Destination.Attribution -> AttributionScreen(
-                metadata = (dictionaryState.status as? DictionaryPackState.Ready)?.metadata,
+                metadata = (settings.state.dictionary.status as? DictionaryPackState.Ready)?.metadata,
                 onBack = { destination = Destination.Settings },
             )
 
             Destination.Settings -> SettingsDestination(
-                dictionaryState,
-                dictionary,
-                vaultState,
-                vaultTransfer,
+                settings,
                 onVaultImported = controller::refresh,
                 onOpenAttribution = { destination = Destination.Attribution },
                 onBack = { destination = Destination.Library },
@@ -225,28 +224,34 @@ private class Lookup(
     val onDismiss: () -> Unit,
 )
 
+/**
+ * The settings screen's live pieces, bundled so [AppScreens] stays within the
+ * parameter bound: the two controllers it drives and the state it renders.
+ */
+private class Settings(
+    val dictionary: DictionaryController?,
+    val vaultTransfer: VaultTransferController?,
+    val state: SettingsUiState,
+)
+
 /** The settings destination wrapped so its action bundle stays out of [AppScreens]. */
-@Suppress("LongParameterList") // The settings sections' inputs are independent; the action bundle is [SettingsActions].
 @Composable
 private fun SettingsDestination(
-    dictionaryState: DictionaryUiState,
-    dictionary: DictionaryController?,
-    vaultState: VaultUiState,
-    vaultTransfer: VaultTransferController?,
+    settings: Settings,
     onVaultImported: () -> Unit,
     onOpenAttribution: () -> Unit,
     onBack: () -> Unit,
 ) {
     SettingsScreen(
-        state = SettingsUiState(dictionaryState, vaultState),
+        state = settings.state,
         actions = SettingsActions(
-            onDownload = { dictionary?.install() },
+            onDownload = { settings.dictionary?.install() },
             onOpenAttribution = onOpenAttribution,
-            onDismissError = { dictionary?.dismissError() },
+            onDismissError = { settings.dictionary?.dismissError() },
             onBack = onBack,
-            onExportVault = { vaultTransfer?.export() },
-            onImportVault = { vaultTransfer?.import(onVaultImported) },
-            onDismissVaultMessage = { vaultTransfer?.dismiss() },
+            onExportVault = { settings.vaultTransfer?.export() },
+            onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
+            onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
         ),
     )
 }
