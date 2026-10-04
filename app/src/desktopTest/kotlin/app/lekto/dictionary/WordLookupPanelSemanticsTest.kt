@@ -156,7 +156,7 @@ class WordLookupPanelSemanticsTest {
         term: String = "blorple",
         speech: SpeechResult? = null,
         onOpenShortcut: (DictionaryShortcut) -> Unit = {},
-        onSpeak: (() -> Unit)? = {},
+        onSpeak: () -> Unit = {},
         onDismiss: () -> Unit = {},
     ) {
         MaterialTheme {
@@ -166,8 +166,7 @@ class WordLookupPanelSemanticsTest {
                 shortcuts = shortcuts,
                 onOpenShortcut = onOpenShortcut,
                 onDismiss = onDismiss,
-                speech = speech,
-                onSpeak = onSpeak,
+                pronunciation = Pronunciation(onSpeak = onSpeak, result = speech),
                 modifier = Modifier.size(width = 360.dp, height = 480.dp),
             )
         }

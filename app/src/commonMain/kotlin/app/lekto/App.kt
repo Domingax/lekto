@@ -29,6 +29,7 @@ import app.lekto.dictionary.DictionaryController
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.DictionaryUiState
+import app.lekto.dictionary.Pronunciation
 import app.lekto.dictionary.WordLookupPanel
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
@@ -175,21 +176,38 @@ private fun ReaderDestination(
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
-    ReaderSession(
-        session = session,
-        environment = environment,
+    val lookup = Lookup(
         selection = selection,
-        speech = speech,
+        pronunciation = Pronunciation(
+            onSpeak = { selection?.let { selected -> speak(selected.token.surface, selected.token.key.language) } },
+            result = speech,
+        ),
         onWordTap = wordTapHandler(dictionary, scope) { token, result ->
             selection = WordSelection(token, result)
             speech = null
         },
-        onSpeak = { selection?.let { selected -> speak(selected.token.surface, selected.token.key.language) } },
-        onDismissLookup = { selection = null },
+        onDismiss = { selection = null },
+    )
+    ReaderSession(
+        session = session,
+        environment = environment,
+        lookup = lookup,
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
 }
+
+/**
+ * The lookup panel's live state and events, bundled so the reader's signature
+ * stays small: the word whose panel is open, its pronunciation control, and the
+ * taps that open and close it (issues #19 and #21).
+ */
+private class Lookup(
+    val selection: WordSelection?,
+    val pronunciation: Pronunciation,
+    val onWordTap: (WordToken) -> Unit,
+    val onDismiss: () -> Unit,
+)
 
 /** The settings destination wrapped so its action bundle stays out of [AppScreens]. */
 @Composable
@@ -297,11 +315,7 @@ private class LibraryNavigation(val onOpenSettings: () -> Unit, val onOpen: (Rea
 private fun ReaderSession(
     session: ReadingSession,
     environment: AppEnvironment,
-    selection: WordSelection?,
-    speech: SpeechResult?,
-    onWordTap: (WordToken) -> Unit,
-    onSpeak: () -> Unit,
-    onDismissLookup: () -> Unit,
+    lookup: Lookup,
     onBack: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
@@ -319,17 +333,20 @@ private fun ReaderSession(
                 chapter = chapter,
                 renderer = ReaderRenderer(segmenter = environment.segmenter, mastery = environment.mastery),
                 initialOffset = session.position?.offset ?: 0,
-                selectedRange = selection?.let { selected -> selected.token.start..selected.token.end },
+                selectedRange = lookup.selection?.let { selected -> selected.token.start..selected.token.end },
             ),
-            actions = ReaderActions(onWordTap = onWordTap, onBack = onBack, onPositionChange = onPositionChange),
+            actions = ReaderActions(
+                onWordTap = lookup.onWordTap,
+                onBack = onBack,
+                onPositionChange = onPositionChange,
+            ),
         )
-        selection?.let { selected ->
+        lookup.selection?.let { selected ->
             LookupPanel(
                 selected = selected,
-                speech = speech,
+                pronunciation = lookup.pronunciation,
                 openUrl = environment.openUrl,
-                onSpeak = onSpeak,
-                onDismiss = onDismissLookup,
+                onDismiss = lookup.onDismiss,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -341,9 +358,8 @@ private fun ReaderSession(
 @Composable
 private fun LookupPanel(
     selected: WordSelection,
-    speech: SpeechResult?,
+    pronunciation: Pronunciation,
     openUrl: (String) -> Unit,
-    onSpeak: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -357,8 +373,7 @@ private fun LookupPanel(
         shortcuts = shortcuts,
         onOpenShortcut = { shortcut -> openUrl(shortcut.url) },
         onDismiss = onDismiss,
-        speech = speech,
-        onSpeak = onSpeak,
+        pronunciation = pronunciation,
         modifier = modifier,
     )
 }

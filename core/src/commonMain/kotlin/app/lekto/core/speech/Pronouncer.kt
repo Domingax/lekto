@@ -26,8 +26,7 @@ sealed interface SpeechResult {
  * **blocking** — on desktop it runs a process, on Android it may touch the
  * engine — so callers run it off the UI thread.
  */
-interface Pronouncer {
-
+fun interface Pronouncer {
     /** Speaks [text] in [language], or reports why it cannot. */
     fun speak(text: String, language: String?): SpeechResult
 

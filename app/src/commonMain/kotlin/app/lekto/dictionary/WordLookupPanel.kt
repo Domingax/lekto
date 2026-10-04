@@ -28,6 +28,13 @@ internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-sourc
 internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
 
 /**
+ * The lookup panel's pronunciation control (issue #21): the action the Listen
+ * button runs and the last honest [result], so a language with no voice renders
+ * its message instead of staying silent.
+ */
+data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = null)
+
+/**
  * The word lookup panel (issue #19): the signature interaction. It opens on the
  * word the reader tapped with the offline result already in it, and always
  * offers the reference-site shortcuts beside that result — so with no pack and
@@ -36,11 +43,11 @@ internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
  * to the exact reading position (docs/ux-design-specification.md, "Success
  * Criteria").
  *
- * Since issue #21 it also carries the pronunciation control: [onSpeak] speaks
- * the tapped word and [speech] is the honest result of the last attempt, so a
+ * Since issue #21 it also carries the pronunciation control: [pronunciation]'s
+ * action speaks the tapped word and its result is the honest outcome, so a
  * language with no installed voice says so instead of failing.
  */
-@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts and speech; a bundle adds a type.
+@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts and pronunciation.
 @Composable
 fun WordLookupPanel(
     result: WordLookup,
@@ -48,8 +55,7 @@ fun WordLookupPanel(
     shortcuts: List<DictionaryShortcut>,
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
-    speech: SpeechResult? = null,
-    onSpeak: (() -> Unit)? = null,
+    pronunciation: Pronunciation,
     modifier: Modifier = Modifier,
 ) {
     Card(modifier.fillMaxWidth().padding(8.dp)) {
@@ -57,8 +63,8 @@ fun WordLookupPanel(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Header(term, onSpeak, onDismiss)
-            SpeechMessage(speech)
+            Header(term, pronunciation.onSpeak, onDismiss)
+            SpeechMessage(pronunciation.result)
             when (result) {
                 is WordLookup.Found -> Found(result, term)
 
@@ -75,13 +81,11 @@ fun WordLookupPanel(
 }
 
 @Composable
-private fun Header(term: String, onSpeak: (() -> Unit)?, onDismiss: () -> Unit) {
+private fun Header(term: String, onSpeak: () -> Unit, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Text(term, style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            onSpeak?.let { speak ->
-                TextButton(onClick = speak, modifier = Modifier.testTag(PRONOUNCE_TAG)) { Text("Listen") }
-            }
+            TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) { Text("Listen") }
             TextButton(onClick = onDismiss) { Text("Close") }
         }
     }
