@@ -1,5 +1,6 @@
 package app.lekto.reader
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -28,16 +29,20 @@ class ReaderTokens(val text: AnnotatedString, val words: List<WordToken>)
  * Used where the whole chapter is wanted at once (the sample, the golden, the
  * tokenisation tests); the reader builds only the visible page's layer with
  * [buildPageTokens], so opening a book does not tokenise every word in it.
+ *
+ * [selected] marks the word whose lookup panel is open, so it stays visibly
+ * highlighted while the panel is up.
  */
 fun buildReaderTokens(
     chapter: ReaderChapter,
     renderer: ReaderRenderer,
+    selected: IntRange? = null,
     onWordTap: (WordToken) -> Unit = {},
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, renderer.styles)
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, renderer.styles, onWordTap)
+    val writer = WordWriter(builder, renderer.styles, selected, onWordTap)
     chapter.blocks.forEachIndexed { index, block ->
         tokenise(block.text, chapter.language, renderer.segmenter).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
@@ -75,12 +80,13 @@ fun buildPageTokens(
     page: ReaderPage,
     renderer: ReaderRenderer,
     chapter: ReaderChapter,
+    selected: IntRange? = null,
     onWordTap: (WordToken) -> Unit = {},
 ): ReaderTokens {
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, renderer.styles, onWordTap)
+    val writer = WordWriter(builder, renderer.styles, selected, onWordTap)
     tokenise(slice.text, chapter.language, renderer.segmenter).words.forEach { token ->
         words += token
         writer.write(token, renderer.mastery.levelOf(token.surface, chapter.language))
@@ -136,22 +142,27 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
 /**
  * Colours and links one word at a time. Highlighted words (levels 0–3) get a
  * colour span and an underline; a known word (level 4) gets neither, so it reads
- * as normal text. The link carries the same colour so the platform's default
- * link tint never overrides the mastery palette.
+ * as normal text. The [selected] word is additionally washed with
+ * [SelectionHighlight], so the word stays visible behind the open lookup panel.
+ * The link carries the same colour so the platform's default link tint never
+ * overrides the mastery palette.
  */
 private class WordWriter(
     private val builder: AnnotatedString.Builder,
     private val styles: ReaderStyles,
+    private val selected: IntRange?,
     private val onWordTap: (WordToken) -> Unit,
 ) {
     fun write(word: WordToken, level: MasteryLevel) {
         val colour = level.readerColorOr(styles.body.color)
         val decoration = level.readerDecoration()
-        builder.addStyle(SpanStyle(color = colour, textDecoration = decoration), word.start, word.end)
+        val background = if (selected == word.start..word.end) SelectionHighlight else Color.Unspecified
+        val span = SpanStyle(color = colour, textDecoration = decoration, background = background)
+        builder.addStyle(span, word.start, word.end)
         builder.addLink(
             LinkAnnotation.Clickable(
                 tag = "word:${word.start}",
-                styles = TextLinkStyles(style = SpanStyle(color = colour, textDecoration = decoration)),
+                styles = TextLinkStyles(style = span),
                 linkInteractionListener = { onWordTap(word) },
             ),
             word.start,

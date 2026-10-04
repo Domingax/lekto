@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                         picker.await()
                     },
                     dictionary = dictionary,
+                    openUrl = { url -> openInBrowser(this@MainActivity, url) },
                 ),
             )
         }

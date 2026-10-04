@@ -15,6 +15,14 @@ private val Familiar = Color(0xFFFACC15) // Yellow.
 private val Recognized = Color(0xFFFB923C) // Light orange.
 private val Mastered = Color(0xFF22C55E) // Green.
 
+/**
+ * The wash the tapped word carries while its lookup panel is open — the
+ * `WordToken` `selected` state of the UX spec. A translucent accent, so the
+ * mastery colour underneath still reads through and the selected word stands out
+ * from its neighbours behind the panel.
+ */
+val SelectionHighlight: Color = Color(0x332563EB)
+
 /** The colour a word at [level] is painted with; `Unspecified` means normal text. */
 fun MasteryLevel.readerColor(): Color = when (this) {
     MasteryLevel.UNKNOWN -> Unknown

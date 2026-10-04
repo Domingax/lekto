@@ -1,5 +1,6 @@
 package app.lekto.reader
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -176,6 +177,18 @@ class ReaderTextTest {
         val titleSpan = tokens.text.spanStyles.first { span -> span.start == 0 && span.end == 7 }
         assertEquals(ReaderStyles.Reading.heading.fontSize, titleSpan.item.fontSize)
         assertEquals(FontWeight.Bold, styleOf(tokens, "loud").fontWeight)
+    }
+
+    @Test
+    fun theSelectedWordCarriesTheSelectionHighlightAndItsNeighboursDoNot() {
+        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val page = ReaderPage(0, chapterText.length)
+        val lantern = buildPageTokens(chapterText, page, renderer, chapter).words.first { it.surface == "lantern" }
+
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, selected = lantern.start..lantern.end)
+
+        assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
+        assertEquals(Color.Unspecified, styleOf(tokens, "the").background)
     }
 }
 

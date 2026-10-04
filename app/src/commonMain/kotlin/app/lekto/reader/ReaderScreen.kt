@@ -171,9 +171,9 @@ private fun rememberPageTokens(
     onWordTap: (WordToken) -> Unit,
 ): ReaderTokens? {
     val latestTap = rememberUpdatedState(onWordTap)
-    return remember(chapterText, page, document.chapter, document.renderer) {
+    return remember(chapterText, page, document.chapter, document.renderer, document.selectedRange) {
         page?.let { slice ->
-            buildPageTokens(chapterText, slice, document.renderer, document.chapter) { word ->
+            buildPageTokens(chapterText, slice, document.renderer, document.chapter, document.selectedRange) { word ->
                 latestTap.value(word)
             }
         }
