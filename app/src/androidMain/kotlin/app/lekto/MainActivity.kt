@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import app.lekto.core.MasteryLookup
+import app.lekto.core.speech.AndroidPronouncer
 import app.lekto.core.text.IcuTextSegmenter
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -15,9 +16,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+
+    private var pronouncer: AndroidPronouncer? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val library = androidBookLibrary(this)
+        pronouncer = AndroidPronouncer(this)
+        val speech = pronouncer
         setContent {
             val scope = rememberCoroutineScope()
             val segmenter = remember { IcuTextSegmenter() }
@@ -45,10 +51,16 @@ class MainActivity : ComponentActivity() {
                         picker.await()
                     },
                     dictionary = dictionary,
+                    pronouncer = speech,
                     openUrl = { url -> openInBrowser(this@MainActivity, url) },
                 ),
             )
         }
+    }
+
+    override fun onDestroy() {
+        pronouncer?.shutdown()
+        super.onDestroy()
     }
 }
 

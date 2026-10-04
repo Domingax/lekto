@@ -20,12 +20,16 @@ import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
+import app.lekto.core.speech.Pronouncer
+import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.TextSegmenter
 import app.lekto.core.text.WordToken
+import app.lekto.core.text.baseLanguage
 import app.lekto.dictionary.DictionaryController
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.DictionaryUiState
+import app.lekto.dictionary.Pronunciation
 import app.lekto.dictionary.WordLookupPanel
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
@@ -48,10 +52,11 @@ import kotlinx.coroutines.withContext
 /**
  * The pieces a platform entry point supplies to the [App]: the [segmenter], the
  * vault-backed [library], the wording palette's [mastery], the file [pickFile],
- * the dictionary [dictionary] services (issue #18), the [openUrl] the lookup
- * panel's reference shortcuts open in the platform browser (issue #19) and the
- * [dispatcher] blocking work runs on. Bundled so the root composable's signature
- * stays small and grows in one named place.
+ * the dictionary [dictionary] services (issue #18), the [pronouncer] the lookup
+ * panel speaks through (issue #21), the [openUrl] the lookup panel's reference
+ * shortcuts open in the platform browser (issue #19) and the [dispatcher]
+ * blocking work runs on. Bundled so the root composable's signature stays small
+ * and grows in one named place.
  */
 data class AppEnvironment(
     val segmenter: TextSegmenter,
@@ -59,6 +64,7 @@ data class AppEnvironment(
     val mastery: MasteryLookup,
     val pickFile: (suspend () -> PickedFile?)? = null,
     val dictionary: DictionaryServices? = null,
+    val pronouncer: Pronouncer? = null,
     val openUrl: (String) -> Unit = {},
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
@@ -168,16 +174,40 @@ private fun ReaderDestination(
     onBack: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
+    var speech by remember { mutableStateOf<SpeechResult?>(null) }
+    val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
+    val lookup = Lookup(
+        selection = selection,
+        pronunciation = Pronunciation(
+            onSpeak = { selection?.let { selected -> speak(selected.token.surface, selected.token.key.language) } },
+            result = speech,
+        ),
+        onWordTap = wordTapHandler(dictionary, scope) { token, result ->
+            selection = WordSelection(token, result)
+            speech = null
+        },
+        onDismiss = { selection = null },
+    )
     ReaderSession(
         session = session,
         environment = environment,
-        selection = selection,
-        onWordTap = wordTapHandler(dictionary, scope) { token, result -> selection = WordSelection(token, result) },
-        onDismissLookup = { selection = null },
+        lookup = lookup,
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
 }
+
+/**
+ * The lookup panel's live state and events, bundled so the reader's signature
+ * stays small: the word whose panel is open, its pronunciation control, and the
+ * taps that open and close it (issues #19 and #21).
+ */
+private class Lookup(
+    val selection: WordSelection?,
+    val pronunciation: Pronunciation,
+    val onWordTap: (WordToken) -> Unit,
+    val onDismiss: () -> Unit,
+)
 
 /** The settings destination wrapped so its action bundle stays out of [AppScreens]. */
 @Composable
@@ -233,6 +263,25 @@ internal fun wordTapHandler(
     }
 }
 
+/**
+ * The pronunciation handler (issue #21): speak the word off the UI thread — the
+ * platform call blocks — and report the honest [SpeechResult] back, or report
+ * that no engine is wired. Returned as a function so the reader's action bundle
+ * stays a plain value.
+ */
+internal fun speakHandler(
+    pronouncer: Pronouncer?,
+    scope: CoroutineScope,
+    dispatcher: CoroutineDispatcher,
+    onResult: (SpeechResult) -> Unit,
+): (String, String?) -> Unit = { text, language ->
+    if (pronouncer == null) {
+        onResult(SpeechResult.Unavailable(Pronouncer.NO_ENGINE))
+    } else {
+        scope.launch { onResult(withContext(dispatcher) { pronouncer.speak(text, language) }) }
+    }
+}
+
 /** The library's actions: import through the platform picker, open a book, dismiss a failure. */
 private fun libraryActions(
     environment: AppEnvironment,
@@ -266,9 +315,7 @@ private class LibraryNavigation(val onOpenSettings: () -> Unit, val onOpen: (Rea
 private fun ReaderSession(
     session: ReadingSession,
     environment: AppEnvironment,
-    selection: WordSelection?,
-    onWordTap: (WordToken) -> Unit,
-    onDismissLookup: () -> Unit,
+    lookup: Lookup,
     onBack: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
@@ -286,15 +333,20 @@ private fun ReaderSession(
                 chapter = chapter,
                 renderer = ReaderRenderer(segmenter = environment.segmenter, mastery = environment.mastery),
                 initialOffset = session.position?.offset ?: 0,
-                selectedRange = selection?.let { selected -> selected.token.start..selected.token.end },
+                selectedRange = lookup.selection?.let { selected -> selected.token.start..selected.token.end },
             ),
-            actions = ReaderActions(onWordTap = onWordTap, onBack = onBack, onPositionChange = onPositionChange),
+            actions = ReaderActions(
+                onWordTap = lookup.onWordTap,
+                onBack = onBack,
+                onPositionChange = onPositionChange,
+            ),
         )
-        selection?.let { selected ->
+        lookup.selection?.let { selected ->
             LookupPanel(
                 selected = selected,
+                pronunciation = lookup.pronunciation,
                 openUrl = environment.openUrl,
-                onDismiss = onDismissLookup,
+                onDismiss = lookup.onDismiss,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -302,14 +354,16 @@ private fun ReaderSession(
 }
 
 /** The lookup panel for [selected], with the book's reference shortcuts built for its language. */
+@Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
 @Composable
 private fun LookupPanel(
     selected: WordSelection,
+    pronunciation: Pronunciation,
     openUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val language = selected.token.key.language?.let { code -> DictionaryLookup.baseLanguage(code) }
+    val language = selected.token.key.language?.let { code -> baseLanguage(code) }
     val shortcuts = remember(selected.token, language) {
         dictionaryShortcuts(selected.token.surface, language, DictionaryRelease.TARGET_LANGUAGE)
     }
@@ -319,6 +373,7 @@ private fun LookupPanel(
         shortcuts = shortcuts,
         onOpenShortcut = { shortcut -> openUrl(shortcut.url) },
         onDismiss = onDismiss,
+        pronunciation = pronunciation,
         modifier = modifier,
     )
 }

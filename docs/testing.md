@@ -144,7 +144,7 @@ machine or runner without Docker skips it instead of failing: the lane is green
 everywhere and simply proves more where Docker is present.
 
 The nightly instrumented lane is wired but still has no instrumented tests to run;
-they arrive with the platform work (tickets #16, #21, #24). The lane exists and
+they arrive with the remaining platform work (ticket #24). The lane exists and
 stays off the critical path so those tickets only have to add tests, not CI.
 
 ## Android host lane
@@ -326,6 +326,18 @@ through `AppSemanticsTest`. Opening a shortcut is a platform action: the desktop
 opener takes its browse call as a parameter so it is unit-tested, and the Android
 glue sits behind the coverage exclusion like the rest of the platform entry
 points.
+
+The pronunciation control (issue #21) is proved at its own levels. The desktop
+binding's outcome mapping — speak a word, report a language with no installed
+voice as `NoVoice`, and an engine that fails or will not start as `Unavailable` —
+and the per-OS voice-listing parsers are `core/jvmTest` (`JvmPronouncerTest`,
+`SpeechHostTest`). The Android engine is a Robolectric host test in
+`core/androidHostTest` (`AndroidPronouncerHostTest`): it drives the platform
+`TextToSpeech` on a simulated runtime, where an installed language speaks and a
+language with no voice is an honest message, so the two clients cannot disagree
+about the outcome. The panel's Listen control and the messages it renders are
+`app/desktopTest`, and `AppSemanticsTest` speaks a tapped word through
+`testkit`'s `FakePronouncer`, covering the no-voice and no-engine messages.
 
 ## Naming and placement
 

@@ -2,6 +2,7 @@ package app.lekto.dictionary
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -18,9 +19,20 @@ import app.lekto.core.dictionary.DictionaryEntry
 import app.lekto.core.dictionary.DictionaryShortcut
 import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
+import app.lekto.core.speech.SpeechResult
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
+
+/** The test tag on the pronunciation button, so a UI test can click it unambiguously. */
+internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
+
+/**
+ * The lookup panel's pronunciation control (issue #21): the action the Listen
+ * button runs and the last honest [result], so a language with no voice renders
+ * its message instead of staying silent.
+ */
+data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = null)
 
 /**
  * The word lookup panel (issue #19): the signature interaction. It opens on the
@@ -30,8 +42,12 @@ internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-sourc
  * than an empty panel. The reader stays in place behind it, so closing returns
  * to the exact reading position (docs/ux-design-specification.md, "Success
  * Criteria").
+ *
+ * Since issue #21 it also carries the pronunciation control: [pronunciation]'s
+ * action speaks the tapped word and its result is the honest outcome, so a
+ * language with no installed voice says so instead of failing.
  */
-@Suppress("LongParameterList") // The panel's inputs are the result, the word and its shortcuts; a bundle adds a type.
+@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts and pronunciation.
 @Composable
 fun WordLookupPanel(
     result: WordLookup,
@@ -39,6 +55,7 @@ fun WordLookupPanel(
     shortcuts: List<DictionaryShortcut>,
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
+    pronunciation: Pronunciation,
     modifier: Modifier = Modifier,
 ) {
     Card(modifier.fillMaxWidth().padding(8.dp)) {
@@ -46,7 +63,8 @@ fun WordLookupPanel(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Header(term, onDismiss)
+            Header(term, pronunciation.onSpeak, onDismiss)
+            SpeechMessage(pronunciation.result)
             when (result) {
                 is WordLookup.Found -> Found(result, term)
 
@@ -63,11 +81,29 @@ fun WordLookupPanel(
 }
 
 @Composable
-private fun Header(term: String, onDismiss: () -> Unit) {
+private fun Header(term: String, onSpeak: () -> Unit, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Text(term, style = MaterialTheme.typography.titleLarge)
-        TextButton(onClick = onDismiss) { Text("Close") }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) { Text("Listen") }
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
     }
+}
+
+/** The honest outcome of the last pronunciation attempt: a failure is a message, success is silent. */
+@Composable
+private fun SpeechMessage(speech: SpeechResult?) {
+    val message = when (speech) {
+        null, is SpeechResult.Spoken -> null
+
+        is SpeechResult.NoVoice ->
+            speech.language?.let { language -> "No voice is installed for \"$language\"." }
+                ?: "No voice is installed for this language."
+
+        is SpeechResult.Unavailable -> speech.message
+    }
+    message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
 }
 
 @Composable
