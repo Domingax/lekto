@@ -117,8 +117,8 @@ git config --local core.hooksPath .githooks
 
 ### Branches
 
-One branch per issue, named `<owner>/issue-<n>` (for example `Domingax/issue-3`).
-Branch from `main` and open the pull request against `main`.
+One branch per issue, named `issue-<n>` (for example `issue-3`). Branch from
+`main` and open the pull request against `main`.
 
 ### Pull requests
 
