@@ -34,6 +34,7 @@ import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.dictionary.Pronunciation
 import app.lekto.dictionary.VocabularyPanel
+import app.lekto.dictionary.WordLookupActions
 import app.lekto.dictionary.WordLookupPanel
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
@@ -467,8 +468,10 @@ private fun LookupPanel(
         result = selected.result,
         term = token.surface,
         shortcuts = shortcuts,
-        onOpenShortcut = { shortcut -> openUrl(shortcut.url) },
-        onDismiss = onDismiss,
+        actions = WordLookupActions(
+            onOpenShortcut = { shortcut -> openUrl(shortcut.url) },
+            onDismiss = onDismiss,
+        ),
         pronunciation = pronunciation,
         vocabulary = vocabulary,
         modifier = modifier,

@@ -59,6 +59,13 @@ data class VocabularyPanel(
 }
 
 /**
+ * The panel's outbound actions (issues #19 and #22), bundled so the panel's
+ * signature fits the parameter bound: [onOpenShortcut] hands a reference page to
+ * the platform browser and [onDismiss] closes the panel.
+ */
+data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, val onDismiss: () -> Unit)
+
+/**
  * The word lookup panel (issue #19): the signature interaction. It opens on the
  * word the reader tapped with the offline result already in it, and always
  * offers the reference-site shortcuts beside that result — so with no pack and
@@ -72,14 +79,13 @@ data class VocabularyPanel(
  * translation, context sentence and level, and the selector moves a saved word
  * between levels — the reader's colour updating is the only confirmation.
  */
-@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts, pronunciation and vocabulary.
+@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts, actions and the two controls.
 @Composable
 fun WordLookupPanel(
     result: WordLookup,
     term: String,
     shortcuts: List<DictionaryShortcut>,
-    onOpenShortcut: (DictionaryShortcut) -> Unit,
-    onDismiss: () -> Unit,
+    actions: WordLookupActions,
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
@@ -89,7 +95,7 @@ fun WordLookupPanel(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Header(term, pronunciation.onSpeak, vocabulary, onDismiss)
+            Header(term, pronunciation.onSpeak, vocabulary, actions.onDismiss)
             SpeechMessage(pronunciation.result)
             when (result) {
                 is WordLookup.Found -> Found(result, term)
@@ -101,7 +107,7 @@ fun WordLookupPanel(
 
                 is WordLookup.Unavailable -> Text(result.message, style = MaterialTheme.typography.bodyLarge)
             }
-            Shortcuts(shortcuts, onOpenShortcut)
+            Shortcuts(shortcuts, actions.onOpenShortcut)
             MasterySelector(vocabulary)
         }
     }
