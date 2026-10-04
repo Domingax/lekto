@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -158,7 +159,7 @@ class WordLookupPanelSemanticsTest {
         var saved: MasteryLevel? = null
         setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
 
-        onNodeWithTag(SAVE_TAG).performClick()
+        onNodeWithTag(SAVE_TAG).performScrollTo().performClick()
 
         assertEquals(MasteryLevel.FAMILIAR, saved)
     }
@@ -168,7 +169,7 @@ class WordLookupPanelSemanticsTest {
         var saved: MasteryLevel? = null
         setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
 
-        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performClick()
+        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
 
         assertEquals(MasteryLevel.MASTERED, saved)
     }

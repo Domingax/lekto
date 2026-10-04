@@ -127,7 +127,9 @@ private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPane
 /**
  * The five-point selector (issue #22): tapping a level saves the word there, or
  * moves an already-saved word, so mastery can be changed after saving. The
- * current level is the filled chip.
+ * current level is the filled chip. The chips are compact — the level's number
+ * and a check for known — so all five fit one row (docs/ux-design-specification.md,
+ * `MasterySelector`).
  */
 @Composable
 private fun MasterySelector(vocabulary: VocabularyPanel) {
@@ -149,13 +151,13 @@ private fun MasterySelector(vocabulary: VocabularyPanel) {
     }
 }
 
-/** A mastery level's name, for the selector's compact buttons. */
+/** A mastery level's compact chip label: its number, and a check for the known level. */
 private fun MasteryLevel.label(): String = when (this) {
-    MasteryLevel.UNKNOWN -> "Unknown"
-    MasteryLevel.FAMILIAR -> "Familiar"
-    MasteryLevel.RECOGNIZED -> "Recognized"
-    MasteryLevel.MASTERED -> "Mastered"
-    MasteryLevel.KNOWN -> "Known"
+    MasteryLevel.UNKNOWN -> "0"
+    MasteryLevel.FAMILIAR -> "1"
+    MasteryLevel.RECOGNIZED -> "2"
+    MasteryLevel.MASTERED -> "3"
+    MasteryLevel.KNOWN -> "4"
 }
 
 /** The honest outcome of the last pronunciation attempt: a failure is a message, success is silent. */
