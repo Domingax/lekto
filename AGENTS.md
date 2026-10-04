@@ -81,7 +81,9 @@ core ─────────────► nothing     (no app module, no A
 - `architecture` is the test-only module that turns these boundaries into tests
   (ticket #9); it reads the working tree and depends on no module, so it sits
   outside the graph it polices.
-- `tools/dictionaries` is standalone and stays off the application CI path.
+- `tools/dictionaries` is standalone and never blocks application CI: its own
+  workflow builds and publishes the pack, while its fast unit tests run in
+  `check`.
 
 Architecture tests enforce these rules, and the naming and placement conventions
 in [`docs/testing.md#naming-and-placement`](docs/testing.md#naming-and-placement).

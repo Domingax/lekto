@@ -1,0 +1,138 @@
+# The dictionary-pack lane (ticket #17).
+#
+# It builds the trimmed EN→FR pack from the raw Wiktextract extract and publishes
+# it as a GitHub Release asset. It runs on demand and monthly, and never on a
+# push or pull request, so it cannot block application CI
+# (docs/build.md#dictionary-pipeline). The pack is a release artifact and is
+# never committed. See ADR-0017 for the access shape and
+# docs/research/open-dictionaries.md for the source rationale.
+name: dictionary-pack
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monthly, on the 1st at 03:17 UTC. Kaikki overwrites its raw file weekly and
+    # keeps no dated archive, so each run sees newer data; the build's sanity gate
+    # fails only on a changed schema or a coverage collapse, not on ordinary drift.
+    - cron: "17 3 1 * *"
+
+concurrency:
+  group: dictionary-pack
+  cancel-in-progress: false
+
+# Creating the release needs write access to repository contents.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Streaming the ~3 GiB gz source dominates; the runner's disk holds it.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Resolve the release date
+        id: release
+        run: echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Download the raw Wiktextract source
+        id: download
+        run: |
+          curl -fL --retry 3 --retry-delay 5 \
+            -D "$RUNNER_TEMP/source-headers.txt" \
+            -o "$RUNNER_TEMP/raw-wiktextract-data.jsonl.gz" \
+            https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz
+          # The upstream extraction date is the source file's own Last-Modified,
+          # not the day this workflow runs: the same input must record the same
+          # provenance.
+          last_modified="$(grep -i '^last-modified:' "$RUNNER_TEMP/source-headers.txt" | tail -1 \
+            | cut -d' ' -f2- | tr -d '\r')"
+          if [ -n "$last_modified" ]; then
+            echo "extraction_date=$(date -u -d "$last_modified" +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          else
+            echo "extraction_date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Hash the source
+        id: source
+        run: |
+          echo "sha256=$(sha256sum "$RUNNER_TEMP/raw-wiktextract-data.jsonl.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      # The sanity gate compares this build's lemma count with the previous
+      # release's manifest. A first run has no previous release and is not gated
+      # on coverage.
+      - name: Look up the previous pack's lemma count
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/previous"
+          tag="$(gh release list --limit 100 --json tagName \
+            --jq '[.[] | select(.tagName | startswith("dictionary-en-fr-"))][0].tagName')"
+          if [ -n "$tag" ] && [ "$tag" != "null" ]; then
+            gh release download "$tag" --pattern manifest.json \
+              --dir "$RUNNER_TEMP/previous" --clobber || true
+          fi
+          if [ -f "$RUNNER_TEMP/previous/manifest.json" ]; then
+            echo "lemma_count=$(jq -r '.stats.lemmaCount' "$RUNNER_TEMP/previous/manifest.json")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the CLI
+        run: ./gradlew --no-daemon :tools:dictionaries:installDist
+
+      - name: Build the pack
+        env:
+          PREVIOUS_LEMMA_COUNT: ${{ steps.previous.outputs.lemma_count }}
+        run: |
+          cli=tools/dictionaries/build/install/dictionaries/bin/dictionaries
+          sqlite="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
+          args=(
+            --input "$RUNNER_TEMP/raw-wiktextract-data.jsonl.gz"
+            --output "$sqlite"
+            --source-url "https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz"
+            --source-sha256 "${{ steps.source.outputs.sha256 }}"
+            --extraction-date "${{ steps.download.outputs.extraction_date }}"
+            --notice "$RUNNER_TEMP/NOTICE"
+            --manifest "$RUNNER_TEMP/manifest.json"
+          )
+          if [ -n "$PREVIOUS_LEMMA_COUNT" ] && [ "$PREVIOUS_LEMMA_COUNT" != "null" ]; then
+            args+=(--previous-lemma-count "$PREVIOUS_LEMMA_COUNT")
+          fi
+          "$cli" "${args[@]}"
+
+      # `-n` omits the gzip timestamp and filename, so compression adds no
+      # non-determinism of its own.
+      - name: Compress the pack deterministically
+        run: gzip -9 -n "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
+
+      - name: Write the checksums
+        run: |
+          cd "$RUNNER_TEMP"
+          sha256sum "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" > SHA256SUMS
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="dictionary-en-fr-${{ steps.release.outputs.date }}"
+          assets=(
+            "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
+            "$RUNNER_TEMP/SHA256SUMS"
+            "$RUNNER_TEMP/NOTICE"
+            "$RUNNER_TEMP/manifest.json"
+          )
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --clobber
+          else
+            gh release create "$tag" "${assets[@]}" \
+              --title "Dictionary pack EN→FR ${{ steps.release.outputs.date }}" \
+              --notes-file "$RUNNER_TEMP/NOTICE"
+          fi

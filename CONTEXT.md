@@ -17,6 +17,14 @@ Anything Lekto can regenerate or re-download rather than something the user auth
 parsed book text, the dictionary pack. Lives device-local and is never synced.
 _Avoid_: Cache, generated data
 
+**Dictionary pack**:
+The offline EN→FR reference Lekto derives from Wiktionary: the words it knows,
+with their senses and French translations, and enough morphology to collapse an
+inflected form onto its lemma — or onto the normalised surface form when it knows
+no lemma. A **Derived asset**, versioned so a reader can refuse a pack it does
+not understand; never authored by the user and never synced.
+_Avoid_: Dictionary, lexicon, word list
+
 **Tombstone**:
 The mark a deleted item leaves behind so the deletion itself can sync: the item's
 identity and update metadata without its content. A tombstone with a later update

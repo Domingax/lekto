@@ -7,6 +7,17 @@
 
 > **Headline:** Wiktionary is the only source that is simultaneously **open-licensed (CC BY-SA 4.0 + GFDL)**, **rich** (definitions, senses, translations, IPA, etymology, inflections), **directly callable from the browser** (MediaWiki's `origin=*` CORS grant, verified), and **available offline** as machine-readable extracts (Wiktextract/Kaikki). The catch is size and licence obligation: the full English extract is ~3.3 GB JSONL (523 MB gz), the French-language extract is ~584 MB JSONL (58 MB gz), and any shipped copy is a **ShareAlike** distribution that must attribute Wiktionary contributors and be relicensed compatibly. FreeDict gives a genuinely tiny (~450 KB total) GPL-2.0 baseline for EN↔FR but only ~8.5–8.8 k headwords. Everything else in §4 is either server-dependent (`dictionaryapi.dev`, MyMemory, LibreTranslate public instance, Apertium APY) or English-only semantic data (WordNet/OMW). **The credible server-free design is: a build-time-derived Wiktionary pack (SQLite) bundled/downloaded into the vault + the live Wiktionary API as enrichment/fallback.**
 
+> **Correction — EN→FR source (2026-10-04, ticket #17).** The Tier-1 advice below
+> to build from Kaikki's **per-language** English file
+> (`kaikki.org-dictionary-English.jsonl.gz`) is wrong for the EN→FR direction. A
+> spike measured that file at **5,101** distinct English lemmas carrying a French
+> translation, against **71,808** from the raw all-languages Wiktextract file
+> (`raw-wiktextract-data.jsonl.gz`) — the per-language post-processing strips
+> about 94% of the `translations` rows. The raw file is also the non-deprecated
+> one. Build the pack by streaming the **raw** file and filtering
+> `lang_code == "en"` with `translations[].lang_code == "fr"`; see ticket #17 and
+> `docs/build.md#dictionary-pipeline`.
+
 ---
 
 ## 1. Wiktionary as a live API (MediaWiki Action API)

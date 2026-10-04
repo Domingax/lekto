@@ -35,6 +35,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | UI semantics         | `app/desktopTest`              | `:app:desktopTest`              | a JVM        |
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
 | Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
+| Dictionary pack      | `tools/dictionaries/src/test`  | `:tools:dictionaries:test`      | a JVM        |
 | WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 | Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
@@ -252,6 +253,7 @@ where the change lands:
 | Android platform glue                                                 | Robolectric host test                                   | `androidHostTest`           |
 | An architectural boundary or naming convention                       | architecture rule test, plus a synthetic violation it must catch | `architecture/src/test` |
 | A bug                                                                 | regression test at the seam the bug occurs              | wherever that seam lives    |
+| The dictionary-pack transform (`tools/dictionaries`)                  | canonical golden over a committed fixture, plus a built-twice byte hash | `tools/dictionaries/src/test` |
 
 Every change lands with a test at its level: `/deliver` holds each surface to its
 row and each demanded level to a red → green before the commit.
@@ -286,6 +288,16 @@ a tombstone with a later timestamp out-votes a live record, and a live record
 with a later timestamp out-votes an older tombstone. `testkit` supplies
 `testTombstone`, and `testVaultRecord` gained a `device` parameter so a case can
 tell two writers apart.
+
+The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
+so its level is its own: `PackBuilderTest` pins the transform's rules,
+`SqlitePackWriterTest` reads the written pack back and proves two builds are
+byte-for-byte identical, and `DictionaryPackGoldenTest` pins the canonical output
+of a committed JSONL fixture — the reproducibility evidence for ticket #17. The
+sanity gate and the command line are unit-tested the same way. The module's tests
+run in `check` like any other module's, but the module sits outside the
+application's coverage, licence and publication graph, so nothing it builds ships
+with the app.
 
 ## Naming and placement
 

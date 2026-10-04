@@ -34,6 +34,7 @@ without the other.
 | ICU4J (segmentation) | 78.3      | `gradle/libs.versions.toml` (`icu4j`)           |
 | jsoup (XHTML)        | 1.23.2    | `gradle/libs.versions.toml` (`jsoup`)           |
 | kotlinx.serialization (vault) | 1.9.0 | `gradle/libs.versions.toml` (`kotlinx-serialization`) |
+| sqlite-jdbc (dictionary pack) | 3.53.4.0 | `gradle/libs.versions.toml` (`sqlite-jdbc`) |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -217,8 +218,8 @@ work (tickets #16, #21, #24). Vulnerability alerts are a repository setting,
 enabled once with
 `gh api --method PUT repos/<owner>/<repo>/vulnerability-alerts`.
 
-`tools/dictionaries` builds by its own workflow (ticket #17) and never sits on
-the application CI path.
+`tools/dictionaries` builds and publishes by its own workflow (ticket #17), which
+never blocks application CI. Its fast unit tests still run in `check`.
 
 ## Prerequisites
 
@@ -255,12 +256,40 @@ Native packaging for Windows, macOS and Linux is ticket #29.
 
 ## Dictionary pipeline
 
-`tools/dictionaries` is a JVM module built by its own CI workflow (ticket #17).
-It never sits on the application CI path.
+`tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
+extract (≈3 GiB gz, all languages) into a **trimmed EN→FR SQLite pack**: English
+entries that carry a French translation, their senses and French translations,
+their IPA/audio, and their inflections reversed into a surface→lemma index. It is
+published by its own workflow (ticket #17); that pack build never blocks
+application CI.
 
 ```sh
-./gradlew :tools:dictionaries:run
+./gradlew :tools:dictionaries:check          # the unit tests, the golden, ktlint and detekt
+./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz --output pack.sqlite \
+  --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
+
+The CLI streams the raw `.jsonl[.gz]`, filters `lang_code == "en"` entries that
+carry a French translation, drops multi-word surfaces, normalises every key with
+the same rule as `core`'s `normaliseSurface` (NFC + lower case), and writes a
+read-only SQLite file whose `user_version` is the pack format version. It also
+writes a `NOTICE` (attribution) and a `manifest.json` (provenance and counts).
+
+The pack is a **Derived asset**: it is never committed.
+`.github/workflows/dictionary-pack.yml` downloads the source, runs the CLI and
+publishes a GitHub Release tagged `dictionary-en-fr-<YYYYMMDD>` with the pack, a
+`SHA256SUMS` and the `NOTICE`. The workflow runs on `workflow_dispatch` and a
+monthly `schedule`, so it can never block application CI. The build is
+deterministic — fixed row ordering, no timestamps, gzip `-n` — and
+`DictionaryPackGoldenTest` proves the transform on a committed fixture; a sanity
+gate fails a run only on a changed source schema or a coverage collapse below 80%
+of the previous build's lemma count.
+
+The CLI builds the pack with **xerial sqlite-jdbc** (Apache-2.0,
+AGPL-compatible). `tools/dictionaries` is outside the application licence gate —
+it never ships — so the dependency is not in `config/dependency-licences.txt`.
+See ADR-0017 (`docs/adr/0017-large-derived-assets-open-by-path.md`) and
+`docs/research/open-dictionaries.md`.
 
 ## Modules
 
@@ -270,7 +299,7 @@ It never sits on the application CI path.
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
 | `integrations/webdav`   | The first sync driver, isolated from the domain.                    |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |
-| `tools/dictionaries`    | The offline dictionary-pack pipeline, built by its own CI workflow.  |
+| `tools/dictionaries`    | The offline dictionary-pack pipeline; published by its own CI workflow. |
 | `architecture`          | The architecture tests (ticket #9): the module boundaries and naming conventions as tests. Test-only, never published. |
 
 The module boundaries are a decision, not an accident: the domain never depends
