@@ -67,6 +67,18 @@ class LibraryController(
         _state.update { current -> current.copy(error = null) }
     }
 
+    /**
+     * Re-reads the vault's books. Called after a vault import replaces the store
+     * (issue #20), so the library shows the restored books rather than the ones
+     * it listed before.
+     */
+    fun refresh() {
+        scope.launch {
+            val books = library.books()
+            _state.update { current -> current.copy(books = books) }
+        }
+    }
+
     private fun report(progress: ImportProgress) {
         _state.update { current -> current.copy(progress = progress.fraction) }
     }

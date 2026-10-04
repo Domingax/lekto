@@ -26,6 +26,7 @@ import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.dictionary.DictionaryServices
+import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryVaultFileSystem
@@ -202,12 +203,13 @@ class AppSemanticsTest {
 }
 
 @Suppress("LongParameterList") // The environment's inputs are independent; a bundle would only hide that.
-private fun environment(
+internal fun environment(
     library: BookLibrary,
     pickFile: (suspend () -> PickedFile?)? = null,
     dictionary: DictionaryServices? = null,
     pronouncer: Pronouncer? = null,
     openUrl: (String) -> Unit = {},
+    vaultTransfer: VaultTransfer? = null,
 ) = AppEnvironment(
     segmenter = WhitespaceTextSegmenter(),
     library = library,
@@ -216,6 +218,7 @@ private fun environment(
     dictionary = dictionary,
     pronouncer = pronouncer,
     openUrl = openUrl,
+    vaultTransfer = vaultTransfer,
 )
 
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */

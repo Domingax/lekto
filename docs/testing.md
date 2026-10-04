@@ -339,6 +339,23 @@ about the outcome. The panel's Listen control and the messages it renders are
 `app/desktopTest`, and `AppSemanticsTest` speaks a tapped word through
 `testkit`'s `FakePronouncer`, covering the no-voice and no-engine messages.
 
+The settings screen's vault export/import (issue #20) is proved at the same
+levels. The state holder that runs the transfer — the export's bytes handed to
+the save action, an import restoring the vault, a cancelled file dialog as a
+no-op, and a bad or unreadable file becoming an honest message rather than a
+crash — is a behaviour over the in-memory vault in
+`app/desktopTest/.../settings/VaultTransferControllerTest`, driven by
+`kotlinx-coroutines-test`'s virtual time. The screen's sections and its
+export/import controls are UI semantics in `SettingsScreenSemanticsTest`, and the
+whole loop — export to the injected save action, import from the injected picker,
+and the library reloading the restored records rather than showing its stale list
+(`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
+real vault-backed `VaultBookLibrary`, so the test proves what the user then sees.
+The desktop wiring that roots the transfer at the same directory as the library
+is `DesktopVaultTest`; the modal Swing dialogs and the Android `CreateDocument`
+and `OpenDocument` glue sit behind the coverage exclusion, like the rest of the
+platform entry points.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

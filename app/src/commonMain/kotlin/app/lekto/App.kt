@@ -43,6 +43,10 @@ import app.lekto.reader.ReaderScreen
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
+import app.lekto.settings.SettingsUiState
+import app.lekto.settings.VaultTransfer
+import app.lekto.settings.VaultTransferController
+import app.lekto.settings.VaultUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,9 +58,10 @@ import kotlinx.coroutines.withContext
  * vault-backed [library], the wording palette's [mastery], the file [pickFile],
  * the dictionary [dictionary] services (issue #18), the [pronouncer] the lookup
  * panel speaks through (issue #21), the [openUrl] the lookup panel's reference
- * shortcuts open in the platform browser (issue #19) and the [dispatcher]
- * blocking work runs on. Bundled so the root composable's signature stays small
- * and grows in one named place.
+ * shortcuts open in the platform browser (issue #19), the [vaultTransfer] that
+ * exports and imports the vault (issue #20) and the [dispatcher] blocking work
+ * runs on. Bundled so the root composable's signature stays small and grows in
+ * one named place.
  */
 data class AppEnvironment(
     val segmenter: TextSegmenter,
@@ -66,6 +71,7 @@ data class AppEnvironment(
     val dictionary: DictionaryServices? = null,
     val pronouncer: Pronouncer? = null,
     val openUrl: (String) -> Unit = {},
+    val vaultTransfer: VaultTransfer? = null,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
 
@@ -81,7 +87,8 @@ private sealed interface Destination {
  * The application root and the composition root for the reading loop: it shows
  * the library, drives an import through the environment's library, and opens the
  * chosen book in the reader (issue #15). Since issue #18 it also reaches settings,
- * the attribution screen, and an offline word lookup.
+ * the attribution screen, and an offline word lookup, and since issue #20 the
+ * settings screen exports and imports the whole vault.
  *
  * The host supplies the file picker as [AppEnvironment.pickFile], because
  * choosing a file is a platform action. When it is absent the Import button does
@@ -106,8 +113,12 @@ fun App(environment: AppEnvironment) {
         environment.dictionary?.let { services -> DictionaryController(services, environment.dispatcher) }
     }
     val dictionaryState = dictionary?.state?.collectAsState()?.value ?: DictionaryUiState()
+    val vaultTransfer = remember(environment.vaultTransfer, environment.dispatcher, scope) {
+        environment.vaultTransfer?.let { transfer -> VaultTransferController(transfer, environment.dispatcher, scope) }
+    }
+    val vaultState = vaultTransfer?.state?.collectAsState()?.value ?: VaultUiState()
 
-    AppScreens(environment, controller, state, scope, progress, dictionary, dictionaryState)
+    AppScreens(environment, controller, state, scope, progress, dictionary, dictionaryState, vaultTransfer, vaultState)
 }
 
 /** The app's destinations, so [App] stays a wiring function and each screen is small. */
@@ -121,6 +132,8 @@ private fun AppScreens(
     progress: ReadingProgressWriter,
     dictionary: DictionaryController?,
     dictionaryState: DictionaryUiState,
+    vaultTransfer: VaultTransferController?,
+    vaultState: VaultUiState,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -143,6 +156,9 @@ private fun AppScreens(
             Destination.Settings -> SettingsDestination(
                 dictionaryState,
                 dictionary,
+                vaultState,
+                vaultTransfer,
+                onVaultImported = controller::refresh,
                 onOpenAttribution = { destination = Destination.Attribution },
                 onBack = { destination = Destination.Library },
             )
@@ -210,20 +226,27 @@ private class Lookup(
 )
 
 /** The settings destination wrapped so its action bundle stays out of [AppScreens]. */
+@Suppress("LongParameterList") // The settings sections' inputs are independent; the action bundle is [SettingsActions].
 @Composable
 private fun SettingsDestination(
     dictionaryState: DictionaryUiState,
     dictionary: DictionaryController?,
+    vaultState: VaultUiState,
+    vaultTransfer: VaultTransferController?,
+    onVaultImported: () -> Unit,
     onOpenAttribution: () -> Unit,
     onBack: () -> Unit,
 ) {
     SettingsScreen(
-        state = dictionaryState,
+        state = SettingsUiState(dictionaryState, vaultState),
         actions = SettingsActions(
             onDownload = { dictionary?.install() },
             onOpenAttribution = onOpenAttribution,
             onDismissError = { dictionary?.dismissError() },
             onBack = onBack,
+            onExportVault = { vaultTransfer?.export() },
+            onImportVault = { vaultTransfer?.import(onVaultImported) },
+            onDismissVaultMessage = { vaultTransfer?.dismiss() },
         ),
     )
 }
