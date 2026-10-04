@@ -110,6 +110,12 @@ An outbound link from the lookup panel to a word's canonical page on a
 shortcut hands the page to the platform browser.
 _Avoid_: Dictionary tab, deep link
 
+**Pronunciation**:
+Playing a selected word or phrase aloud through the platform's own speech engine,
+never a network service and never stored. A language with no installed voice is
+reported to the reader rather than failing.
+_Avoid_: TTS, speech, audio
+
 **LLM provider**:
 The user's own language-model service (OpenAI, Anthropic, Gemini, Ollama), connected
 BYOK, used for phrase translation.

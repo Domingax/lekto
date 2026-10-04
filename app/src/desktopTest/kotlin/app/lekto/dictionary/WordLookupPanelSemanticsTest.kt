@@ -17,6 +17,7 @@ import app.lekto.core.dictionary.DictionaryShortcut
 import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
+import app.lekto.core.speech.SpeechResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -25,7 +26,8 @@ import kotlin.test.assertTrue
  * The word lookup panel through semantics (issue #19): a known word shows its
  * pronunciation, definitions and translations beside the reference shortcuts; an
  * unknown word and an offline lookup keep their honest message and the shortcuts
- * still stand; a shortcut opens the canonical page it names.
+ * still stand; a shortcut opens the canonical page it names. Since issue #21 it
+ * also carries the pronunciation control and the honest result of speaking.
  */
 @OptIn(ExperimentalTestApi::class)
 class WordLookupPanelSemanticsTest {
@@ -118,11 +120,43 @@ class WordLookupPanelSemanticsTest {
         onNodeWithText("A word.", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun theListenButtonInvokesPronunciation() = runComposeUiTest {
+        var spoken = false
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSpeak = { spoken = true }) }
+
+        onNodeWithTag(PRONOUNCE_TAG).performClick()
+
+        assertTrue(spoken, "the Listen button must reach the pronunciation seam")
+    }
+
+    @Test
+    fun aLanguageWithNoVoiceShowsAnHonestMessage() = runComposeUiTest {
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), speech = SpeechResult.NoVoice("fr")) }
+
+        onNodeWithText("No voice is installed for \"fr\".", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun anUnavailableEngineShowsItsMessage() = runComposeUiTest {
+        setContent {
+            Panel(
+                WordLookup.NotInDictionary("zzzz", "en"),
+                speech = SpeechResult.Unavailable("No speech engine is available on this device."),
+            )
+        }
+
+        onNodeWithText("No speech engine is available on this device.").assertIsDisplayed()
+    }
+
+    @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
     @Composable
     private fun Panel(
         result: WordLookup,
         term: String = "blorple",
+        speech: SpeechResult? = null,
         onOpenShortcut: (DictionaryShortcut) -> Unit = {},
+        onSpeak: (() -> Unit)? = {},
         onDismiss: () -> Unit = {},
     ) {
         MaterialTheme {
@@ -132,6 +166,8 @@ class WordLookupPanelSemanticsTest {
                 shortcuts = shortcuts,
                 onOpenShortcut = onOpenShortcut,
                 onDismiss = onDismiss,
+                speech = speech,
+                onSpeak = onSpeak,
                 modifier = Modifier.size(width = 360.dp, height = 480.dp),
             )
         }

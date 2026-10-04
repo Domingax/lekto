@@ -4,6 +4,14 @@
     <!-- The dictionary pack is downloaded on demand from its release (issue #18). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Android 11+ package visibility: without this, TextToSpeech cannot see the
+         installed speech engines and pronunciation would silently find none (issue #21). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:label="Lekto"
         android:supportsRtl="true"

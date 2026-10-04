@@ -1,5 +1,6 @@
 package app.lekto.core.dictionary
 
+import app.lekto.core.text.baseLanguage
 import app.lekto.core.text.normaliseSurface
 
 /** The three honest outcomes of looking a word up in the offline dictionary. */
@@ -59,8 +60,5 @@ class DictionaryLookup(private val pack: () -> DictionaryPack?) {
         /** The message when the book carries no language, so no pack key can be formed. */
         const val UNKNOWN_LANGUAGE: String =
             "This book's language isn't known, so the offline dictionary can't be searched."
-
-        /** The pack's base language for a BCP-47 tag: `en-US` and `en_GB` both become `en`. */
-        fun baseLanguage(language: String): String = language.substringBefore('-').substringBefore('_').lowercase()
     }
 }

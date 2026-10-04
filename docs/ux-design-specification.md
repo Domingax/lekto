@@ -59,7 +59,7 @@ Lekto is a hybrid Web + Android application (Capacitor / React / Vite / TypeScri
 
 Interaction paradigms differ by platform — click/mouse on web, tap/swipe on Android — but the experience must feel equally native on both. Platform-specific capabilities (File System Access API on web, Capacitor plugins on Android) are used where available; graceful fallbacks where not.
 
-The app is fully offline by design. Network access is used only for dictionary lookups, BYOK AI translation, and TTS — all of which degrade gracefully when offline.
+The app is fully offline by design. Network access is used only for dictionary-pack downloads and BYOK AI translation — both of which degrade gracefully when offline. Pronunciation uses the device's own speech engine, so it needs no network.
 
 ### Effortless Interactions
 

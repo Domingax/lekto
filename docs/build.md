@@ -214,8 +214,8 @@ so the two do not overlap. The `fast` lane also runs `core`'s Android host suite
 (`:core:testAndroidHostTest`), which needs the Android SDK the GitHub runners
 carry — no emulator (`docs/testing.md#android-host-lane`).
 The `instrumented` lane is the only one that needs an emulator; it is scheduled,
-so it never slows a change, and its instrumented tests arrive with the platform
-work (tickets #16, #21, #24). Vulnerability alerts are a repository setting,
+so it never slows a change, and its instrumented tests arrive with the remaining
+platform work (ticket #24). Vulnerability alerts are a repository setting,
 enabled once with
 `gh api --method PUT repos/<owner>/<repo>/vulnerability-alerts`.
 
