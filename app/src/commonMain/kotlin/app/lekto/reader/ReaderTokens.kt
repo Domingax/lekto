@@ -14,6 +14,7 @@ import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.WordToken
+import app.lekto.core.text.contextSentence
 import app.lekto.core.text.tokenise
 
 /**
@@ -23,6 +24,13 @@ import app.lekto.core.text.tokenise
  * styling.
  */
 class ReaderTokens(val text: AnnotatedString, val words: List<WordToken>)
+
+/**
+ * A word the reader tapped, with the **Context sentence** it was found in
+ * (issue #22). The [token]'s offsets are into the chapter text, so the sentence
+ * survives a page boundary; [contextSentence] is `null` when it cannot be read.
+ */
+data class WordTap(val token: WordToken, val contextSentence: String?)
 
 /**
  * The whole chapter's word layer: every word coloured by mastery and tappable.
@@ -37,17 +45,18 @@ fun buildReaderTokens(
     chapter: ReaderChapter,
     renderer: ReaderRenderer,
     selected: IntRange? = null,
-    onWordTap: (WordToken) -> Unit = {},
+    onWordTap: (WordTap) -> Unit = {},
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, renderer.styles)
+    val text = chapter.blocks.joinToString(separator = "\n\n") { block -> block.text }
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, renderer.styles, selected, onWordTap)
+    val writer = WordWriter(builder, renderer.styles, selected, onWordTap, offset = 0, text = text)
     chapter.blocks.forEachIndexed { index, block ->
-        tokenise(block.text, chapter.language, renderer.segmenter).words.forEach { token ->
+        tokenise(block.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
             words += word
-            writer.write(word, renderer.mastery.levelOf(word.surface, chapter.language))
+            writer.write(word, renderer.mastery.levelOf(word.key))
         }
     }
     return ReaderTokens(builder.toAnnotatedString(), words)
@@ -69,7 +78,12 @@ fun buildChapterText(chapter: ReaderChapter, styles: ReaderStyles): AnnotatedStr
  * The word layer for one [page]: [page] sliced out of [chapterText] — keeping
  * its block and inline styles — with every word in the slice coloured and
  * tappable ([onWordTap]). The returned offsets are local to the slice, so the
- * reader tokenises one page's words, not the whole book's.
+ * reader tokenises one page's words, not the whole book's, and can hit-test them
+ * against the page's layout.
+ *
+ * The token handed to [onWordTap] is shifted back to the chapter's coordinates,
+ * and its context sentence is cut from [chapterText], so a sentence that spans a
+ * page break is not truncated (issue #22).
  *
  * Pages are cut at line boundaries, so a word is never split across two of them;
  * tokenising the slice finds the same words tokenising the chapter would.
@@ -81,15 +95,15 @@ fun buildPageTokens(
     renderer: ReaderRenderer,
     chapter: ReaderChapter,
     selected: IntRange? = null,
-    onWordTap: (WordToken) -> Unit = {},
+    onWordTap: (WordTap) -> Unit = {},
 ): ReaderTokens {
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, renderer.styles, selected, onWordTap)
-    tokenise(slice.text, chapter.language, renderer.segmenter).words.forEach { token ->
+    val writer = WordWriter(builder, renderer.styles, selected, onWordTap, page.start, chapterText.text)
+    tokenise(slice.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
         words += token
-        writer.write(token, renderer.mastery.levelOf(token.surface, chapter.language))
+        writer.write(token, renderer.mastery.levelOf(token.key))
     }
     return ReaderTokens(builder.toAnnotatedString(), words)
 }
@@ -146,24 +160,40 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
  * [SelectionHighlight], so the word stays visible behind the open lookup panel.
  * The link carries the same colour so the platform's default link tint never
  * overrides the mastery palette.
+ *
+ * [offset] maps the local word to the chapter's coordinates for the tap and the
+ * selection test, while the span and link stay local; [text] is the chapter,
+ * used to cut the tapped word's context sentence (issue #22).
  */
+@Suppress("LongParameterList") // The writer's inputs are the builder's state; a bundle would only hide that.
 private class WordWriter(
     private val builder: AnnotatedString.Builder,
     private val styles: ReaderStyles,
     private val selected: IntRange?,
-    private val onWordTap: (WordToken) -> Unit,
+    private val onWordTap: (WordTap) -> Unit,
+    private val offset: Int,
+    private val text: String,
 ) {
     fun write(word: WordToken, level: MasteryLevel) {
         val colour = level.readerColorOr(styles.body.color)
         val decoration = level.readerDecoration()
-        val background = if (selected == word.start..word.end) SelectionHighlight else Color.Unspecified
+        val globalStart = word.start + offset
+        val globalEnd = word.end + offset
+        val background = if (selected == globalStart..globalEnd) SelectionHighlight else Color.Unspecified
         val span = SpanStyle(color = colour, textDecoration = decoration, background = background)
         builder.addStyle(span, word.start, word.end)
         builder.addLink(
             LinkAnnotation.Clickable(
                 tag = "word:${word.start}",
                 styles = TextLinkStyles(style = span),
-                linkInteractionListener = { onWordTap(word) },
+                linkInteractionListener = {
+                    onWordTap(
+                        WordTap(
+                            token = word.shifted(offset),
+                            contextSentence = contextSentence(text, globalStart, globalEnd),
+                        ),
+                    )
+                },
             ),
             word.start,
             word.end,

@@ -40,7 +40,7 @@ class ReaderScreenSemanticsTest {
 
     private val renderer = ReaderRenderer(
         segmenter = WhitespaceTextSegmenter(),
-        mastery = MasteryLookup { _, _ -> MasteryLevel.KNOWN },
+        mastery = MasteryLookup { MasteryLevel.KNOWN },
     )
 
     private companion object {

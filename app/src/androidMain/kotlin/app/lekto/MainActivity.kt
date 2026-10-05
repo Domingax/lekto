@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import app.lekto.core.MasteryLookup
 import app.lekto.core.speech.AndroidPronouncer
 import app.lekto.core.text.IcuTextSegmenter
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,6 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val library = androidBookLibrary(this)
+        val vocabulary = androidVocabulary(this)
         pronouncer = AndroidPronouncer(this)
         val speech = pronouncer
         setContent {
@@ -43,7 +43,8 @@ class MainActivity : ComponentActivity() {
                 AppEnvironment(
                     segmenter = segmenter,
                     library = library,
-                    mastery = MasteryLookup.AllKnown,
+                    lemmas = dictionary.lemmas,
+                    vocabulary = vocabulary,
                     pickFile = {
                         // Arm the picker before launching, then park the import until
                         // it answers — the order closes the resolve-before-await race.

@@ -3,12 +3,12 @@ package app.lekto
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import app.lekto.core.MasteryLookup
 import app.lekto.core.speech.JvmPronouncer
 import app.lekto.core.text.IcuTextSegmenter
 
 fun main() = application {
     val library = remember { desktopBookLibrary() }
+    val vocabulary = remember { desktopVocabulary() }
     val dictionary = remember { desktopDictionary() }
     val pronouncer = remember { JvmPronouncer() }
     val vaultTransfer = remember { desktopVaultTransfer(save = ::saveVaultToFile, open = ::pickVaultFileToImport) }
@@ -17,7 +17,8 @@ fun main() = application {
             AppEnvironment(
                 segmenter = IcuTextSegmenter(),
                 library = library,
-                mastery = MasteryLookup.AllKnown,
+                lemmas = dictionary.lemmas,
+                vocabulary = vocabulary,
                 pickFile = ::pickFileToImport,
                 dictionary = dictionary,
                 pronouncer = pronouncer,

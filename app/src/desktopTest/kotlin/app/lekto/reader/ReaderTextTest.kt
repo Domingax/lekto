@@ -12,7 +12,9 @@ import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
+import app.lekto.core.text.WordKey
 import app.lekto.core.text.WordToken
+import app.lekto.testkit.InMemoryLemmaLookup
 import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -26,12 +28,13 @@ import kotlin.test.assertTrue
  * property of the [androidx.compose.ui.text.AnnotatedString], and asserting it
  * here is exact and fast. The rendered screen has its own semantics test.
  */
+@Suppress("TooManyFunctions") // One layer, one test per property; splitting the class hides the layer's surface.
 class ReaderTextTest {
 
     private val renderer = ReaderRenderer(
         segmenter = WhitespaceTextSegmenter(),
-        mastery = MasteryLookup { word, _ ->
-            when (word) {
+        mastery = MasteryLookup { key ->
+            when (key.key) {
                 "lantern" -> MasteryLevel.UNKNOWN
                 "glows" -> MasteryLevel.FAMILIAR
                 else -> MasteryLevel.KNOWN
@@ -86,12 +89,12 @@ class ReaderTextTest {
 
     @Test
     fun everyWordIsTappable() {
-        val tapped = mutableListOf<WordToken>()
-        val tokens = buildReaderTokens(chapter, renderer, onWordTap = { word -> tapped += word })
+        val tapped = mutableListOf<WordTap>()
+        val tokens = buildReaderTokens(chapter, renderer, onWordTap = { tap -> tapped += tap })
 
         tokens.words.forEach { word -> tap(tokens, word) }
 
-        assertEquals(tokens.words, tapped)
+        assertEquals(tokens.words, tapped.map { it.token })
     }
 
     @Test
@@ -147,16 +150,16 @@ class ReaderTextTest {
     fun aPageCarriesItsStylesAndItsWordsOnly() {
         val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
         val page = ReaderPage(0, chapterText.length)
-        var tapped: WordToken? = null
+        var tapped: WordTap? = null
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter) { word -> tapped = word }
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter) { tap -> tapped = tap }
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
         val lantern = tokens.words.first { word -> word.surface == "lantern" }
         assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
         tap(tokens, lantern)
-        assertEquals(lantern, tapped)
+        assertEquals(lantern, tapped?.token)
     }
 
     @Test
@@ -189,6 +192,33 @@ class ReaderTextTest {
 
         assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
         assertEquals(Color.Unspecified, styleOf(tokens, "the").background)
+    }
+
+    @Test
+    fun aTokenCarriesTheLemmaKeyWhenTheLemmaLookupKnowsIt() {
+        val lemmas = InMemoryLemmaLookup(mapOf("lanterns" to "lantern"))
+        val lemmaRenderer = ReaderRenderer(WhitespaceTextSegmenter(), renderer.mastery, lemmas)
+        val plural = ReaderChapter(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lanterns glow")))),
+        )
+
+        val tokens = buildReaderTokens(plural, lemmaRenderer)
+
+        assertEquals(WordKey("en", "lantern"), tokens.words.first { it.surface == "lanterns" }.key)
+    }
+
+    @Test
+    fun aTapCarriesTheSentenceTheWordWasFoundIn() {
+        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val page = ReaderPage(0, chapterText.length)
+        var tapped: WordTap? = null
+
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter) { tap -> tapped = tap }
+        tap(tokens, tokens.words.first { it.surface == "lantern" })
+
+        assertEquals("the lantern glows", tapped?.contextSentence)
     }
 }
 

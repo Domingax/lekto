@@ -2,6 +2,8 @@ package app.lekto.dictionary
 
 import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.dictionary.dictionaryLemmas
+import app.lekto.core.text.LemmaLookup
 
 /**
  * The dictionary pack the published workflow produces, at the stable
@@ -30,4 +32,11 @@ object DictionaryRelease {
 class DictionaryServices(val installer: DictionaryPackInstaller) {
     /** The word query, reading the installed pack or degrading when there is none. */
     val lookup: DictionaryLookup = DictionaryLookup { installer.open() }
+
+    /**
+     * The pack's lemma index as the word-identity seam (ADR-0006): the tokeniser
+     * asks it so an inflection carries its lemma's key, which is what makes a
+     * saved inflection update its lemma's entry (issue #22).
+     */
+    val lemmas: LemmaLookup = dictionaryLemmas { installer.open() }
 }

@@ -1,11 +1,14 @@
 package app.lekto.core.text
 
+import kotlinx.serialization.Serializable
+
 /**
  * The identity of a word (ADR-0006): its [language] plus the [key] mastery and
  * vocabulary are keyed by — the lemma when the dictionary pack knows one, and
  * the normalised surface form otherwise. Keying on this rather than the spelling
  * is what keeps "mangeais", "mange" and "manger" one entry instead of three.
  */
+@Serializable
 data class WordKey(val language: String?, val key: String)
 
 /**

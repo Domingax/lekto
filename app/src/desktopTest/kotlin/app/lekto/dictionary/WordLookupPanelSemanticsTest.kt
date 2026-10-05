@@ -9,8 +9,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryEntry
 import app.lekto.core.dictionary.DictionarySense
 import app.lekto.core.dictionary.DictionaryShortcut
@@ -18,6 +20,8 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.speech.SpeechResult
+import app.lekto.core.text.WordKey
+import app.lekto.core.vocabulary.VocabularyEntry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -30,6 +34,7 @@ import kotlin.test.assertTrue
  * also carries the pronunciation control and the honest result of speaking.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One panel, one test per outcome and control; splitting hides the panel's surface.
 class WordLookupPanelSemanticsTest {
 
     private val shortcuts = dictionaryShortcuts("blorple", "en", "fr")
@@ -149,14 +154,45 @@ class WordLookupPanelSemanticsTest {
         onNodeWithText("No speech engine is available on this device.").assertIsDisplayed()
     }
 
+    @Test
+    fun savingFromThePanelSavesAtTheDefaultLevel() = runComposeUiTest {
+        var saved: MasteryLevel? = null
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
+
+        onNodeWithTag(SAVE_TAG).performScrollTo().performClick()
+
+        assertEquals(MasteryLevel.FAMILIAR, saved)
+    }
+
+    @Test
+    fun tappingAMasteryLevelSavesAtThatLevel() = runComposeUiTest {
+        var saved: MasteryLevel? = null
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
+
+        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+
+        assertEquals(MasteryLevel.MASTERED, saved)
+    }
+
+    @Test
+    fun aSavedWordLabelsTheSaveButtonAndMarksItsLevel() = runComposeUiTest {
+        val entry = VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = MasteryLevel.RECOGNIZED)
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = entry) }
+
+        onNodeWithText("Saved").assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).assertIsDisplayed()
+    }
+
     @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
     @Composable
     private fun Panel(
         result: WordLookup,
         term: String = "blorple",
         speech: SpeechResult? = null,
+        entry: VocabularyEntry? = null,
         onOpenShortcut: (DictionaryShortcut) -> Unit = {},
         onSpeak: () -> Unit = {},
+        onSave: (MasteryLevel) -> Unit = {},
         onDismiss: () -> Unit = {},
     ) {
         MaterialTheme {
@@ -164,9 +200,9 @@ class WordLookupPanelSemanticsTest {
                 result = result,
                 term = term,
                 shortcuts = shortcuts,
-                onOpenShortcut = onOpenShortcut,
-                onDismiss = onDismiss,
+                actions = WordLookupActions(onOpenShortcut = onOpenShortcut, onDismiss = onDismiss),
                 pronunciation = Pronunciation(onSpeak = onSpeak, result = speech),
+                vocabulary = VocabularyPanel(entry = entry, onSave = onSave),
                 modifier = Modifier.size(width = 360.dp, height = 480.dp),
             )
         }

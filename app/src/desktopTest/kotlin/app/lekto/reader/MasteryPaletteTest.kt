@@ -35,4 +35,13 @@ class MasteryPaletteTest {
             assertEquals(TextDecoration.Underline, level.readerDecoration())
         }
     }
+
+    @Test
+    fun aFilledChipGetsAForegroundThatReadsOnItsColour() {
+        // The dark blue needs white; the light yellow, orange and green need ink.
+        assertEquals(Color.White, contentColorOn(MasteryLevel.UNKNOWN.readerColor()))
+        listOf(MasteryLevel.FAMILIAR, MasteryLevel.RECOGNIZED, MasteryLevel.MASTERED).forEach { level ->
+            assertEquals(MasteryInk, contentColorOn(level.readerColor()))
+        }
+    }
 }

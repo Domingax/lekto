@@ -356,6 +356,33 @@ is `DesktopVaultTest`; the modal Swing dialogs and the Android `CreateDocument`
 and `OpenDocument` glue sit behind the coverage exclusion, like the rest of the
 platform entry points.
 
+Saving a word and setting its mastery (issue #22) is proved at the same levels.
+The vocabulary entry is a domain fact, so `VaultVocabularyTest` in
+`core/commonTest` proves it over the in-memory vault — a save keyed by the word's
+identity, an inflection updating its lemma's entry rather than adding a second,
+a save replacing an earlier one, and an entry surviving a "restart" over the same
+vault — and `VocabularyRecordPropertyTest` pins the record's serialise/parse
+round-trip and its deterministic, filename-safe id for arbitrary text. The
+context-sentence cut is a property in `core/commonTest/.../ContextSentenceTest`.
+`MasteryLookup` is now keyed by `WordKey`, so the reader's own layers are pinned
+by `ReaderTextTest`: a lemma lookup collapses an inflection onto the lemma's key,
+and a tap carries the sentence the word was found in. The reader's live state —
+load once, an unsaved word is unknown, a save bumps the revision that recolours,
+and a previous session's save is present at startup — is a `VocabularyControllerTest`
+in `app/desktopTest`, and the panel's Save button and level chips are
+`WordLookupPanelSemanticsTest`. The whole loop — tap a word, Save it with its
+context and level, change the level afterwards, and find an earlier session's
+entry already saved — runs through `AppSemanticsTest` against the in-memory
+vocabulary, including that saving an inflected form does not create a second
+entry. The translation a save keeps is a pure transform,
+`VocabularySaveTest`; the desktop wiring that saves to a real directory and
+reloads it is `DesktopLibraryTest`, which also proves the whole-vault export
+carries the saved word — the vocabulary is a vault record, so it is portable
+with no separate export. The selector's chips carry their level's colour (the
+filled current one, the others ringed) so the reader's text colours read
+straight off the panel; the mapping reuses the pinned mastery palette and
+`contentColorOn` is unit-tested in `MasteryPaletteTest`.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

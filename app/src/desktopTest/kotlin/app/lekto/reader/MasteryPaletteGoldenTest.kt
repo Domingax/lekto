@@ -82,7 +82,7 @@ private fun WordRow(words: List<WordToken>) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         words.forEach { word ->
-            val level = SampleChapter.mastery.levelOf(word.surface, SampleChapter.LANGUAGE)
+            val level = SampleChapter.mastery.levelOf(word.key)
             Box(modifier = Modifier.width(wordWidth(word.surface)).height(14.dp).background(level.swatch()))
             Box(modifier = Modifier.width(5.dp).height(14.dp))
         }

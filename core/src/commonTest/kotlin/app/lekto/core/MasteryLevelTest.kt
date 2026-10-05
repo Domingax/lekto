@@ -1,5 +1,6 @@
 package app.lekto.core
 
+import app.lekto.core.text.WordKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,9 +21,10 @@ class MasteryLevelTest {
     }
 
     @Test
-    fun aLookupAnswersForAWordInItsLanguage() {
-        val lookup = MasteryLookup { word, _ -> if (word == "manger") MasteryLevel.KNOWN else MasteryLevel.UNKNOWN }
-        assertEquals(MasteryLevel.KNOWN, lookup.levelOf("manger", "fr"))
-        assertTrue(lookup.levelOf("mangeais", "fr").highlighted)
+    fun aLookupAnswersForAWordsIdentity() {
+        val lookup = MasteryLookup { key -> if (key.key == "manger") MasteryLevel.KNOWN else MasteryLevel.UNKNOWN }
+
+        assertEquals(MasteryLevel.KNOWN, lookup.levelOf(WordKey("fr", "manger")))
+        assertTrue(lookup.levelOf(WordKey("fr", "mangeais")).highlighted)
     }
 }

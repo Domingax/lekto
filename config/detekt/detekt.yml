@@ -23,6 +23,12 @@ complexity:
     allowedConstructorParameters: 5
   NestedBlockDepth:
     allowedDepth: 3
+  # A file bundles its own small types. `App.kt` is the composition root, which
+  # names each destination and the seams they thread; splitting a wiring function
+  # across files to satisfy a count makes the wiring harder to read, not easier.
+  # The rule still bounds a class or object, which is where cohesion matters.
+  TooManyFunctions:
+    allowedFunctionsPerFile: 16
 
 naming:
   # Compose UI functions are PascalCase, and ktlint's `function-naming` rule

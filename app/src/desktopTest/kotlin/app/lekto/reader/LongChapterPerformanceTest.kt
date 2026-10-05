@@ -50,7 +50,7 @@ class LongChapterPerformanceTest {
     @Test
     @Suppress("LongMethod") // One linear measurement: chapter text, first page, first-page tokens, whole-book layout.
     fun aLongBookIsOpenedWithoutProcessingTheWholeBook() = runComposeUiTest {
-        val renderer = ReaderRenderer(IcuTextSegmenter(), MasteryLookup { _, _ -> MasteryLevel.UNKNOWN })
+        val renderer = ReaderRenderer(IcuTextSegmenter(), MasteryLookup { MasteryLevel.UNKNOWN })
 
         var start = System.nanoTime()
         val chapterText = buildChapterText(chapter, renderer.styles)

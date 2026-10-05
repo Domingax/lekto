@@ -35,7 +35,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import app.lekto.core.text.WordToken
 import kotlinx.coroutines.yield
 
 private val HorizontalMargin = 24.dp
@@ -53,7 +52,7 @@ internal const val READER_PAGE_TAG = "reader-page"
  * a word, a way back to the library, and the position a page turn lands on.
  */
 data class ReaderActions(
-    val onWordTap: (WordToken) -> Unit = {},
+    val onWordTap: (WordTap) -> Unit = {},
     val onBack: (() -> Unit)? = null,
     val onPositionChange: (Int) -> Unit = {},
 )
@@ -135,7 +134,7 @@ private fun ColumnScope.ReaderPage(
     document: ReaderDocument,
     chapterText: AnnotatedString,
     state: ReaderState,
-    onWordTap: (WordToken) -> Unit,
+    onWordTap: (WordTap) -> Unit,
 ) {
     val tokens = rememberPageTokens(document, chapterText, state.page, onWordTap)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -162,16 +161,23 @@ private fun ColumnScope.ReaderPage(
     }
 }
 
-/** The page's word layer, rebuilt only when the page or the chapter changes. */
+/** The page's word layer, rebuilt only when the page, the chapter or the mastery behind it changes. */
 @Composable
 private fun rememberPageTokens(
     document: ReaderDocument,
     chapterText: AnnotatedString,
     page: ReaderPage?,
-    onWordTap: (WordToken) -> Unit,
+    onWordTap: (WordTap) -> Unit,
 ): ReaderTokens? {
     val latestTap = rememberUpdatedState(onWordTap)
-    return remember(chapterText, page, document.chapter, document.renderer, document.selectedRange) {
+    return remember(
+        chapterText,
+        page,
+        document.chapter,
+        document.renderer,
+        document.selectedRange,
+        document.masteryRevision,
+    ) {
         page?.let { slice ->
             buildPageTokens(chapterText, slice, document.renderer, document.chapter, document.selectedRange) { word ->
                 latestTap.value(word)
