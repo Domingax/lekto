@@ -40,7 +40,10 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Library", style = MaterialTheme.typography.headlineMedium)
-            TextButton(onClick = actions.onOpenSettings) { Text("Settings") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = actions.onOpenVocabulary) { Text("Vocabulary") }
+                TextButton(onClick = actions.onOpenSettings) { Text("Settings") }
+            }
         }
 
         state.error?.let { message -> ImportError(message, actions.onDismissError) }

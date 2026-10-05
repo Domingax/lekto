@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -42,6 +43,8 @@ import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
+import app.lekto.vocabulary.vocabularyDeleteTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -289,6 +292,83 @@ class AppSemanticsTest {
         onNodeWithText("Saved").assertIsDisplayed()
         onNodeWithText("Save").assertDoesNotExist()
         assertEquals(1, vocabulary.all().size)
+    }
+
+    @Test
+    fun theVocabularyListShowsSavedWordsWithTheirDetails() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(
+            VocabularyEntry(
+                key = WordKey("en", "lantern"),
+                surface = "lantern",
+                translation = "lanterne",
+                contextSentence = "The lantern burned all night.",
+                mastery = MasteryLevel.MASTERED,
+            ),
+        )
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        onNodeWithText("Vocabulary").performClick()
+
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("lanterne").assertIsDisplayed()
+        onNodeWithText("The lantern burned all night.").assertIsDisplayed()
+        onNodeWithText("Mastered").assertIsDisplayed()
+    }
+
+    @Test
+    fun theVocabularyCanBeSearched() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.MASTERED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.FAMILIAR))
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        onNodeWithText("Vocabulary").performClick()
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("harbour").assertIsDisplayed()
+
+        onNodeWithTag(VOCABULARY_SEARCH_TAG).performTextInput("har")
+
+        onNodeWithText("harbour").assertIsDisplayed()
+        onNodeWithText("lantern").assertDoesNotExist()
+    }
+
+    @Test
+    fun anEmptyVocabularyShowsTheInstructionalEmptyState() = runComposeUiTest {
+        setContent { App(environment(InMemoryLibrary(), vocabulary = inMemoryVocabulary())) }
+
+        onNodeWithText("Vocabulary").performClick()
+
+        onNodeWithText("No words saved yet", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun deletingAWordDropsItFromTheReader() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        // Save the first word from the panel, then find it in the list.
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+        onNodeWithText("Save").performClick()
+        waitUntil { vocabulary.all().isNotEmpty() }
+        val saved = vocabulary.all().single()
+
+        onNodeWithText("Library").performClick()
+        onNodeWithText("Vocabulary").performClick()
+        onNodeWithTag(vocabularyDeleteTag(saved.key)).performClick()
+        waitUntil { vocabulary.all().isEmpty() }
+        onNodeWithText("No words saved yet", substring = true).assertIsDisplayed()
+
+        // Reopening the book, the word is unsaved again — the reader's colour
+        // dropped with the entry, so list and text agree.
+        onNodeWithText("Library").performClick()
+        onNodeWithText("The Lantern Keeper").performClick()
+        tapFirstWord()
+
+        onNodeWithText("Save").assertIsDisplayed()
+        onNodeWithText("Saved").assertDoesNotExist()
     }
 }
 

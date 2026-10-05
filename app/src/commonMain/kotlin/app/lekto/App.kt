@@ -53,7 +53,11 @@ import app.lekto.settings.SettingsUiState
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
+import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
+import app.lekto.vocabulary.VocabularyScreen
+import app.lekto.vocabulary.VocabularyUiState
+import app.lekto.vocabulary.searchVocabulary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -90,6 +94,7 @@ private sealed interface Destination {
     data object Library : Destination
     data object Settings : Destination
     data object Attribution : Destination
+    data object Vocabulary : Destination
     data class Reading(val session: ReadingSession) : Destination
 }
 
@@ -177,11 +182,16 @@ private fun AppScreens(
                 onBack = { destination = Destination.Library },
             )
 
+            Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, scope) {
+                destination = Destination.Library
+            }
+
             Destination.Library -> LibraryDestination(
                 environment,
                 controller,
                 scope,
                 libraryState,
+                onOpenVocabulary = { destination = Destination.Vocabulary },
                 onOpenSettings = { destination = Destination.Settings },
                 onOpen = { session -> destination = Destination.Reading(session) },
             )
@@ -320,12 +330,52 @@ private fun LibraryDestination(
     controller: LibraryController,
     scope: CoroutineScope,
     state: LibraryUiState,
+    onOpenVocabulary: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpen: (ReadingSession) -> Unit,
 ) {
     LibraryScreen(
         state = state,
-        actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpenSettings, onOpen)),
+        actions = libraryActions(
+            environment,
+            controller,
+            scope,
+            LibraryNavigation(onOpenVocabulary, onOpenSettings, onOpen),
+        ),
+    )
+}
+
+/**
+ * The vocabulary list destination (issue #23): the reader's live vocabulary, the
+ * search query the user has typed, and the delete that removes an entry from the
+ * vault. The query is local to the screen; the delete is a blocking vault write,
+ * so it runs on the environment's dispatcher, and the reader recolours through
+ * the controller's bumped revision.
+ */
+@Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
+@Composable
+private fun VocabularyDestination(
+    vocabulary: VocabularyController?,
+    environment: AppEnvironment,
+    scope: CoroutineScope,
+    onBack: () -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val all = vocabulary?.all().orEmpty()
+    val state = if (all.isEmpty()) {
+        VocabularyUiState.Empty
+    } else {
+        VocabularyUiState.Results(searchVocabulary(all, query), query)
+    }
+    VocabularyScreen(
+        state = state,
+        actions = VocabularyActions(
+            onSearch = { text -> query = text },
+            onDelete = { entry ->
+                scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
+            },
+            onBack = onBack,
+        ),
     )
 }
 
@@ -389,10 +439,15 @@ private fun libraryActions(
     },
     onDismissError = controller::dismissError,
     onOpenSettings = navigation.onOpenSettings,
+    onOpenVocabulary = navigation.onOpenVocabulary,
 )
 
 /** Where the library's taps lead, bundled so [libraryActions] stays within the parameter bound. */
-private class LibraryNavigation(val onOpenSettings: () -> Unit, val onOpen: (ReadingSession) -> Unit)
+private class LibraryNavigation(
+    val onOpenVocabulary: () -> Unit,
+    val onOpenSettings: () -> Unit,
+    val onOpen: (ReadingSession) -> Unit,
+)
 
 /** The reader over an opened [session], with a way back to the library and the lookup panel. */
 @Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.

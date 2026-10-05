@@ -52,6 +52,22 @@ class DesktopLibraryTest {
     }
 
     @Test
+    fun theVocabularyDeletesAWordOverTheDesktopVault() {
+        val root = Files.createTempDirectory("lekto-desktop-vocabulary-delete").toFile().resolve("vault")
+        try {
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+            val vocabulary = desktopVocabulary(root)
+            vocabulary.save(entry)
+
+            vocabulary.delete(entry.key)
+
+            assertEquals(null, desktopVocabulary(root).entryFor(entry.key))
+        } finally {
+            root.parentFile.deleteRecursively()
+        }
+    }
+
+    @Test
     fun theVaultExportCarriesSavedVocabulary() {
         val root = Files.createTempDirectory("lekto-desktop-vocab-export").toFile().resolve("vault")
         try {

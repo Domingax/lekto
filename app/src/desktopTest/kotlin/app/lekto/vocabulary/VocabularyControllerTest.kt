@@ -59,4 +59,40 @@ class VocabularyControllerTest {
         assertEquals(MasteryLevel.FAMILIAR, controller.mastery.levelOf(key))
         assertEquals("lantern", controller.entryFor(key)?.surface)
     }
+
+    @Test
+    fun allListsTheSavedEntries() {
+        val controller = controller()
+        controller.save(VocabularyEntry(key, "lantern"))
+        controller.save(VocabularyEntry(WordKey("fr", "manger"), "mangeais"))
+
+        assertEquals(
+            setOf("lantern", "mangeais"),
+            controller.all().map { entry -> entry.surface }.toSet(),
+        )
+    }
+
+    @Test
+    fun deletingAWordClearsItsMasteryAndBumpsTheRevision() {
+        val controller = controller()
+        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.MASTERED))
+        val before = controller.revision
+
+        controller.delete(key)
+
+        assertEquals(MasteryLevel.UNKNOWN, controller.mastery.levelOf(key))
+        assertEquals(null, controller.entryFor(key))
+        assertEquals(before + 1, controller.revision)
+    }
+
+    @Test
+    fun aDeletedWordStaysDeletedOverTheVault() {
+        val vault = InMemoryVaultStore()
+        val controller = controller(vault)
+        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.MASTERED))
+
+        controller.delete(key)
+
+        assertEquals(null, controller(vault).entryFor(key))
+    }
 }

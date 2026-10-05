@@ -383,6 +383,27 @@ filled current one, the others ringed) so the reader's text colours read
 straight off the panel; the mapping reuses the pinned mastery palette and
 `contentColorOn` is unit-tested in `MasteryPaletteTest`.
 
+Browsing, searching and deleting the saved words (issue #23) is proved at the
+same levels. The delete is a domain fact — the entry's vault record is removed,
+so the word is gone on the next read, including after a restart — so
+`VaultVocabularyTest` in `core/commonTest` proves a deleted word has no entry,
+its record is gone from the vault, and deleting an unsaved word is not an error.
+The reader's live state gains `all()` and `delete()`, so `VocabularyControllerTest`
+proves a delete clears the word's mastery and bumps the revision the reader
+recolours on, and that the deletion survives a "restart" over the vault. The
+search is a pure transform, `VocabularySearchTest`: a blank query keeps every
+entry, and a word is found by its spelling, its lemma, its translation or its
+context sentence, case-insensitively. The list's surface is
+`VocabularyScreenSemanticsTest` in `app/desktopTest` — the instructional empty
+state, an entry's word, translation, context sentence and mastery, the search
+field raising the query, the no-match message, the delete action, and going back.
+The whole loop runs through `AppSemanticsTest` against the in-memory vocabulary:
+a word saved from the reader appears in the list with its details, the list can
+be searched, and deleting the word returns it to unsaved in the reader — so the
+list and the text cannot disagree. The desktop wiring that deletes over a real
+directory is `DesktopLibraryTest`. The list is reached from the library's header,
+not the navigation pattern the UX spec draws; that shell is separate work.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`
