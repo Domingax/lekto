@@ -122,14 +122,16 @@ on the application), import purity (the domain's shared sources name neither the
 application, nor an integration, nor Android — its `androidMain` platform set may
 name the Android API it backs; the testkit never reaches production), and
 naming and placement (a package matches its directory, a source sits under its
-module's package root, a test class is `*Test.kt` in a test source set).
+module's package root, a test class is `*Test.kt` in a test source set, and a
+desktop `*SemanticsTest` has a same-named Android host-lane twin — issue #73).
 
 The rules are hand-rolled rather than Konsist or ArchUnit, so the suite adds no
 dependency and can read the Gradle module graph, which a bytecode analyser
 cannot; ADR-0013 records the decision. Each rule is proven against a deliberately
 broken repository in `ArchitectureViolationTest`, and the real tree is asserted
 by `LektoArchitectureTest` — a boundary can only be relaxed by editing
-`LektoArchitecture.policies`.
+`LektoArchitecture.policies`, and a screen's missing Android twin only by removing
+its path from `LektoArchitecture.uiTestParityAllowlist`.
 
 ### Dependency licences
 

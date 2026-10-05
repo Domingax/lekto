@@ -187,6 +187,13 @@ because a lazy item's key must be Bundle-saveable, and only the Android lane see
 that (issue #69). The desktop lane keeps a Bundle-strict saveable-state registry
 in `VocabularyScreenSemanticsTest` as its own guard.
 
+The two lanes are inseparable by rule, not by habit (issue #73): the architecture
+suite asserts that every `*SemanticsTest.kt` under `app/src/desktopTest` has a
+same-named file under `app/src/androidUnitTest`, so a screen cannot gain a desktop
+test and no Android twin without failing `check`. The rule names the missing twin;
+screens whose twin has not landed yet sit on `LektoArchitecture.uiTestParityAllowlist`,
+which shrinks to empty as each twin lands.
+
 Robolectric (MIT) and JUnit 4 (EPL-1.0) are test-scope only and never linked into
 the shipped application (`config/dependency-licences.txt`). The first run
 downloads Robolectric's `android-all` runtime from Maven Central, so the initial
@@ -452,6 +459,11 @@ suite (ticket #9), so a drift fails `check` rather than the next review:
 - A test class lives in a test source set and its file is named `<Class>Test.kt`;
   a production file is never named `*Test.kt`. Shared fakes and fixtures belong in
   `testkit`, not in a test source set, so a test source set holds tests only.
+- A desktop `*SemanticsTest` has a same-named twin under `app/src/androidUnitTest`
+  — same package, different lane — so a screen proved on the desktop is proved on
+  Android too; `check` fails, naming the missing twin, unless the screen is on
+  `LektoArchitecture.uiTestParityAllowlist`, the burn-down list of screens whose
+  Android twin has not landed yet (issue #73).
 
 ## Reproducing a failure
 
