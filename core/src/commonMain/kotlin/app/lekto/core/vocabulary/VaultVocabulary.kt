@@ -29,4 +29,8 @@ class VaultVocabulary(private val vault: VaultStore, private val seams: Seams, p
     override fun save(entry: VocabularyEntry) {
         vault.put(VocabularyRecord.of(entry, seams.clock.now(), deviceId))
     }
+
+    override fun delete(key: WordKey) {
+        vault.remove(VocabularyRecord.idOf(key))
+    }
 }

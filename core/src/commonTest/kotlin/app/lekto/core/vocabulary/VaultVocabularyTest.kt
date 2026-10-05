@@ -74,6 +74,32 @@ class VaultVocabularyTest :
             newVocabulary(vault).entryFor(entry.key) shouldBe entry
         }
 
+        test("a deleted word has no entry") {
+            val vault = InMemoryVaultStore()
+            val vocabulary = newVocabulary(vault)
+            vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern"))
+
+            vocabulary.delete(WordKey("en", "lantern"))
+
+            vocabulary.entryFor(WordKey("en", "lantern")) shouldBe null
+            vocabulary.all() shouldBe emptyList()
+        }
+
+        test("a deleted word is removed from the vault, so a restart does not bring it back") {
+            val vault = InMemoryVaultStore()
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern")
+            newVocabulary(vault).save(entry)
+
+            newVocabulary(vault).delete(entry.key)
+
+            vault.all().none { record -> record.kind == VocabularyRecord.KIND } shouldBe true
+            newVocabulary(vault).entryFor(entry.key) shouldBe null
+        }
+
+        test("deleting an unsaved word is not an error") {
+            newVocabulary().delete(WordKey("en", "lantern"))
+        }
+
         test("all lists every saved entry") {
             val vocabulary = newVocabulary()
             val entries = listOf(
