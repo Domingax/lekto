@@ -4,10 +4,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -116,14 +117,17 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("The Lantern Keeper").performClick()
         compose.onNodeWithText("Next page").performClick()
-        compose.onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        compose.awaitPage(2)
         // Persisting runs off the UI thread; wait for it before leaving the book.
         compose.waitUntil { library.savedOffset() != null }
 
         compose.onNodeWithText("Library").performClick()
         compose.onNodeWithText("The Lantern Keeper").performClick()
 
-        compose.onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        // The reopened reader resumes past page one: the page number is enough,
+        // and Previous page enabled proves it is not page one.
+        compose.awaitPage(2)
+        compose.onNodeWithText("Previous page").assertIsEnabled()
     }
 
     @Test
@@ -164,7 +168,7 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("The Lantern Keeper").performClick()
         compose.onNodeWithText("Next page").performClick()
-        compose.onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        compose.awaitPage(2)
 
         compose.tapFirstWord()
         compose.onNodeWithText("Look it up online").assertIsDisplayed()
@@ -176,7 +180,7 @@ class AppSemanticsTest {
         compose.onNodeWithText("Close").performClick()
 
         compose.onNodeWithText("Look it up online").assertDoesNotExist()
-        compose.onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        compose.awaitPage(2)
     }
 
     @Test
@@ -448,10 +452,25 @@ private fun inMemoryVocabulary(): Vocabulary =
     VaultVocabulary(InMemoryVaultStore(), deterministicSeams(), DeviceId("device-a"))
 
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
-private fun SemanticsNodeInteractionsProvider.tapFirstWord() {
+private fun ComposeTestRule.tapFirstWord() {
+    // The word layer arrives a frame after the reader opens (the page is
+    // paginated and tokenised asynchronously), so wait for it before tapping.
+    waitUntil(timeoutMillis = 5_000) {
+        onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+    }
     onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
         .onFirst()
         .performSemanticsAction(SemanticsActions.OnClick)
+}
+
+/** Waits until the reader's page bar reports page [page], then asserts it is there. */
+private fun ComposeTestRule.awaitPage(page: Int) {
+    waitUntil(timeoutMillis = 5_000) {
+        onAllNodesWithText("Page $page of", substring = true).fetchSemanticsNodes().isNotEmpty()
+    }
+    onNodeWithText("Page $page of", substring = true).assertExists()
 }
 
 private fun dictionaryServices(): DictionaryServices {
