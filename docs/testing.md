@@ -402,7 +402,14 @@ a word saved from the reader appears in the list with its details, the list can
 be searched, and deleting the word returns it to unsaved in the reader — so the
 list and the text cannot disagree. The desktop wiring that deletes over a real
 directory is `DesktopLibraryTest`. The list is reached from the library's header,
-not the navigation pattern the UX spec draws; that shell is separate work.
+not the navigation pattern the UX spec draws; that shell is separate work. The
+list's `LazyColumn` key is a `String` projected from the word's identity, and
+`VocabularyScreenSemanticsTest` renders the list under a saveable-state registry
+as strict as Android's, so a key the platform cannot put in a `Bundle` fails here
+in the JVM lane instead of only on a device (issue #69); `VocabularyRowKeyTest`
+pins the projection's `String` type and its uniqueness. This is the closest the
+fast lane gets to the Android-only rule until `app` has an Android UI lane
+(ticket #24).
 
 ## Naming and placement
 

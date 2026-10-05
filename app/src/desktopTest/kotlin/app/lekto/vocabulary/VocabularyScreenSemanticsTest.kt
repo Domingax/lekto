@@ -3,6 +3,9 @@ package app.lekto.vocabulary
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -92,6 +95,17 @@ class VocabularyScreenSemanticsTest {
         assertTrue(backed)
     }
 
+    @Test
+    fun theListIsKeyedByABundleSaveableValue() = runComposeUiTest {
+        setContent {
+            CompositionLocalProvider(LocalSaveableStateRegistry provides BundleStrictRegistry) {
+                Vocabulary(VocabularyUiState.Results(listOf(lantern), ""))
+            }
+        }
+
+        onNodeWithText("lantern").assertIsDisplayed()
+    }
+
     @Composable
     private fun Vocabulary(
         state: VocabularyUiState,
@@ -107,4 +121,24 @@ class VocabularyScreenSemanticsTest {
             )
         }
     }
+}
+
+/**
+ * A saveable-state registry as strict as Android's: it accepts only types the
+ * platform can put in a `Bundle` — here, anything `Serializable`, and a [WordKey]
+ * is a Kotlin data class and is not one. Rendering the list under it reproduces
+ * the Android-only crash a non-Bundle key causes, so the list's `LazyColumn` key
+ * is guarded in the JVM lane (issue #69).
+ */
+private val BundleStrictRegistry = object : SaveableStateRegistry {
+    override fun canBeSaved(value: Any): Boolean = value is java.io.Serializable
+
+    override fun consumeRestored(key: String): Any? = null
+
+    override fun registerProvider(key: String, valueProvider: () -> Any?): SaveableStateRegistry.Entry =
+        object : SaveableStateRegistry.Entry {
+            override fun unregister() = Unit
+        }
+
+    override fun performSave(): Map<String, List<Any?>> = emptyMap()
 }
