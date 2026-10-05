@@ -380,6 +380,24 @@ opener takes its browse call as a parameter so it is unit-tested, and the Androi
 glue sits behind the coverage exclusion like the rest of the platform entry
 points.
 
+Phrase selection and the zero-configuration **Translation shortcut** (issue #87)
+are proved at the same levels. `translationShortcut` is a pure transform in
+`core` — Google Translate's page for a phrase, built from the book's language and
+the pack's target language — so `TranslationShortcutTest` pins its URL, its
+space and non-ASCII encoding, the auto-detect fallback and the pair it cannot
+address, in `core/commonTest`. The reader's long-press drag is split from the
+page: `PhraseSelectionTest` pins the pure range-to-phrase math, `ReaderTextTest`
+pins that a selected phrase washes every word it covers, and the gesture itself
+is driven through `ReaderScreenSemanticsTest` on both lanes. The panel is
+`PhraseLookupPanelSemanticsTest` on both lanes, and the whole loop — select a
+phrase on page two, open the shortcut through the injected browser, close and
+land on the same page — runs through `AppSemanticsTest` on both lanes. Robolectric's
+glyph metrics are sub-pixel, so its text hit-testing does not extend the drag
+reliably; the Android lane proves the gesture selects a phrase and opens the
+panel, while the multi-word range is pinned by `PhraseSelectionTest` and the
+desktop lane. The shortcut needs no **LLM provider** and no key — it is a plain
+outbound URL the platform browser opens, never an embedded or scraped service.
+
 The pronunciation control (issue #21) is proved at its own levels. The desktop
 binding's outcome mapping — speak a word, report a language with no installed
 voice as `NoVoice`, and an engine that fails or will not start as `Unavailable` —

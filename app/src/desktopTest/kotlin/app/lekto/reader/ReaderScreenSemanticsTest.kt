@@ -5,12 +5,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,6 +29,7 @@ import app.lekto.core.text.TextRun
 import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -143,6 +148,26 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
+    fun selectingAPhraseByLongPressDragReportsIt() = runComposeUiTest {
+        var selected: PhraseSelection? = null
+        setContent { Reader(renderer, onPhraseSelected = { chosen -> selected = chosen }) }
+
+        onNodeWithText("On the quiet evening", substring = true).assertIsDisplayed()
+        val start = firstWordCentre()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+            down(start)
+            advanceEventTime(1000)
+            moveTo(Offset(start.x + 160f, start.y))
+            up()
+        }
+
+        val phrase = assertNotNull(selected, "a long-press drag must select a phrase")
+        val chapter = SampleChapter.chapter.blocks.joinToString("\n\n") { block -> block.text }
+        assertTrue(phrase.text.contains(" "), "a drag across the line must select more than one word: ${phrase.text}")
+        assertTrue(chapter.contains(phrase.text), "the phrase must come from the chapter: ${phrase.text}")
+    }
+
+    @Test
     fun theTapZonesAreThirdsOfTheWidth() {
         val width = 300
         assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(0f, width))
@@ -153,18 +178,35 @@ class ReaderScreenSemanticsTest {
     }
 
     @Composable
+    @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
     private fun Reader(
         renderer: ReaderRenderer,
         chapter: ReaderChapter = SampleChapter.chapter,
         initialOffset: Int = 0,
         onPositionChange: (Int) -> Unit = {},
+        onPhraseSelected: (PhraseSelection) -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
                 document = ReaderDocument(chapter, renderer, initialOffset),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
-                actions = ReaderActions(onBack = {}, onPositionChange = onPositionChange),
+                actions = ReaderActions(
+                    onPhraseSelected = onPhraseSelected,
+                    onBack = {},
+                    onPositionChange = onPositionChange,
+                ),
             )
         }
     }
+}
+
+/** The first word link's centre, in the reader page's coordinates. */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeUiTest.firstWordCentre(): Offset {
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val word = onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+        .onFirst()
+        .fetchSemanticsNode()
+        .boundsInRoot
+    return word.center - page.topLeft
 }

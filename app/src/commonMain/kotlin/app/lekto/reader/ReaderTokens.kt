@@ -156,10 +156,10 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
 /**
  * Colours and links one word at a time. Highlighted words (levels 0–3) get a
  * colour span and an underline; a known word (level 4) gets neither, so it reads
- * as normal text. The [selected] word is additionally washed with
- * [SelectionHighlight], so the word stays visible behind the open lookup panel.
- * The link carries the same colour so the platform's default link tint never
- * overrides the mastery palette.
+ * as normal text. A word inside the [selected] range is additionally washed with
+ * [SelectionHighlight], so a tapped word — or every word of a selected phrase —
+ * stays visible behind the open lookup panel. The link carries the same colour so
+ * the platform's default link tint never overrides the mastery palette.
  *
  * [offset] maps the local word to the chapter's coordinates for the tap and the
  * selection test, while the span and link stay local; [text] is the chapter,
@@ -179,7 +179,8 @@ private class WordWriter(
         val decoration = level.readerDecoration()
         val globalStart = word.start + offset
         val globalEnd = word.end + offset
-        val background = if (selected == globalStart..globalEnd) SelectionHighlight else Color.Unspecified
+        val washed = selected != null && globalStart >= selected.first && globalEnd <= selected.last
+        val background = if (washed) SelectionHighlight else Color.Unspecified
         val span = SpanStyle(color = colour, textDecoration = decoration, background = background)
         builder.addStyle(span, word.start, word.end)
         builder.addLink(
