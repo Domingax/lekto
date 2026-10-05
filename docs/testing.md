@@ -187,6 +187,14 @@ because a lazy item's key must be Bundle-saveable, and only the Android lane see
 that (issue #69). The desktop lane keeps a Bundle-strict saveable-state registry
 in `VocabularyScreenSemanticsTest` as its own guard.
 
+The reader's page — a `SelectionContainer` over an `AnnotatedString` whose
+words are clickable `LinkAnnotation`s, paginated by the platform text stack — is
+the second screen proved on this lane (issue #75): `ReaderScreenSemanticsTest`
+opens at a saved offset, turns pages by button and by tap zone, and toggles the
+chrome on the runtime Android uses. Robolectric lays glyphs out far more tightly
+than a device font, so the twin uses a longer chapter than the desktop test's
+sample; the assertions are about behaviour, not a pinned page count.
+
 The two lanes are inseparable by rule, not by habit (issue #73): the architecture
 suite asserts that every `*SemanticsTest.kt` under `app/src/desktopTest` has a
 same-named file under `app/src/androidUnitTest`, so a screen cannot gain a desktop
