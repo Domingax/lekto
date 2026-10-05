@@ -60,8 +60,10 @@ kotlin {
         // The UI-semantics suite runs on the JVM (desktop) in seconds, with no
         // emulator. It lives in desktopTest rather than commonTest because the
         // Compose Multiplatform common test API cannot run under Android's local
-        // (host) test configuration; instrumented coverage is a separate, slower
-        // lane. See docs/testing.md and docs/research/testing-harness.md §6.
+        // (host) test configuration; the Android-specific `androidUnitTest` lane
+        // below runs the same screens under Robolectric, and instrumented coverage
+        // is a separate, slower nightly lane. See docs/testing.md and
+        // docs/research/testing-harness.md §6.
         getByName("desktopTest").dependencies {
             implementation(project(":testkit"))
             implementation(kotlin("test"))
@@ -75,6 +77,26 @@ kotlin {
             // Roborazzi desktop tasks. See docs/testing.md.
             implementation(libs.roborazzi.core)
             implementation(libs.roborazzi.compose.desktop)
+        }
+        if (androidEnabled) {
+            // Host tests (Robolectric, issue #71): the Compose UI runs on a
+            // simulated Android runtime in the fast lane, so a constraint only
+            // Android enforces — a `LazyColumn` key the platform cannot save, say
+            // — fails here rather than on a device, which is where the vocabulary
+            // list crashed (issue #69). JUnit 4 drives Robolectric.
+            getByName("androidUnitTest").dependencies {
+                implementation(project(":testkit"))
+                implementation(libs.compose.ui.test.junit4)
+                implementation(libs.robolectric)
+                implementation(libs.junit4)
+            }
+            // Instrumented smoke tests on an emulator in the nightly lane (issue
+            // #71): the paths the host lane cannot reach, and a launched Activity.
+            getByName("androidInstrumentedTest").dependencies {
+                implementation(libs.compose.ui.test.junit4)
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.ext.junit)
+            }
         }
     }
 }
@@ -90,6 +112,17 @@ if (androidEnabled) {
             targetSdk = libs.versions.android.targetSdk.get().toInt()
             versionCode = 1
             versionName = "0.1.0"
+            // Drives the instrumented tests the nightly lane runs on an emulator
+            // (issue #71).
+            testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+
+        testOptions {
+            // Robolectric host tests read the app's resources and merged manifest
+            // (issue #71), so the Compose rule can start its host Activity.
+            unitTests {
+                isIncludeAndroidResources = true
+            }
         }
 
         compileOptions {
@@ -108,6 +141,31 @@ if (androidEnabled) {
 compose.desktop {
     application {
         mainClass = "app.lekto.MainKt"
+    }
+}
+
+if (androidEnabled) {
+    // The Compose test rule starts a host Activity; `ui-test-manifest` contributes
+    // it to the debug app the Robolectric host tests run against (issue #71). The
+    // AAR must be on the app, not the test classpath, for its manifest to merge —
+    // `debugImplementation`, as the Android docs prescribe.
+    dependencies {
+        add("debugImplementation", libs.compose.ui.test.manifest)
+    }
+
+    // `check` does not reach the Android unit tests in this KMP setup (only the
+    // desktop suite), so the fast lane would miss the host lane: wire it in
+    // explicitly, as the acceptance criterion for issue #71 requires.
+    tasks.named("check") { dependsOn("testDebugUnitTest") }
+
+    // The host Activity the Compose rule starts is debug-only (`ui-test-manifest`
+    // is a debug dependency), and the app has no release-specific behaviour to
+    // prove, so the release unit-test variant is turned off. Without this, the
+    // aggregate `check` runs it too and fails for want of that Activity.
+    extensions.configure<com.android.build.api.variant.ApplicationAndroidComponentsExtension> {
+        beforeVariants(selector().withBuildType("release")) { variant ->
+            variant.enableUnitTest = false
+        }
     }
 }
 

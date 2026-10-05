@@ -56,6 +56,11 @@ test-licence GPL-2.0-with-classpath-exception
 # reviewed by hand and named after the licence the project actually publishes.
 override com.google.guava:listenablefuture Apache-2.0
 override org.hamcrest:hamcrest-core BSD-3-Clause
+# The Android instrumented test runner (issue #71) pulls two more Hamcrest
+# modules whose POMs declare no licence; Hamcrest is BSD-3-Clause, as the
+# `hamcrest-core` override above already records.
+override org.hamcrest:hamcrest-integration BSD-3-Clause
+override org.hamcrest:hamcrest-library BSD-3-Clause
 override io.github.java-diff-utils:java-diff-utils Apache-2.0
 override net.bytebuddy:byte-buddy Apache-2.0
 override net.bytebuddy:byte-buddy-agent Apache-2.0

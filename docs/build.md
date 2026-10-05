@@ -52,11 +52,13 @@ parses EPUB content documents leniently. ICU4J is Unicode-3.0 and jsoup MIT;
 both are AGPL-compatible and recorded in `config/dependency-licences.txt`
 (ADR-0011). See `docs/research/epub-to-tokens-spike.md`.
 
-Robolectric (MIT) runs `core`'s platform code on a simulated Android runtime on
-the JVM, with no emulator (ticket #49): it is test-scope only, and its JUnit 4
-runner (EPL-1.0) is likewise never conveyed. The `androidHostTest` source set
-exists only when `core`'s Android target is applied, under the KMP Android
-library plugin (`com.android.kotlin.multiplatform.library`). See
+Robolectric (MIT) runs `core`'s and the app's platform code on a simulated
+Android runtime on the JVM, with no emulator (tickets #49 and #71): it is
+test-scope only, and its JUnit 4 runner (EPL-1.0) is likewise never conveyed.
+`core`'s `androidHostTest` source set exists only when its Android target is
+applied, under the KMP Android library plugin
+(`com.android.kotlin.multiplatform.library`); the app, an Android application,
+uses the classic `androidUnitTest` source set instead. See
 `docs/testing.md#android-host-lane`.
 
 kotlinx.serialization (Apache-2.0) is the vault's dependency (ticket #12): records
@@ -210,13 +212,14 @@ require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
 pull request has no secret, so the scan is skipped there and only the coverage and
 linter reports are produced. The `webdav` lane needs Docker — present on GitHub's
 runners — and skips cleanly where it is absent; the `fast` lane excludes its test
-so the two do not overlap. The `fast` lane also runs `core`'s Android host suite
-(`:core:testAndroidHostTest`), which needs the Android SDK the GitHub runners
-carry — no emulator (`docs/testing.md#android-host-lane`).
+so the two do not overlap. The `fast` lane also runs the Android host suites —
+`core`'s `:core:testAndroidHostTest` and the app's `:app:testDebugUnitTest` —
+which need the Android SDK the GitHub runners carry, and no emulator
+(`docs/testing.md#android-host-lane`).
 The `instrumented` lane is the only one that needs an emulator; it is scheduled,
-so it never slows a change, and its instrumented tests arrive with the remaining
-platform work (ticket #24). Vulnerability alerts are a repository setting,
-enabled once with
+so it never slows a change, and it runs the app's launch smoke test
+(`app/androidInstrumentedTest`, issue #71). Vulnerability alerts are a repository
+setting, enabled once with
 `gh api --method PUT repos/<owner>/<repo>/vulnerability-alerts`.
 
 `tools/dictionaries` builds and publishes by its own workflow (ticket #17), which
