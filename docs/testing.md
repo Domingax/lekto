@@ -95,8 +95,9 @@ in-memory fakes in `core/commonTest`, and a real-EPUB run over a temporary
 directory lives in `core/jvmTest`. The vault's binary **attachments** (ADR-0016)
 are proven in the shared `VaultStoreContract`, so the in-memory and on-disk
 stores cannot drift, and a property in `VaultCodecPropertyTest` round-trips
-arbitrary bytes through export and import. The library UI is a UI-semantics test
-in `app/desktopTest`, and the `LibraryController`'s async import is driven with
+arbitrary bytes through export and import. The library UI's semantics are proved
+in `app/desktopTest` and its same-named Android twin in `app/androidUnitTest`
+(issue #74), and the `LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
 
 The reader on a real book and its **resume** (issue #16) are proven at the same
