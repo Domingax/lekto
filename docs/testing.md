@@ -95,8 +95,9 @@ in-memory fakes in `core/commonTest`, and a real-EPUB run over a temporary
 directory lives in `core/jvmTest`. The vault's binary **attachments** (ADR-0016)
 are proven in the shared `VaultStoreContract`, so the in-memory and on-disk
 stores cannot drift, and a property in `VaultCodecPropertyTest` round-trips
-arbitrary bytes through export and import. The library UI is a UI-semantics test
-in `app/desktopTest`, and the `LibraryController`'s async import is driven with
+arbitrary bytes through export and import. The library UI's semantics are proved
+in `app/desktopTest` and its same-named Android twin in `app/androidUnitTest`
+(issue #74), and the `LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
 
 The reader on a real book and its **resume** (issue #16) are proven at the same
@@ -186,6 +187,14 @@ Android uses, which the desktop lane cannot stand in for: the vocabulary list's
 because a lazy item's key must be Bundle-saveable, and only the Android lane sees
 that (issue #69). The desktop lane keeps a Bundle-strict saveable-state registry
 in `VocabularyScreenSemanticsTest` as its own guard.
+
+The reader's page — a `SelectionContainer` over an `AnnotatedString` whose
+words are clickable `LinkAnnotation`s, paginated by the platform text stack — is
+also proved on this lane (issue #75): `ReaderScreenSemanticsTest`
+opens at a saved offset, turns pages by button and by tap zone, and toggles the
+chrome on the runtime Android uses. Robolectric lays glyphs out far more tightly
+than a device font, so the twin uses a longer chapter than the desktop test's
+sample; the assertions are about behaviour, not a pinned page count.
 
 The two lanes are inseparable by rule, not by habit (issue #73): the architecture
 suite asserts that every `*SemanticsTest.kt` under `app/src/desktopTest` has a
@@ -345,8 +354,11 @@ Google Translate — and `dictionaryShortcuts` drops a source that cannot addres
 the language pair rather than hand it a wrong page, so those tests live in
 `core/commonTest`. The panel itself, its offline result and its graceful
 degradation to the shortcuts and an honest message when no pack is installed are
-`app/desktopTest` semantics. The reader's selection wash, which keeps the tapped
-word visible behind the panel, is pinned on the word layer in `ReaderTextTest`,
+`app/desktopTest` semantics, and its same-named `app/androidUnitTest` twin (issue
+#76) proves the found, offline, pronunciation, mastery and save behaviours under
+Robolectric, so the parity rule (issue #73) no longer allowlists the screen. The
+reader's selection wash, which keeps the tapped word visible behind the panel, is
+pinned on the word layer in `ReaderTextTest`,
 and the whole loop — turn a page, tap a word, open Reverso through the injected
 browser opener, close, and find the reader still on the same page — is driven
 through `AppSemanticsTest`. Opening a shortcut is a platform action: the desktop
@@ -374,6 +386,11 @@ crash — is a behaviour over the in-memory vault in
 `app/desktopTest/.../settings/VaultTransferControllerTest`, driven by
 `kotlinx-coroutines-test`'s virtual time. The screen's sections and its
 export/import controls are UI semantics in `SettingsScreenSemanticsTest`, and the
+same screen is re-proved on a simulated Android runtime in
+`app/androidUnitTest/.../settings/SettingsScreenSemanticsTest` (issue #77) — the
+dictionary status and its download, the way to attribution, and the vault
+section's export/import controls — so the screen is proved on both lanes, as the
+parity rule requires (issue #73). The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
 (`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
