@@ -115,7 +115,6 @@ object LektoArchitecture {
         "app/src/desktopTest/kotlin/app/lekto/AppSemanticsTest.kt",
         "app/src/desktopTest/kotlin/app/lekto/AppVaultSemanticsTest.kt",
         "app/src/desktopTest/kotlin/app/lekto/dictionary/WordLookupPanelSemanticsTest.kt",
-        "app/src/desktopTest/kotlin/app/lekto/reader/ReaderScreenSemanticsTest.kt",
         "app/src/desktopTest/kotlin/app/lekto/settings/AttributionScreenSemanticsTest.kt",
         "app/src/desktopTest/kotlin/app/lekto/settings/SettingsScreenSemanticsTest.kt",
     )
