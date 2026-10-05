@@ -57,6 +57,7 @@ import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
+import app.lekto.vocabulary.filterByMastery
 import app.lekto.vocabulary.searchVocabulary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -361,16 +362,18 @@ private fun VocabularyDestination(
     onBack: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
+    var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
     val all = vocabulary?.all().orEmpty()
     val state = if (all.isEmpty()) {
         VocabularyUiState.Empty
     } else {
-        VocabularyUiState.Results(searchVocabulary(all, query), query)
+        VocabularyUiState.Results(filterByMastery(searchVocabulary(all, query), masteryLevel), query, masteryLevel)
     }
     VocabularyScreen(
         state = state,
         actions = VocabularyActions(
             onSearch = { text -> query = text },
+            onFilter = { chosen -> masteryLevel = chosen },
             onDelete = { entry ->
                 scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
             },

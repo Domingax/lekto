@@ -1,19 +1,14 @@
 package app.lekto.dictionary
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,8 +22,7 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
-import app.lekto.reader.contentColorOn
-import app.lekto.reader.readerColorOr
+import app.lekto.reader.MasteryChip
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
@@ -149,35 +143,19 @@ private fun MasterySelector(vocabulary: VocabularyPanel) {
     Text("Mastery", style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         MasteryLevel.entries.forEach { level ->
-            val colour = level.readerColorOr(MaterialTheme.colorScheme.outline)
-            val selected = level == vocabulary.level
-            if (selected) {
-                Button(
-                    onClick = { vocabulary.onSave(level) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colour,
-                        contentColor = contentColorOn(colour),
-                    ),
-                    contentPadding = ChipPadding,
-                    modifier = Modifier.testTag(masteryTag(level)),
-                ) { Text(level.label()) }
-            } else {
-                OutlinedButton(
-                    onClick = { vocabulary.onSave(level) },
-                    border = BorderStroke(2.dp, colour),
-                    contentPadding = ChipPadding,
-                    modifier = Modifier.testTag(masteryTag(level)),
-                ) { Text(level.label()) }
-            }
+            MasteryChip(
+                level = level,
+                label = level.shortLabel(),
+                selected = level == vocabulary.level,
+                onClick = { vocabulary.onSave(level) },
+                modifier = Modifier.testTag(masteryTag(level)),
+            )
         }
     }
 }
 
-/** A selector chip's padding, so the compact row stays within a phone's width. */
-private val ChipPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-
-/** A mastery level's compact chip label: its number, and a check for the known level. */
-private fun MasteryLevel.label(): String = when (this) {
+/** A selector chip's compact label: its number, and a check for the known level. */
+private fun MasteryLevel.shortLabel(): String = when (this) {
     MasteryLevel.UNKNOWN -> "0"
     MasteryLevel.FAMILIAR -> "1"
     MasteryLevel.RECOGNIZED -> "2"
