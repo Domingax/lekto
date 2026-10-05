@@ -113,7 +113,7 @@ private fun ColumnScope.Results(state: VocabularyUiState.Results, actions: Vocab
         )
     } else {
         LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
-            items(state.entries, key = { entry -> entry.key }) { entry ->
+            items(state.entries, key = { entry -> entry.key.rowKey() }) { entry ->
                 EntryRow(entry, actions.onDelete)
             }
         }
@@ -184,6 +184,16 @@ private fun MasteryLevel.label(): String = when (this) {
     MasteryLevel.MASTERED -> "Mastered"
     MasteryLevel.KNOWN -> "Known"
 }
+
+/**
+ * The Bundle-safe key for a word's row (issue #69). Compose saves a lazy item's
+ * state through a saveable-state holder, and Android only accepts a key it can
+ * put in a `Bundle`; a [WordKey] is a data class and is not one, so keying a
+ * `LazyColumn` on it crashed the vocabulary list on Android. This projects the
+ * key onto the `String` Android needs, joined the same way the vault's own
+ * record id joins its fields, so distinct words get distinct rows.
+ */
+internal fun WordKey.rowKey(): String = "${language.orEmpty()}\u0000$key"
 
 /**
  * The entries matching [query] (issue #23): a blank query returns them all, and a
