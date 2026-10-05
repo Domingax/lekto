@@ -196,12 +196,26 @@ chrome on the runtime Android uses. Robolectric lays glyphs out far more tightly
 than a device font, so the twin uses a longer chapter than the desktop test's
 sample; the assertions are about behaviour, not a pinned page count.
 
+The whole application's end-to-end flows are proved on this lane too (issue #79):
+`AppSemanticsTest` and `AppVaultSemanticsTest` are the same-named twins of the
+desktop files, so import → library → reader → resume, word lookup and save, the
+vocabulary list with its search and filter, settings and attribution, and the
+vault export/import loop all run under Robolectric through the same `App()`
+composable. The book's text is built from one-line paragraphs, because
+Robolectric lays glyphs out far more tightly than a device font, and a page
+boundary then always falls between paragraphs. A word link is activated through
+its semantics action rather than a synthetic tap, because a tap on Robolectric's
+tiny measured glyphs lands between them and the reader turns the page instead;
+the raw tap zones and paging are proved on this lane by the reader's own twin
+(issue #75).
+
 The two lanes are inseparable by rule, not by habit (issue #73): the architecture
 suite asserts that every `*SemanticsTest.kt` under `app/src/desktopTest` has a
 same-named file under `app/src/androidUnitTest`, so a screen cannot gain a desktop
 test and no Android twin without failing `check`. The rule names the missing twin;
 screens whose twin has not landed yet sit on `LektoArchitecture.uiTestParityAllowlist`,
-which shrinks to empty as each twin lands.
+which shrinks to empty as each twin lands — and is empty now that issue #79
+landed the last two.
 
 Robolectric (MIT) and JUnit 4 (EPL-1.0) are test-scope only and never linked into
 the shipped application (`config/dependency-licences.txt`). The first run
@@ -284,7 +298,7 @@ where the change lands:
 | A seam — `SyncTarget`, `VaultStore`, a provider adapter               | contract suite + in-memory fake                         | `testkit/commonMain`        |
 | A driver under `integrations/`                                        | that contract suite, plus a containerised integration run | `integrations/webdav/jvmTest` |
 | A parser — EPUB, TXT, PDF                                             | golden over a generated corpus, plus one awkward real fixture | `jvmTest`             |
-| UI behaviour in `app`                                                 | Compose UI-semantics test (desktop, and the Android host lane for platform-only constraints) | `app/desktopTest`, `app/androidUnitTest` |
+| UI behaviour in `app`                                                 | Compose UI-semantics test (desktop, and the same-named Android host lane) | `app/desktopTest`, `app/androidUnitTest` |
 | A visual or layout change                                             | + screenshot golden                                     | `app`, on the PR lane       |
 | Android platform glue                                                 | Robolectric host test                                   | `androidHostTest` (core), `androidUnitTest` (app) |
 | An architectural boundary or naming convention                       | architecture rule test, plus a synthetic violation it must catch | `architecture/src/test` |
@@ -394,7 +408,9 @@ parity rule requires (issue #73). The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
 (`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
-real vault-backed `VaultBookLibrary`, so the test proves what the user then sees.
+real vault-backed `VaultBookLibrary`, so the test proves what the user then sees;
+its same-named `app/androidUnitTest` twin (issue #79) re-proves the loop on the
+runtime Android uses.
 The desktop wiring that roots the transfer at the same directory as the library
 is `DesktopVaultTest`; the modal Swing dialogs and the Android `CreateDocument`
 and `OpenDocument` glue sit behind the coverage exclusion, like the rest of the
@@ -418,7 +434,8 @@ in `app/desktopTest`, and the panel's Save button and level chips are
 context and level, change the level afterwards, and find an earlier session's
 entry already saved — runs through `AppSemanticsTest` against the in-memory
 vocabulary, including that saving an inflected form does not create a second
-entry. The translation a save keeps is a pure transform,
+entry; its same-named `app/androidUnitTest` twin (issue #79) re-proves the save
+loop on the runtime Android uses. The translation a save keeps is a pure transform,
 `VocabularySaveTest`; the desktop wiring that saves to a real directory and
 reloads it is `DesktopLibraryTest`, which also proves the whole-vault export
 carries the saved word — the vocabulary is a vault record, so it is portable
@@ -480,7 +497,9 @@ suite (ticket #9), so a drift fails `check` rather than the next review:
   — same package, different lane — so a screen proved on the desktop is proved on
   Android too; `check` fails, naming the missing twin, unless the screen is on
   `LektoArchitecture.uiTestParityAllowlist`, the burn-down list of screens whose
-  Android twin has not landed yet (issue #73).
+  Android twin has not landed yet (issue #73). The list is empty now; the last two
+  twins — the whole-app `AppSemanticsTest` and `AppVaultSemanticsTest` — landed
+  with issue #79.
 
 ## Reproducing a failure
 

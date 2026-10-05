@@ -111,10 +111,7 @@ object LektoArchitecture {
      * each twin PR deletes its own entry, and an empty set means the rule has no
      * exceptions. A path here is a deliberate exception, not a silent one.
      */
-    val uiTestParityAllowlist: Set<String> = setOf(
-        "app/src/desktopTest/kotlin/app/lekto/AppSemanticsTest.kt",
-        "app/src/desktopTest/kotlin/app/lekto/AppVaultSemanticsTest.kt",
-    )
+    val uiTestParityAllowlist: Set<String> = emptySet()
 
     /** Runs every rule over [repository]; an empty result means it conforms. */
     fun check(repository: Repository): List<Violation> = buildList {
