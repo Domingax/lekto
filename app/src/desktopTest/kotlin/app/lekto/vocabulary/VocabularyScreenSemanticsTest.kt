@@ -15,9 +15,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import app.lekto.core.MasteryLevel
-import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.testkit.testVocabularyEntry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,13 +31,7 @@ import kotlin.test.assertTrue
 @Suppress("TooManyFunctions") // One list, one test per behaviour; splitting hides the screen's surface.
 class VocabularyScreenSemanticsTest {
 
-    private val lantern = VocabularyEntry(
-        key = WordKey("en", "lantern"),
-        surface = "lantern",
-        translation = "lanterne",
-        contextSentence = "The lantern burned all night.",
-        mastery = MasteryLevel.MASTERED,
-    )
+    private val lantern = testVocabularyEntry()
 
     @Test
     fun anEmptyVocabularyShowsTheInstructionalEmptyState() = runComposeUiTest {

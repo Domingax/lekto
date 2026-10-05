@@ -33,18 +33,24 @@ Force a re-run when Gradle marks the task up-to-date:
 | Domain + properties  | `core/commonTest`              | `:core:jvmTest`                 | a JVM        |
 | Android host tests   | `core/androidHostTest`         | `:core:testAndroidHostTest`     | a JVM + an Android SDK (Robolectric downloads its runtime once) |
 | UI semantics         | `app/desktopTest`              | `:app:desktopTest`              | a JVM        |
+| UI on Android        | `app/androidUnitTest`          | `:app:testDebugUnitTest`        | a JVM + an Android SDK (Robolectric downloads its runtime once) |
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
 | Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
 | Dictionary pack      | `tools/dictionaries/src/test`  | `:tools:dictionaries:test`      | a JVM        |
 | WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
+| Android instrumented | `app/androidInstrumentedTest`  | `:app:connectedCheck`           | an emulator (nightly) |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 | Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
 
 The UI-semantics suite lives in `desktopTest`, not `commonTest`, because the
 Compose Multiplatform common test API cannot run under Android's local (host)
-test configuration. The slower lanes — screenshot goldens, the containerised
-WebDAV driver and instrumented end-to-end runs — run on pull requests or nightly;
-the CI fast lane excludes the WebDAV test so the two lanes do not overlap.
+test configuration. The Android-specific `ui-test-junit4` API runs the same
+screens under Robolectric in `app/androidUnitTest` (`:app:testDebugUnitTest`,
+wired into `check`), so an Android-only constraint is not left to the desktop
+lane — issue #69's `LazyColumn` key crashed on Android while every JVM test was
+green. The slower lanes — screenshot goldens, the containerised WebDAV driver and
+instrumented end-to-end runs — run on pull requests or nightly; the CI fast lane
+excludes the WebDAV test so the two lanes do not overlap.
 `docs/build.md#ci-lanes` lists the workflow jobs that run each one.
 
 The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
@@ -143,22 +149,29 @@ The test class is annotated `@Testcontainers(disabledWithoutDocker = true)`, so 
 machine or runner without Docker skips it instead of failing: the lane is green
 everywhere and simply proves more where Docker is present.
 
-The nightly instrumented lane is wired but still has no instrumented tests to run;
-they arrive with the remaining platform work (ticket #24). The lane exists and
-stays off the critical path so those tickets only have to add tests, not CI.
+The nightly instrumented lane runs a launch smoke test on an emulator
+(`app/androidInstrumentedTest`, issue #71); the platform integrations that need a
+real device — SAF, TTS, Keystore — add their tests there. The lane stays off the
+critical path.
 
 ## Android host lane
 
-`core/src/androidHostTest` runs `core`'s platform code on a **simulated Android
-runtime** through Robolectric, on the host JVM and with no emulator (ticket #49).
-The source set exists only because the KMP Android library plugin is told to
-create it (`withHostTest { … }` in `core/build.gradle.kts`); otherwise the module
-compiles and runs **zero** host tests. `:core:testAndroidHostTest` is part of
-`check`, so the lane runs in the `fast` CI job (it needs an Android SDK, which the
-GitHub runners carry; without one `core` builds as a JVM module and the lane is
-skipped).
+Two host lanes run platform code on a **simulated Android runtime** through
+Robolectric, on the host JVM and with no emulator: `core/androidHostTest` (ticket
+#49) and `app/androidUnitTest` (issue #71). `:core:testAndroidHostTest` and
+`:app:testDebugUnitTest` are part of `check`, so both run in the `fast` CI job
+(they need an Android SDK, which the GitHub runners carry; without one the modules
+build as JVM-only and the lanes are skipped).
 
-The suite drives the whole `EpubParser` pipeline through
+`core`'s lane exists because the KMP Android library plugin is told to create the
+source set (`withHostTest { … }` in `core/build.gradle.kts`); `app` uses the
+application plugin, so its lane is the classic `androidUnitTest` source set on
+the debug variant (the release variant's unit tests are disabled — the Compose
+test rule's host Activity is debug-only). `check` does not reach the Android unit
+tests on its own in this KMP setup, so `app/build.gradle.kts` wires
+`:app:testDebugUnitTest` into `check` explicitly.
+
+The `core` suite drives the whole `EpubParser` pipeline through
 `org.apache.harmony.xml.parsers.DocumentBuilderFactoryImpl` — Android's own XML
 parser, taken from the `android-all` runtime Robolectric loads — and imports a
 real book (`pg1952.epub`). Robolectric never shadows `javax.*`, so the host JDK's
@@ -166,6 +179,13 @@ Xerces would hide the difference; the test instantiates Android's factory
 explicitly. Replacing the tolerant `XmlHardening.setFeatureIfSupported` with a
 plain `setFeature` fails this suite, which is the regression guard for ticket
 #15's Android import failure.
+
+The `app` suite renders the Compose UI with `ui-test-junit4` on the same runtime
+Android uses, which the desktop lane cannot stand in for: the vocabulary list's
+`LazyColumn` keyed its rows by a `WordKey` (a data class), which Android rejects
+because a lazy item's key must be Bundle-saveable, and only the Android lane sees
+that (issue #69). The desktop lane keeps a Bundle-strict saveable-state registry
+in `VocabularyScreenSemanticsTest` as its own guard.
 
 Robolectric (MIT) and JUnit 4 (EPL-1.0) are test-scope only and never linked into
 the shipped application (`config/dependency-licences.txt`). The first run
@@ -248,9 +268,9 @@ where the change lands:
 | A seam — `SyncTarget`, `VaultStore`, a provider adapter               | contract suite + in-memory fake                         | `testkit/commonMain`        |
 | A driver under `integrations/`                                        | that contract suite, plus a containerised integration run | `integrations/webdav/jvmTest` |
 | A parser — EPUB, TXT, PDF                                             | golden over a generated corpus, plus one awkward real fixture | `jvmTest`             |
-| UI behaviour in `app`                                                 | Compose UI-semantics test                               | `app/desktopTest`           |
+| UI behaviour in `app`                                                 | Compose UI-semantics test (desktop, and the Android host lane for platform-only constraints) | `app/desktopTest`, `app/androidUnitTest` |
 | A visual or layout change                                             | + screenshot golden                                     | `app`, on the PR lane       |
-| Android platform glue                                                 | Robolectric host test                                   | `androidHostTest`           |
+| Android platform glue                                                 | Robolectric host test                                   | `androidHostTest` (core), `androidUnitTest` (app) |
 | An architectural boundary or naming convention                       | architecture rule test, plus a synthetic violation it must catch | `architecture/src/test` |
 | A bug                                                                 | regression test at the seam the bug occurs              | wherever that seam lives    |
 | The dictionary-pack transform (`tools/dictionaries`)                  | canonical golden over a committed fixture, plus a built-twice byte hash | `tools/dictionaries/src/test` |
@@ -405,11 +425,11 @@ directory is `DesktopLibraryTest`. The list is reached from the library's header
 not the navigation pattern the UX spec draws; that shell is separate work. The
 list's `LazyColumn` key is a `String` projected from the word's identity, and
 `VocabularyScreenSemanticsTest` renders the list under a saveable-state registry
-as strict as Android's, so a key the platform cannot put in a `Bundle` fails here
-in the JVM lane instead of only on a device (issue #69); `VocabularyRowKeyTest`
-pins the projection's `String` type and its uniqueness. This is the closest the
-fast lane gets to the Android-only rule until `app` has an Android UI lane
-(ticket #24).
+as strict as Android's, so a key the platform cannot put in a `Bundle` fails on
+the desktop lane too (issue #69); `VocabularyRowKeyTest` pins the projection's
+`String` type and its uniqueness. The clean guard is the Android host lane's
+`VocabularyScreenSemanticsTest`, which renders the same list on a simulated Android
+runtime (issue #71).
 
 ## Naming and placement
 
