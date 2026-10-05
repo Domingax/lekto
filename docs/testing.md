@@ -374,6 +374,11 @@ crash — is a behaviour over the in-memory vault in
 `app/desktopTest/.../settings/VaultTransferControllerTest`, driven by
 `kotlinx-coroutines-test`'s virtual time. The screen's sections and its
 export/import controls are UI semantics in `SettingsScreenSemanticsTest`, and the
+same screen is re-proved on a simulated Android runtime in
+`app/androidUnitTest/.../settings/SettingsScreenSemanticsTest` (issue #77) — the
+dictionary status and its download, the way to attribution, and the vault
+section's export/import controls — so the screen is proved on both lanes, as the
+parity rule requires (issue #73). The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
 (`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
