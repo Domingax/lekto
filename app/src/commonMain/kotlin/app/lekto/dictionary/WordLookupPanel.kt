@@ -1,15 +1,19 @@
 package app.lekto.dictionary
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,6 +27,8 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.reader.contentColorOn
+import app.lekto.reader.readerColorOr
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
@@ -132,30 +138,43 @@ private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPane
 
 /**
  * The five-point selector (issue #22): tapping a level saves the word there, or
- * moves an already-saved word, so mastery can be changed after saving. The
- * current level is the filled chip. The chips are compact — the level's number
- * and a check for known — so all five fit one row (docs/ux-design-specification.md,
- * `MasterySelector`).
+ * moves an already-saved word, so mastery can be changed after saving. Each chip
+ * carries its level's colour — the current one filled, the others ringed — so the
+ * reader's text colours can be read straight off the selector (issue #22
+ * feedback). The chips are compact, a number and a check for known, so all five
+ * fit one row (docs/ux-design-specification.md, `MasterySelector`).
  */
 @Composable
 private fun MasterySelector(vocabulary: VocabularyPanel) {
     Text("Mastery", style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         MasteryLevel.entries.forEach { level ->
-            if (level == vocabulary.level) {
-                FilledTonalButton(
+            val colour = level.readerColorOr(MaterialTheme.colorScheme.outline)
+            val selected = level == vocabulary.level
+            if (selected) {
+                Button(
                     onClick = { vocabulary.onSave(level) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colour,
+                        contentColor = contentColorOn(colour),
+                    ),
+                    contentPadding = ChipPadding,
                     modifier = Modifier.testTag(masteryTag(level)),
                 ) { Text(level.label()) }
             } else {
-                TextButton(
+                OutlinedButton(
                     onClick = { vocabulary.onSave(level) },
+                    border = BorderStroke(2.dp, colour),
+                    contentPadding = ChipPadding,
                     modifier = Modifier.testTag(masteryTag(level)),
                 ) { Text(level.label()) }
             }
         }
     }
 }
+
+/** A selector chip's padding, so the compact row stays within a phone's width. */
+private val ChipPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
 
 /** A mastery level's compact chip label: its number, and a check for the known level. */
 private fun MasteryLevel.label(): String = when (this) {

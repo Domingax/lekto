@@ -3,7 +3,9 @@ package app.lekto
 import app.lekto.core.MasteryLevel
 import app.lekto.core.book.BookFormat
 import app.lekto.core.text.WordKey
+import app.lekto.core.vault.VaultCodec
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.core.vocabulary.VocabularyRecord
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -44,6 +46,26 @@ class DesktopLibraryTest {
             desktopVocabulary(root).save(entry)
 
             assertEquals(entry, desktopVocabulary(root).entryFor(entry.key))
+        } finally {
+            root.parentFile.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theVaultExportCarriesSavedVocabulary() {
+        val root = Files.createTempDirectory("lekto-desktop-vocab-export").toFile().resolve("vault")
+        try {
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+            desktopVocabulary(root).save(entry)
+
+            val bundle = VaultCodec.decodeBundle(desktopVaultStore(root).exportBundle().decodeToString())
+            val record = bundle.records.single { it.kind == VocabularyRecord.KIND }
+
+            assertTrue(
+                record.kind == VocabularyRecord.KIND,
+                "the whole-vault export must carry the saved word, so it is portable",
+            )
+            assertEquals(entry, VocabularyRecord.entryOf(record))
         } finally {
             root.parentFile.deleteRecursively()
         }

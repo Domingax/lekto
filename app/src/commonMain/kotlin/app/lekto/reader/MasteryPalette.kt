@@ -1,6 +1,7 @@
 package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 
@@ -39,6 +40,20 @@ fun MasteryLevel.readerColor(): Color = when (this) {
  */
 fun MasteryLevel.readerColorOr(normal: Color): Color =
     readerColor().takeIf { colour -> colour != Color.Unspecified } ?: normal
+
+/** The relative luminance above which a palette level is light enough to need dark ink. */
+private const val LIGHT_LUMINANCE = 0.4f
+
+/** The ink the light palette levels use on a filled control: near-black, WCAG AA on each. */
+val MasteryInk: Color = Color(0xFF1A1A1A)
+
+/**
+ * The foreground that reads on a filled [background] at WCAG AA: [MasteryInk] on
+ * the light palette levels, white on the dark one. Used where a level is a
+ * **filled control** rather than text — the lookup panel's selector — so its
+ * chip carries the same colour as the word it will paint in the reader.
+ */
+fun contentColorOn(background: Color): Color = if (background.luminance() > LIGHT_LUMINANCE) MasteryInk else Color.White
 
 /**
  * The non-colour indicator for [this] level, for colour-blind readers (UX spec

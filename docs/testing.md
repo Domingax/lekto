@@ -376,7 +376,12 @@ entry already saved — runs through `AppSemanticsTest` against the in-memory
 vocabulary, including that saving an inflected form does not create a second
 entry. The translation a save keeps is a pure transform,
 `VocabularySaveTest`; the desktop wiring that saves to a real directory and
-reloads it is `DesktopLibraryTest`.
+reloads it is `DesktopLibraryTest`, which also proves the whole-vault export
+carries the saved word — the vocabulary is a vault record, so it is portable
+with no separate export. The selector's chips carry their level's colour (the
+filled current one, the others ringed) so the reader's text colours read
+straight off the panel; the mapping reuses the pinned mastery palette and
+`contentColorOn` is unit-tested in `MasteryPaletteTest`.
 
 ## Naming and placement
 
