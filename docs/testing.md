@@ -354,8 +354,11 @@ Google Translate — and `dictionaryShortcuts` drops a source that cannot addres
 the language pair rather than hand it a wrong page, so those tests live in
 `core/commonTest`. The panel itself, its offline result and its graceful
 degradation to the shortcuts and an honest message when no pack is installed are
-`app/desktopTest` semantics. The reader's selection wash, which keeps the tapped
-word visible behind the panel, is pinned on the word layer in `ReaderTextTest`,
+`app/desktopTest` semantics, and its same-named `app/androidUnitTest` twin (issue
+#76) proves the found, offline, pronunciation, mastery and save behaviours under
+Robolectric, so the parity rule (issue #73) no longer allowlists the screen. The
+reader's selection wash, which keeps the tapped word visible behind the panel, is
+pinned on the word layer in `ReaderTextTest`,
 and the whole loop — turn a page, tap a word, open Reverso through the injected
 browser opener, close, and find the reader still on the same page — is driven
 through `AppSemanticsTest`. Opening a shortcut is a platform action: the desktop
