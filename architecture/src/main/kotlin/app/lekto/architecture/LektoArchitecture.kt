@@ -114,7 +114,6 @@ object LektoArchitecture {
     val uiTestParityAllowlist: Set<String> = setOf(
         "app/src/desktopTest/kotlin/app/lekto/AppSemanticsTest.kt",
         "app/src/desktopTest/kotlin/app/lekto/AppVaultSemanticsTest.kt",
-        "app/src/desktopTest/kotlin/app/lekto/settings/AttributionScreenSemanticsTest.kt",
     )
 
     /** Runs every rule over [repository]; an empty result means it conforms. */
