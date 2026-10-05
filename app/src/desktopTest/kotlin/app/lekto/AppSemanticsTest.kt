@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -271,6 +272,7 @@ class AppSemanticsTest {
         )
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
+        waitUntil { onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Saved").assertIsDisplayed()
     }
 

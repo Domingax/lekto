@@ -300,6 +300,7 @@ class AppSemanticsTest {
         )
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
+        compose.waitUntil { compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Saved").assertIsDisplayed()
     }
 
