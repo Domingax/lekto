@@ -1,6 +1,7 @@
 package app.lekto.vocabulary
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.reader.MasteryChip
 import app.lekto.reader.readerColorOr
 
 /** The test tag on the search field, so a UI test can type into it unambiguously. */
@@ -35,10 +38,15 @@ internal const val VOCABULARY_SEARCH_TAG: String = "vocabulary-search"
 /** The test tag on an entry's delete button, so a UI test can click exactly one. */
 internal fun vocabularyDeleteTag(key: WordKey): String = "vocabulary-delete-${key.language.orEmpty()}-${key.key}"
 
+/** The test tag on a mastery filter chip; `null` is the "All levels" chip. */
+internal fun vocabularyFilterTag(level: MasteryLevel?): String = "vocabulary-filter-${level?.name ?: "ALL"}"
+
+/** The test tag on an entry's mastery label, so a UI test can read it apart from the filter chips. */
+internal fun vocabularyMasteryTag(key: WordKey): String = "vocabulary-mastery-${key.language.orEmpty()}-${key.key}"
+
 /**
  * The vocabulary list's state (issue #23), one value per thing the screen can
- * show, so "nothing saved yet" cannot be confused with "this search matched
- * nothing".
+ * show, so "nothing saved yet" cannot be confused with "nothing matched".
  */
 sealed interface VocabularyUiState {
 
@@ -46,19 +54,23 @@ sealed interface VocabularyUiState {
     data object Empty : VocabularyUiState
 
     /**
-     * The vocabulary holds entries: those matching [query] — every entry when
-     * [query] is blank — and the [query] itself. An empty [entries] here means
-     * the query matched nothing.
+     * The vocabulary holds entries: those matching [query] and [masteryLevel] —
+     * every entry when the query is blank and [masteryLevel] is `null` — and the
+     * two filters themselves. An empty [entries] here means the filters matched
+     * nothing.
      */
-    data class Results(val entries: List<VocabularyEntry>, val query: String) : VocabularyUiState
+    data class Results(val entries: List<VocabularyEntry>, val query: String, val masteryLevel: MasteryLevel? = null) :
+        VocabularyUiState
 }
 
 /**
- * The vocabulary list's actions (issue #23): change the search query, delete an
+ * The vocabulary list's actions (issue #23, filter #66): change the search
+ * query, change the mastery level filter (`null` is every level), delete an
  * entry, and go back to the library.
  */
 data class VocabularyActions(
     val onSearch: (String) -> Unit = {},
+    val onFilter: (MasteryLevel?) -> Unit = {},
     val onDelete: (VocabularyEntry) -> Unit = {},
     val onBack: () -> Unit = {},
 )
@@ -105,9 +117,10 @@ private fun Header(onBack: () -> Unit) {
 @Composable
 private fun ColumnScope.Results(state: VocabularyUiState.Results, actions: VocabularyActions) {
     Search(state.query, actions.onSearch)
+    MasteryFilter(state.masteryLevel, actions.onFilter)
     if (state.entries.isEmpty()) {
         Text(
-            text = "No words match \"${state.query}\".",
+            text = noMatchMessage(state.query, state.masteryLevel),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 16.dp),
         )
@@ -131,6 +144,51 @@ private fun Search(query: String, onSearch: (String) -> Unit) {
     )
 }
 
+/**
+ * The mastery filter (issue #66): an "All levels" chip and one per level, so the
+ * list can be narrowed to a level. The chips are the shared [MasteryChip], so
+ * the filter and the lookup panel's selector stay identical.
+ */
+@Composable
+private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        MasteryChip(
+            level = null,
+            label = "All levels",
+            selected = selected == null,
+            onClick = { onFilter(null) },
+            modifier = Modifier.testTag(vocabularyFilterTag(null)),
+        )
+        MasteryLevel.entries.forEach { level ->
+            MasteryChip(
+                level = level,
+                label = level.fullLabel(),
+                selected = level == selected,
+                onClick = { onFilter(level) },
+                modifier = Modifier.testTag(vocabularyFilterTag(level)),
+            )
+        }
+    }
+}
+
+/** Why the filtered list is empty, naming each filter that emptied it. */
+private fun noMatchMessage(query: String, masteryLevel: MasteryLevel?): String {
+    val searched = query.trim()
+    return when {
+        searched.isNotEmpty() && masteryLevel != null ->
+            "No words match \"$searched\" at the ${masteryLevel.fullLabel()} level."
+
+        searched.isNotEmpty() -> "No words match \"$searched\"."
+
+        masteryLevel != null -> "No words at the ${masteryLevel.fullLabel()} level."
+
+        else -> "No words to show."
+    }
+}
+
 /** One entry: its word, translation, context sentence, mastery and delete action. */
 @Composable
 private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit) {
@@ -147,7 +205,7 @@ private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit
                 modifier = Modifier.testTag(vocabularyDeleteTag(entry.key)),
             ) { Text("Delete") }
         }
-        Mastery(entry.mastery)
+        Mastery(entry.mastery, entry.key)
         entry.translation?.let { translation ->
             Text(translation, style = MaterialTheme.typography.bodyMedium)
         }
@@ -165,19 +223,23 @@ private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit
  * read as text; the swatch ties the entry to the colour the reader paints it.
  */
 @Composable
-private fun Mastery(level: MasteryLevel) {
+private fun Mastery(level: MasteryLevel, key: WordKey) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier
                 .size(10.dp)
                 .background(level.readerColorOr(MaterialTheme.colorScheme.outline), CircleShape),
         )
-        Text(level.label(), style = MaterialTheme.typography.labelLarge)
+        Text(
+            level.fullLabel(),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.testTag(vocabularyMasteryTag(key)),
+        )
     }
 }
 
 /** A mastery level's readable name, so the list shows the level and not just its colour. */
-private fun MasteryLevel.label(): String = when (this) {
+private fun MasteryLevel.fullLabel(): String = when (this) {
     MasteryLevel.UNKNOWN -> "Unknown"
     MasteryLevel.FAMILIAR -> "Familiar"
     MasteryLevel.RECOGNIZED -> "Recognized"
@@ -211,3 +273,11 @@ private fun VocabularyEntry.matches(needle: String): Boolean = surface.contains(
     key.key.contains(needle, ignoreCase = true) ||
     translation.orEmpty().contains(needle, ignoreCase = true) ||
     contextSentence.orEmpty().contains(needle, ignoreCase = true)
+
+/**
+ * The entries saved at [masteryLevel] (issue #66), or every entry when
+ * [masteryLevel] is `null` — the "All levels" chip. The filter and
+ * [searchVocabulary] compose, either order giving the same set.
+ */
+fun filterByMastery(entries: List<VocabularyEntry>, masteryLevel: MasteryLevel?): List<VocabularyEntry> =
+    if (masteryLevel == null) entries else entries.filter { entry -> entry.mastery == masteryLevel }

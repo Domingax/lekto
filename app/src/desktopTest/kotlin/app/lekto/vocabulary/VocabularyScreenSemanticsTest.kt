@@ -9,12 +9,15 @@ import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import app.lekto.core.MasteryLevel
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.testkit.testVocabularyEntry
 import kotlin.test.Test
@@ -48,7 +51,7 @@ class VocabularyScreenSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("lanterne").assertIsDisplayed()
         onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        onNodeWithText("Mastered").assertIsDisplayed()
+        onNodeWithTag(vocabularyMasteryTag(lantern.key)).assertTextEquals("Mastered")
     }
 
     @Test
@@ -99,17 +102,56 @@ class VocabularyScreenSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
     }
 
+    @Test
+    fun tappingAMasteryFilterRaisesThatLevel() = runComposeUiTest {
+        var filtered: MasteryLevel? = null
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), ""), onFilter = { filtered = it }) }
+
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+
+        assertEquals(MasteryLevel.MASTERED, filtered)
+    }
+
+    @Test
+    fun theAllChipClearsTheMasteryFilter() = runComposeUiTest {
+        var filtered: MasteryLevel? = MasteryLevel.MASTERED
+        setContent {
+            Vocabulary(
+                VocabularyUiState.Results(listOf(lantern), "", MasteryLevel.MASTERED),
+                onFilter = { filtered = it },
+            )
+        }
+
+        onNodeWithTag(vocabularyFilterTag(null)).performClick()
+
+        assertEquals(null, filtered)
+    }
+
+    @Test
+    fun aFilterThatMatchesNothingSaysSo() = runComposeUiTest {
+        setContent { Vocabulary(VocabularyUiState.Results(emptyList(), "", MasteryLevel.KNOWN)) }
+
+        onNodeWithText("No words at the Known level", substring = true).assertIsDisplayed()
+    }
+
+    @Suppress("LongParameterList") // The screen's actions are independent; a bundle would only hide that.
     @Composable
     private fun Vocabulary(
         state: VocabularyUiState,
         onSearch: (String) -> Unit = {},
+        onFilter: (MasteryLevel?) -> Unit = {},
         onDelete: (VocabularyEntry) -> Unit = {},
         onBack: () -> Unit = {},
     ) {
         MaterialTheme {
             VocabularyScreen(
                 state = state,
-                actions = VocabularyActions(onSearch = onSearch, onDelete = onDelete, onBack = onBack),
+                actions = VocabularyActions(
+                    onSearch = onSearch,
+                    onFilter = onFilter,
+                    onDelete = onDelete,
+                    onBack = onBack,
+                ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )
         }

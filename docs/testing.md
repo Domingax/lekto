@@ -431,6 +431,15 @@ the desktop lane too (issue #69); `VocabularyRowKeyTest` pins the projection's
 `VocabularyScreenSemanticsTest`, which renders the same list on a simulated Android
 runtime (issue #71).
 
+The mastery filter (issue #66) is proved the same way. `filterByMastery` is a
+pure transform, so `VocabularyFilterTest` proves a level keeps only its entries,
+`null` keeps them all, and the filter composes with the search. The chips
+themselves are the shared `MasteryChip` (in `app`'s reader package), so the
+list's filter and the lookup panel's level selector cannot drift;
+`VocabularyScreenSemanticsTest` proves a chip raises its level, the all-levels
+chip clears it, and a filter that matches nothing says so, and `AppSemanticsTest`
+filters the list to a level and finds only that level's word.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

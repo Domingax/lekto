@@ -5,11 +5,13 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.lekto.core.MasteryLevel
@@ -45,6 +47,8 @@ import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
+import app.lekto.vocabulary.vocabularyFilterTag
+import app.lekto.vocabulary.vocabularyMasteryTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -313,7 +317,7 @@ class AppSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("lanterne").assertIsDisplayed()
         onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        onNodeWithText("Mastered").assertIsDisplayed()
+        onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Mastered")
     }
 
     @Test
@@ -331,6 +335,23 @@ class AppSemanticsTest {
 
         onNodeWithText("harbour").assertIsDisplayed()
         onNodeWithText("lantern").assertDoesNotExist()
+    }
+
+    @Test
+    fun theVocabularyCanBeFilteredByMastery() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.MASTERED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.FAMILIAR))
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        onNodeWithText("Vocabulary").performClick()
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("harbour").assertIsDisplayed()
+
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("harbour").assertDoesNotExist()
     }
 
     @Test
