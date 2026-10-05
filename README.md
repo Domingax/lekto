@@ -40,6 +40,26 @@ APK with `./gradlew :app:assembleDebug`.
 | `docs/research/`        | Research reports behind the decisions.                            |
 | `CONTEXT.md`            | The domain glossary.                                             |
 
+## Language-model providers (BYOK)
+
+Phrase translation is bring-your-own-key: Lekto calls the provider directly from the
+device with your own API key, and there is no Lekto server in between (ADR-0002,
+ADR-0022). Connect one provider in settings and choose a model. Any service that speaks
+the OpenAI chat-completions API works through the **Custom** preset.
+
+| Provider          | Notes                                          |
+| ----------------- | ---------------------------------------------- |
+| OpenAI            | API key                                        |
+| Anthropic (Claude) | API key                                       |
+| Google Gemini     | API key                                        |
+| OpenCode Zen      | API key                                        |
+| OpenCode Go       | subscription API key                           |
+| Ollama            | local; desktop only                            |
+| Custom            | any OpenAI-compatible base URL                 |
+
+Keys are stored in the platform keystore or keychain, never in the vault and never in
+an export (ADR-0021).
+
 ## Licence
 
 AGPL-3.0. The dictionary pack is a separate CC BY-SA 4.0 artifact and is never

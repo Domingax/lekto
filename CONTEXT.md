@@ -112,6 +112,13 @@ An outbound link from the lookup panel to a word's canonical page on a
 shortcut hands the page to the platform browser.
 _Avoid_: Dictionary tab, deep link
 
+**Translation shortcut**:
+An outbound link from the lookup panel that opens an external translation service with
+a selected phrase or sentence already filled in. Like a **Dictionary shortcut**, Lekto
+never embeds or scrapes the service; opening it hands the page to the platform browser,
+and it is what the panel offers when no **LLM provider** is connected.
+_Avoid_: Deep link, machine translation
+
 **Pronunciation**:
 Playing a selected word or phrase aloud through the platform's own speech engine,
 never a network service and never stored. A language with no installed voice is
@@ -119,6 +126,7 @@ reported to the reader rather than failing.
 _Avoid_: TTS, speech, audio
 
 **LLM provider**:
-The user's own language-model service (OpenAI, Anthropic, Gemini, Ollama), connected
-BYOK, used for phrase translation.
+The user's own language-model service, connected by the user's own API key, that
+translates a selected phrase or sentence in context. Lekto reaches it directly, with no
+Lekto server in between.
 _Avoid_: AI, model

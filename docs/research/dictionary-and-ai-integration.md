@@ -1,5 +1,13 @@
 # Dictionary & AI integration: what is possible with **no backend server**
 
+> **Update (2026-10-05):** this report was written for a browser client, before the
+> stack was settled as native Kotlin Multiplatform (ADR-0007) with the web target
+> closed (ADR-0008). The **CORS analysis in §0, §1 and §4 no longer applies** — a
+> native client is not subject to CORS — and providers are reached directly by API key
+> (ADR-0022). The web/keychain discussion in §5.1–§5.2 is superseded by ADR-0021. Read
+> the provider facts below for what each service allows, not for how a browser reaches
+> it.
+
 **Date:** 2026-09-27
 **Scope:** For Lekto (React/Vite/TypeScript web + Android via Capacitor; hard constraint: no backend server, no proxy the project operates), determine what is actually feasible client-side for (a) word-level dictionary lookups from WordReference / Reverso / Linguee / Google Translate, and (b) phrase-level BYOK LLM calls (OpenAI / Anthropic / Gemini / Ollama), plus secure key storage and streaming.
 **Method:** Primary sources only — the services' own new/ToS/robots pages, official API docs, vendor SDK source, and **raw HTTP header evidence captured with `curl`** (OPTIONS preflight + GET/POST) from this host on 2026-09-27. Where a header could not be observed (bot/rate limits from a datacenter IP), that is stated explicitly rather than guessed. Every claim carries a URL; header captures are reproduced in the Appendix.
