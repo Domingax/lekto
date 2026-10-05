@@ -25,6 +25,7 @@ object Rules {
     const val PACKAGE_OWNERSHIP = "package-ownership"
     const val SOURCE_PLACEMENT = "source-placement"
     const val TEST_PLACEMENT = "test-placement"
+    const val UI_TEST_PARITY = "ui-test-parity"
 }
 
 /**
@@ -103,12 +104,30 @@ object LektoArchitecture {
         ),
     )
 
+    /**
+     * The desktop `*SemanticsTest` files whose Android twin has not landed yet
+     * (issue #73). The parity rule below would otherwise fail while the
+     * per-screen twins are written, so this is the explicit burn-down list:
+     * each twin PR deletes its own entry, and an empty set means the rule has no
+     * exceptions. A path here is a deliberate exception, not a silent one.
+     */
+    val uiTestParityAllowlist: Set<String> = setOf(
+        "app/src/desktopTest/kotlin/app/lekto/AppSemanticsTest.kt",
+        "app/src/desktopTest/kotlin/app/lekto/AppVaultSemanticsTest.kt",
+        "app/src/desktopTest/kotlin/app/lekto/dictionary/WordLookupPanelSemanticsTest.kt",
+        "app/src/desktopTest/kotlin/app/lekto/library/LibraryScreenSemanticsTest.kt",
+        "app/src/desktopTest/kotlin/app/lekto/reader/ReaderScreenSemanticsTest.kt",
+        "app/src/desktopTest/kotlin/app/lekto/settings/AttributionScreenSemanticsTest.kt",
+        "app/src/desktopTest/kotlin/app/lekto/settings/SettingsScreenSemanticsTest.kt",
+    )
+
     /** Runs every rule over [repository]; an empty result means it conforms. */
     fun check(repository: Repository): List<Violation> = buildList {
         addAll(checkModulePolicies(repository))
         addAll(checkModuleDependencies(repository))
         addAll(PlacementRules.check(repository))
         addAll(ImportRules.check(repository))
+        addAll(UiTestParityRules.check(repository))
     }
 
     private fun checkModulePolicies(repository: Repository): List<Violation> {

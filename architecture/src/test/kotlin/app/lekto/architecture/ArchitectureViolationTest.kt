@@ -217,6 +217,87 @@ class ArchitectureViolationTest :
             rules(namedTestInProduction) shouldContain Rules.TEST_PLACEMENT
             rules(supportInTestSource) shouldContain Rules.TEST_PLACEMENT
         }
+
+        test("a desktop semantics test must have an Android twin") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "app/src/desktopTest/kotlin/app/lekto/newfeature/NewScreenSemanticsTest.kt",
+                        "desktopTest",
+                        "app.lekto.newfeature",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldContain Rules.UI_TEST_PARITY
+        }
+
+        test("the parity violation names the missing Android twin") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "app/src/desktopTest/kotlin/app/lekto/newfeature/NewScreenSemanticsTest.kt",
+                        "desktopTest",
+                        "app.lekto.newfeature",
+                    ),
+                ),
+            )
+
+            val violation = UiTestParityRules.check(repository, allowlist = emptySet()).single()
+
+            violation.rule shouldBe Rules.UI_TEST_PARITY
+            violation.detail shouldBe
+                "has no Android twin at app/src/androidUnitTest/kotlin/app/lekto/newfeature/NewScreenSemanticsTest.kt"
+        }
+
+        test("a desktop semantics test with a same-named Android twin conforms") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "app/src/desktopTest/kotlin/app/lekto/newfeature/NewScreenSemanticsTest.kt",
+                        "desktopTest",
+                        "app.lekto.newfeature",
+                    ),
+                    source(
+                        "app/src/androidUnitTest/kotlin/app/lekto/newfeature/NewScreenSemanticsTest.kt",
+                        "androidUnitTest",
+                        "app.lekto.newfeature",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldNotContain Rules.UI_TEST_PARITY
+        }
+
+        test("an allowlisted desktop semantics test may miss its Android twin") {
+            val path = "app/src/desktopTest/kotlin/app/lekto/newfeature/NewScreenSemanticsTest.kt"
+            val repository = repository(sources = listOf(source(path, "desktopTest", "app.lekto.newfeature")))
+
+            UiTestParityRules.check(repository, allowlist = setOf(path)) shouldBe emptyList()
+        }
+
+        test("only a *SemanticsTest needs an Android twin") {
+            val repository = repository(
+                sources = listOf(
+                    source(
+                        "app/src/desktopTest/kotlin/app/lekto/library/LibraryControllerTest.kt",
+                        "desktopTest",
+                        "app.lekto.library",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldNotContain Rules.UI_TEST_PARITY
+        }
+
+        test("derives the Android twin path, rewriting only the source-set segment") {
+            UiTestParityRules.twinPath(
+                "app/src/desktopTest/kotlin/app/lekto/reader/ReaderScreenSemanticsTest.kt",
+            ) shouldBe "app/src/androidUnitTest/kotlin/app/lekto/reader/ReaderScreenSemanticsTest.kt"
+            UiTestParityRules.twinPath(
+                "app/src/desktopTest/kotlin/app/lekto/desktopTest/NestedScreenSemanticsTest.kt",
+            ) shouldBe "app/src/androidUnitTest/kotlin/app/lekto/desktopTest/NestedScreenSemanticsTest.kt"
+        }
     })
 
 private fun repository(
