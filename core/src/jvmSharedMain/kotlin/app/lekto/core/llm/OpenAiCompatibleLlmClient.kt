@@ -2,6 +2,7 @@ package app.lekto.core.llm
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.UUID
@@ -19,6 +20,10 @@ import java.util.UUID
  * thread. [connect] is the seam a test injects to point at a local server;
  * [sessionId] is stable for the client's life, which is what OpenCode Go asks for
  * (see [llmRequestHeaders]).
+ *
+ * On failure it reads at most [MAX_ERROR_BYTES] of the error body and hands only
+ * its machine identifier to [connectionResult] — the provider's free text is
+ * never rendered, so a body that echoes the request cannot echo a secret.
  */
 class OpenAiCompatibleLlmClient(
     private val connect: (String) -> HttpURLConnection = { url ->
@@ -48,17 +53,42 @@ class OpenAiCompatibleLlmClient(
         try {
             val request = ChatRequest(config.model, listOf(ChatMessage("user", "ping")))
             connection.outputStream.use { output -> output.write(Json.encodeToString(request).encodeToByteArray()) }
-            // The body is never read: mapping the status alone keeps a provider's
-            // echoed request — and so a key — out of every message.
-            return connectionResultFor(connection.responseCode)
+            val status = connection.responseCode
+            if (status in HTTP_OK until HTTP_REDIRECT) return LlmConnectionResult.Connected
+            return connectionResult(status, errorIdentifier(readBounded(connection.errorStream)))
         } finally {
             connection.disconnect()
+        }
+    }
+
+    /**
+     * At most [MAX_ERROR_BYTES] of [stream], so a hostile or broken provider
+     * cannot make the app buffer a whole body to classify one error. The bytes
+     * are parsed for an identifier and then dropped; none of them is displayed.
+     */
+    private fun readBounded(stream: InputStream?): String {
+        if (stream == null) return ""
+        return stream.use { input ->
+            val buffer = ByteArray(MAX_ERROR_BYTES)
+            var read = 0
+            while (read < buffer.size) {
+                val count = input.read(buffer, read, buffer.size - read)
+                if (count < 0) break
+                read += count
+            }
+            buffer.decodeToString(0, read)
         }
     }
 
     private companion object {
         /** A connection test must fail fast; a provider that hangs is reported unreachable. */
         const val TIMEOUT_MILLIS = 15_000
+
+        /** Enough for any provider's error envelope, and a hard cap on what we buffer. */
+        const val MAX_ERROR_BYTES = 8 * 1024
+
+        const val HTTP_OK = 200
+        const val HTTP_REDIRECT = 300
     }
 }
 

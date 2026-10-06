@@ -21,9 +21,10 @@ import java.net.URI
  * local and scripted, so no provider and no key is involved, as the pack
  * downloader's lane is.
  *
- * It also proves the OpenCode Go client contract: a named `User-Agent` and a
- * stable `x-opencode-session` are sent to the OpenCode gateways — without the
- * session header, Go answers `MissingSessionID`.
+ * It also proves the OpenCode Go client contract (a named `User-Agent` and a
+ * stable `x-opencode-session`, without which Go answers `MissingSessionID`) and
+ * that a provider's error body is only ever classified, never rendered — a body
+ * that echoes the key cannot put it in a message.
  */
 class OpenAiCompatibleLlmClientTest :
     FunSpec({
@@ -37,7 +38,7 @@ class OpenAiCompatibleLlmClientTest :
             var body: String? = null
         }
 
-        fun serve(status: Int, recorded: Recorded): HttpServer {
+        fun serve(status: Int, recorded: Recorded, responseBody: String = ""): HttpServer {
             val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
             server.createContext("/v1/chat/completions") { exchange ->
                 recorded.path = exchange.requestURI.path
@@ -45,7 +46,13 @@ class OpenAiCompatibleLlmClientTest :
                 recorded.userAgent = exchange.requestHeaders.getFirst("User-Agent")
                 recorded.session = exchange.requestHeaders.getFirst("x-opencode-session")
                 recorded.body = exchange.requestBody.readBytes().decodeToString()
-                exchange.sendResponseHeaders(status, -1)
+                val bytes = responseBody.encodeToByteArray()
+                if (bytes.isEmpty()) {
+                    exchange.sendResponseHeaders(status, -1)
+                } else {
+                    exchange.sendResponseHeaders(status, bytes.size.toLong())
+                    exchange.responseBody.use { output -> output.write(bytes) }
+                }
                 exchange.close()
             }
             server.start()
@@ -122,6 +129,42 @@ class OpenAiCompatibleLlmClientTest :
             try {
                 OpenAiCompatibleLlmClient().testConnection(custom(base(server), "m"), "sk-wrong") shouldBe
                     LlmConnectionResult.Failed(LlmConnectionResult.REJECTED_KEY)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("an OpenCode MissingSessionID error body names the missing session") {
+            val body = """{"type":"error","error":{"type":"MissingSessionID","message":"missing it"}}"""
+            val server = serve(400, Recorded(), body)
+            try {
+                OpenAiCompatibleLlmClient().testConnection(custom(base(server), "m"), "sk-test") shouldBe
+                    LlmConnectionResult.Failed(LlmConnectionResult.MISSING_SESSION)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("an insufficient-quota error body names the billing") {
+            val body = """{"error":{"type":"invalid_request_error","code":"insufficient_quota"}}"""
+            val server = serve(429, Recorded(), body)
+            try {
+                OpenAiCompatibleLlmClient().testConnection(custom(base(server), "m"), "sk-test") shouldBe
+                    LlmConnectionResult.Failed(LlmConnectionResult.NO_FUNDS)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a body that echoes the key is classified, never rendered") {
+            val echoed = "sk-very-secret"
+            val body = """{"error":{"type":"WeirdUnknownError","message":"your key $echoed is rejected"}}"""
+            val server = serve(400, Recorded(), body)
+            try {
+                val result = OpenAiCompatibleLlmClient().testConnection(custom(base(server), "m"), echoed)
+
+                (result as LlmConnectionResult.Failed).message shouldBe LlmConnectionResult.BAD_REQUEST
+                result.message shouldNotContain echoed
             } finally {
                 server.stop(0)
             }

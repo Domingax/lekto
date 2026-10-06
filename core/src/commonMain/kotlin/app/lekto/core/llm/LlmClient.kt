@@ -1,11 +1,17 @@
 package app.lekto.core.llm
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+
 /**
  * The outcome of a connection test against an **LLM provider** (issue #88): the
  * provider [Connected] and answered, or it [Failed] with an honest reason the
  * settings screen shows inline. A failure is a first-class outcome, not an
  * exception into the reading session (ADR-0022), and its [Failed.message] never
- * carries the **API key**.
+ * carries the **API key** or any text the provider controls.
  */
 sealed interface LlmConnectionResult {
 
@@ -35,6 +41,19 @@ sealed interface LlmConnectionResult {
         /** HTTP 400: the request was malformed, usually an unknown model name. */
         const val BAD_REQUEST: String = "The provider rejected the request. Check the model name."
 
+        /** The provider named the model in its error: it does not offer that one. */
+        const val UNKNOWN_MODEL: String = "The provider doesn't offer that model. Check the model name."
+
+        /**
+         * The provider wants the client to attach a session identifier it can route
+         * on — OpenCode Go answers `MissingSessionID` without `x-opencode-session`.
+         */
+        const val MISSING_SESSION: String =
+            "The provider needs the app to identify its session. Update the app or pick another provider."
+
+        /** The provider's account cannot pay for the request — no credit or an exhausted plan. */
+        const val NO_FUNDS: String = "The provider account can't pay for the request. Check your billing."
+
         /** HTTP 5xx or anything else: the provider is up but unhappy; retrying may help. */
         const val SERVER_ERROR: String = "The provider answered with an error. Try again shortly."
     }
@@ -59,11 +78,29 @@ fun interface LlmClient {
 }
 
 /**
+ * The reader-facing outcome of a failed call (issue #88), from the HTTP
+ * [statusCode] and an optional provider [errorIdentifier].
+ *
+ * The [errorIdentifier] is a short machine token the provider puts in its error
+ * envelope — `MissingSessionID`, `invalid_api_key`, `model_not_found` — read by
+ * [errorIdentifier]. It is used **only as a lookup key** into the fixed
+ * [KNOWN_ERRORS] table and is **never rendered**: the provider's own free text is
+ * untrusted (a Custom base URL is user-supplied and could echo the request), so
+ * only our constants ever reach the screen. An unknown identifier falls back to
+ * the status-only mapping in [connectionResultFor].
+ */
+internal fun connectionResult(statusCode: Int, errorIdentifier: String?): LlmConnectionResult {
+    val known = errorIdentifier?.lowercase()?.let(KNOWN_ERRORS::get)
+    return known ?: connectionResultFor(statusCode)
+}
+
+/**
  * Maps an HTTP [statusCode] from the chat-completions call to the reader-facing
- * outcome (issue #88). It is pure and lives in `commonMain`, so the two clients
- * map a provider's answer the same way and the mapping is tested without a
- * socket. The response body is deliberately never read: it can quote the request,
- * so mapping the status alone keeps a secret out of any message.
+ * outcome (issue #88), used when the body names no error we recognise. It is pure
+ * and lives in `commonMain`, so the two clients map a provider's answer the same
+ * way and the mapping is tested without a socket. The response body is never
+ * rendered — only its machine identifier, via [connectionResult] — so a provider
+ * that echoes the request cannot echo a secret into a message.
  */
 fun connectionResultFor(statusCode: Int): LlmConnectionResult = when {
     statusCode in HTTP_OK until HTTP_REDIRECT -> LlmConnectionResult.Connected
@@ -80,6 +117,42 @@ fun connectionResultFor(statusCode: Int): LlmConnectionResult = when {
 
     else -> LlmConnectionResult.Failed(LlmConnectionResult.SERVER_ERROR)
 }
+
+/**
+ * The machine error identifier in a provider's error body, or `null` when the
+ * body is not the JSON envelope we expect (issue #88). It reads the shape every
+ * supported provider sends — an `error` object, with a specific `code` before a
+ * general `type` — and never returns the provider's `message`, which is free text
+ * we do not trust. A malformed, non-JSON or empty body yields `null`.
+ */
+internal fun errorIdentifier(body: String): String? {
+    val root = runCatching { Json.parseToJsonElement(body) }.getOrNull() as? JsonObject
+    val error = root?.get("error") as? JsonObject
+    return error?.get("code").textOrNull() ?: error?.get("type").textOrNull()
+}
+
+private fun JsonElement?.textOrNull(): String? = (this as? JsonPrimitive)?.contentOrNull
+
+/**
+ * The identifiers whose meaning is known well enough to name precisely. Keys are
+ * lowercase; a value the provider sends that is not here falls back to the HTTP
+ * status, so an unrecognised or hostile identifier can only ever produce one of
+ * our own constants.
+ */
+private val KNOWN_ERRORS: Map<String, LlmConnectionResult> = mapOf(
+    "autherror" to LlmConnectionResult.Failed(LlmConnectionResult.REJECTED_KEY),
+    "invalid_api_key" to LlmConnectionResult.Failed(LlmConnectionResult.REJECTED_KEY),
+    "authentication_error" to LlmConnectionResult.Failed(LlmConnectionResult.REJECTED_KEY),
+    "modelerror" to LlmConnectionResult.Failed(LlmConnectionResult.UNKNOWN_MODEL),
+    "model_not_found" to LlmConnectionResult.Failed(LlmConnectionResult.UNKNOWN_MODEL),
+    "invalid_model" to LlmConnectionResult.Failed(LlmConnectionResult.UNKNOWN_MODEL),
+    "missingsessionid" to LlmConnectionResult.Failed(LlmConnectionResult.MISSING_SESSION),
+    "insufficient_quota" to LlmConnectionResult.Failed(LlmConnectionResult.NO_FUNDS),
+    "insufficient_funds" to LlmConnectionResult.Failed(LlmConnectionResult.NO_FUNDS),
+    "quota_exceeded" to LlmConnectionResult.Failed(LlmConnectionResult.NO_FUNDS),
+    "ratelimiterror" to LlmConnectionResult.Failed(LlmConnectionResult.RATE_LIMITED),
+    "rate_limit_exceeded" to LlmConnectionResult.Failed(LlmConnectionResult.RATE_LIMITED),
+)
 
 private const val HTTP_OK = 200
 private const val HTTP_REDIRECT = 300

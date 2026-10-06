@@ -448,8 +448,12 @@ mapping and that a dead transport is an inline failure rather than a thrown exce
 and the header policy it proves by value (`llmRequestHeaders`): a named `User-Agent`,
 no `Authorization` for a keyless provider, and the `x-opencode-session` that OpenCode
 Go requires — without which it answers `MissingSessionID` — sent to the OpenCode
-gateways alone; no provider and no real key is involved, as the pack downloader's lane
-is. The state
+gateways alone. A provider's error body is parsed only for its machine identifier
+(`errorIdentifier`) and classified against a fixed allowlist (`connectionResult`), so
+no provider-authored text — and therefore no echoed key — ever reaches a message;
+`LlmConnectionResultTest` pins the allowlist, the status fallback, and that an unknown
+identifier cannot be rendered. No provider and no real key is involved, as the pack
+downloader's lane is. The state
 holder — load, choose one provider, save app-privately while the key goes to the
 `SecretStore`, test off the UI thread, report inline — is `ProviderControllerTest` in
 `app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The section's
