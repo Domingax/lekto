@@ -34,6 +34,11 @@ licence AGPL-3.0
 # is GPL-compatible; ICU4J declares it as `Unicode-3.0` with a URL the normaliser
 # does not map, so it is both allowed here and recorded as an override below.
 licence Unicode-3.0
+# JNA (issue #24) is the Java Native Access bridge KSafe uses to call the OS
+# keychain on desktop. Its POM declares both LGPL-2.1-or-later and Apache-2.0;
+# the gate accepts the Apache-2.0 arm, which is AGPL-3.0-compatible like every
+# other Apache dependency. JNA is linked dynamically, so the LGPL arm would also
+# be compatible, but Apache-2.0 is the arm Lekto relies on. See ADR-0021.
 
 # --- Test-only exceptions -----------------------------------------------------
 # JUnit 5 / Jupiter is EPL-2.0 and JUnit 4 is EPL-1.0: the FSF lists them as

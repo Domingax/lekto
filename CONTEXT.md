@@ -125,6 +125,17 @@ never a network service and never stored. A language with no installed voice is
 reported to the reader rather than failing.
 _Avoid_: TTS, speech, audio
 
+**Secret store**:
+The device's own secure storage for a value that must never enter the **Vault**,
+an export, or a log — an API key, say. A device with no usable one reports it
+unavailable rather than writing the value in the clear.
+_Avoid_: Keystore, keychain, credential store
+
+**API key**:
+The user's own credential for their **LLM provider**, kept in the **Secret store**
+and never in the **Vault**.
+_Avoid_: Token, secret key
+
 **LLM provider**:
 The user's own language-model service, connected by the user's own API key, that
 translates a selected phrase or sentence in context. Lekto reaches it directly, with no

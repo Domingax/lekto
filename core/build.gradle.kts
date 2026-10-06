@@ -111,6 +111,12 @@ kotlin {
         named("jvmMain").configure {
             dependencies {
                 implementation(libs.sqlite.jdbc)
+                // The desktop `SecretStore` (issue #24) reaches the OS keychain
+                // — Windows DPAPI, macOS Keychain, Linux Secret Service — through
+                // KSafe (Apache-2.0) (ADR-0021). Desktop-only: the Android target
+                // backs the seam with its own Keystore code, so KSafe never
+                // reaches the Android classpath.
+                implementation(libs.ksafe)
             }
         }
         if (androidEnabled) {

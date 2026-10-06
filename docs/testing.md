@@ -410,6 +410,23 @@ about the outcome. The panel's Listen control and the messages it renders are
 `app/desktopTest`, and `AppSemanticsTest` speaks a tapped word through
 `testkit`'s `FakePronouncer`, covering the no-voice and no-engine messages.
 
+The secret store (issue #24; ADR-0021) is proved at its own levels. The
+`SecretStore` seam is a contract in `testkit` — `SecretStoreContract` with the
+`InMemorySecretStore` fake — run in `core/commonTest`, against the desktop store
+over an injected `SecretKeychain` in `core/jvmTest`, and against the Android
+store over a reversible `SecretCipher` in `core/androidHostTest`, so the three
+cannot differ. The Android Keystore cannot run on the host JVM, so `SecretCipher`
+is the Robolectric seam and `KeystoreCipher` is the first-party production
+cipher; `AndroidSecretStoreHostTest` also proves the store reports an honest
+message where the Keystore is unreachable. `SecretStoreIsolationTest` pins that a
+stored secret is absent from the vault and its export and that an unavailable
+outcome carries no secret, the desktop test adds the same vault-export proof,
+and `JvmSecretStoreTest` pins the fail-closed gate — a store with no OS keychain
+reports unavailable rather than falling back to a key in the clear. The masked
+input, `SecretField`, is proved by `SecretFieldSemanticsTest` on the desktop lane
+and its same-named Android twin, and `AppEnvironment` wires the platform store
+through the platform entry points.
+
 The settings screen's vault export/import (issue #20) is proved at the same
 levels. The state holder that runs the transfer — the export's bytes handed to
 the save action, an import restoring the vault, a cancelled file dialog as a

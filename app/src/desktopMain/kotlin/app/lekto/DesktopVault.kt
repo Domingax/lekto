@@ -37,7 +37,7 @@ fun desktopVaultTransfer(
     open: suspend () -> PickedFile?,
 ): VaultTransfer = VaultTransfer(desktopVaultStore(root), save, open)
 
-private fun appDataDirectory(appName: String): File {
+internal fun appDataDirectory(appName: String): File {
     val home = File(System.getProperty("user.home"))
     val os = System.getProperty("os.name").lowercase()
     return when {
