@@ -13,6 +13,7 @@ fun main() = application {
     val pronouncer = remember { JvmPronouncer() }
     val vaultTransfer = remember { desktopVaultTransfer(save = ::saveVaultToFile, open = ::pickVaultFileToImport) }
     val secrets = remember { desktopSecretStore() }
+    val llm = remember { desktopLlm() }
     Window(onCloseRequest = ::exitApplication, title = "Lekto") {
         App(
             AppEnvironment(
@@ -26,6 +27,7 @@ fun main() = application {
                 openUrl = ::openInBrowser,
                 vaultTransfer = vaultTransfer,
                 secrets = secrets,
+                llm = llm,
             ),
         )
     }

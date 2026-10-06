@@ -23,6 +23,9 @@ import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.translationShortcut
+import app.lekto.core.llm.LlmClient
+import app.lekto.core.llm.LlmProvider
+import app.lekto.core.llm.LlmSettingsStore
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
@@ -51,6 +54,8 @@ import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
 import app.lekto.reader.WordTap
 import app.lekto.settings.AttributionScreen
+import app.lekto.settings.ProviderController
+import app.lekto.settings.ProviderUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
 import app.lekto.settings.SettingsUiState
@@ -96,7 +101,26 @@ data class AppEnvironment(
     val openUrl: (String) -> Unit = {},
     val vaultTransfer: VaultTransfer? = null,
     val secrets: SecretStore? = null,
+    val llm: LlmServices? = null,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+)
+
+/**
+ * The LLM provider pieces a platform entry point supplies (issue #88;
+ * ADR-0022): the app-private [settings] store for the non-secret provider
+ * configuration — preset, model, base URL — and the [client] the connection
+ * test reaches the provider with. The **API key** is deliberately not here; it
+ * lives in [AppEnvironment.secrets].
+ */
+data class LlmServices(
+    val settings: LlmSettingsStore,
+    val client: LlmClient,
+    /**
+     * The presets this platform can reach. Android omits `Ollama`, a local server
+     * reachable only from a desktop (ADR-0022), so the picker never offers an
+     * endpoint the client cannot call.
+     */
+    val providers: List<LlmProvider> = LlmProvider.entries,
 )
 
 /** Where the app currently is, so one state replaces the reader/settings/attribution flags. */
@@ -145,10 +169,21 @@ fun App(environment: AppEnvironment) {
     val vocabulary = remember(environment.vocabulary) {
         environment.vocabulary?.let { store -> VocabularyController(store) }
     }
+    val provider = remember(environment.llm, environment.secrets, environment.dispatcher, scope) {
+        val llm = environment.llm
+        val secrets = environment.secrets
+        if (llm != null && secrets != null) {
+            ProviderController(llm.settings, secrets, llm.client, llm.providers, environment.dispatcher, scope)
+        } else {
+            null
+        }
+    }
+    val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
     val settings = Settings(
         dictionary = dictionary,
         vaultTransfer = vaultTransfer,
-        state = SettingsUiState(dictionaryState, vaultState),
+        provider = provider,
+        state = SettingsUiState(dictionaryState, vaultState, providerState),
     )
 
     AppScreens(environment, controller, state, scope, progress, settings, vocabulary)
@@ -327,6 +362,7 @@ private class Lookup(
 private class Settings(
     val dictionary: DictionaryController?,
     val vaultTransfer: VaultTransferController?,
+    val provider: ProviderController?,
     val state: SettingsUiState,
 )
 
@@ -348,6 +384,13 @@ private fun SettingsDestination(
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
+            onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
+            onModelChange = { model -> settings.provider?.setModel(model) },
+            onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
+            onSaveProvider = { apiKey -> settings.provider?.save(apiKey) },
+            onTestProvider = { apiKey -> settings.provider?.test(apiKey) },
+            onRemoveProviderKey = { settings.provider?.removeKey() },
+            onDismissProviderResult = { settings.provider?.dismissResult() },
         ),
     )
 }

@@ -427,6 +427,42 @@ input, `SecretField`, is proved by `SecretFieldSemanticsTest` on the desktop lan
 and its same-named Android twin, and `AppEnvironment` wires the platform store
 through the platform entry points.
 
+Connecting an **LLM provider** (issue #88; ADR-0022, ADR-0023) is proved at its own
+levels. The provider catalogue and configuration are pure data, so `LlmProviderTest`
+in `core/commonTest` pins that every remote preset is HTTPS, that a custom base URL is
+trimmed and resolves, and that a configuration is complete only with a base URL and a
+model. The status-to-outcome
+mapping is the pure `connectionResultFor`, pinned by `LlmConnectionResultTest`, so both
+clients report a provider's answer the same way and no message can quote the key. The
+`LlmClient` provider-adapter seam is a contract in `testkit` — `LlmClientContract` with
+the `FakeLlmClient` fake — run in `core/commonTest`, and the `LlmSettingsStore` seam is
+a contract there too — `LlmSettingsStoreContract` with the `InMemoryLlmSettingsStore`
+fake — run in `core/commonTest` against the fake and against the JSON document store
+over an in-memory filesystem, and in `core/jvmTest` against the same store over a real
+directory (`JsonLlmSettingsStoreDirectoryTest`), so the two implementations cannot
+drift; `JsonLlmSettingsStoreTest` pins that a corrupt document or an unknown preset
+reads as "not configured". The OpenAI-compatible transport is
+`OpenAiCompatibleLlmClientTest` in `core/jvmTest`, a request to a local `HttpServer`
+that pins the bearer key, the model, the `{baseUrl}/chat/completions` path, the status
+mapping and that a dead transport is an inline failure rather than a thrown exception,
+and the header policy it proves by value (`llmRequestHeaders`): a named `User-Agent`,
+no `Authorization` for a keyless provider, and the `x-opencode-session` that OpenCode
+Go requires — without which it answers `MissingSessionID` — sent to the OpenCode
+gateways alone. A provider's error body is parsed only for its machine identifier
+(`errorIdentifier`) and classified against a fixed allowlist (`connectionResult`), so
+no provider-authored text — and therefore no echoed key — ever reaches a message;
+`LlmConnectionResultTest` pins the allowlist, the status fallback, and that an unknown
+identifier cannot be rendered. No provider and no real key is involved, as the pack
+downloader's lane is. The state
+holder — load, choose one provider, save app-privately while the key goes to the
+`SecretStore`, test off the UI thread, report inline — is `ProviderControllerTest` in
+`app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The section's
+controls are `SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach
+settings, choose a provider, type a key, test the connection and see it answered — runs
+through `AppSemanticsTest` on both lanes. Android excludes the local Ollama preset,
+which only a desktop can reach (ADR-0022), through the provider list the platform
+wires.
+
 The settings screen's vault export/import (issue #20) is proved at the same
 levels. The state holder that runs the transfer — the export's bytes handed to
 the save action, an import restoring the vault, a cancelled file dialog as a

@@ -58,7 +58,9 @@ the OpenAI chat-completions API works through the **Custom** preset.
 | Custom            | any OpenAI-compatible base URL                 |
 
 Keys are stored in the platform keystore or keychain, never in the vault and never in
-an export (ADR-0021).
+an export (ADR-0021); the chosen provider, model and base URL are app-private settings
+outside the vault (ADR-0023). Settings offers a connection test, so a provider can be
+checked before you read.
 
 ## Licence
 

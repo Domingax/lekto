@@ -76,6 +76,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
             openUrl = { url -> openInBrowser(context, url) },
             vaultTransfer = vaultTransfer,
             secrets = AndroidSecretStore(context),
+            llm = androidLlm(context),
         ),
     )
 }

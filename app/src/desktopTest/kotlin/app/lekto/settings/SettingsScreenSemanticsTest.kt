@@ -7,23 +7,32 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.DictionaryPackState
+import app.lekto.core.llm.LlmProvider
+import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.testkit.testPackMetadata
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * The settings screen's behaviour through semantics: the dictionary's state and
  * an honest message for each, the download action, the inline download failure
- * with a way to dismiss it, the way to the attribution screen (issue #18), and
- * the vault export/import section (issue #20).
+ * with a way to dismiss it, the way to the attribution screen (issue #18), the
+ * vault export/import section (issue #20), and the LLM provider section
+ * (issue #88) — choosing a provider, the custom base URL field, the masked key
+ * field, save, the inline connection result and key removal.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One screen, one test per control; splitting the class hides the section.
 class SettingsScreenSemanticsTest {
 
     @Test
@@ -138,6 +147,126 @@ class SettingsScreenSemanticsTest {
         onNodeWithText("Export vault").assertIsNotEnabled()
         onNodeWithText("Import vault").assertIsNotEnabled()
     }
+
+    @Test
+    fun choosingAProviderRaisesIt() = runComposeUiTest {
+        var chosen: LlmProvider? = null
+        settings(
+            provider = ProviderUiState(available = true),
+            actions = SettingsActions(onSelectProvider = { provider -> chosen = provider }),
+        )
+
+        onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithText("Anthropic").performClick()
+
+        assertEquals(LlmProvider.ANTHROPIC, chosen)
+    }
+
+    @Test
+    fun aCustomProviderOffersABaseUrlField() = runComposeUiTest {
+        settings(provider = ProviderUiState(true, config = LlmProviderConfig(LlmProvider.CUSTOM, "my-model")))
+
+        onNodeWithTag(BASE_URL_FIELD_TAG).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aNamedProviderHidesTheBaseUrlField() = runComposeUiTest {
+        settings(provider = ProviderUiState(true, config = LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini")))
+
+        onNodeWithTag(BASE_URL_FIELD_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun savingPassesTheTypedKeyToTheController() = runComposeUiTest {
+        var saved: String? = null
+        settings(
+            provider = ProviderUiState(available = true),
+            actions = SettingsActions(onSaveProvider = { key -> saved = key }),
+        )
+
+        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("gpt-4o-mini")
+        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        onNodeWithText("Save").performScrollTo().performClick()
+
+        assertEquals("sk-live-123", saved)
+    }
+
+    @Test
+    fun testingPassesTheTypedKeyToTheController() = runComposeUiTest {
+        var tested: String? = null
+        settings(
+            provider = ProviderUiState(available = true),
+            actions = SettingsActions(onTestProvider = { key -> tested = key }),
+        )
+
+        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
+
+        assertEquals("sk-live-123", tested)
+    }
+
+    @Test
+    fun aSuccessfulConnectionIsReportedAndDismissed() = runComposeUiTest {
+        var dismissed = false
+        settings(
+            provider = ProviderUiState(available = true, result = ProviderResult.Success("The provider answered.")),
+            actions = SettingsActions(onDismissProviderResult = { dismissed = true }),
+        )
+
+        onNodeWithText("The provider answered.").performScrollTo().assertIsDisplayed()
+        onNodeWithTag(PROVIDER_DISMISS_TAG).performScrollTo().performClick()
+
+        assertTrue(dismissed)
+    }
+
+    @Test
+    fun aFailedConnectionIsReportedInline() = runComposeUiTest {
+        settings(
+            provider = ProviderUiState(
+                available = true,
+                result = ProviderResult.Failure("The provider rejected the API key."),
+            ),
+        )
+
+        onNodeWithText("The provider rejected the API key.").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aStoredKeyOffersRemoval() = runComposeUiTest {
+        var removed = false
+        settings(
+            provider = ProviderUiState(available = true, hasStoredKey = true),
+            actions = SettingsActions(onRemoveProviderKey = { removed = true }),
+        )
+
+        onNodeWithText("A key is stored.").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Remove key").performScrollTo().performClick()
+
+        assertTrue(removed)
+    }
+
+    @Test
+    fun anUnwiredProviderSaysSoAndHidesItsControls() = runComposeUiTest {
+        settings(provider = ProviderUiState(available = false))
+
+        onNodeWithText("Connecting an LLM provider", substring = true).performScrollTo().assertIsDisplayed()
+        onNodeWithTag(PROVIDER_PICKER_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aKeylessProviderOffersNoApiKeyField() = runComposeUiTest {
+        settings(provider = ProviderUiState(true, config = LlmProviderConfig(LlmProvider.OLLAMA, "llama3")))
+
+        onNodeWithTag(API_KEY_FIELD_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun testingInProgressDisablesTheActions() = runComposeUiTest {
+        settings(provider = ProviderUiState(available = true, testing = true))
+
+        onNodeWithText("Save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().assertIsNotEnabled()
+    }
 }
 
 /** Renders the settings screen in the app theme, sized like a phone. */
@@ -145,12 +274,13 @@ class SettingsScreenSemanticsTest {
 private fun ComposeUiTest.settings(
     dictionary: DictionaryUiState = DictionaryUiState(),
     vault: VaultUiState = VaultUiState(),
+    provider: ProviderUiState = ProviderUiState(),
     actions: SettingsActions = SettingsActions(),
 ) {
     setContent {
         MaterialTheme {
             SettingsScreen(
-                state = SettingsUiState(dictionary, vault),
+                state = SettingsUiState(dictionary, vault, provider),
                 actions = actions,
                 modifier = Modifier.size(width = 360.dp, height = 720.dp),
             )
