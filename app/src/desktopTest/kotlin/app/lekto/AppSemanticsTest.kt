@@ -26,6 +26,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.BlockKind
@@ -42,9 +43,16 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.settings.API_KEY_FIELD_TAG
+import app.lekto.settings.MODEL_FIELD_TAG
+import app.lekto.settings.PROVIDER_PICKER_TAG
+import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
+import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
+import app.lekto.testkit.InMemoryLlmSettingsStore
+import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.WhitespaceTextSegmenter
@@ -254,6 +262,33 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun connectingALanguageModelFromSettingsRunsAConnectionTest() = runComposeUiTest {
+        val settings = InMemoryLlmSettingsStore()
+        val secrets = InMemorySecretStore()
+        val client = FakeLlmClient()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    secrets = secrets,
+                    llm = LlmServices(settings, client),
+                ),
+            )
+        }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithText("Anthropic").performClick()
+        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("claude-3")
+        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
+
+        waitUntil { client.tested.isNotEmpty() }
+        assertEquals("sk-live-123", client.tested.single().second)
+        onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun savingAWordFromThePanelStoresItWithItsContextAndLevel() = runComposeUiTest {
         val vocabulary = inMemoryVocabulary()
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
@@ -437,6 +472,8 @@ internal fun environment(
     vaultTransfer: VaultTransfer? = null,
     vocabulary: Vocabulary? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
+    secrets: SecretStore? = null,
+    llm: LlmServices? = null,
 ) = AppEnvironment(
     segmenter = WhitespaceTextSegmenter(),
     library = library,
@@ -448,6 +485,8 @@ internal fun environment(
     pronouncer = pronouncer,
     openUrl = openUrl,
     vaultTransfer = vaultTransfer,
+    secrets = secrets,
+    llm = llm,
 )
 
 /** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
