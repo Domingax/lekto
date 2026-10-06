@@ -444,8 +444,12 @@ drift; `JsonLlmSettingsStoreTest` pins that a corrupt document or an unknown pre
 reads as "not configured". The OpenAI-compatible transport is
 `OpenAiCompatibleLlmClientTest` in `core/jvmTest`, a request to a local `HttpServer`
 that pins the bearer key, the model, the `{baseUrl}/chat/completions` path, the status
-mapping and that a dead transport is an inline failure rather than a thrown exception —
-no provider and no real key is involved, as the pack downloader's lane is. The state
+mapping and that a dead transport is an inline failure rather than a thrown exception,
+and the header policy it proves by value (`llmRequestHeaders`): a named `User-Agent`,
+no `Authorization` for a keyless provider, and the `x-opencode-session` that OpenCode
+Go requires — without which it answers `MissingSessionID` — sent to the OpenCode
+gateways alone; no provider and no real key is involved, as the pack downloader's lane
+is. The state
 holder — load, choose one provider, save app-privately while the key goes to the
 `SecretStore`, test off the UI thread, report inline — is `ProviderControllerTest` in
 `app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The section's
