@@ -1,5 +1,6 @@
 package app.lekto
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -7,12 +8,14 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -38,6 +41,7 @@ import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
+import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakePronouncer
@@ -45,6 +49,7 @@ import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
@@ -154,6 +159,34 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun selectingAPhraseOffersTheTranslationShortcutWithNoProviderConfigured() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        var opened: String? = null
+        setContent { App(environment(library, openUrl = { url -> opened = url })) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        // Long-press and drag across the page's words to select a phrase.
+        selectFirstPhrase()
+
+        // No provider and no key are configured: the shortcut is the whole offer.
+        onNodeWithText("Translate online").assertIsDisplayed()
+        // The reader stays put behind the panel, at the same page.
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        onNodeWithTag(TRANSLATION_SHORTCUT_TAG).performClick()
+        assertTrue(
+            opened.orEmpty().startsWith("https://translate.google.com/"),
+            "the shortcut must open the translation service's prefilled page: $opened",
+        )
+
+        onNodeWithText("Close").performClick()
+        onNodeWithText("Translate online").assertDoesNotExist()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun listeningToAWordSpeaksItThroughThePlatform() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         val pronouncer = FakePronouncer()
@@ -239,6 +272,7 @@ class AppSemanticsTest {
         )
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
+        waitUntil { onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Saved").assertIsDisplayed()
     }
 
@@ -426,6 +460,24 @@ private fun ComposeUiTest.tapFirstWord() {
     onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
         .onFirst()
         .performClick()
+}
+
+/** Long-presses the first word link and drags across the line, selecting a phrase. */
+@OptIn(ExperimentalTestApi::class)
+@Suppress("MagicNumber") // The long-press delay and the drag distance are the test's parameters.
+private fun ComposeUiTest.selectFirstPhrase() {
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val word = onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+        .onFirst()
+        .fetchSemanticsNode()
+        .boundsInRoot
+    val start = word.center - page.topLeft
+    onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+        down(start)
+        advanceEventTime(1000)
+        moveTo(Offset(start.x + 160f, start.y))
+        up()
+    }
 }
 
 private fun dictionaryServices(): DictionaryServices {

@@ -49,10 +49,12 @@ internal const val READER_PAGE_TAG = "reader-page"
 
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
- * a word, a way back to the library, and the position a page turn lands on.
+ * a word, a phrase selected by a long-press drag, a way back to the library, and
+ * the position a page turn lands on.
  */
 data class ReaderActions(
     val onWordTap: (WordTap) -> Unit = {},
+    val onPhraseSelected: (PhraseSelection) -> Unit = {},
     val onBack: (() -> Unit)? = null,
     val onPositionChange: (Int) -> Unit = {},
 )
@@ -84,7 +86,7 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
         }
         Column(Modifier.fillMaxSize()) {
             if (state.chromeVisible) ReaderTitle(document.chapter.title, actions.onBack)
-            ReaderPage(document, chapterText, state, actions.onWordTap)
+            ReaderPage(document, chapterText, state, actions.onWordTap, actions.onPhraseSelected)
             if (state.chromeVisible && state.page != null) {
                 ReaderPageBar(state.index, state.total, state::previous, state::next)
             }
@@ -129,14 +131,21 @@ private class ReaderState(
 }
 
 /** The page, its word layer built for this page only, and the tap zones over it. */
+@Suppress("LongParameterList") // The page's renderer pieces are threaded as one call; a bundle would only hide them.
 @Composable
 private fun ColumnScope.ReaderPage(
     document: ReaderDocument,
     chapterText: AnnotatedString,
     state: ReaderState,
     onWordTap: (WordTap) -> Unit,
+    onPhraseSelected: (PhraseSelection) -> Unit,
 ) {
-    val tokens = rememberPageTokens(document, chapterText, state.page, onWordTap)
+    // The range the current long-press drag covers, so the chosen words wash as
+    // they are picked; the open panel's range is the fallback once it ends.
+    var dragRange by remember { mutableStateOf<IntRange?>(null) }
+    val selected = dragRange ?: document.selectedRange
+    val tokens = rememberPageTokens(document, chapterText, state.page, selected, onWordTap)
+    val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val marginPx = with(LocalDensity.current) { HorizontalMargin.roundToPx() }
     val latestTap = rememberUpdatedState(readerSurfaceTap(marginPx, tokens, layout, state))
@@ -146,6 +155,18 @@ private fun ColumnScope.ReaderPage(
             .weight(1f)
             .testTag(READER_PAGE_TAG)
             .readerTapInput(latestTap)
+            .phraseSelectionInput(
+                words = { latestTokens.value?.words.orEmpty() },
+                layout = { layout },
+                marginPx = marginPx,
+                chapter = chapterText.text,
+                pageStart = state.page?.start ?: 0,
+                onSelecting = { range -> dragRange = range },
+                onSelected = { phrase ->
+                    dragRange = null
+                    onPhraseSelected(phrase)
+                },
+            )
             .padding(horizontal = HorizontalMargin),
     ) {
         if (tokens != null) {
@@ -161,12 +182,14 @@ private fun ColumnScope.ReaderPage(
     }
 }
 
-/** The page's word layer, rebuilt only when the page, the chapter or the mastery behind it changes. */
+/** The page's word layer, rebuilt only when the page, the chapter, the wash range or the mastery behind it changes. */
+@Suppress("LongParameterList") // The page's inputs are independent; a bundle would only hide that.
 @Composable
 private fun rememberPageTokens(
     document: ReaderDocument,
     chapterText: AnnotatedString,
     page: ReaderPage?,
+    selected: IntRange?,
     onWordTap: (WordTap) -> Unit,
 ): ReaderTokens? {
     val latestTap = rememberUpdatedState(onWordTap)
@@ -175,11 +198,11 @@ private fun rememberPageTokens(
         page,
         document.chapter,
         document.renderer,
-        document.selectedRange,
+        selected,
         document.masteryRevision,
     ) {
         page?.let { slice ->
-            buildPageTokens(chapterText, slice, document.renderer, document.chapter, document.selectedRange) { word ->
+            buildPageTokens(chapterText, slice, document.renderer, document.chapter, selected) { word ->
                 latestTap.value(word)
             }
         }

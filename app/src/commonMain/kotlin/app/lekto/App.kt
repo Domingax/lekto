@@ -1,6 +1,7 @@
 package app.lekto
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
+import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.LemmaLookup
@@ -40,6 +42,7 @@ import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
+import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
 import app.lekto.reader.ReaderChapter
 import app.lekto.reader.ReaderDocument
@@ -53,6 +56,8 @@ import app.lekto.settings.SettingsUiState
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
+import app.lekto.translation.PhraseLookupActions
+import app.lekto.translation.PhraseLookupPanel
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyScreen
@@ -216,25 +221,31 @@ private fun ReaderDestination(
     onBack: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
+    var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
     val mastery = vocabulary?.mastery ?: environment.mastery
-    val spoken = selection?.tap?.token
     val lookup = Lookup(
         selection = selection,
-        pronunciation = Pronunciation(
-            onSpeak = { spoken?.let { word -> speak(word.surface, word.key.language) } },
-            result = speech,
-        ),
+        phrase = phrase,
+        pronunciation = pronunciationFor(selection, speech, speak),
         vocabulary = VocabularyPanel(
             entry = selection?.let { selected -> vocabulary?.entryFor(selected.tap.token.key) },
             onSave = { level -> selection?.let { chosen -> saveWord(vocabulary, scope, environment, chosen, level) } },
         ),
         onWordTap = wordTapHandler(dictionary, scope) { tap, result ->
+            phrase = null
             selection = WordSelection(tap, result)
             speech = null
         },
-        onDismiss = { selection = null },
+        onPhraseSelected = { chosen ->
+            selection = null
+            phrase = chosen
+        },
+        onDismiss = {
+            selection = null
+            phrase = null
+        },
     )
     ReaderSession(
         session = session,
@@ -246,6 +257,16 @@ private fun ReaderDestination(
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
 }
+
+/** The pronunciation control for the selected word, or a no-op when nothing is selected. */
+private fun pronunciationFor(
+    selection: WordSelection?,
+    speech: SpeechResult?,
+    speak: (String, String?) -> Unit,
+): Pronunciation = Pronunciation(
+    onSpeak = { selection?.tap?.token?.let { word -> speak(word.surface, word.key.language) } },
+    result = speech,
+)
 
 /**
  * Saves the word behind [selection] at [level] (issue #22): the entry carries the
@@ -280,14 +301,18 @@ internal fun translationOf(result: WordLookup): String? = (result as? WordLookup
 
 /**
  * The lookup panel's live state and events, bundled so the reader's signature
- * stays small: the word whose panel is open, its pronunciation and vocabulary
- * controls, and the taps that open and close it (issues #19, #21 and #22).
+ * stays small: the word or phrase whose panel is open, its pronunciation and
+ * vocabulary controls, and the taps that open and close it (issues #19, #21, #22
+ * and #87).
  */
+@Suppress("LongParameterList") // The reader's own pieces, bundled as one value; a second bundle only hides them.
 private class Lookup(
     val selection: WordSelection?,
+    val phrase: PhraseSelection?,
     val pronunciation: Pronunciation,
     val vocabulary: VocabularyPanel,
     val onWordTap: (WordTap) -> Unit,
+    val onPhraseSelected: (PhraseSelection) -> Unit,
     val onDismiss: () -> Unit,
 )
 
@@ -484,25 +509,41 @@ private fun ReaderSession(
                 initialOffset = session.position?.offset ?: 0,
                 selectedRange = lookup.selection?.let { selected ->
                     selected.tap.token.start..selected.tap.token.end
-                },
+                } ?: lookup.phrase?.range,
                 masteryRevision = masteryRevision,
             ),
             actions = ReaderActions(
                 onWordTap = lookup.onWordTap,
+                onPhraseSelected = lookup.onPhraseSelected,
                 onBack = onBack,
                 onPositionChange = onPositionChange,
             ),
         )
-        lookup.selection?.let { selected ->
-            LookupPanel(
-                selected = selected,
-                pronunciation = lookup.pronunciation,
-                vocabulary = lookup.vocabulary,
-                openUrl = environment.openUrl,
-                onDismiss = lookup.onDismiss,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
+        LookupOverlays(lookup, session.book.language, environment.openUrl)
+    }
+}
+
+/** The panel for the open word or phrase, bottom-aligned over the reader. */
+@Composable
+private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: (String) -> Unit) {
+    lookup.selection?.let { selected ->
+        LookupPanel(
+            selected = selected,
+            pronunciation = lookup.pronunciation,
+            vocabulary = lookup.vocabulary,
+            openUrl = openUrl,
+            onDismiss = lookup.onDismiss,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+    lookup.phrase?.let { phrase ->
+        PhrasePanel(
+            phrase = phrase,
+            language = language,
+            openUrl = openUrl,
+            onDismiss = lookup.onDismiss,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -532,6 +573,38 @@ private fun LookupPanel(
         ),
         pronunciation = pronunciation,
         vocabulary = vocabulary,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The phrase panel for [phrase] (issue #87): the book's zero-configuration
+ * **Translation shortcut**, built from the book's language and the pack's target
+ * language. It needs no provider and no key, so the panel always offers it.
+ */
+@Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
+@Composable
+private fun PhrasePanel(
+    phrase: PhraseSelection,
+    language: String?,
+    openUrl: (String) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shortcut = remember(phrase, language) {
+        translationShortcut(
+            phrase.text,
+            language?.let { code -> baseLanguage(code) },
+            DictionaryRelease.TARGET_LANGUAGE,
+        )
+    }
+    PhraseLookupPanel(
+        phrase = phrase.text,
+        shortcut = shortcut,
+        actions = PhraseLookupActions(
+            onOpenShortcut = { chosen -> openUrl(chosen.url) },
+            onDismiss = onDismiss,
+        ),
         modifier = modifier,
     )
 }

@@ -57,17 +57,5 @@ private suspend fun AwaitPointerEventScope.awaitTapUp(down: PointerInputChange, 
 }
 
 /** The word token under [position], or `null` when the tap is not on a word. */
-internal fun wordAt(position: Offset, marginPx: Int, words: List<WordToken>, layout: TextLayoutResult?): WordToken? {
-    if (layout == null) return null
-    val local = Offset(position.x - marginPx, position.y)
-    return if (inside(local, layout)) {
-        val offset = layout.getOffsetForPosition(local)
-        words.firstOrNull { word -> offset in word.start until word.end }
-    } else {
-        null
-    }
-}
-
-/** Whether [local], relative to the text, is inside the laid-out text's bounds. */
-private fun inside(local: Offset, layout: TextLayoutResult): Boolean =
-    local.x in 0f..layout.size.width.toFloat() && local.y in 0f..layout.size.height.toFloat()
+internal fun wordAt(position: Offset, marginPx: Int, words: List<WordToken>, layout: TextLayoutResult?): WordToken? =
+    wordIndexAt(position, marginPx, words, layout)?.let { index -> words[index] }

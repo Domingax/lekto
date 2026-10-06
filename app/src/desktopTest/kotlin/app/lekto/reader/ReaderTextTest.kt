@@ -195,6 +195,20 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aSelectedPhraseWashesEveryWordItCoversAndNoWordOutsideIt() {
+        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val page = ReaderPage(0, chapterText.length)
+        val words = buildPageTokens(chapterText, page, renderer, chapter).words
+        val phrase = words.first().start..words[1].end
+
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, selected = phrase)
+
+        assertEquals(SelectionHighlight, styleOf(tokens, "the").background)
+        assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
+        assertEquals(Color.Unspecified, styleOf(tokens, "glows").background)
+    }
+
+    @Test
     fun aTokenCarriesTheLemmaKeyWhenTheLemmaLookupKnowsIt() {
         val lemmas = InMemoryLemmaLookup(mapOf("lanterns" to "lantern"))
         val lemmaRenderer = ReaderRenderer(WhitespaceTextSegmenter(), renderer.mastery, lemmas)

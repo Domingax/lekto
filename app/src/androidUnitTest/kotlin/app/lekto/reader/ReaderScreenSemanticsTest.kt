@@ -6,12 +6,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -24,6 +28,7 @@ import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.testkit.WhitespaceTextSegmenter
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -177,6 +182,32 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
+    fun selectingAPhraseByLongPressDragReportsIt() {
+        var selected: PhraseSelection? = null
+        compose.setContent { Reader(renderer, onPhraseSelected = { chosen -> selected = chosen }) }
+
+        compose.onNodeWithText("On the quiet evening", substring = true).assertIsDisplayed()
+        val start = compose.firstWordCentre()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+            down(start)
+            advanceEventTime(1000)
+            moveTo(Offset(start.x + 80f, start.y))
+            moveTo(Offset(start.x + 160f, start.y))
+            up()
+        }
+
+        assertNotNull("a long-press drag must select a phrase", selected)
+        val phrase = selected!!
+        val chapter = LONG_CHAPTER.blocks.joinToString("\n\n") { block -> block.text }
+        // Robolectric's text metrics are sub-pixel, so the drag does not extend
+        // reliably here; the desktop lane proves a multi-word range and
+        // `PhraseSelectionTest` pins it. This lane proves the gesture selects a
+        // phrase from the chapter and opens the panel.
+        assertTrue("the selected phrase must not be blank", phrase.text.isNotBlank())
+        assertTrue("the phrase must come from the chapter: ${phrase.text}", chapter.contains(phrase.text))
+    }
+
+    @Test
     fun theTapZonesAreThirdsOfTheWidth() {
         val width = 300
         assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(0f, width))
@@ -187,18 +218,40 @@ class ReaderScreenSemanticsTest {
     }
 
     @Composable
+    @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
     private fun Reader(
         renderer: ReaderRenderer,
         chapter: ReaderChapter = LONG_CHAPTER,
         initialOffset: Int = 0,
         onPositionChange: (Int) -> Unit = {},
+        onPhraseSelected: (PhraseSelection) -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
                 document = ReaderDocument(chapter, renderer, initialOffset),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
-                actions = ReaderActions(onBack = {}, onPositionChange = onPositionChange),
+                actions = ReaderActions(
+                    onPhraseSelected = onPhraseSelected,
+                    onBack = {},
+                    onPositionChange = onPositionChange,
+                ),
             )
         }
     }
+}
+
+/** The first word link's centre, in the reader page's coordinates. */
+@Suppress("MagicNumber") // The wait for the word layer is the test's parameter.
+private fun ComposeTestRule.firstWordCentre(): Offset {
+    waitUntil(timeoutMillis = 5_000) {
+        onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+    }
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val word = onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+        .onFirst()
+        .fetchSemanticsNode()
+        .boundsInRoot
+    return word.center - page.topLeft
 }
