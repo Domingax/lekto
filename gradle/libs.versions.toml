@@ -71,6 +71,14 @@ jsoup = "1.23.2"
 # Kotlin compiler plugin is versioned with Kotlin itself.
 kotlinx-serialization = "1.9.0"
 
+# Secret storage (issue #24). KSafe (Apache-2.0) backs the desktop `SecretStore`
+# through the OS keychain — Windows DPAPI, macOS Keychain, Linux Secret Service
+# (ADR-0021). Desktop-only: Android backs the seam with its own Keystore code, so
+# KSafe never reaches the Android classpath. Its transitive dependencies
+# (kotlinx.serialization, kotlinx-coroutines, androidx.datastore, okio) are all
+# permissive; the licence gate is the authority. See docs/testing.md.
+ksafe = "3.3.0"
+
 # Measurement (ticket #8). Kover (Apache-2.0) is JetBrains' Kotlin coverage
 # engine and the KMP-native alternative to JaCoCo; it writes a
 # JaCoCo-compatible XML report. SonarCloud is a hosted service, not a build
@@ -129,6 +137,10 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 # Dictionary-pack pipeline (ticket #17): see the versions block above.
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
+
+# Secret storage (issue #24): see the versions block above. The plain KMP
+# coordinate resolves to the `-jvm` variant on the desktop target.
+ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -35,6 +35,7 @@ without the other.
 | jsoup (XHTML)        | 1.23.2    | `gradle/libs.versions.toml` (`jsoup`)           |
 | kotlinx.serialization (vault) | 1.9.0 | `gradle/libs.versions.toml` (`kotlinx-serialization`) |
 | sqlite-jdbc (dictionary pack) | 3.53.4.0 | `gradle/libs.versions.toml` (`sqlite-jdbc`) |
+| KSafe (desktop secret storage) | 3.3.0 | `gradle/libs.versions.toml` (`ksafe`) |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -306,6 +307,16 @@ framework's SQLite on Android (ADR-0018). The CLI and the JVM reader use
 dependency of `core`'s JVM target (desktop) as well as the standalone tool, so it
 is held to the licence gate like any other. See ADR-0017, ADR-0018 and
 `docs/research/open-dictionaries.md`.
+
+**KSafe** (Apache-2.0, AGPL-compatible) is the desktop secret store's dependency
+(issue #24): it drives the OS keychain — Windows DPAPI, the macOS login Keychain,
+the Linux Secret Service — behind `core`'s `SecretStore` seam (ADR-0021). It is a
+production dependency of `core`'s JVM target only: the Android client backs the
+same seam with its own Keystore code, so KSafe never reaches the Android
+classpath. Its transitive dependencies (JNA, androidx.datastore, okio) clear the
+licence gate; JNA's POM declares both LGPL-2.1-or-later and Apache-2.0, and the
+gate accepts the Apache-2.0 arm. See `docs/testing.md` for how the seam is
+proved.
 
 ## Modules
 

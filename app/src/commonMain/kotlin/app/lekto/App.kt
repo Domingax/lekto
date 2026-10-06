@@ -23,6 +23,7 @@ import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.translationShortcut
+import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.LemmaLookup
@@ -77,9 +78,11 @@ import kotlinx.coroutines.withContext
  * panel speaks through (issue #21), the [openUrl] the lookup panel's reference
  * shortcuts open in the platform browser (issue #19), the [vaultTransfer] that
  * exports and imports the vault (issue #20), the saved [vocabulary] the reader
- * colours by and the lookup panel saves into (issue #22), the [lemmas] that give
- * each word its identity, and the [dispatcher] blocking work runs on. Bundled so
- * the root composable's signature stays small and grows in one named place.
+ * colours by and the lookup panel saves into (issue #22), the [secrets] store an
+ * API key is kept in and never in the vault (issue #24; ADR-0021), the [lemmas]
+ * that give each word its identity, and the [dispatcher] blocking work runs on.
+ * Bundled so the root composable's signature stays small and grows in one named
+ * place.
  */
 data class AppEnvironment(
     val segmenter: TextSegmenter,
@@ -92,6 +95,7 @@ data class AppEnvironment(
     val pronouncer: Pronouncer? = null,
     val openUrl: (String) -> Unit = {},
     val vaultTransfer: VaultTransfer? = null,
+    val secrets: SecretStore? = null,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
 
