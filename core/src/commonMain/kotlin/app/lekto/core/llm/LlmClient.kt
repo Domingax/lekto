@@ -1,5 +1,6 @@
 package app.lekto.core.llm
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -60,21 +61,32 @@ sealed interface LlmConnectionResult {
 }
 
 /**
- * The provider adapter seam (issue #88; ADR-0022): it reaches the user's own
- * **LLM provider** directly with their **API key** and reports whether it
- * answers. The OpenAI-compatible implementation lives in `jvmSharedMain`; a
- * scripted fake lives in `testkit`, so the settings controller is driven without
- * a network.
+ * The provider adapter seam (issues #88, #89; ADR-0022): it reaches the user's
+ * own **LLM provider** directly with their **API key** — no Lekto server in
+ * between — to report whether it answers and to stream a phrase translation.
+ * The OpenAI-compatible implementation lives in `jvmSharedMain`; a scripted
+ * fake lives in `testkit`, so the settings controller and the reader are driven
+ * without a network.
  *
- * The call blocks — it opens a socket — so the application runs it off the UI
- * thread, exactly as it runs a download or a vault write. Every failure is an
- * [LlmConnectionResult.Failed], never a thrown exception, so a dead provider
+ * The connection test blocks — it opens a socket — so the application runs it
+ * off the UI thread, exactly as it runs a download or a vault write; the
+ * translation is a cold [Flow] the caller collects on its own coroutine, so
+ * cancelling the collection (the panel closing) stops the stream. Every failure
+ * is a first-class outcome — [LlmConnectionResult.Failed] or
+ * [LlmTranslationEvent.Failed] — never a thrown exception, so a dead provider
  * cannot interrupt the reading session.
  */
-fun interface LlmClient {
+interface LlmClient {
 
     /** Tests [config] with [apiKey], reporting whether the provider answers. */
     fun testConnection(config: LlmProviderConfig, apiKey: String): LlmConnectionResult
+
+    /**
+     * Streams the translation [request] asks for as it arrives, emitting each
+     * [LlmTranslationEvent]. The flow is cold: collecting it opens the request,
+     * and cancelling the collection stops it and closes the connection.
+     */
+    fun translate(request: LlmTranslationRequest): Flow<LlmTranslationEvent>
 }
 
 /**

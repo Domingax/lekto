@@ -82,6 +82,11 @@ kotlin {
             // record's body is a `JsonObject` and therefore part of the public
             // model the testkit and the application both handle.
             api(libs.kotlinx.serialization.json)
+            // The streaming **LLM provider** seam returns a `Flow` of text deltas
+            // (issue #89; ADR-0022), so `Flow` is part of the domain's public
+            // model and a consumer (the app, testkit) needs it on its compile
+            // classpath.
+            api(libs.kotlinx.coroutines.core)
         }
         // The EPUB parser and the ICU segmenter are JVM-only: java.util.zip
         // and jsoup build the [StructuredText], ICU4J segments it. They are

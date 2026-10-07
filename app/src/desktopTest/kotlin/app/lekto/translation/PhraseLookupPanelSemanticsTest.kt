@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -16,10 +17,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The lookup panel in phrase mode through semantics (issue #87): a selected
- * phrase shows the zero-configuration Translation shortcut and no provider or
- * key is needed, the shortcut opens the service's prefilled page, and a phrase
- * the service cannot address still closes honestly.
+ * The lookup panel in phrase mode through semantics (issues #87, #89): a selected
+ * phrase shows the zero-configuration Translation shortcut and no provider or key
+ * is needed; a connected provider's translation streams into the panel and it
+ * discloses what leaves the device; without a provider it shows a non-blocking
+ * prompt beside the shortcut; and a provider failure is reported inline.
  */
 @OptIn(ExperimentalTestApi::class)
 class PhraseLookupPanelSemanticsTest {
@@ -58,11 +60,74 @@ class PhraseLookupPanelSemanticsTest {
         assertTrue(dismissed)
     }
 
+    @Test
+    fun withoutAProviderThePanelShowsANonBlockingPromptBesideTheShortcut() = runComposeUiTest {
+        var openedSettings = false
+        setContent { Panel(onOpenSettings = { openedSettings = true }) }
+
+        onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
+        assertTrue(openedSettings)
+
+        // The shortcut still works with no provider and no key.
+        onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun aStreamingTranslationShowsTheTextAndDisclosesWhatLeavesTheDevice() = runComposeUiTest {
+        setContent {
+            Panel(
+                translation = PhraseTranslationUiState(
+                    provider = "OpenAI",
+                    context = "Containing sentence: The lantern glows softly.",
+                    state = PhraseTranslationState.Streaming("La lanterne"),
+                ),
+            )
+        }
+
+        onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne")
+        onNodeWithText("Sends your selection and its sentence to OpenAI.", substring = true).assertIsDisplayed()
+        onNodeWithText("The lantern glows softly.", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aProviderFailureIsReportedInline() = runComposeUiTest {
+        setContent {
+            Panel(
+                translation = PhraseTranslationUiState(
+                    provider = "OpenAI",
+                    state = PhraseTranslationState.Failed("The provider rejected the API key."),
+                ),
+            )
+        }
+
+        onNodeWithText("The provider rejected the API key.").assertIsDisplayed()
+        // The phrase was still sent, so the panel keeps disclosing it.
+        onNodeWithText("Sends your selection and its sentence to OpenAI.", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun anEmptyProviderAnswerSaysSo() = runComposeUiTest {
+        setContent {
+            Panel(
+                translation = PhraseTranslationUiState(
+                    provider = "OpenAI",
+                    state = PhraseTranslationState.Done(""),
+                ),
+            )
+        }
+
+        onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("The provider returned no translation.")
+    }
+
+    @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide them.
     @Composable
     private fun Panel(
         phrase: String = "the lantern glows",
         shortcut: TranslationShortcut? = translationShortcut(phrase, "en", "fr"),
+        translation: PhraseTranslationUiState = PhraseTranslationUiState(),
         onOpenShortcut: (TranslationShortcut) -> Unit = {},
+        onOpenSettings: () -> Unit = {},
         onDismiss: () -> Unit = {},
     ) {
         MaterialTheme {
@@ -70,6 +135,8 @@ class PhraseLookupPanelSemanticsTest {
                 phrase = phrase,
                 shortcut = shortcut,
                 actions = PhraseLookupActions(onOpenShortcut = onOpenShortcut, onDismiss = onDismiss),
+                translation = translation,
+                onOpenSettings = onOpenSettings,
             )
         }
     }

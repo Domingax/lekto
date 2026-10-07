@@ -8,6 +8,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import kotlinx.coroutines.flow.toList
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
@@ -69,6 +70,21 @@ class OpenAiCompatibleLlmClientTest :
             LlmProviderConfig(LlmProvider.CUSTOM, model, customBaseUrl = base)
 
         fun base(server: HttpServer): String = "http://127.0.0.1:${server.address.port}/v1"
+
+        /** The server-sent-event body a provider streams: the payloads, then `[DONE]`. */
+        fun sse(vararg payloads: String): String =
+            payloads.joinToString("") { payload -> "data: $payload\n\n" } + "data: [DONE]\n\n"
+
+        /** A translation request with the prompt the domain would build. */
+        fun translationRequest(config: LlmProviderConfig, key: String = "sk-test"): LlmTranslationRequest =
+            LlmTranslationRequest(
+                config = config,
+                apiKey = key,
+                messages = listOf(
+                    LlmMessage("system", "Translate into fr"),
+                    LlmMessage("user", "Selected phrase: the lantern"),
+                ),
+            )
 
         test("a 2xx answer reports the provider connected") {
             val server = serve(200, Recorded())
@@ -227,5 +243,94 @@ class OpenAiCompatibleLlmClientTest :
             zen.shouldContainKey("x-opencode-session")
             openai.shouldNotContainKey("x-opencode-session")
             openai["User-Agent"] shouldBe USER_AGENT
+        }
+
+        // --- Streaming phrase translation (issue #89) ------------------------
+
+        test("a translation streams the deltas in order and stops at [DONE]") {
+            val recorded = Recorded()
+            val body = sse(
+                """{"choices":[{"delta":{"content":"Bon"}}]}""",
+                """{"choices":[{"delta":{"content":"jour"}}]}""",
+            )
+            val server = serve(200, recorded, body)
+            try {
+                val events = OpenAiCompatibleLlmClient()
+                    .translate(translationRequest(custom(base(server), "m")))
+                    .toList()
+
+                events shouldBe listOf(LlmTranslationEvent.Delta("Bon"), LlmTranslationEvent.Delta("jour"))
+                recorded.body shouldContain "\"stream\":true"
+                recorded.body shouldContain "\"model\":\"m\""
+                recorded.body shouldContain "Selected phrase: the lantern"
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a 4xx translation is an inline failure event, not a thrown exception") {
+            val server = serve(401, Recorded())
+            try {
+                val events = OpenAiCompatibleLlmClient()
+                    .translate(translationRequest(custom(base(server), "m")))
+                    .toList()
+
+                events shouldBe listOf(LlmTranslationEvent.Failed(LlmConnectionResult.REJECTED_KEY))
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a mid-stream error envelope is classified, never rendered with its text") {
+            val echoed = "sk-very-secret"
+            val body = sse("""{"error":{"code":"invalid_api_key","message":"key $echoed rejected"}}""")
+            val server = serve(200, Recorded(), body)
+            try {
+                val events = OpenAiCompatibleLlmClient()
+                    .translate(translationRequest(custom(base(server), "m"), echoed))
+                    .toList()
+
+                events shouldBe listOf(LlmTranslationEvent.Failed(LlmConnectionResult.REJECTED_KEY))
+                (events.single() as LlmTranslationEvent.Failed).message shouldNotContain echoed
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a dead translation transport is an inline failure event") {
+            val client = OpenAiCompatibleLlmClient(connect = { throw IOException("connection refused") })
+
+            client.translate(translationRequest(custom("http://127.0.0.1:1/v1", "m"))).toList() shouldBe
+                listOf(LlmTranslationEvent.Failed(LlmConnectionResult.UNREACHABLE))
+        }
+
+        test("an incomplete translation configuration is refused before any request is sent") {
+            var connected = false
+            val client = OpenAiCompatibleLlmClient(
+                connect = {
+                    connected = true
+                    throw IOException("must not connect")
+                },
+            )
+            val request = LlmTranslationRequest(
+                config = LlmProviderConfig(LlmProvider.OPENAI, ""),
+                apiKey = "sk-test",
+                messages = listOf(LlmMessage("user", "hi")),
+            )
+
+            client.translate(request).toList() shouldBe
+                listOf(LlmTranslationEvent.Failed(LlmConnectionResult.INCOMPLETE))
+            connected shouldBe false
+        }
+
+        test("a server-sent event with no text yields no event") {
+            streamEvent("""{"choices":[{"delta":{"role":"assistant"}}]}""") shouldBe null
+            streamEvent(": keep-alive") shouldBe null
+            streamEvent("not json") shouldBe null
+        }
+
+        test("a server-sent event carrying text yields a delta") {
+            streamEvent("""{"choices":[{"delta":{"content":"bonjour"}}]}""") shouldBe
+                LlmTranslationEvent.Delta("bonjour")
         }
     })

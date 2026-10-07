@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -29,6 +30,8 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.llm.LlmProvider
+import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
@@ -49,6 +52,7 @@ import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
+import app.lekto.settings.ProviderController
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
@@ -60,6 +64,8 @@ import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.translation.TRANSLATION_RESULT_TAG
+import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
@@ -220,6 +226,52 @@ class AppSemanticsTest {
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Translate online").assertDoesNotExist()
         compose.awaitPage(2)
+    }
+
+    @Test
+    fun selectingAPhraseStreamsATranslationFromTheConnectedProvider() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        val settings = InMemoryLlmSettingsStore(LlmProviderConfig(LlmProvider.ANTHROPIC, "claude-3"))
+        val secrets = InMemorySecretStore().apply {
+            put(ProviderController.providerSecretKey(LlmProvider.ANTHROPIC), "sk-live-123")
+        }
+        val client = FakeLlmClient(translation = listOf("La lanterne", " brille"))
+        compose.setContent {
+            App(environment(library, secrets = secrets, llm = LlmServices(settings, client)))
+        }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithText("Next page").performClick()
+        compose.awaitPage(2)
+
+        compose.selectFirstPhrase()
+
+        compose.waitUntil { client.translated.isNotEmpty() }
+        compose.waitUntil { compose.onAllNodesWithTag(TRANSLATION_RESULT_TAG).fetchSemanticsNodes().isNotEmpty() }
+        // The selection and its containing sentence leave the device; the answer streams in.
+        val user = client.translated.single().messages.single { message -> message.role == "user" }
+        assertTrue("the request discloses the context: ${user.content}", user.content.contains("Selected phrase:"))
+        compose.onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne brille")
+        // The reader stays put behind the panel.
+        compose.onNodeWithText("Page 2 of", substring = true).assertExists()
+    }
+
+    @Test
+    fun selectingAPhraseWithoutAProviderLinksToSettings() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, dictionary = dictionaryServices())) }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithText("Next page").performClick()
+        compose.awaitPage(2)
+
+        compose.selectFirstPhrase()
+
+        compose.onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
+
+        // The non-blocking prompt lands on settings, leaving the book behind.
+        compose.onNodeWithText("Dictionary").assertIsDisplayed()
     }
 
     @Test
