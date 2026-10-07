@@ -145,18 +145,20 @@ verify tasks cannot race over one directory.
 `integrations/webdav/src/jvmTest` starts an Apache `mod_dav` server through
 Testcontainers and drives it over the network; it is the lane the `SyncTarget`
 driver contract (ticket #26) runs against for the WebDAV driver (ticket #27). The
-image is pinned by digest, so a green build does not move under it, and runs a
-current Apache (≥ 2.4.16): Apache 2.4.10–2.4.14 shipped a broken
-`ap_condition_if_match` that rejects a matching `If-Match`, so an older server
-would fail the compare-and-swap cases through no fault of the driver. The
+image runs a current Apache and is pinned by digest, so a green build does not
+move under it. The driver conditions updates through WebDAV's `If` header rather
+than HTTP `If-Match`: Apache marks a freshly written file's ETag weak for a
+second, and `If-Match` requires a strong comparison, so it would reject an
+immediate update (ADR-0025). The
 contract class is annotated `@Testcontainers(disabledWithoutDocker = true)`,
 so a machine or runner without Docker skips it instead of failing: the lane is
 green everywhere and simply proves more where Docker is present.
 
 The same source set also runs the whole contract against `testkit`'s
 `FakeWebDavServer`, an in-process server that speaks the same subset —
-`MKCOL`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, Basic auth, strong ETags and
-`If-Match`/`If-None-Match` — so the driver's remote layout and conditional writes
+`MKCOL`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, Basic auth, ETags and the
+conditional headers (`If-None-Match`, `If-Match` and the DAV `If`) — so the
+driver's remote layout and conditional writes
 are proved without Docker. The fake mirrors Apache's one
 wrinkle that matters to the driver: a `PUT` that returns no ETag, which forces the
 driver's `HEAD` fallback. A separate test drives the container lane, a rejected

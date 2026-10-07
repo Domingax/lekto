@@ -37,10 +37,20 @@ internal object WebDavRequests {
         .PUT(HttpRequest.BodyPublishers.ofByteArray(bytes))
         .header("Content-Type", "application/octet-stream")
 
-    /** The conditional headers [condition] translates to (RFC 4918, RFC 7232). */
+    /**
+     * The conditional headers [condition] translates to.
+     *
+     * A create uses HTTP `If-None-Match: *`. An update conditions on the
+     * revision through WebDAV's `If` header (`If: ([<etag>])`), not HTTP
+     * `If-Match`: `If-Match` requires a **strong** ETag comparison, and Apache
+     * `mod_dav` marks a freshly written file's ETag weak for a second (its
+     * `ap_make_etag_ex` cannot rule out a change within the same second), so an
+     * immediate `If-Match` update is rejected. The `If` header compares ETags
+     * weakly (RFC 4918 §10.4.1), so it works on both strong and weak ETags.
+     */
     fun conditions(condition: WriteCondition): Map<String, String> = when (condition) {
         WriteCondition.CreateOnly -> mapOf("If-None-Match" to "*")
-        is WriteCondition.MatchesRevision -> mapOf("If-Match" to condition.revision)
+        is WriteCondition.MatchesRevision -> mapOf("If" to "([${condition.revision}])")
         WriteCondition.Unconditional -> emptyMap()
     }
 }

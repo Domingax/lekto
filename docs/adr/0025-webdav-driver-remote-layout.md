@@ -26,14 +26,18 @@ channels apart. Collections are created on demand with `MKCOL`, tolerating the
 
 ## Revisions and conditional writes
 
-An item's revision is its **strong ETag**. A write is conditioned per RFC 7232:
-create-if-absent sends `If-None-Match: *`, an update sends `If-Match: <etag>`, and
-a `412 Precondition Failed` becomes `WriteOutcome.Conflicted` — the value the
-engine settles — never a silent overwrite. Apache `mod_dav` evaluates exactly
-these preconditions in `dav_validate_request`, so the driver reports
-`conditionalWrites = true`. (Apache 2.4.10–2.4.14 shipped a broken
-`ap_condition_if_match` that rejects a matching `If-Match`; fixed in 2.4.16, so
-the integration lane must not pin an older server.)
+An item's revision is its **ETag**. A write is conditioned: create-if-absent sends
+`If-None-Match: *`, an update sends WebDAV's `If` header (`If: ([<etag>])`), and a
+`412 Precondition Failed` becomes `WriteOutcome.Conflicted` — the value the engine
+settles — never a silent overwrite. The driver therefore reports
+`conditionalWrites = true`.
+
+The update does **not** use HTTP `If-Match`, which requires a strong ETag
+comparison: Apache `mod_dav` marks a file's ETag weak for the first second after a
+write (`ap_make_etag_ex` cannot rule out a change within the same second), so an
+immediate `If-Match` update is rejected. WebDAV's `If` header compares ETags
+weakly (RFC 4918 §10.4.1), so it conditions correctly on both weak and strong
+ETags; `dav_validate_request` evaluates it in `dav_validate_resource_state`.
 
 A `PUT` response may omit an ETag (Apache's does), so after a write the driver
 reads the revision from the response's `ETag` header or, when that is absent, from

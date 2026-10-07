@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber") // HTTP status codes are the protocol's own vocabulary; naming each adds nothing.
+@file:Suppress("MagicNumber", "TooManyFunctions") // HTTP status codes are the protocol's; a fake speaks every verb.
 
 package app.lekto.testkit
 
@@ -12,8 +12,9 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * An in-process WebDAV server for a driver's fast-lane tests: it speaks the
  * subset of RFC 4918 the driver uses — `MKCOL`, `PROPFIND`, `GET`, `HEAD`, `PUT`
- * and `DELETE`, behind HTTP Basic auth — and issues a strong ETag per write,
- * honouring `If-Match` and `If-None-Match` with `412 Precondition Failed`. A
+ * and `DELETE`, behind HTTP Basic auth — and issues an ETag per write, honouring
+ * `If-None-Match: *`, `If-Match` and the DAV `If` header with `412 Precondition
+ * Failed`. A
  * write returns its ETag by default; with [omitEtagOnPut] it withholds it, as
  * Apache `mod_dav` does, so the driver's HEAD fallback is exercised without
  * Docker.
@@ -22,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger
  * (docs/testing.md#naming-and-placement). The containerised `mod_dav` run is the
  * real integration lane (ticket #27); this is the fast twin.
  */
-@Suppress("TooManyFunctions") // A fake of a whole protocol; one method per verb it speaks.
 class FakeWebDavServer(username: String = "lekto", password: String = "lekto") : AutoCloseable {
 
     private val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -120,11 +120,29 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
         val current = resources[path]
         when {
             parentOf(path) !in collections -> respond(exchange, 409)
-            exchange.requestHeaders.getFirst("If-Match")?.let { it != current?.etag } == true -> respond(exchange, 412)
-            exchange.requestHeaders.getFirst("If-None-Match") == "*" && current != null -> respond(exchange, 412)
+            preconditionFails(exchange, current) -> respond(exchange, 412)
             else -> store(exchange, path, current != null)
         }
     }
+
+    /** Whether a conditional header rejects the write: `If-None-Match: *`, `If-Match`, or the DAV `If`. */
+    private fun preconditionFails(exchange: HttpExchange, current: Stored?): Boolean {
+        val ifNoneMatch = exchange.requestHeaders.getFirst("If-None-Match")
+        val ifMatch = exchange.requestHeaders.getFirst("If-Match")
+        val ifHeader = exchange.requestHeaders.getFirst("If")
+        return when {
+            ifNoneMatch == "*" -> current != null
+            ifMatch != null -> ifMatch != current?.etag
+            ifHeader != null -> opaque(etagOf(ifHeader)) != current?.let { stored -> opaque(stored.etag) }
+            else -> false
+        }
+    }
+
+    /** The entity-tag a DAV `If` condition names, e.g. `([W/"abc"])` → `W/"abc"`. */
+    private fun etagOf(ifHeader: String): String = ifHeader.substringAfter('[', "").substringBefore(']', "")
+
+    /** The opaque tag, with any `W/` weakness marker removed for a weak comparison (RFC 4918 §10.4.1). */
+    private fun opaque(etag: String): String = etag.removePrefix("W/")
 
     private fun store(exchange: HttpExchange, path: String, replaced: Boolean) {
         val etag = "\"s${sequence.incrementAndGet()}\""

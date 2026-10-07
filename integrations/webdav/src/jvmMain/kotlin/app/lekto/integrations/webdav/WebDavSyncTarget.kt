@@ -19,12 +19,13 @@ import kotlinx.serialization.SerializationException
  * live record or a tombstone), and `<root>/attachments/<base64url(id)>.bin`
  * holds one book original.
  *
- * Capabilities are reported honestly: WebDAV `PUT` honours `If-Match` and
- * `If-None-Match` (RFC 4918), so **conditional writes are supported**; RFC 6578
- * `sync-collection` is server-dependent, so **no change cursor** is claimed and
- * the engine lists the whole collection instead. A driver that claimed a
- * capability it lacked fails the shared [SyncTarget] contract, which only adds
- * the cases a claimed capability demands.
+ * Capabilities are reported honestly: a create conditions with HTTP
+ * `If-None-Match: *` and an update with WebDAV's `If` header (RFC 4918), so
+ * **conditional writes are supported**; RFC 6578 `sync-collection` is
+ * server-dependent, so **no change cursor** is claimed and the engine lists the
+ * whole collection instead. A driver that claimed a capability it lacked fails
+ * the shared [SyncTarget] contract, which only adds the cases a claimed
+ * capability demands.
  */
 class WebDavSyncTarget(baseUrl: String, username: String, password: String) : SyncTarget {
 
