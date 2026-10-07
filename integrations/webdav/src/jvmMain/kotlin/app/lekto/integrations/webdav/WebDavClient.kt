@@ -117,9 +117,9 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
 
     /** Reads a written item's revision when the server did not return it on the `PUT`. */
     private fun etagFromHead(relative: String): String {
-        val response = send(WebDavRequests.head(urls.resource(relative)), "read the revision", relative)
-        if (response.statusCode() != 200) throw failure("read the revision", relative, response.statusCode())
-        return requireEtag(response, "read the revision", relative)
+        val response = send(WebDavRequests.head(urls.resource(relative)), READ_REVISION, relative)
+        if (response.statusCode() != 200) throw failure(READ_REVISION, relative, response.statusCode())
+        return requireEtag(response, READ_REVISION, relative)
     }
 
     /** Runs [request], mapping a transport failure to a [SyncTargetException]. */
@@ -147,6 +147,9 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
     private companion object {
         /** A collection that already exists answers 405 (or 200 on some servers), not 201. */
         val COLLECTION_SUCCESS: Set<Int> = setOf(200, 201, 405)
+
+        /** The action label an error carries when the driver reads back a written revision. */
+        const val READ_REVISION: String = "read the revision"
 
         val TIMEOUT: Duration = Duration.ofSeconds(30)
 
