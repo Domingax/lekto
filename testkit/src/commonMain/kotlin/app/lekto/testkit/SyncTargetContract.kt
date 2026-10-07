@@ -27,6 +27,7 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
         val capabilities = newTarget().capabilities()
         return buildList {
             addAll(baseCases())
+            addAll(attachmentCases())
             if (capabilities.changeCursor) addAll(cursorCases())
             if (capabilities.conditionalWrites) addAll(conditionalCases()) else add(unconditionalCase())
         }
@@ -61,6 +62,38 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
             target.write(VersionedRecord.of(testVaultRecord("a")))
             target.write(VersionedRecord.of(testVaultRecord("b", kind = "progress")))
             expectEquals(listOf("a", "b"), target.list().map { it.id }.sorted(), "the listed ids")
+        },
+    )
+
+    private fun attachmentCases(): List<SuspendContractCase> = listOf(
+        SuspendContractCase("an id with no attachment reads as null") {
+            val target = newTarget()
+            expectTrue(target.attachment("absent") == null, "an absent attachment must read as null")
+            expectTrue("absent" !in target.attachmentIds(), "an absent attachment must not be listed")
+        },
+        SuspendContractCase("an attachment reads back byte for byte") {
+            val target = newTarget()
+            target.putAttachment("a", SAMPLE_ATTACHMENT)
+            expectTrue(target.attachment("a")?.contentEquals(SAMPLE_ATTACHMENT) == true, "the attachment read back")
+            expectTrue("a" in target.attachmentIds(), "the attachment listed")
+        },
+        SuspendContractCase("putAttachment replaces an existing attachment") {
+            val target = newTarget()
+            target.putAttachment("a", SAMPLE_ATTACHMENT)
+            target.putAttachment("a", REPLACEMENT_ATTACHMENT)
+            expectTrue(
+                target.attachment("a")?.contentEquals(REPLACEMENT_ATTACHMENT) == true,
+                "the replaced attachment",
+            )
+            expectEquals(1, target.attachmentIds().count { it == "a" }, "one attachment per id")
+        },
+        SuspendContractCase("writing a tombstone drops the id's attachment") {
+            val target = newTarget()
+            target.write(VersionedRecord.of(testVaultRecord("a")))
+            target.putAttachment("a", SAMPLE_ATTACHMENT)
+            target.write(VersionedRecord.of(testTombstone("a", updatedAtMillis = 2)))
+            expectTrue(target.attachment("a") == null, "a deleted id must have no attachment")
+            expectTrue("a" !in target.attachmentIds(), "a deleted id must not be listed")
         },
     )
 
@@ -129,3 +162,9 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
 
     private suspend fun SyncTarget.revisionOf(id: String): Revision? = get(id)?.revision
 }
+
+/** Sample bytes with a leading zero, a high bit and a negative byte, so encoding is exercised. */
+private val SAMPLE_ATTACHMENT = byteArrayOf(0, 1, 2, 3, -1, 127)
+
+/** Different bytes, so a replace can be told from the original. */
+private val REPLACEMENT_ATTACHMENT = byteArrayOf(0, 1, 2, 3, -1, 126)

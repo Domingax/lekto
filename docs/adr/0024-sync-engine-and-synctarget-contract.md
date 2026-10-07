@@ -3,7 +3,7 @@
 ADR-0009 puts synchronisation behind a `SyncTarget` seam and ADR-0015 makes the
 merge a pure function over `VersionedRecord`s, deferring the engine's tombstone
 store and retention to "a later engine ticket". This is that ticket (#26); it
-fixes the shape of the seam and the engine, and records the two things it does
+fixes the shape of the seam and the engine, and records the one thing it does
 **not** yet do.
 
 ## The `SyncTarget` contract
@@ -11,16 +11,26 @@ fixes the shape of the seam and the engine, and records the two things it does
 A driver exchanges `VersionedRecord`s — a live `VaultRecord` or a `Tombstone` —
 each tagged with an opaque `Revision` (a WebDAV ETag, a Dropbox `rev`). The
 engine never interprets the revision; it only hands it back to condition a write.
-Four operations cover the seam: `list()` (every item), `get(id)`, `changes(cursor)`
-(what moved since a `SyncCursor`), and `put(version, expected)`, which returns
-`Written(revision)` or `Conflicted(current)`. A small `SyncCapabilities` query
-says whether the target has a change cursor and whether it compares-and-swaps;
-the engine reads it and degrades — a listing diff where there is no cursor, a
-plain write where there is no CAS — but the record-by-record last-writer-wins it
-applies is the merge ADR-0004/0015 already fixed.
+Four operations cover the records: `list()` (every item), `get(id)`,
+`changes(cursor)` (what moved since a `SyncCursor`), and `put(version, expected)`,
+which returns `Written(revision)` or `Conflicted(current)`. A small
+`SyncCapabilities` query says whether the target has a change cursor and whether
+it compares-and-swaps; the engine reads it and degrades — a listing diff where
+there is no cursor, a plain write where there is no CAS — but the record-by-record
+last-writer-wins it applies is the merge ADR-0004/0015 already fixed.
 
-The remote **layout** — which files a driver writes, where tombstones live — is
-the driver's, not the engine's. WebDAV (ticket #27) decides it.
+A **binary attachment channel** carries a book's original file, which lives on its
+record rather than in it (ADR-0016): `attachmentIds()` lists the ids that have
+one, `attachment(id)` reads the bytes, and `putAttachment(id, bytes)` writes them.
+Presence is listed separately from the records so the engine never downloads a
+blob just to learn it exists; an attachment is immutable content keyed by a fresh
+record id, so it carries no revision and last-writer-wins on presence is enough.
+Writing a tombstone drops the id's attachment, so a deleted book's original does
+not linger on the target.
+
+The remote **layout** — which files a driver writes, where tombstones and
+attachments live — is the driver's, not the engine's. WebDAV (ticket #27) decides
+it.
 
 ## The engine's device-local state
 
@@ -39,14 +49,7 @@ export). A `delete` removes the record *and* leaves the tombstone the merge
 compares on; a record saved again after its delete shares its id, so the local
 side is collapsed to the newest version per id before the merge.
 
-## Not yet: attachments and tombstone purge
-
-**Attachments are not synced.** ADR-0016 stores a book's original as a binary
-attachment on its record, and ADR-0005's vault includes it. `SyncTarget` moves
-records and tombstones only, so a full sync currently carries every JSON record
-but not a book original. Attachment sync needs its own design — a presence
-listing, a byte channel, deletion, and no compare-and-swap on a blob — and is
-tracked separately rather than smuggled into this contract.
+## Not yet: tombstone purge
 
 **Tombstones are retained, not yet purged.** ADR-0015 lets the engine drop a
 tombstone past the longest offline window and treat a returning device as new.
@@ -63,10 +66,13 @@ The engine is pure of clock and dispatcher: `delete` reads the injected clock an
 round of listing at a time. A lost conditional write is recovered by re-reading
 the target's item and re-applying the merge, bounded by a small attempt count;
 what cannot be settled is reported, not lost. Two devices with disjoint history
-converge to the union of their records, a deletion propagates as a tombstone, and
-a tie resolves on `deviceId`.
+converge to the union of their records **and their book originals**, a deletion
+propagates as a tombstone that takes the original with it, and a tie resolves on
+`deviceId`.
 
-**Rejected**: per-record attachment sync now (needs its own contract); storing
+**Rejected**: storing attachments in the record's JSON body (they are binary,
+ADR-0016) or giving them a revision and compare-and-swap (a book original is
+immutable and keyed by a fresh id, so presence is the whole comparison); storing
 tombstones or the remote index in the vault (they are not user data, ADR-0003 /
 ADR-0005); letting each driver invent its own merge or ignore a capability the
 other honours (the difference would leak into the merge, which ADR-0009 exists to

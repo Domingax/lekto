@@ -10,8 +10,9 @@ import app.lekto.core.vault.VersionedRecord
 import kotlin.time.Clock
 
 /**
- * What one [SyncEngine.sync] moved, in the four directions it can move: live
- * records each way, deletions, and writes the target refused to settle.
+ * What one [SyncEngine.sync] moved: live records each way, deletions, the binary
+ * attachments (book originals) it carried, and writes the target refused to
+ * settle.
  *
  * [unresolved] is the honest count of conditional writes that kept losing their
  * race; a non-zero value is recoverable — the next sync retries — so a caller
@@ -24,6 +25,8 @@ data class SyncReport(
     val downloaded: Int,
     /** Deletions applied on either side. */
     val deletions: Int,
+    /** Attachments carried either way — a book's original file (ADR-0016). */
+    val attachments: Int,
     /** Writes the target rejected and the engine could not settle. */
     val unresolved: Int,
 )
@@ -36,7 +39,9 @@ data class SyncReport(
  * local vault, then hands both to the pure [VaultMerge]. The outcome tells the
  * engine what each side must write or delete; it applies that to the vault and
  * through the target, conditioning each remote write on the revision it saw
- * where the target supports a compare-and-swap.
+ * where the target supports a compare-and-swap. It then reconciles the binary
+ * attachments that travel with live records, so an imported book's original
+ * follows its record (ADR-0016).
  *
  * **Deletions go through [delete].** A record removed from the vault with no
  * tombstone is only absent — the next sync would copy it back from a device that
@@ -77,10 +82,12 @@ class SyncEngine(
         val outcome = VaultMerge.merge(local = localVersions(), remote = remoteVersions)
         val appliedLocally = applyLocally(outcome)
         val remoteWrites = applyRemotely(outcome)
+        val attachments = reconcileAttachments()
         return SyncReport(
             uploaded = remoteWrites.uploaded,
             downloaded = appliedLocally + remoteWrites.downloaded,
             deletions = outcome.toDeleteLocally.size + outcome.toDeleteRemotely.size,
+            attachments = attachments,
             unresolved = remoteWrites.unresolved,
         )
     }
@@ -126,18 +133,15 @@ class SyncEngine(
 
     /** Writes the remote half of the outcome, one conditional write at a time. */
     private suspend fun applyRemotely(outcome: MergeOutcome): RemoteWrites {
-        val results = versionsOf(outcome).map { version -> writeRemotely(version) }
+        val versions = outcome.toWriteRemotely.map { VersionedRecord.of(it) } +
+            outcome.toDeleteRemotely.map { VersionedRecord.of(it) }
+        val results = versions.map { version -> writeRemotely(version) }
         return RemoteWrites(
             uploaded = results.count { it == WriteResult.Landed },
             downloaded = results.count { it == WriteResult.Adopted },
             unresolved = results.count { it == WriteResult.Unresolved },
         )
     }
-
-    /** The versions the local side won, records and tombstones alike. */
-    private fun versionsOf(outcome: MergeOutcome): List<VersionedRecord> =
-        outcome.toWriteRemotely.map { VersionedRecord.of(it) } +
-            outcome.toDeleteRemotely.map { VersionedRecord.of(it) }
 
     /**
      * Writes [version] to the target, retrying against a fresh revision after a
@@ -149,7 +153,8 @@ class SyncEngine(
         var attempts = 0
         while (result == WriteResult.Unresolved && attempts < MAX_WRITE_ATTEMPTS) {
             attempts++
-            when (val outcome = target.put(version, expectedRevision(version))) {
+            val expected = if (target.capabilities().conditionalWrites) remote.get(version.id)?.revision else null
+            when (val outcome = target.put(version, expected)) {
                 is WriteOutcome.Written -> {
                     remote.upsert(SyncItem(version, outcome.revision))
                     result = WriteResult.Landed
@@ -161,9 +166,33 @@ class SyncEngine(
         return result
     }
 
-    /** The revision to condition [version]'s write on, where the target compares-and-swaps. */
-    private fun expectedRevision(version: VersionedRecord): Revision? =
-        if (target.capabilities().conditionalWrites) remote.get(version.id)?.revision else null
+    /**
+     * Reconciles the binary attachments — a book's original file (ADR-0016) — for
+     * the live records, after the record merge: uploads one the target lacks, and
+     * downloads one the vault lacks. An attachment is immutable content keyed by
+     * a record id, so presence is the whole comparison and last-writer-wins on it
+     * is enough. A deletion needs no work here: writing the tombstone dropped the
+     * id's remote attachment and adopting it dropped the local one.
+     */
+    private suspend fun reconcileAttachments(): Int {
+        val remoteIds = target.attachmentIds()
+        var moved = 0
+        local.all().forEach { record ->
+            val bytes = local.getAttachment(record.id)
+            when {
+                bytes != null && record.id !in remoteIds -> {
+                    target.putAttachment(record.id, bytes)
+                    moved++
+                }
+
+                bytes == null && record.id in remoteIds -> target.attachment(record.id)?.let { downloaded ->
+                    local.putAttachment(record.id, downloaded)
+                    moved++
+                }
+            }
+        }
+        return moved
+    }
 
     /**
      * Reconciles a conditional write that lost its race: re-read the target's

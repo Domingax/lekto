@@ -119,6 +119,27 @@ interface SyncTarget {
      * [WriteOutcome.Conflicted]. A `null` [expected] replaces unconditionally
      * where the target has no compare-and-swap, and creates only if absent where
      * it does.
+     *
+     * Writing a [VersionedRecord.Deleted] tombstone also drops the id's
+     * [attachment]: a tombstone says the id is gone, so a driver must not keep a
+     * deleted book's original behind.
      */
     suspend fun put(version: VersionedRecord, expected: Revision?): WriteOutcome
+
+    /**
+     * The ids the target holds a binary **attachment** for — a book's original
+     * file (ADR-0016). Presence is listed on its own so the engine can reconcile
+     * attachments without downloading every blob.
+     */
+    suspend fun attachmentIds(): Set<String>
+
+    /** [id]'s attachment bytes, or `null` when the target holds none. */
+    suspend fun attachment(id: String): ByteArray?
+
+    /**
+     * Stores [bytes] as [id]'s attachment, replacing any previous one. An
+     * attachment is immutable content keyed by a record id, so it carries no
+     * revision: last-writer-wins on presence is enough.
+     */
+    suspend fun putAttachment(id: String, bytes: ByteArray)
 }

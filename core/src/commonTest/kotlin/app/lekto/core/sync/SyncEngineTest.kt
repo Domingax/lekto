@@ -207,6 +207,63 @@ class SyncEngineTest :
             }
         }
 
+        test("an imported book's original reaches the other device") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                val b = Device("device-b", target)
+                val book = testVaultRecord("book", kind = "books", updatedAtMillis = 1, device = "device-a")
+                val original = byteArrayOf(0, 1, 2, 3, -1, 127)
+                a.vault.put(book)
+                a.vault.putAttachment("book", original)
+
+                a.engine.sync()
+                b.engine.sync()
+
+                b.vault.get("book") shouldBe book
+                (b.vault.getAttachment("book")?.contentEquals(original)) shouldBe true
+                ("book" in target.attachmentIds()) shouldBe true
+            }
+        }
+
+        test("a deletion removes a book's original on both devices") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                val b = Device("device-b", target)
+                a.vault.put(testVaultRecord("book", kind = "books", updatedAtMillis = 1, device = "device-a"))
+                a.vault.putAttachment("book", byteArrayOf(1, 2, 3))
+                a.engine.sync()
+                b.engine.sync()
+                (b.vault.getAttachment("book")?.contentEquals(byteArrayOf(1, 2, 3))) shouldBe true
+
+                a.at(millis = 10)
+                a.engine.delete("book")
+                a.engine.sync()
+                b.engine.sync()
+
+                a.vault.getAttachment("book") shouldBe null
+                b.vault.getAttachment("book") shouldBe null
+                ("book" in target.attachmentIds()) shouldBe false
+            }
+        }
+
+        test("an original is uploaded once, not on every sync") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                a.vault.put(testVaultRecord("book", kind = "books", updatedAtMillis = 1, device = "device-a"))
+                a.vault.putAttachment("book", byteArrayOf(1))
+
+                a.engine.sync()
+                val afterFirst = target.attachmentWrites
+                a.engine.sync()
+
+                afterFirst shouldBe 1
+                target.attachmentWrites shouldBe afterFirst
+            }
+        }
+
         test("deleting an unknown id leaves nothing behind") {
             runTest {
                 val a = Device("device-a", InMemorySyncTarget())

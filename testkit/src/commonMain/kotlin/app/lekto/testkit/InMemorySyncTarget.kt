@@ -18,17 +18,20 @@ import kotlin.time.Duration
  * §4).
  *
  * It models what a real driver cannot avoid — an opaque [Revision] per write, an
- * optional change cursor over write order, and an optional compare-and-swap —
- * and can be told to lose a write's race so the engine's recovery path is
- * reachable. [listCalls] and [changesCalls] let a test prove which path the
- * engine took, [latency] lets it prove the engine runs under virtual time, and
+ * optional change cursor over write order, an optional compare-and-swap, and a
+ * binary attachment channel — and can be told to lose a write's race so the
+ * engine's recovery path is reachable. [listCalls] and [changesCalls] let a test
+ * prove which path the engine took, [attachmentWrites] proves an original is
+ * uploaded once, [latency] lets it prove the engine runs under virtual time, and
  * [failNextConditionalWrite] simulates a competing writer.
  */
+@Suppress("TooManyFunctions") // A test double of a wide seam; its methods are the seam's.
 class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private val changeCursor: Boolean = true) :
     SyncTarget {
 
     private val items = linkedMapOf<String, SyncItem>()
     private val sequences = mutableMapOf<String, Long>()
+    private val attachments = linkedMapOf<String, ByteArray>()
     private var sequence = 0L
     private var forcedConflicts = 0
 
@@ -38,6 +41,10 @@ class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private 
 
     /** How many times the engine asked for a change set. */
     var changesCalls = 0
+        private set
+
+    /** How many attachments were written to the target. */
+    var attachmentWrites = 0
         private set
 
     /** A delay every operation waits, so a test can drive the engine's virtual time. */
@@ -79,6 +86,22 @@ class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private 
         }
     }
 
+    override suspend fun attachmentIds(): Set<String> {
+        delay(latency)
+        return attachments.keys.toSet()
+    }
+
+    override suspend fun attachment(id: String): ByteArray? {
+        delay(latency)
+        return attachments[id]?.copyOf()
+    }
+
+    override suspend fun putAttachment(id: String, bytes: ByteArray) {
+        delay(latency)
+        attachments[id] = bytes.copyOf()
+        attachmentWrites++
+    }
+
     /**
      * Makes the next write behave as if a competing writer moved the revision
      * between the engine reading it and writing it, so its recovery path runs.
@@ -107,6 +130,8 @@ class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private 
         val revision = Revision("rev-${++sequence}")
         items[version.id] = SyncItem(version, revision)
         sequences[version.id] = sequence
+        // A tombstone says the id is gone, so its original must not linger (ADR-0016).
+        if (version is VersionedRecord.Deleted) attachments.remove(version.id)
         return WriteOutcome.Written(revision)
     }
 

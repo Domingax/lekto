@@ -346,18 +346,21 @@ moves those merged bytes, so its behaviours live in `core/commonTest`: a full
 sync reconciles two vaults that share no history, incremental sync takes a change
 cursor where the target offers one and a listing where it does not, a `delete`
 propagates and does not resurrect, a conflicting edit resolves by the merge
-rules, and a conditional write that loses its race is re-read and re-applied.
-The `SyncTarget` seam is a contract in `testkit` — `SyncTargetContract` with the
-`InMemorySyncTarget` fake — run against the fake in every capability
-combination, so the cursor and compare-and-swap branches and the no-capability
-degraded path are all exercised; the WebDAV driver (ticket #27) runs the same
-contract against a container. The engine's own store of **tombstones** is a
-second seam, `TombstoneStore`: `TombstoneStoreContract` runs against
-`InMemoryTombstoneStore` in `core/commonTest` and against the JSON store
-(`JsonTombstoneStore`) over an in-memory filesystem there and a real directory in
-`core/jvmTest`. The engine pins no dispatcher: `sync` is `suspend` and runs on
-the caller's context, so the whole suite runs under `runTest`, and one test drives
-the fake's latency through the test scheduler to prove it.
+rules, a conditional write that loses its race is re-read and re-applied, and an
+imported book's original follows its record to the other device while a deletion
+takes it away on both (ADR-0016). The `SyncTarget` seam is a contract in
+`testkit` — `SyncTargetContract` with the `InMemorySyncTarget` fake — run against
+the fake in every capability combination, so the cursor and compare-and-swap
+branches and the no-capability degraded path are all exercised, and it pins the
+attachment channel including that writing a tombstone drops the id's original;
+the WebDAV driver (ticket #27) runs the same contract against a container. The
+engine's own store of **tombstones** is a second seam, `TombstoneStore`:
+`TombstoneStoreContract` runs against `InMemoryTombstoneStore` in
+`core/commonTest` and against the JSON store (`JsonTombstoneStore`) over an
+in-memory filesystem there and a real directory in `core/jvmTest`. The engine
+pins no dispatcher: `sync` is `suspend` and runs on the caller's context, so the
+whole suite runs under `runTest`, and one test drives the fake's latency through
+the test scheduler to prove it.
 
 The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
 so its level is its own: `PackBuilderTest` pins the transform's rules,
