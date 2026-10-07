@@ -2,7 +2,9 @@ package app.lekto.integrations.webdav
 
 import app.lekto.core.sync.SyncCapabilities
 import app.lekto.core.sync.SyncTarget
+import app.lekto.core.vault.VersionedRecord
 import app.lekto.testkit.SyncTargetContract
+import app.lekto.testkit.testVaultRecord
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
@@ -61,5 +63,21 @@ class WebDavSyncTargetContainerTest {
             SyncCapabilities(conditionalWrites = true, changeCursor = false),
             newTarget().capabilities(),
         )
+    }
+
+    @Test
+    fun `diagnostic of a conditional update against the container`() {
+        val target = WebDavSyncTarget(baseUrl(), "lekto", "lekto")
+        val message = runBlocking {
+            val created = target.put(VersionedRecord.of(testVaultRecord("diag", updatedAtMillis = 1)), null)
+            val first = target.get("diag")
+            val updated = target.put(
+                VersionedRecord.of(testVaultRecord("diag", updatedAtMillis = 2)),
+                first?.revision,
+            )
+            val second = target.get("diag")
+            "created=$created | firstRev=${first?.revision} | updated=$updated | secondRev=${second?.revision}"
+        }
+        throw AssertionError(message)
     }
 }
