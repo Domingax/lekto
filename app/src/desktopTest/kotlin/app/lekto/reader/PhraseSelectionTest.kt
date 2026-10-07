@@ -50,4 +50,19 @@ class PhraseSelectionTest {
         assertEquals("the", selection.text)
         assertEquals(5..8, selection.range)
     }
+
+    @Test
+    fun thePhraseCarriesItsContainingSentence() {
+        val selection = phraseInChapter("The keeper lit the lantern. Then he waited.", pageStart = 0, range = 19..26)
+
+        assertEquals("lantern", selection.text)
+        assertEquals("The keeper lit the lantern.", selection.sentence)
+    }
+
+    @Test
+    fun aSentenceWithoutATerminatorRunsToTheChaptersEnd() {
+        val selection = phraseInChapter("the lantern glows", pageStart = 0, range = 4..11)
+
+        assertEquals("the lantern glows", selection.sentence)
+    }
 }

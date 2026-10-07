@@ -64,6 +64,8 @@ import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
+import app.lekto.translation.PhraseTranslationUiState
+import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyScreen
@@ -213,6 +215,7 @@ private fun AppScreens(
                 progress,
                 vocabulary,
                 onBack = { destination = Destination.Library },
+                onOpenSettings = { destination = Destination.Settings },
             )
 
             Destination.Attribution -> AttributionScreen(
@@ -248,7 +251,7 @@ private fun AppScreens(
 private data class WordSelection(val tap: WordTap, val result: WordLookup)
 
 /** The reader destination over an opened session, with the lookup panel it owns. */
-@Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.
+@Suppress("LongParameterList", "LongMethod") // The reader wires its independent pieces; splitting scatters them.
 @Composable
 private fun ReaderDestination(
     session: ReadingSession,
@@ -258,12 +261,14 @@ private fun ReaderDestination(
     progress: ReadingProgressWriter,
     vocabulary: VocabularyController?,
     onBack: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
     val mastery = vocabulary?.mastery ?: environment.mastery
+    val translation = rememberTranslation(environment, scope)
     val lookup = Lookup(
         selection = selection,
         phrase = phrase,
@@ -272,18 +277,23 @@ private fun ReaderDestination(
             entry = selection?.let { selected -> vocabulary?.entryFor(selected.tap.token.key) },
             onSave = { level -> selection?.let { chosen -> saveWord(vocabulary, scope, environment, chosen, level) } },
         ),
+        translation = translation.state,
+        onOpenSettings = onOpenSettings,
         onWordTap = wordTapHandler(dictionary, scope) { tap, result ->
             phrase = null
+            translation.dismiss()
             selection = WordSelection(tap, result)
             speech = null
         },
         onPhraseSelected = { chosen ->
             selection = null
             phrase = chosen
+            translation.start(chosen)
         },
         onDismiss = {
             selection = null
             phrase = null
+            translation.dismiss()
         },
     )
     ReaderSession(
@@ -350,6 +360,8 @@ private class Lookup(
     val phrase: PhraseSelection?,
     val pronunciation: Pronunciation,
     val vocabulary: VocabularyPanel,
+    val translation: PhraseTranslationUiState,
+    val onOpenSettings: () -> Unit,
     val onWordTap: (WordTap) -> Unit,
     val onPhraseSelected: (PhraseSelection) -> Unit,
     val onDismiss: () -> Unit,
@@ -588,6 +600,8 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
             phrase = phrase,
             language = language,
             openUrl = openUrl,
+            translation = lookup.translation,
+            onOpenSettings = lookup.onOpenSettings,
             onDismiss = lookup.onDismiss,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
@@ -635,6 +649,8 @@ private fun PhrasePanel(
     phrase: PhraseSelection,
     language: String?,
     openUrl: (String) -> Unit,
+    translation: PhraseTranslationUiState,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -652,6 +668,8 @@ private fun PhrasePanel(
             onOpenShortcut = { chosen -> openUrl(chosen.url) },
             onDismiss = onDismiss,
         ),
+        translation = translation,
+        onOpenSettings = onOpenSettings,
         modifier = modifier,
     )
 }

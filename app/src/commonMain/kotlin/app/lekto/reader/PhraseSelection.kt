@@ -3,14 +3,17 @@ package app.lekto.reader
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.text.WordToken
+import app.lekto.core.text.contextSentence
 
 /**
- * A phrase the reader selected while reading: the [text] the user sees and its
- * [range] into the chapter text, so the panel and the reading position both use
- * the chapter's coordinates rather than the page's. Like [WordToken], the range
- * is half-open: `range.last` is the offset just past the last character.
+ * A phrase the reader selected while reading: the [text] the user sees, its
+ * [range] into the chapter text — so the panel and the reading position both use
+ * the chapter's coordinates rather than the page's — and the [sentence] that
+ * contains it, so a provider call can send the phrase in context (issue #89).
+ * Like [WordToken], the range is half-open: `range.last` is the offset just past
+ * the last character.
  */
-data class PhraseSelection(val text: String, val range: IntRange)
+data class PhraseSelection(val text: String, val range: IntRange, val sentence: String? = null)
 
 /**
  * The page-local range covering the words from [anchor] to [current] inclusive
@@ -53,5 +56,9 @@ internal fun wordIndexAt(
 internal fun phraseInChapter(chapter: String, pageStart: Int, range: IntRange): PhraseSelection {
     val start = range.first + pageStart
     val end = range.last + pageStart
-    return PhraseSelection(chapter.substring(start, end), start..end)
+    return PhraseSelection(
+        text = chapter.substring(start, end),
+        range = start..end,
+        sentence = contextSentence(chapter, start, end),
+    )
 }

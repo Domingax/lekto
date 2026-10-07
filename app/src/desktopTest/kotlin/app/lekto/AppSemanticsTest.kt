@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -26,6 +27,8 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.llm.LlmProvider
+import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
@@ -46,6 +49,7 @@ import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
+import app.lekto.settings.ProviderController
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
@@ -57,6 +61,8 @@ import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.translation.TRANSLATION_RESULT_TAG
+import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
@@ -192,6 +198,52 @@ class AppSemanticsTest {
         onNodeWithText("Close").performClick()
         onNodeWithText("Translate online").assertDoesNotExist()
         onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun selectingAPhraseStreamsATranslationFromTheConnectedProvider() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        val settings = InMemoryLlmSettingsStore(LlmProviderConfig(LlmProvider.ANTHROPIC, "claude-3"))
+        val secrets = InMemorySecretStore().apply {
+            put(ProviderController.providerSecretKey(LlmProvider.ANTHROPIC), "sk-live-123")
+        }
+        val client = FakeLlmClient(translation = listOf("La lanterne", " brille"))
+        setContent {
+            App(environment(library, secrets = secrets, llm = LlmServices(settings, client)))
+        }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        selectFirstPhrase()
+
+        waitUntil { client.translated.isNotEmpty() }
+        waitUntil { onAllNodesWithTag(TRANSLATION_RESULT_TAG).fetchSemanticsNodes().isNotEmpty() }
+        // The selection and its containing sentence leave the device; the answer streams in.
+        val user = client.translated.single().messages.single { message -> message.role == "user" }
+        assertTrue(user.content.contains("Selected phrase:"), "the request discloses the context: ${user.content}")
+        onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne brille")
+        // The reader stays put behind the panel.
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun selectingAPhraseWithoutAProviderLinksToSettings() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, dictionary = dictionaryServices())) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        selectFirstPhrase()
+
+        onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
+
+        // The non-blocking prompt lands on settings, leaving the book behind.
+        onNodeWithText("Dictionary").assertIsDisplayed()
     }
 
     @Test

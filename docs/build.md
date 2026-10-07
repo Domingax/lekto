@@ -21,7 +21,7 @@ without the other.
 | Android compileSdk   | 36        | `gradle/libs.versions.toml` (`android-compileSdk`) |
 | Kotest (test)        | 6.2.5     | `gradle/libs.versions.toml` (`kotest`)          |
 | Turbine (test)       | 1.2.1     | `gradle/libs.versions.toml` (`turbine`)         |
-| Coroutines (test)    | 1.11.0    | `gradle/libs.versions.toml` (`kotlinx-coroutines`) |
+| Coroutines           | 1.11.0    | `gradle/libs.versions.toml` (`kotlinx-coroutines`) |
 | Roborazzi (test)     | 1.75.0    | `gradle/libs.versions.toml` (`roborazzi`)       |
 | Testcontainers (test)| 2.0.5     | `gradle/libs.versions.toml` (`testcontainers`)  |
 | JUnit Jupiter (test) | 5.13.4    | `gradle/libs.versions.toml` (`junit-jupiter`)   |
@@ -317,6 +317,15 @@ classpath. Its transitive dependencies (JNA, androidx.datastore, okio) clear the
 licence gate; JNA's POM declares both LGPL-2.1-or-later and Apache-2.0, and the
 gate accepts the Apache-2.0 arm. See `docs/testing.md` for how the seam is
 proved.
+
+**kotlinx-coroutines** (Apache-2.0, AGPL-compatible) is a production dependency
+of `core`'s shared sources (issue #89; ADR-0022): the phrase-translation
+provider seam returns a `Flow` of text deltas, so `Flow` is part of the domain's
+public model and a consumer (the app, `testkit`) needs it on its compile
+classpath. It was already on the test classpath through
+`kotlinx-coroutines-test`, which the harness uses for virtual time
+(`docs/testing.md`), so the change promotes it to an `api` dependency rather than
+adding a new component.
 
 ## Modules
 

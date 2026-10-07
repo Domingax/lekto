@@ -463,6 +463,31 @@ through `AppSemanticsTest` on both lanes. Android excludes the local Ollama pres
 which only a desktop can reach (ADR-0022), through the provider list the platform
 wires.
 
+The streamed phrase translation (issue #89; ADR-0022) is proved at its own
+levels. The prompt is built in `core`, so `LlmTranslationPromptTest` in
+`core/commonTest` pins that the selection and its containing sentence reach the
+model, that the disclosed context is exactly the user message sent, and that it
+is capped. The streaming half of the `LlmClient` seam joins the same contract:
+`LlmClientContract.translationCases()` — the deltas in order, a failure as an
+event rather than a throw, and the request reaching the adapter unchanged — runs
+against `FakeLlmClient` in `core/commonTest`. The OpenAI-compatible transport's
+server-sent-event parsing is pinned in `OpenAiCompatibleLlmClientTest`
+(`core/jvmTest`): a streamed answer, the `stream: true` request, a `4xx` and a
+mid-stream error classified from the machine identifier alone, a dead transport
+as an inline event, and `streamEvent`'s frame shapes. The state holder — read the
+active provider and its key from the `SecretStore`, stream the deltas, disclose
+the context, report a failure inline, cancel on close, and fall back to the
+**Translation shortcut** without a key — is `PhraseTranslationControllerTest` in
+`app/desktopTest`, driven by virtual time. The panel is
+`PhraseLookupPanelSemanticsTest` on both lanes — the shortcut with no provider,
+the non-blocking prompt beside it, the streamed text with its disclosure
+collapsed until asked for, the inline failure and the empty answer — and the
+whole loop — select a phrase,
+watch the translation stream in with the provider reachable directly, close and
+find the reader on the same page — runs through `AppSemanticsTest` on both
+lanes. Closing the panel cancels the collecting coroutine, and the transport
+closes the socket as the flow is cancelled, so the stream stops.
+
 The settings screen's vault export/import (issue #20) is proved at the same
 levels. The state holder that runs the transfer — the export's bytes handed to
 the save action, an import restoring the vault, a cancelled file dialog as a
