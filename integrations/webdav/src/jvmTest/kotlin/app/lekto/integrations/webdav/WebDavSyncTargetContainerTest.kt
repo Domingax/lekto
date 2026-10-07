@@ -21,10 +21,15 @@ import kotlin.test.assertEquals
  * (`If-Match`/`If-None-Match`), so the contract's compare-and-swap cases run for
  * real, not against a fake.
  *
+ * The image runs a current Apache (≥ 2.4.16). Apache 2.4.10–2.4.14 shipped a
+ * broken `ap_condition_if_match` that rejects a matching `If-Match`, so an older
+ * server would fail the compare-and-swap cases through no fault of the driver.
+ * The image is pinned by digest so a green build does not move under it.
+ *
  * `disabledWithoutDocker = true` keeps the lane green where Docker is absent —
  * a developer's machine, or the `fast` CI job, which excludes this task — and
  * proves it where Docker is present, which is the `webdav` lane on a pull
- * request. The image is pinned by digest because it publishes no version tags.
+ * request.
  */
 @Testcontainers(disabledWithoutDocker = true)
 class WebDavSyncTargetContainerTest {
@@ -32,16 +37,17 @@ class WebDavSyncTargetContainerTest {
     @Container
     val server: GenericContainer<*> = GenericContainer(
         DockerImageName.parse(
-            "morrisjobke/webdav@sha256:047ee10e9c203359be976b293b36e86c309c6d3f1bde3fb5889ac068e3057760",
+            "bytemark/webdav@sha256:bcabbc024c511b9c63ed3345f88573e31d84c952ee493c9acb3fe345f4f80f57",
         ),
     )
+        .withEnv("AUTH_TYPE", "Basic")
         .withEnv("USERNAME", "lekto")
         .withEnv("PASSWORD", "lekto")
         .withExposedPorts(80)
 
     private fun newTarget(): SyncTarget = WebDavSyncTarget("${baseUrl()}/lekto-${UUID.randomUUID()}", "lekto", "lekto")
 
-    private fun baseUrl(): String = "http://${server.host}:${server.getMappedPort(80)}/webdav"
+    private fun baseUrl(): String = "http://${server.host}:${server.getMappedPort(80)}"
 
     @TestFactory
     fun `passes the shared SyncTarget contract against a real server`(): List<DynamicTest> =

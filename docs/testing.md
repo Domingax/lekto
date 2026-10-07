@@ -145,9 +145,11 @@ verify tasks cannot race over one directory.
 `integrations/webdav/src/jvmTest` starts an Apache `mod_dav` server through
 Testcontainers and drives it over the network; it is the lane the `SyncTarget`
 driver contract (ticket #26) runs against for the WebDAV driver (ticket #27). The
-image is pinned by digest —
-the server publishes no version tags — so a green build does not move under it.
-The contract class is annotated `@Testcontainers(disabledWithoutDocker = true)`,
+image is pinned by digest, so a green build does not move under it, and runs a
+current Apache (≥ 2.4.16): Apache 2.4.10–2.4.14 shipped a broken
+`ap_condition_if_match` that rejects a matching `If-Match`, so an older server
+would fail the compare-and-swap cases through no fault of the driver. The
+contract class is annotated `@Testcontainers(disabledWithoutDocker = true)`,
 so a machine or runner without Docker skips it instead of failing: the lane is
 green everywhere and simply proves more where Docker is present.
 

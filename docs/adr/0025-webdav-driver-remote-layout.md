@@ -31,7 +31,9 @@ create-if-absent sends `If-None-Match: *`, an update sends `If-Match: <etag>`, a
 a `412 Precondition Failed` becomes `WriteOutcome.Conflicted` — the value the
 engine settles — never a silent overwrite. Apache `mod_dav` evaluates exactly
 these preconditions in `dav_validate_request`, so the driver reports
-`conditionalWrites = true`.
+`conditionalWrites = true`. (Apache 2.4.10–2.4.14 shipped a broken
+`ap_condition_if_match` that rejects a matching `If-Match`; fixed in 2.4.16, so
+the integration lane must not pin an older server.)
 
 A `PUT` response may omit an ETag (Apache's does), so after a write the driver
 reads the revision from the response's `ETag` header or, when that is absent, from
