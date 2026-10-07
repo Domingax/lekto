@@ -214,9 +214,10 @@ lanes; the emulator lane is nightly and never on the critical path (ticket #7).
 `fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
 must require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
 pull request has no secret, so the scan is skipped there and only the coverage and
-linter reports are produced. The `webdav` lane needs Docker — present on GitHub's
-runners — and skips cleanly where it is absent; the `fast` lane excludes its test
-so the two do not overlap. The `fast` lane also runs the Android host suites —
+linter reports are produced. The `webdav` lane needs Docker for the driver's
+container cases — present on GitHub's runners — while its non-container tests run
+anywhere, so the task still passes where Docker is absent; the `fast` lane excludes
+that task so the two lanes do not overlap. The `fast` lane also runs the Android host suites —
 `core`'s `:core:testAndroidHostTest` and the app's `:app:testDebugUnitTest` —
 which need the Android SDK the GitHub runners carry, and no emulator
 (`docs/testing.md#android-host-lane`).

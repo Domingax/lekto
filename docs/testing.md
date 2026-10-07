@@ -37,7 +37,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | UI screenshot goldens| `app/desktopTest`              | `:app:verifyRoborazziDesktop`   | a JVM        |
 | Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
 | Dictionary pack      | `tools/dictionaries/src/test`  | `:tools:dictionaries:test`      | a JVM        |
-| WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | Docker; skips without |
+| WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | a JVM; the container cases add Docker and skip without |
 | Android instrumented | `app/androidInstrumentedTest`  | `:app:connectedCheck`           | an emulator (nightly) |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 | Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
@@ -147,9 +147,19 @@ Testcontainers and drives it over the network; it is the lane the `SyncTarget`
 driver contract (ticket #26) runs against for the WebDAV driver (ticket #27). The
 image is pinned by digest —
 the server publishes no version tags — so a green build does not move under it.
-The test class is annotated `@Testcontainers(disabledWithoutDocker = true)`, so a
-machine or runner without Docker skips it instead of failing: the lane is green
-everywhere and simply proves more where Docker is present.
+The contract class is annotated `@Testcontainers(disabledWithoutDocker = true)`,
+so a machine or runner without Docker skips it instead of failing: the lane is
+green everywhere and simply proves more where Docker is present.
+
+The same source set also runs the whole contract against `testkit`'s
+`FakeWebDavServer`, an in-process server that speaks the same subset —
+`MKCOL`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, Basic auth, strong ETags and
+`If-Match`/`If-None-Match` — so the driver's remote layout and conditional writes
+are proved without Docker. The fake mirrors Apache's one
+wrinkle that matters to the driver: a `PUT` that returns no ETag, which forces the
+driver's `HEAD` fallback. A separate test drives the container lane, a rejected
+credential and a `500` (both surfaced as `SyncTargetException`), and a driver that
+claims a capability it lacks, which the contract must reject (ADR-0025).
 
 The nightly instrumented lane runs a launch smoke test on an emulator
 (`app/androidInstrumentedTest`, issue #71); the platform integrations that need a
@@ -353,7 +363,11 @@ takes it away on both (ADR-0016). The `SyncTarget` seam is a contract in
 the fake in every capability combination, so the cursor and compare-and-swap
 branches and the no-capability degraded path are all exercised, and it pins the
 attachment channel including that writing a tombstone drops the id's original;
-the WebDAV driver (ticket #27) runs the same contract against a container. The
+the WebDAV driver (ticket #27) runs the same contract against a container, and
+against `testkit`'s in-process `FakeWebDavServer` without Docker, so its remote
+layout — one JSON file per item named by the Base64-URL id, one binary file per
+book original — and its ETag compare-and-swap are pinned without Docker
+(ADR-0025). The
 engine's own store of **tombstones** is a second seam, `TombstoneStore`:
 `TombstoneStoreContract` runs against `InMemoryTombstoneStore` in
 `core/commonTest` and against the JSON store (`JsonTombstoneStore`) over an

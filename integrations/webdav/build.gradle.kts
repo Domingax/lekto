@@ -31,6 +31,9 @@ kotlin {
             implementation(libs.junit.jupiter)
             implementation(libs.testcontainers)
             implementation(libs.testcontainers.junit.jupiter)
+            // The shared `SyncTargetContract` the driver must pass (ticket #26),
+            // plus the in-memory fake and fixtures its cases build on.
+            implementation(project(":testkit"))
         }
     }
 }
