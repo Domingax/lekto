@@ -1,5 +1,11 @@
 package app.lekto.testkit
 
+/** One named behaviour a seam must exhibit, and how to run it. */
+data class ContractCase(val name: String, val body: () -> Unit)
+
+/** A contract case whose body may suspend, e.g. to collect a flow or await a target. */
+data class SuspendContractCase(val name: String, val body: suspend () -> Unit)
+
 /**
  * The assertion helpers every framework-free contract suite in `testkit` shares,
  * so `VaultStoreContract` and `DictionaryPackContract` state a violation the same

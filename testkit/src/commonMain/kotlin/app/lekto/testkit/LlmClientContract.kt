@@ -30,10 +30,10 @@ class LlmClientContract(private val newClient: () -> FakeLlmClient) {
     )
 
     /** Every streaming behaviour the seam promises; the bodies suspend on the flow. */
-    fun translationCases(): List<TranslationContractCase> = listOf(
-        TranslationContractCase("the deltas stream in order and complete") { streamsDeltas() },
-        TranslationContractCase("a streamed failure is an event, not thrown") { reportsStreamedFailure() },
-        TranslationContractCase("the translation request reaches the adapter unchanged") { passesTheRequestThrough() },
+    fun translationCases(): List<SuspendContractCase> = listOf(
+        SuspendContractCase("the deltas stream in order and complete") { streamsDeltas() },
+        SuspendContractCase("a streamed failure is an event, not thrown") { reportsStreamedFailure() },
+        SuspendContractCase("the translation request reaches the adapter unchanged") { passesTheRequestThrough() },
     )
 
     private fun reportsConnected() {
@@ -93,6 +93,3 @@ class LlmClientContract(private val newClient: () -> FakeLlmClient) {
         const val A_KEY = "sk-contract-0123456789"
     }
 }
-
-/** A streaming contract case: a body that may suspend while it collects a flow. */
-data class TranslationContractCase(val name: String, val body: suspend () -> Unit)
