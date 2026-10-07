@@ -1,0 +1,21 @@
+{
+  "name": "lekto-guide",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Lekto end-user guide: a VitePress site published on GitHub Pages.",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "check:licences": "node scripts/check-licences.mjs",
+    "test": "node --test \"scripts/*.test.mjs\""
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

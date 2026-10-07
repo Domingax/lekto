@@ -36,6 +36,7 @@ APK with `./gradlew :app:assembleDebug`.
 | `app`                   | The Compose Multiplatform application (Android + desktop).        |
 | `tools/dictionaries`    | The offline dictionary-pack pipeline.                             |
 | `architecture`          | The architecture tests: module boundaries and naming conventions.|
+| `guide`                 | The end-user guide: a VitePress site published on GitHub Pages.  |
 | `docs/adr/`             | Architecture decisions (authoritative).                           |
 | `docs/research/`        | Research reports behind the decisions.                            |
 | `CONTEXT.md`            | The domain glossary.                                             |

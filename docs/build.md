@@ -208,10 +208,11 @@ lanes; the emulator lane is nightly and never on the critical path (ticket #7).
 | `sonar` | push, pull request | `./gradlew check koverXmlReport` then the SonarCloud scan |
 | `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
 | `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
+| `guide` | pull request; push to `main` when the guide changed | `npm ci`, `npm test`, `npm run check:licences` and `npm run build` in `guide/` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
-`fast`, `licences` and `sonar` gate merging: branch protection on `main` must
-require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
+`fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
+must require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
 pull request has no secret, so the scan is skipped there and only the coverage and
 linter reports are produced. The `webdav` lane needs Docker — present on GitHub's
 runners — and skips cleanly where it is absent; the `fast` lane excludes its test
@@ -219,6 +220,9 @@ so the two do not overlap. The `fast` lane also runs the Android host suites —
 `core`'s `:core:testAndroidHostTest` and the app's `:app:testDebugUnitTest` —
 which need the Android SDK the GitHub runners carry, and no emulator
 (`docs/testing.md#android-host-lane`).
+The `guide` lane builds the end-user guide and its npm licence gate on every pull
+request, and deploys the site to GitHub Pages only on a push to `main` that
+touches the guide ([User guide](#user-guide), ADR-0024).
 The `instrumented` lane is the only one that needs an emulator; it is scheduled,
 so it never slows a change, and it runs the app's launch smoke test
 (`app/androidInstrumentedTest`, issue #71). Vulnerability alerts are a repository
@@ -227,6 +231,31 @@ setting, enabled once with
 
 `tools/dictionaries` builds and publishes by its own workflow (ticket #17), which
 never blocks application CI. Its fast unit tests still run in `check`.
+
+## User guide
+
+The end-user guide is a [VitePress](https://vitepress.dev/) site whose content
+lives in the top-level `guide/` directory — deliberately **outside** `docs/`, so
+the internal material (an ADR, `CONTEXT.md`, a research report) can never be
+published by accident (ADR-0024). The site is built and deployed by
+`.github/workflows/docs.yml` (the `guide` CI lane). Run it from `guide/`:
+
+```sh
+cd guide
+npm ci                    # restore from the committed lockfile
+npm run check:licences    # the guide's npm licence gate (ADR-0011)
+npm test                  # the licence gate's own tests
+npm run build             # write the site to guide/.vitepress/dist
+npm run dev               # preview while writing
+```
+
+`npm run build` fails on a dead internal link, so a broken page cannot merge. The
+Gradle licence task sees only the Gradle graph, so the `guide` lane runs its own
+npm licence gate (`guide/scripts/check-licences.mjs`) over the Node toolchain.
+The site is configured with English as its root locale and an `fr/` tree that
+holds a placeholder page, ready for the French translation to land page by page.
+Node itself is pinned to 22 in `guide/package.json`'s `engines` and in the
+`guide` lane.
 
 ## Prerequisites
 

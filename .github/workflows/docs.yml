@@ -1,0 +1,76 @@
+# The user-guide lane (ADR-0024).
+#
+# It builds the VitePress site under `guide/` on every pull request, so a page
+# that does not compile or an internal link that does not resolve fails before
+# merge; running on every pull request keeps the check present to be made
+# required, rather than path-filtered and therefore absent on unrelated changes.
+# On a merge to `main` that touches the guide it also deploys to GitHub Pages,
+# and the `push` trigger is path-filtered so an unrelated change does not
+# redeploy the site. The guide's npm dependencies are checked for
+# AGPL-3.0-compatibility in the same job, because the Gradle licence gate cannot
+# see the Node toolchain (ADR-0011). See docs/build.md#ci-lanes.
+name: guide
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "guide/**"
+      - ".github/workflows/docs.yml"
+
+concurrency:
+  group: guide-${{ github.ref }}
+  # Superseded pull-request builds are cancelled, but a run on `main` is allowed
+  # to finish, so a quick second merge cannot drop a deploy.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # The guide's build, its licence gate and its own tests. The Pages deploy
+  # below only runs when this job succeeds on a push to `main`.
+  guide:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: guide/package-lock.json
+      - name: Install the guide's dependencies
+        working-directory: guide
+        run: npm ci
+      - name: Test the licence gate
+        working-directory: guide
+        run: npm test
+      - name: Check the guide's npm licences
+        working-directory: guide
+        run: npm run check:licences
+      - name: Build the site
+        working-directory: guide
+        run: npm run build
+      - name: Configure GitHub Pages
+        if: github.event_name == 'push'
+        uses: actions/configure-pages@v5
+      - name: Upload the site
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: guide/.vitepress/dist
+
+  deploy:
+    needs: guide
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

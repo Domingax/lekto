@@ -85,6 +85,13 @@ core ─────────────► nothing     (no app module, no A
   workflow builds and publishes the pack, while its fast unit tests run in
   `check`.
 
+`guide/` is not a module: it is the end-user guide's content root, a VitePress
+site built by its own npm toolchain and published to GitHub Pages (ADR-0024). It
+sits outside `docs/` on purpose, so the internal material is never published; it
+is a documented surface, so a feature change updates its page in the same pull
+request (see `guide/AGENTS.md` for the feature→page map). Its commands are in
+[`docs/build.md#user-guide`](docs/build.md#user-guide).
+
 Architecture tests enforce these rules, and the naming and placement conventions
 in [`docs/testing.md#naming-and-placement`](docs/testing.md#naming-and-placement).
 
@@ -103,7 +110,8 @@ docs(adr): record the sync seam
 
 Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`,
 `ci`, `chore`, `revert`. The scope is optional and names the module or area (`core`,
-`testkit`, `webdav`, `app`, `dictionaries`, `architecture`, `build`, `ci`, `docs`). A breaking change
+`testkit`, `webdav`, `app`, `dictionaries`, `architecture`, `guide`, `build`, `ci`,
+`docs`). A breaking change
 takes a `!` before the colon and a `BREAKING CHANGE:` footer.
 
 **Enforced** by `.githooks/commit-msg`, which checks the shape above: type, optional
