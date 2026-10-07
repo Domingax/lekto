@@ -10,6 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -24,6 +28,9 @@ internal const val TRANSLATION_RESULT_TAG: String = "lookup-translation-result"
 /** The test tag on the no-provider prompt's link to settings. */
 internal const val TRANSLATION_SETTINGS_TAG: String = "lookup-translation-settings"
 
+/** The test tag on the control that reveals what is sent to the provider. */
+internal const val TRANSLATION_DISCLOSURE_TAG: String = "lookup-translation-disclosure"
+
 /**
  * The phrase panel's actions (issue #87): [onOpenShortcut] hands the service's
  * prefilled page to the platform browser, and [onDismiss] closes the panel.
@@ -36,8 +43,9 @@ data class PhraseLookupActions(val onOpenShortcut: (TranslationShortcut) -> Unit
  * into the panel, and always offers the zero-configuration **Translation
  * shortcut** — the service's prefilled page, handed to the platform browser.
  *
- * The panel is honest about the two working modes: the provider branch discloses
- * exactly what leaves the device ([PhraseTranslationUiState.context]), and
+ * The panel is honest about the two working modes: the provider branch keeps the
+ * translation the focus and discloses exactly what leaves the device
+ * ([PhraseTranslationUiState.context]) behind a control the reader can open, and
  * without a provider it shows a non-blocking prompt beside the shortcut, never a
  * dead action. A provider failure is rendered inline, so reading is never
  * interrupted (ADR-0022). Like a Dictionary shortcut, Lekto never embeds or
@@ -75,19 +83,19 @@ private fun TranslationSection(translation: PhraseTranslationUiState, onOpenSett
         PhraseTranslationState.NoProvider -> NoProviderPrompt(onOpenSettings)
 
         is PhraseTranslationState.Streaming -> {
-            TranslationDisclosure(translation)
             StreamingResult(state.text)
+            TranslationDisclosure(translation)
         }
 
         is PhraseTranslationState.Done -> {
-            TranslationDisclosure(translation)
             DoneResult(state.text)
+            TranslationDisclosure(translation)
         }
 
         is PhraseTranslationState.Failed -> {
-            // The phrase was still sent, so keep disclosing what left the device.
-            TranslationDisclosure(translation)
             FailureResult(state.message)
+            // The phrase was still sent, so keep the disclosure reachable.
+            TranslationDisclosure(translation)
         }
     }
 }
@@ -138,15 +146,28 @@ private fun FailureResult(message: String) {
     )
 }
 
-/** The line that says who receives the phrase and the exact text that leaves the device. */
+/**
+ * The disclosure of what leaves the device, collapsed to a single control so the
+ * translation stays the panel's focus: on demand it names the provider and shows
+ * the exact text sent (issue #89). It resets to collapsed for a new selection.
+ */
 @Composable
 private fun TranslationDisclosure(translation: PhraseTranslationUiState) {
-    Text(
-        "Sends your selection and its sentence to ${translation.provider ?: "the provider"}.",
-        style = MaterialTheme.typography.labelMedium,
-    )
-    if (translation.context.isNotBlank()) {
-        Text(translation.context, style = MaterialTheme.typography.bodySmall)
+    var expanded by remember(translation.context) { mutableStateOf(false) }
+    TextButton(
+        onClick = { expanded = !expanded },
+        modifier = Modifier.testTag(TRANSLATION_DISCLOSURE_TAG),
+    ) {
+        Text(if (expanded) "Hide what's sent" else "What's sent?")
+    }
+    if (expanded) {
+        Text(
+            "Sends your selection and its sentence to ${translation.provider ?: "the provider"}.",
+            style = MaterialTheme.typography.labelMedium,
+        )
+        if (translation.context.isNotBlank()) {
+            Text(translation.context, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 

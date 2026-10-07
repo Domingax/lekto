@@ -86,6 +86,12 @@ class PhraseLookupPanelSemanticsTest {
         }
 
         onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne")
+        // The disclosure is collapsed so the translation stays the focus.
+        onNodeWithText("What's sent?").assertIsDisplayed()
+        onNodeWithText("The lantern glows softly.", substring = true).assertDoesNotExist()
+
+        onNodeWithTag(TRANSLATION_DISCLOSURE_TAG).performClick()
+
         onNodeWithText("Sends your selection and its sentence to OpenAI.", substring = true).assertIsDisplayed()
         onNodeWithText("The lantern glows softly.", substring = true).assertIsDisplayed()
     }
@@ -102,7 +108,8 @@ class PhraseLookupPanelSemanticsTest {
         }
 
         onNodeWithText("The provider rejected the API key.").assertIsDisplayed()
-        // The phrase was still sent, so the panel keeps disclosing it.
+        // The phrase was still sent, so the disclosure is still reachable.
+        onNodeWithTag(TRANSLATION_DISCLOSURE_TAG).performClick()
         onNodeWithText("Sends your selection and its sentence to OpenAI.", substring = true).assertIsDisplayed()
     }
 

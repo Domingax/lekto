@@ -480,8 +480,9 @@ the context, report a failure inline, cancel on close, and fall back to the
 **Translation shortcut** without a key — is `PhraseTranslationControllerTest` in
 `app/desktopTest`, driven by virtual time. The panel is
 `PhraseLookupPanelSemanticsTest` on both lanes — the shortcut with no provider,
-the non-blocking prompt beside it, the streamed text with its disclosure, the
-inline failure and the empty answer — and the whole loop — select a phrase,
+the non-blocking prompt beside it, the streamed text with its disclosure
+collapsed until asked for, the inline failure and the empty answer — and the
+whole loop — select a phrase,
 watch the translation stream in with the provider reachable directly, close and
 find the reader on the same page — runs through `AppSemanticsTest` on both
 lanes. Closing the panel cancels the collecting coroutine, and the transport
