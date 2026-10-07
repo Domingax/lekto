@@ -7,9 +7,6 @@ import app.lekto.core.vault.VaultFormatException
 import app.lekto.core.vault.VaultManifest
 import app.lekto.core.vault.VaultStore
 
-/** One named behaviour every [VaultStore] must exhibit, and how to run it. */
-data class ContractCase(val name: String, val body: () -> Unit)
-
 /**
  * The specification of the [VaultStore] seam, as executable cases.
  *

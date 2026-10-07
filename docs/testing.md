@@ -144,7 +144,8 @@ verify tasks cannot race over one directory.
 
 `integrations/webdav/src/jvmTest` starts an Apache `mod_dav` server through
 Testcontainers and drives it over the network; it is the lane the `SyncTarget`
-driver contract (ticket #27) will run against. The image is pinned by digest —
+driver contract (ticket #26) runs against for the WebDAV driver (ticket #27). The
+image is pinned by digest —
 the server publishes no version tags — so a green build does not move under it.
 The test class is annotated `@Testcontainers(disabledWithoutDocker = true)`, so a
 machine or runner without Docker skips it instead of failing: the lane is green
@@ -281,11 +282,12 @@ domain. Each is an injected parameter, never an ambient global:
 `Seams.system()` is the production wiring and `deterministicSeams()` (testkit) is
 the test wiring. The domain never reads a wall clock or a global RNG directly.
 
-Dispatchers are injected the same way — as a `CoroutineDispatcher` parameter on
-whatever asynchronous code needs one — but they are not part of `Seams` yet,
-because the domain holds no asynchronous code. `kotlinx-coroutines-test`
-supplies the virtual time (`runTest`, `TestScope`, `advanceUntilIdle`) for them
-when the sync engine lands; a hard-coded `Dispatchers.IO` would not see it.
+Dispatchers are the same kind of seam, but the sync engine takes none of its
+own: `sync` is a `suspend` function that runs on the caller's context, so
+`kotlinx-coroutines-test` supplies the virtual time (`runTest`, `TestScope`,
+`advanceUntilIdle`) and a hard-coded `Dispatchers.IO` would not see it. Code
+that must move work off the caller's thread takes a `CoroutineDispatcher`
+parameter, the way `Seams` threads its clock, ids and randomness.
 
 ## Test levels
 
@@ -338,6 +340,27 @@ a tombstone with a later timestamp out-votes a live record, and a live record
 with a later timestamp out-votes an older tombstone. `testkit` supplies
 `testTombstone`, and `testVaultRecord` gained a `device` parameter so a case can
 tell two writers apart.
+
+The sync **engine** (ticket #26; ADR-0009, ADR-0015) is the domain service that
+moves those merged bytes, so its behaviours live in `core/commonTest`: a full
+sync reconciles two vaults that share no history, incremental sync takes a change
+cursor where the target offers one and a listing where it does not, a `delete`
+propagates and does not resurrect, a conflicting edit resolves by the merge
+rules, a conditional write that loses its race is re-read and re-applied, and an
+imported book's original follows its record to the other device while a deletion
+takes it away on both (ADR-0016). The `SyncTarget` seam is a contract in
+`testkit` — `SyncTargetContract` with the `InMemorySyncTarget` fake — run against
+the fake in every capability combination, so the cursor and compare-and-swap
+branches and the no-capability degraded path are all exercised, and it pins the
+attachment channel including that writing a tombstone drops the id's original;
+the WebDAV driver (ticket #27) runs the same contract against a container. The
+engine's own store of **tombstones** is a second seam, `TombstoneStore`:
+`TombstoneStoreContract` runs against `InMemoryTombstoneStore` in
+`core/commonTest` and against the JSON store (`JsonTombstoneStore`) over an
+in-memory filesystem there and a real directory in `core/jvmTest`. The engine
+pins no dispatcher: `sync` is `suspend` and runs on the caller's context, so the
+whole suite runs under `runTest`, and one test drives the fake's latency through
+the test scheduler to prove it.
 
 The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
 so its level is its own: `PackBuilderTest` pins the transform's rules,
