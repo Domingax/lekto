@@ -174,9 +174,9 @@ comma-separated list of report **files** and does not expand wildcards, while
 detekt and ktlint each write one report per Kotlin compilation or source set, so
 `mergeDetektReports` and `mergeKtlintReports` fold each tool's reports into a
 single Checkstyle XML under `build/reports/sonar/` for the scanner to read.
-`verifySonarReportPaths` — part of `check` — fails if a configured path is missing
-or hides behind a wildcard, so a misconfiguration trips the fast lane rather than
-the sonar one. `sonar.qualitygate.wait=true` makes the scan wait for the gate and
+`verifySonarReportPaths` — part of `check` — fails if a configured report path is
+missing or hides behind a wildcard, so a misconfiguration trips the fast lane
+rather than the sonar one. `sonar.qualitygate.wait=true` makes the scan wait for the gate and
 fail the job when it fails. That job blocks a pull request once branch protection
 on `main` requires it.
 
