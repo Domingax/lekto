@@ -234,7 +234,7 @@ class SyncController(
         _state.update { current ->
             current.copy(
                 config = SyncSettings.DEFAULT,
-                hasStoredPassword = if (deletion is SecretResult.Unavailable) current.hasStoredPassword else false,
+                hasStoredPassword = deletion is SecretResult.Unavailable && current.hasStoredPassword,
                 lastSync = null,
                 result = (deletion as? SecretResult.Unavailable)?.let { outcome -> SyncResult.Failure(outcome.message) }
                     ?: SyncResult.Success(DISCONNECTED),
