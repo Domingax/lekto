@@ -26,3 +26,13 @@ highlighted in the reader and level 4 is shown as normal text. Setting a level
 recolours the word everywhere it appears. See [Reading](/reading) for the scale.
 
 Hear a saved word aloud with [Pronunciation](/pronunciation).
+
+## Screenshots
+
+### Desktop
+
+![The Vocabulary list on desktop](/images/vocabulary-desktop.png)
+
+### Android
+
+![The Vocabulary list on Android](/images/vocabulary-android.png)

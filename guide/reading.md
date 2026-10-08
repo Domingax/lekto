@@ -28,3 +28,13 @@ levels, the page slowly clears.
 ## Look a word up
 
 Tap a **Word token** to open the lookup panel. See [Word lookup](/word-lookup).
+
+## Screenshots
+
+### Desktop
+
+![Reading on desktop](/images/reader-desktop.png)
+
+### Android
+
+![Reading on Android](/images/reader-android.png)
