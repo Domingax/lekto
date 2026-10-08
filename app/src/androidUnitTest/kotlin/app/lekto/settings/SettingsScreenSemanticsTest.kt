@@ -317,6 +317,7 @@ class SettingsScreenSemanticsTest {
             sync = SyncUiState(
                 available = true,
                 config = configured(enabled = true),
+                hasStoredPassword = true,
             ),
         )
 

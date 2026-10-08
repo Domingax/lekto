@@ -48,7 +48,7 @@ class SyncControllerTest {
 
         assertTrue(controller.state.value.available)
         assertEquals("https://cloud.example.test/dav", controller.state.value.config.serverUrl)
-        assertEquals(SyncController.SYNC_OFF, controller.state.value.status)
+        assertEquals(SyncUiState.SYNC_OFF, controller.state.value.status)
     }
 
     @Test
@@ -57,16 +57,26 @@ class SyncControllerTest {
 
         assertFalse(controller.state.value.config.isConfigured)
         assertFalse(controller.state.value.config.enabled)
-        assertEquals(SyncController.NOT_SET_UP, controller.state.value.status)
+        assertEquals(SyncUiState.NOT_SET_UP, controller.state.value.status)
     }
 
     @Test
-    fun `an enabled store reports sync on`() = runTest {
+    fun `an enabled store with a stored password reports sync on`() = runTest {
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://x.test/dav", username = "r", enabled = true),
+        )
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+
+        assertEquals(SyncUiState.SYNC_ON, controller(settings = settings, secrets = secrets).state.value.status)
+    }
+
+    @Test
+    fun `an enabled store without a stored password does not claim sync is on`() = runTest {
         val settings = InMemorySyncSettingsStore(
             SyncSettings(serverUrl = "https://x.test/dav", username = "r", enabled = true),
         )
 
-        assertEquals(SyncController.SYNC_ON, controller(settings = settings).state.value.status)
+        assertEquals(SyncUiState.SYNC_OFF, controller(settings = settings).state.value.status)
     }
 
     @Test
@@ -198,7 +208,23 @@ class SyncControllerTest {
 
         assertTrue(settings.load().enabled)
         assertTrue(controller.state.value.config.enabled)
-        assertEquals(SyncController.SYNC_ON, controller.state.value.status)
+        assertEquals(SyncUiState.SYNC_ON, controller.state.value.status)
+    }
+
+    @Test
+    fun `enabling runs the first sync, so the choice has a visible outcome`() = runTest {
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val target = InMemorySyncTarget()
+        val controller = controller(secrets = secrets, target = target)
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.save("")
+
+        controller.enable()
+        advanceUntilIdle()
+
+        assertEquals(1, target.changesCalls)
+        assertIs<SyncResult.Success>(controller.state.value.lastSync)
     }
 
     @Test
@@ -212,7 +238,7 @@ class SyncControllerTest {
 
         assertFalse(settings.load().enabled)
         assertEquals("https://cloud.example.test/dav", settings.load().serverUrl)
-        assertEquals(SyncController.SYNC_OFF, controller.state.value.status)
+        assertEquals(SyncUiState.SYNC_OFF, controller.state.value.status)
     }
 
     @Test

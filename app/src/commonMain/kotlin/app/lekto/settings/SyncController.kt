@@ -73,13 +73,24 @@ data class SyncUiState(
     val lastSync: SyncResult? = null,
 ) {
 
-    /** The one-line status the section shows at rest, so enabling is always visible. */
+    /**
+     * The one-line status the section shows at rest, so enabling is always
+     * visible. It claims sync is on only when an endpoint and a stored password
+     * make a run possible, so the flag can never promise a sync that cannot
+     * happen.
+     */
     val status: String
         get() = when {
-            config.enabled -> SyncController.SYNC_ON
-            config.isConfigured -> SyncController.SYNC_OFF
-            else -> SyncController.NOT_SET_UP
+            !config.isConfigured -> NOT_SET_UP
+            config.enabled && hasStoredPassword -> SYNC_ON
+            else -> SYNC_OFF
         }
+
+    companion object {
+        const val SYNC_ON: String = "Sync is on."
+        const val SYNC_OFF: String = "Sync is off."
+        const val NOT_SET_UP: String = "Sync isn't set up yet."
+    }
 }
 
 /**
@@ -154,24 +165,26 @@ class SyncController(
 
     /**
      * Turns sync on as a deliberate act (issue #28): it needs a usable endpoint
-     * and a stored password, so enabling can never silently sync nothing.
+     * and a stored password, so enabling can never silently sync nothing. Turning
+     * it on runs the first sync immediately, so the choice has a visible outcome
+     * rather than only a stored flag.
      */
     fun enable() {
         val config = _state.value.config
-        val result = when {
+        val failure = when {
             !config.isConfigured -> SyncResult.Failure(NOT_CONFIGURED)
-
             storedPassword() == null -> SyncResult.Failure(NO_PASSWORD)
-
-            else -> {
-                services.settings.save(config.copy(enabled = true))
-                SyncResult.Success(SYNC_ON)
-            }
+            else -> null
         }
-        val enabled = result is SyncResult.Success
+        if (failure != null) {
+            _state.update { current -> current.copy(result = failure) }
+            return
+        }
+        services.settings.save(config.copy(enabled = true))
         _state.update { current ->
-            current.copy(config = if (enabled) current.config.copy(enabled = true) else current.config, result = result)
+            current.copy(config = current.config.copy(enabled = true), result = SyncResult.Success(SyncUiState.SYNC_ON))
         }
+        syncNow()
     }
 
     /** Turns sync off, leaving the endpoint configured and the vault local and usable. */
@@ -180,7 +193,7 @@ class SyncController(
         _state.update { current ->
             current.copy(
                 config = current.config.copy(enabled = false),
-                result = SyncResult.Success(SYNC_OFF),
+                result = SyncResult.Success(SyncUiState.SYNC_OFF),
             )
         }
     }
@@ -193,10 +206,13 @@ class SyncController(
      */
     fun syncNow() {
         val config = _state.value.config
-        if (current().syncing || !config.enabled) return
-        val password = storedPassword()
-        if (!config.isConfigured || password == null) {
-            _state.update { current -> current.copy(lastSync = SyncResult.Failure(NO_PASSWORD)) }
+        if (_state.value.syncing || !config.enabled) return
+        // A run needs both halves: the endpoint and the stored password. When
+        // either is missing the honest reason names the one that is.
+        val password = if (config.isConfigured) storedPassword() else null
+        if (password == null) {
+            val reason = if (config.isConfigured) NO_PASSWORD else NOT_CONFIGURED
+            _state.update { current -> current.copy(lastSync = SyncResult.Failure(reason)) }
             return
         }
         _state.update { current -> current.copy(syncing = true) }
@@ -218,7 +234,7 @@ class SyncController(
         _state.update { current ->
             current.copy(
                 config = SyncSettings.DEFAULT,
-                hasStoredPassword = false,
+                hasStoredPassword = if (deletion is SecretResult.Unavailable) current.hasStoredPassword else false,
                 lastSync = null,
                 result = (deletion as? SecretResult.Unavailable)?.let { outcome -> SyncResult.Failure(outcome.message) }
                     ?: SyncResult.Success(DISCONNECTED),
@@ -230,8 +246,6 @@ class SyncController(
     fun dismissResult() {
         _state.update { current -> current.copy(result = null) }
     }
-
-    private fun current(): SyncUiState = _state.value
 
     private fun initialState(): SyncUiState {
         val config = services.settings.load()
@@ -277,9 +291,6 @@ class SyncController(
 
         const val SAVED: String = "Saved."
         const val CONNECTED: String = "The server answered. Sync is ready."
-        const val SYNC_ON: String = "Sync is on."
-        const val SYNC_OFF: String = "Sync is off."
-        const val NOT_SET_UP: String = "Sync isn't set up yet."
         const val DISCONNECTED: String = "Disconnected. Your vault stays on this device."
         const val NOT_CONFIGURED: String = "Add a server address and a username first."
         const val NO_PASSWORD: String = "Add the application password first."

@@ -32,6 +32,8 @@ import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
+import app.lekto.core.sync.SyncEngine
+import app.lekto.core.sync.SyncSettings
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.StructuredText
@@ -50,6 +52,10 @@ import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
+import app.lekto.settings.SYNC_HOST_FIELD_TAG
+import app.lekto.settings.SYNC_SAVE_TAG
+import app.lekto.settings.SYNC_USERNAME_FIELD_TAG
+import app.lekto.settings.SyncServices
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
@@ -57,8 +63,12 @@ import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.testkit.InMemorySyncSettingsStore
+import app.lekto.testkit.InMemorySyncTarget
+import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
+import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
 import app.lekto.translation.TRANSLATION_RESULT_TAG
@@ -341,6 +351,30 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun configuresSyncFromSettings() = runComposeUiTest {
+        val settings = InMemorySyncSettingsStore()
+        val secrets = InMemorySecretStore()
+        val sync = SyncServices(
+            settings = settings,
+            target = { _, _ -> InMemorySyncTarget() },
+            engine = { target ->
+                SyncEngine(InMemoryVaultStore(), InMemoryTombstoneStore(), target, TestClock(), DeviceId("device-a"))
+            },
+        )
+        setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithTag(SYNC_HOST_FIELD_TAG).performScrollTo().performTextInput("https://cloud.example.test/dav")
+        onNodeWithTag(SYNC_USERNAME_FIELD_TAG).performScrollTo().performTextInput("reader")
+        onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
+
+        assertEquals(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
+            settings.load(),
+        )
+    }
+
+    @Test
     fun savingAWordFromThePanelStoresItWithItsContextAndLevel() = runComposeUiTest {
         val vocabulary = inMemoryVocabulary()
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
@@ -526,6 +560,7 @@ internal fun environment(
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
+    sync: SyncServices? = null,
 ) = AppEnvironment(
     segmenter = WhitespaceTextSegmenter(),
     library = library,
@@ -539,6 +574,7 @@ internal fun environment(
     vaultTransfer = vaultTransfer,
     secrets = secrets,
     llm = llm,
+    sync = sync,
 )
 
 /** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
