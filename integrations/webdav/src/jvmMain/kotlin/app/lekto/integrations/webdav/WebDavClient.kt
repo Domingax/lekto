@@ -74,7 +74,7 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
     private fun requireBase() {
         if (exists("")) return
         val request = WebDavRequests.mkcol(urls.collection(""))
-        val status = send(request, "create collection", "").statusCode()
+        val status = send(request, CREATE_COLLECTION, "").statusCode()
         if (status !in COLLECTION_SUCCESS) {
             throw SyncTargetException("the WebDAV server did not recognise the address as a collection (HTTP $status)")
         }
@@ -129,8 +129,8 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
         if (parent.isNotEmpty()) createCollection(parent)
         if (!exists(relative)) {
             val request = WebDavRequests.mkcol(urls.collection(relative))
-            val status = send(request, "create collection", relative).statusCode()
-            if (status !in COLLECTION_SUCCESS) throw failure("create collection", relative, status)
+            val status = send(request, CREATE_COLLECTION, relative).statusCode()
+            if (status !in COLLECTION_SUCCESS) throw failure(CREATE_COLLECTION, relative, status)
         }
         ensuredCollections += relative
     }
@@ -181,7 +181,14 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
         SyncTargetException("could not $what '$path': the WebDAV server answered HTTP $status")
 
     private companion object {
-        /** A collection that already exists answers 405 (or 200 on some servers), not 201. */
+        /** The action label a collection-creation error carries. */
+        const val CREATE_COLLECTION: String = "create collection"
+
+        /**
+         * A collection that races into existence between the existence read and
+         * the `MKCOL` answers 405 (or 200 on some servers); creating it answers
+         * 201.
+         */
         val COLLECTION_SUCCESS: Set<Int> = setOf(200, 201, 405)
 
         /** The action label an error carries when the driver reads back a written revision. */
