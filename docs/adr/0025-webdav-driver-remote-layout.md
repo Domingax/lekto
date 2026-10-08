@@ -84,3 +84,14 @@ property read back by `PROPFIND` (server-dependent persistence, no gain over the
 without ETag preconditions (WebDAV's whole advantage); OkHttp (a new dependency
 where the JDK client suffices); claiming an RFC 6578 cursor (Apache `mod_dav` does
 not offer one, so the claim would fail the contract).
+
+## Update — a collection's existence is read, not inferred from MKCOL (issue #117)
+
+The driver no longer sends `MKCOL` for a collection that already exists. It reads
+existence with a zero-depth `PROPFIND` and only creates what it read as absent.
+Servers disagree on the status a redundant `MKCOL` answers: RFC 4918 says `405`,
+which the driver tolerated, but Infomaniak kDrive answers `404` even for the drive
+root — so a correctly configured account failed with *"could not create collection
+''"* before any sync. Reading existence makes the driver independent of that
+status. The remote layout, the ETag revisions and the conditional-write contract
+are unchanged.

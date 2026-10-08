@@ -39,6 +39,13 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
     /** When true a `PUT` omits its `ETag`, so the driver must fall back to `HEAD`. */
     var omitEtagOnPut: Boolean = false
 
+    /**
+     * The status a `MKCOL` on a collection that already exists answers. RFC 4918
+     * says `405`, but servers vary — Infomaniak kDrive answers `404`, even for the
+     * drive root — so a driver must read existence instead of trusting this.
+     */
+    var mkcolExistingStatus: Int = 405
+
     private val expectedAuthorization: String =
         "Basic " + Base64.getEncoder().encodeToString("$username:$password".toByteArray(StandardCharsets.UTF_8))
 
@@ -84,7 +91,7 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
     private fun mkcol(exchange: HttpExchange, path: String) {
         val parent = parentOf(path)
         when {
-            path in collections -> respond(exchange, 405)
+            path in collections -> respond(exchange, mkcolExistingStatus)
 
             parent !in collections -> respond(exchange, 409)
 

@@ -18,9 +18,9 @@ internal object WebDavRequests {
                 """<D:prop><D:getetag/><D:resourcetype/></D:prop></D:propfind>"""
             ).toByteArray()
 
-    fun propfind(url: String): HttpRequest.Builder = HttpRequest.newBuilder(URI.create(url))
+    fun propfind(url: String, depth: Int = 1): HttpRequest.Builder = HttpRequest.newBuilder(URI.create(url))
         .method("PROPFIND", HttpRequest.BodyPublishers.ofByteArray(PROPFIND_BODY))
-        .header("Depth", "1")
+        .header("Depth", depth.toString())
         .header("Content-Type", "application/xml; charset=utf-8")
 
     fun mkcol(url: String): HttpRequest.Builder =

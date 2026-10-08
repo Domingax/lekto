@@ -44,6 +44,7 @@ internal sealed interface WebDavWriteResult {
  * partial result. Credentials travel in the `Authorization` header only and are
  * never named in an error.
  */
+@Suppress("TooManyFunctions") // One method per WebDAV verb and its small helpers; the seam is the protocol.
 internal class WebDavClient(connection: WebDavConnection, private val http: HttpClient = defaultClient()) {
 
     private val urls = WebDavUrls(connection.baseUrl)
@@ -105,14 +106,33 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
         if (status !in 200..299 && status != 404) throw failure("delete", relative, status)
     }
 
-    /** Creates [relative]'s collection chain, tolerating one that already exists. */
+    /** Creates [relative]'s collection chain, if it is not already there. */
     private fun createCollection(relative: String) {
         if (relative in ensuredCollections) return
         val parent = relative.substringBeforeLast('/', "")
         if (parent.isNotEmpty()) createCollection(parent)
-        val status = send(WebDavRequests.mkcol(urls.collection(relative)), "create collection", relative).statusCode()
-        if (status !in COLLECTION_SUCCESS) throw failure("create collection", relative, status)
+        if (!exists(relative)) {
+            val request = WebDavRequests.mkcol(urls.collection(relative))
+            val status = send(request, "create collection", relative).statusCode()
+            if (status !in COLLECTION_SUCCESS) throw failure("create collection", relative, status)
+        }
         ensuredCollections += relative
+    }
+
+    /**
+     * Whether the collection [relative] already exists. It is read with a
+     * zero-depth `PROPFIND` rather than inferred from a `MKCOL`: servers answer
+     * different statuses for a collection that already exists — RFC 4918 says
+     * `405`, but Infomaniak kDrive answers `404` even for the drive root — so a
+     * `MKCOL` is only ever sent for a collection read as absent.
+     */
+    private fun exists(relative: String): Boolean {
+        val response = send(WebDavRequests.propfind(urls.collection(relative), depth = 0), "check", relative)
+        return when (response.statusCode()) {
+            207 -> true
+            404 -> false
+            else -> throw failure("check", relative, response.statusCode())
+        }
     }
 
     /** Reads a written item's revision when the server did not return it on the `PUT`. */
