@@ -159,9 +159,11 @@ The same source set also runs the whole contract against `testkit`'s
 `MKCOL`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, Basic auth, ETags and the
 conditional headers (`If-None-Match`, `If-Match` and the DAV `If`) — so the
 driver's remote layout and conditional writes
-are proved without Docker. The fake mirrors Apache's one
-wrinkle that matters to the driver: a `PUT` that returns no ETag, which forces the
-driver's `HEAD` fallback. A separate test drives the container lane, a rejected
+are proved without Docker. The fake mirrors the wrinkles that matter to the
+driver: a `PUT` that returns no ETag, which forces the driver's `HEAD` fallback,
+and a configurable status for a `MKCOL` on a collection that already exists,
+which pins that the driver reads a collection's existence instead of trusting
+`405` (issue #117). A separate test drives the container lane, a rejected
 credential and a `500` (both surfaced as `SyncTargetException`), and a driver that
 claims a capability it lacks, which the contract must reject (ADR-0025).
 
