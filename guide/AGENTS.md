@@ -45,6 +45,6 @@ behaviour updates the page(s) named below in the same pull request, the way
 | Saving, searching, filtering or deleting vocabulary | `vocabulary.md` |
 | Pronunciation and its unavailable-language message | `pronunciation.md` |
 | The LLM provider, API key or Translation shortcut | `llm-provider.md` |
-| The Vault, export/import or moving it to a synced folder | `vault-and-sync.md` |
+| The Vault, export/import or syncing to a WebDAV server | `vault-and-sync.md` |
 | Settings, attribution or a common failure | `settings-and-faq.md` |
 | First launch or the download links | `getting-started.md`, `index.md` |
