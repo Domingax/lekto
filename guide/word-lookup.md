@@ -23,17 +23,3 @@ the source; opening the shortcut hands the page to your device's own browser.
 
 Save a word to keep its translation and the **Context sentence** it appeared in.
 See [Vocabulary](/vocabulary) and [Pronunciation](/pronunciation).
-
-## Screenshots
-
-Tapping a word opens the panel over the reader:
-
-![Tapping a word and opening the lookup panel](/images/lookup-flow.gif)
-
-### Desktop
-
-![The lookup panel on desktop](/images/lookup-desktop.png)
-
-### Android
-
-![The lookup panel on Android](/images/lookup-android.png)

@@ -42,13 +42,3 @@ See [Vault and sync](/vault-and-sync).
 ### Where do I get Lekto for my computer?
 
 The [home page](/#download) links the latest Android and desktop releases.
-
-## Screenshots
-
-### Desktop
-
-![Settings on desktop](/images/settings-desktop.png)
-
-### Android
-
-![Settings on Android](/images/settings-android.png)
