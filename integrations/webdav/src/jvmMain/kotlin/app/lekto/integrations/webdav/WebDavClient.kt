@@ -58,10 +58,26 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
      */
     fun ensureCollection(relative: String) {
         if (baseEnsured.not()) {
-            createCollection("")
+            requireBase()
             baseEnsured = true
         }
         createCollection(relative)
+    }
+
+    /**
+     * Ensures the collection the user points at exists, creating it only when the
+     * server read it as absent. A server that will not let it be created is
+     * reported as an address that is not a usable collection — the honest message
+     * for a wrong URL or an account whose plan has WebDAV disabled — rather than
+     * as a failed `MKCOL`.
+     */
+    private fun requireBase() {
+        if (exists("")) return
+        val request = WebDavRequests.mkcol(urls.collection(""))
+        val status = send(request, "create collection", "").statusCode()
+        if (status !in COLLECTION_SUCCESS) {
+            throw SyncTargetException("the WebDAV server did not recognise the address as a collection (HTTP $status)")
+        }
     }
 
     /** The paths of the files directly under the collection [relative]. */

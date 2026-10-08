@@ -125,6 +125,15 @@ class WebDavSyncTargetTest {
     }
 
     @Test
+    fun `a base the server does not recognise fails with a clear message`() {
+        val target = WebDavSyncTarget("${server.baseUrl}/no-such-parent/child", "lekto", "lekto")
+
+        val error = assertFailsWith<SyncTargetException> { runBlocking { target.list() } }
+
+        assertTrue(error.message.orEmpty().contains("did not recognise"), error.message.orEmpty())
+    }
+
+    @Test
     fun `a write whose PUT omits the ETag reads it back with a HEAD`() {
         server.omitEtagOnPut = true
         val target = newTarget()
