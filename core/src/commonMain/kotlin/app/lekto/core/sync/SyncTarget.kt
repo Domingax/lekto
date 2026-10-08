@@ -7,7 +7,7 @@ import kotlin.jvm.JvmInline
 private const val NO_CHANGE_CURSOR = "no-change-cursor"
 
 /**
- * A driver's opaque token for one remote item's version — a WebDAV strong ETag,
+ * A driver's opaque token for one remote item's version — a WebDAV ETag,
  * a Dropbox `rev`. The engine never interprets it; it only hands the token back
  * to condition a write, so a driver cannot leak its revision model into the
  * merge rules (ADR-0009).
@@ -41,7 +41,7 @@ value class SyncCursor(val value: String) {
 data class SyncCapabilities(
     /**
      * The target rejects a write whose expected [Revision] has moved — a real
-     * compare-and-swap (WebDAV `If-Match`, Dropbox `WriteMode.update(rev)`).
+     * compare-and-swap (WebDAV's `If` header, Dropbox `WriteMode.update(rev)`).
      */
     val conditionalWrites: Boolean,
 

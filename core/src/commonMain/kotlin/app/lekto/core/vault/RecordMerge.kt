@@ -25,6 +25,7 @@ sealed interface VersionedRecord {
     val deviceId: DeviceId
 
     /** A live record. */
+    @Serializable
     data class Live(val record: VaultRecord) : VersionedRecord {
         override val id: String get() = record.id
         override val updatedAt: Instant get() = record.updatedAt
@@ -32,6 +33,7 @@ sealed interface VersionedRecord {
     }
 
     /** A deletion: the record's envelope without its body. */
+    @Serializable
     data class Deleted(val tombstone: Tombstone) : VersionedRecord {
         override val id: String get() = tombstone.id
         override val updatedAt: Instant get() = tombstone.updatedAt
