@@ -48,3 +48,13 @@ Because the original stays in the Vault, a book is never lost when its parsed
 text is discarded or rebuilt; Lekto regenerates that text on demand.
 
 Next: find your book in the [Library](/library).
+
+## Screenshots
+
+### Desktop
+
+![Choosing a file to import on desktop](/images/import-desktop.png)
+
+### Android
+
+![Choosing a file to import on Android](/images/import-android.png)

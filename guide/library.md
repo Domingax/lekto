@@ -25,3 +25,13 @@ position** automatically, so you continue where you left off; see
 
 **Import** brings a book into the Library. See [Import](/import) for the formats
 and what each supports.
+
+## Screenshots
+
+### Desktop
+
+![The Library on desktop](/images/library-desktop.png)
+
+### Android
+
+![The Library on Android](/images/library-android.png)
