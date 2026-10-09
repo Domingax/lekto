@@ -56,6 +56,11 @@ kotlin {
         }
         getByName("desktopMain").dependencies {
             implementation(compose.desktop.currentOs)
+            // The WebDAV sync driver (issue #28; ADR-0025): the desktop client is
+            // the one composition root that owns a real sync target for now, so
+            // the driver is wired here and contributes the settings screen's sync
+            // section. The domain never names it; only this entry point does.
+            implementation(project(":integrations:webdav"))
         }
         // The UI-semantics suite runs on the JVM (desktop) in seconds, with no
         // emulator. It lives in desktopTest rather than commonTest because the

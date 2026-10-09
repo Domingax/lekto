@@ -59,6 +59,9 @@ import app.lekto.settings.ProviderUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
 import app.lekto.settings.SettingsUiState
+import app.lekto.settings.SyncController
+import app.lekto.settings.SyncServices
+import app.lekto.settings.SyncUiState
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
@@ -87,7 +90,8 @@ import kotlinx.coroutines.withContext
  * exports and imports the vault (issue #20), the saved [vocabulary] the reader
  * colours by and the lookup panel saves into (issue #22), the [secrets] store an
  * API key is kept in and never in the vault (issue #24; ADR-0021), the [lemmas]
- * that give each word its identity, and the [dispatcher] blocking work runs on.
+ * that give each word its identity, the [sync] services that reconcile the vault
+ * with a WebDAV server (issue #28), and the [dispatcher] blocking work runs on.
  * Bundled so the root composable's signature stays small and grows in one named
  * place.
  */
@@ -104,6 +108,7 @@ data class AppEnvironment(
     val vaultTransfer: VaultTransfer? = null,
     val secrets: SecretStore? = null,
     val llm: LlmServices? = null,
+    val sync: SyncServices? = null,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
 
@@ -150,6 +155,7 @@ private sealed interface Destination {
  * because a hard-coded dispatcher cannot be driven by virtual time
  * (docs/testing.md, "Deterministic seams").
  */
+@Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
 @Composable
 fun App(environment: AppEnvironment) {
     val controller = remember(environment.library, environment.dispatcher) {
@@ -181,11 +187,14 @@ fun App(environment: AppEnvironment) {
         }
     }
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
+    val sync = rememberSyncController(environment, scope)
+    val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
     val settings = Settings(
         dictionary = dictionary,
         vaultTransfer = vaultTransfer,
         provider = provider,
-        state = SettingsUiState(dictionaryState, vaultState, providerState),
+        sync = sync,
+        state = SettingsUiState(dictionaryState, vaultState, providerState, syncState),
     )
 
     AppScreens(environment, controller, state, scope, progress, settings, vocabulary)
@@ -375,6 +384,7 @@ private class Settings(
     val dictionary: DictionaryController?,
     val vaultTransfer: VaultTransferController?,
     val provider: ProviderController?,
+    val sync: SyncController?,
     val state: SettingsUiState,
 )
 
@@ -403,6 +413,15 @@ private fun SettingsDestination(
             onTestProvider = { apiKey -> settings.provider?.test(apiKey) },
             onRemoveProviderKey = { settings.provider?.removeKey() },
             onDismissProviderResult = { settings.provider?.dismissResult() },
+            onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
+            onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
+            onSaveSync = { password -> settings.sync?.save(password) },
+            onTestSync = { password -> settings.sync?.test(password) },
+            onEnableSync = { settings.sync?.enable() },
+            onDisableSync = { settings.sync?.disable() },
+            onSyncNow = { settings.sync?.syncNow() },
+            onDisconnectSync = { settings.sync?.disconnect() },
+            onDismissSyncResult = { settings.sync?.dismissResult() },
         ),
     )
 }

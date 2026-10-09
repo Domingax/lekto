@@ -14,6 +14,7 @@ fun main() = application {
     val vaultTransfer = remember { desktopVaultTransfer(save = ::saveVaultToFile, open = ::pickVaultFileToImport) }
     val secrets = remember { desktopSecretStore() }
     val llm = remember { desktopLlm() }
+    val sync = remember { desktopSync() }
     Window(onCloseRequest = ::exitApplication, title = "Lekto") {
         App(
             AppEnvironment(
@@ -28,6 +29,7 @@ fun main() = application {
                 vaultTransfer = vaultTransfer,
                 secrets = secrets,
                 llm = llm,
+                sync = sync,
             ),
         )
     }

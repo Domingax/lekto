@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
+import app.lekto.core.sync.SyncSettings
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.testkit.testPackMetadata
 import org.junit.Assert.assertEquals
@@ -281,17 +282,199 @@ class SettingsScreenSemanticsTest {
         compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().assertIsNotEnabled()
     }
 
+    @Test
+    fun syncAlwaysWarnsAgainstFolderSyncTools() {
+        render()
+
+        compose.onNodeWithText("folder-sync tool", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("corrupt", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun anUnwiredSyncSaysSoAndHidesItsControls() {
+        render(sync = SyncUiState(available = false))
+
+        compose.onNodeWithText("Sync isn't available", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(SYNC_HOST_FIELD_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aConfiguredSyncShowsItsStatusAndEndpoint() {
+        render(
+            sync = SyncUiState(
+                available = true,
+                config = SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
+            ),
+        )
+
+        compose.onNodeWithText("Sync is off.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(SYNC_HOST_FIELD_TAG).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun anEnabledSyncSaysSyncIsOn() {
+        render(
+            sync = SyncUiState(
+                available = true,
+                config = configured(enabled = true),
+                hasStoredPassword = true,
+            ),
+        )
+
+        compose.onNodeWithText("Sync is on.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(SYNC_DISABLE_TAG).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun savingSyncPassesTheTypedPasswordToTheController() {
+        var saved: String? = null
+        render(
+            sync = SyncUiState(available = true),
+            actions = SettingsActions(onSaveSync = { password -> saved = password }),
+        )
+
+        compose.onNodeWithTag(SYNC_PASSWORD_FIELD_TAG).performScrollTo().performTextInput("app-password")
+        compose.onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
+
+        assertEquals("app-password", saved)
+    }
+
+    @Test
+    fun testingSyncPassesTheTypedPasswordToTheController() {
+        var tested: String? = null
+        render(
+            sync = SyncUiState(available = true),
+            actions = SettingsActions(onTestSync = { password -> tested = password }),
+        )
+
+        compose.onNodeWithTag(SYNC_PASSWORD_FIELD_TAG).performScrollTo().performTextInput("app-password")
+        compose.onNodeWithTag(SYNC_TEST_TAG).performScrollTo().performClick()
+
+        assertEquals("app-password", tested)
+    }
+
+    @Test
+    fun enablingSyncRaisesTheAction() {
+        var enabled = false
+        render(
+            sync = SyncUiState(available = true, config = configured()),
+            actions = SettingsActions(onEnableSync = { enabled = true }),
+        )
+
+        compose.onNodeWithTag(SYNC_ENABLE_TAG).performScrollTo().performClick()
+
+        assertTrue(enabled)
+    }
+
+    @Test
+    fun disablingSyncRaisesTheAction() {
+        var disabled = false
+        render(
+            sync = SyncUiState(available = true, config = configured(enabled = true)),
+            actions = SettingsActions(onDisableSync = { disabled = true }),
+        )
+
+        compose.onNodeWithTag(SYNC_DISABLE_TAG).performScrollTo().performClick()
+
+        assertTrue(disabled)
+    }
+
+    @Test
+    fun syncNowIsOfferedOnlyWhenSyncIsOn() {
+        render(sync = SyncUiState(available = true, config = configured()))
+
+        compose.onNodeWithTag(SYNC_NOW_TAG).performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun syncNowRaisesTheActionWhenSyncIsOn() {
+        var synced = false
+        render(
+            sync = SyncUiState(available = true, config = configured(enabled = true)),
+            actions = SettingsActions(onSyncNow = { synced = true }),
+        )
+
+        compose.onNodeWithTag(SYNC_NOW_TAG).performScrollTo().performClick()
+
+        assertTrue(synced)
+    }
+
+    @Test
+    fun theLastSyncOutcomeIsShown() {
+        render(
+            sync = SyncUiState(
+                available = true,
+                config = configured(enabled = true),
+                lastSync = SyncResult.Success("Synced: uploaded 1."),
+            ),
+        )
+
+        compose.onNodeWithText("Synced: uploaded 1.").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aFailedSyncIsShownInPlainLanguage() {
+        render(
+            sync = SyncUiState(
+                available = true,
+                config = configured(enabled = true),
+                lastSync = SyncResult.Failure("The last sync didn't finish: the server is unreachable"),
+            ),
+        )
+
+        compose.onNodeWithText("The last sync didn't finish", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aSyncResultRendersAndDismisses() {
+        var dismissed = false
+        render(
+            sync = SyncUiState(available = true, result = SyncResult.Success("Saved.")),
+            actions = SettingsActions(onDismissSyncResult = { dismissed = true }),
+        )
+
+        compose.onNodeWithText("Saved.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(SYNC_DISMISS_TAG).performScrollTo().performClick()
+
+        assertTrue(dismissed)
+    }
+
+    @Test
+    fun disconnectingRaisesTheAction() {
+        var disconnected = false
+        render(
+            sync = SyncUiState(available = true, config = configured()),
+            actions = SettingsActions(onDisconnectSync = { disconnected = true }),
+        )
+
+        compose.onNodeWithTag(SYNC_DISCONNECT_TAG).performScrollTo().performClick()
+
+        assertTrue(disconnected)
+    }
+
+    @Test
+    fun syncingInProgressDisablesTheControls() {
+        render(sync = SyncUiState(available = true, config = configured(enabled = true), syncing = true))
+
+        compose.onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(SYNC_TEST_TAG).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(SYNC_NOW_TAG).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(SYNC_DISCONNECT_TAG).performScrollTo().assertIsNotEnabled()
+    }
+
     /** Renders the settings screen in the app theme, sized like a phone. */
+    @Suppress("LongParameterList") // One test helper mirroring the screen's state bundles.
     private fun render(
         dictionary: DictionaryUiState = DictionaryUiState(),
         vault: VaultUiState = VaultUiState(),
         provider: ProviderUiState = ProviderUiState(),
+        sync: SyncUiState = SyncUiState(),
         actions: SettingsActions = SettingsActions(),
     ) {
         compose.setContent {
             MaterialTheme {
                 SettingsScreen(
-                    state = SettingsUiState(dictionary, vault, provider),
+                    state = SettingsUiState(dictionary, vault, provider, sync),
                     actions = actions,
                     modifier = Modifier.size(width = 360.dp, height = 720.dp),
                 )
@@ -299,3 +482,7 @@ class SettingsScreenSemanticsTest {
         }
     }
 }
+
+/** A usable endpoint with the password stored, for the sync section's tests. */
+private fun configured(enabled: Boolean = false): SyncSettings =
+    SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = enabled)

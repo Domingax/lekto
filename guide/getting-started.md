@@ -10,8 +10,9 @@ The first time you open Lekto it creates a **Vault** for you: the private,
 on-device store that holds everything you author or import. You do not need to
 sign in, and nothing is uploaded anywhere.
 
-If you already have a Vault on another device, you can point Lekto at the same
-folder instead and pick up where you left off. See [Vault and sync](/vault-and-sync).
+If you already use Lekto on another device, you can turn on sync in Settings to
+bring your books, reading progress and vocabulary here. See
+[Vault and sync](/vault-and-sync).
 
 ## The shape of the app
 

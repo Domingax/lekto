@@ -159,9 +159,11 @@ The same source set also runs the whole contract against `testkit`'s
 `MKCOL`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, Basic auth, ETags and the
 conditional headers (`If-None-Match`, `If-Match` and the DAV `If`) — so the
 driver's remote layout and conditional writes
-are proved without Docker. The fake mirrors Apache's one
-wrinkle that matters to the driver: a `PUT` that returns no ETag, which forces the
-driver's `HEAD` fallback. A separate test drives the container lane, a rejected
+are proved without Docker. The fake mirrors the wrinkles that matter to the
+driver: a `PUT` that returns no ETag, which forces the driver's `HEAD` fallback,
+and a configurable status for a `MKCOL` on a collection that already exists,
+which pins that the driver reads a collection's existence instead of trusting
+`405` (issue #117). A separate test drives the container lane, a rejected
 credential and a `500` (both surfaced as `SyncTargetException`), and a driver that
 claims a capability it lacks, which the contract must reject (ADR-0025).
 
@@ -379,6 +381,25 @@ in-memory filesystem there and a real directory in `core/jvmTest`. The engine
 pins no dispatcher: `sync` is `suspend` and runs on the caller's context, so the
 whole suite runs under `runTest`, and one test drives the fake's latency through
 the test scheduler to prove it.
+
+The sync **settings and status** (issue #28) are proved at their own levels. The
+non-secret endpoint and the enable flag are a seam, `SyncSettingsStore`:
+`SyncSettingsStoreContract` runs against `InMemorySyncSettingsStore` in
+`core/commonTest` and against the JSON document store (`JsonSyncSettingsStore`)
+over an in-memory filesystem there and a real directory in `core/jvmTest`, and
+`JsonSyncSettingsStoreTest` pins that a corrupt or future-shaped document reads
+as "not configured"; the **application password** never lives there, only in the
+`SecretStore` (ADR-0021). The state holder — load the stored endpoint, save it
+while the password goes to the secret store, test the connection off the UI
+thread, enable sync as a deliberate act, run a manual sync and report its outcome
+in plain language, and disconnect without touching the local vault — is
+`SyncControllerTest` in `app/desktopTest`, driven by `kotlinx-coroutines-test`'s
+virtual time with `testkit`'s `InMemorySyncTarget` and a target that cannot be
+reached. `SyncReportSummaryTest` pins the plain-language summary, the section's
+controls, status line and folder-sync warning are `SettingsScreenSemanticsTest`
+on both lanes, and only the desktop composition root wires a real driver
+(ADR-0025) — without one the section says sync is unavailable and never gates the
+reader.
 
 The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
 so its level is its own: `PackBuilderTest` pins the transform's rules,

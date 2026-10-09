@@ -110,6 +110,30 @@ class WebDavSyncTargetTest {
     }
 
     @Test
+    fun `a server that rejects MKCOL on an existing collection still lists`() {
+        // Infomaniak kDrive answers 404 to MKCOL on a collection that already
+        // exists — even the drive root — so the driver reads existence with a
+        // zero-depth PROPFIND instead of demanding a MKCOL outcome (issue #117).
+        server.mkcolExistingStatus = 404
+        val base = "${server.baseUrl}/lekto-${UUID.randomUUID()}"
+        val record = testVaultRecord("a", updatedAtMillis = 1)
+        runBlocking { WebDavSyncTarget(base, "lekto", "lekto").put(VersionedRecord.of(record), null) }
+
+        val items = runBlocking { WebDavSyncTarget(base, "lekto", "lekto").list() }
+
+        assertTrue(items.any { item -> item.id == "a" }, "a collection that already exists must still be listed")
+    }
+
+    @Test
+    fun `a base the server does not recognise fails with a clear message`() {
+        val target = WebDavSyncTarget("${server.baseUrl}/no-such-parent/child", "lekto", "lekto")
+
+        val error = assertFailsWith<SyncTargetException> { runBlocking { target.list() } }
+
+        assertTrue(error.message.orEmpty().contains("did not recognise"), error.message.orEmpty())
+    }
+
+    @Test
     fun `a write whose PUT omits the ETag reads it back with a HEAD`() {
         server.omitEtagOnPut = true
         val target = newTarget()

@@ -31,6 +31,23 @@ identity and update metadata without its content. A tombstone with a later updat
 timestamp beats a live copy, so a deletion does not resurrect on the next sync.
 _Avoid_: Delete marker, soft delete, tomb
 
+**Sync**:
+Reconciling the **Vault** with a remote copy the user owns, so the same books,
+reading positions and vocabulary appear on every device. It is off by default,
+turned on by an explicit act, and its status and last outcome are always visible.
+_Avoid_: Folder sync, backup, mirror
+
+**Sync target**:
+The remote store Lekto reconciles the **Vault** with, reached over WebDAV and
+addressed by a base URL and a username.
+_Avoid_: Backend, server, remote
+
+**Application password**:
+A per-device credential a self-hosted **Sync target** issues for Lekto, kept in
+the **Secret store** and never in the **Vault**. It is not the user's account
+password.
+_Avoid_: Password, token
+
 **Book**:
 An imported piece of reading content — EPUB or TXT as first-class, PDF as best-effort
 text extraction. Comprises an original file plus the text Lekto renders.

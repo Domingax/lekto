@@ -42,10 +42,11 @@ internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
 
 /**
  * The settings screen: the dictionary pack (issue #18), the vault's
- * export/import (issue #20) and the LLM provider (issue #88). Each is its own
- * section so later settings land without disturbing the ones already here, and
- * nothing on the screen gates the reader — the vault actions exist only where a
- * file picker is wired, and the model only where a provider is.
+ * export/import (issue #20), sync (issue #28) and the LLM provider (issue #88).
+ * Each is its own section so later settings land without disturbing the ones
+ * already here, and nothing on the screen gates the reader — the vault actions
+ * exist only where a file picker is wired, sync only where a driver is, and the
+ * model only where a provider is.
  */
 @Composable
 fun SettingsScreen(
@@ -60,6 +61,7 @@ fun SettingsScreen(
         Header(actions.onBack)
         Section("Dictionary") { DictionarySection(state.dictionary, actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
+        Section("Sync") { SyncSection(state.sync, actions) }
         Section("LLM provider") { ProviderSection(state.provider, actions) }
     }
 }

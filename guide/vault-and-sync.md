@@ -13,15 +13,31 @@ Lekto server, so nothing is uploaded anywhere unless you choose to move it.
 Derived assets — parsed book text, the dictionary pack — are not part of the
 Vault. Lekto can regenerate or re-download them, and they are never synced.
 
-## Moving and syncing your Vault
+## Syncing your Vault
 
-Lekto does not run its own sync service. Instead, you can relocate your Vault to a
-folder that a sync service you already use and trust is watching, and let that
-service carry the files between your devices.
+::: info Desktop only for now
+Sync is in the desktop app today. The Android app does not offer it yet, and its
+Settings says so; Android support is coming in a later release.
+:::
 
-The privacy trade is yours to make: you choose the sync method and where the data
-travels. There is no Lekto server in the middle. Point a second device at the same
-folder and it reaches the same data.
+Sync is off until you turn it on. In **Settings → Sync**, enter the address of
+your own WebDAV server — Nextcloud, ownCloud, Synology or any WebDAV host — a
+username and an **application password**, test the connection, then enable sync.
+
+The address is kept on the device and the application password in the **Secret
+store**; neither enters the Vault, an export or a log. Only the Vault travels
+between your devices — the dictionary pack and your **API key** do not.
+
+Once sync is on, **Sync now** reconciles this device with the server and reports
+what moved in plain language. A run that fails says so and changes nothing
+locally, so the app stays fully usable offline. **Disconnect** clears the address
+and the password and leaves your Vault on the device.
+
+::: warning Do not point a folder-sync tool at your Vault
+Syncthing, Dropbox, iCloud Drive and the like put a second writer on the same
+files and can corrupt them. Use Lekto's own sync instead — it merges changes
+safely.
+:::
 
 Only the Vault moves. Secrets, such as an **API key**, live in the **Secret store**
 and are never part of the Vault or an export; see
