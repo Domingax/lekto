@@ -409,7 +409,10 @@ thread, enable sync as a deliberate act, run a manual sync and report its outcom
 in plain language, and disconnect without touching the local vault — is
 `SyncControllerTest` in `app/desktopTest`, driven by `kotlinx-coroutines-test`'s
 virtual time with `testkit`'s `InMemorySyncTarget` and a target that cannot be
-reached. `SyncReportSummaryTest` pins the plain-language summary, the section's
+reached. It also pins that the blocking probe and sync move onto the injected
+dispatcher rather than the caller's scope, so Android never runs a network call on
+the main thread (issue #116). `SyncReportSummaryTest` pins the plain-language
+summary, the section's
 controls, status line and folder-sync warning are `SettingsScreenSemanticsTest`
 on both lanes, and the loop — reach settings, save the endpoint and find it
 persisted — is driven through `AppSemanticsTest` on both lanes. The

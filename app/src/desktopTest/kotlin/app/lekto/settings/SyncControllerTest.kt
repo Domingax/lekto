@@ -15,11 +15,14 @@ import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.testVaultRecord
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -330,11 +333,45 @@ class SyncControllerTest {
         assertFalse(controller.state.value.toString().contains("top-secret-password"))
     }
 
+    @Test
+    fun `a test runs the blocking probe on the injected dispatcher`() = runTest {
+        // Android forbids a network call on the main thread; the probe must move
+        // to the injected dispatcher, not run on whatever scope the caller owns
+        // (issue #116).
+        val dispatches = AtomicInteger()
+        val controller = controller(dispatcher = countingDispatcher(dispatches))
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+
+        controller.test("app-password")
+        advanceUntilIdle()
+
+        assertTrue(dispatches.get() > 0, "the probe must run on the injected dispatcher")
+    }
+
+    @Test
+    fun `sync now runs the blocking engine on the injected dispatcher`() = runTest {
+        val dispatches = AtomicInteger()
+        val vault = InMemoryVaultStore().apply { put(testVaultRecord(id = "vocabulary-1")) }
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val controller = controller(vault = vault, secrets = secrets, dispatcher = countingDispatcher(dispatches))
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.save("")
+
+        controller.enable()
+        advanceUntilIdle()
+
+        assertTrue(dispatches.get() > 0, "the sync must run on the injected dispatcher")
+    }
+
+    @Suppress("LongParameterList") // The test's own inputs, bundled so every case reads the same.
     private fun TestScope.controller(
         settings: InMemorySyncSettingsStore = InMemorySyncSettingsStore(),
         secrets: InMemorySecretStore = InMemorySecretStore(),
         target: SyncTarget = InMemorySyncTarget(),
         vault: InMemoryVaultStore = InMemoryVaultStore(),
+        dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
     ): SyncController = SyncController(
         services = SyncServices(
             settings = settings,
@@ -344,7 +381,7 @@ class SyncControllerTest {
             },
         ),
         secrets = secrets,
-        dispatcher = StandardTestDispatcher(testScheduler),
+        dispatcher = dispatcher,
         scope = this,
     )
 }
@@ -352,4 +389,17 @@ class SyncControllerTest {
 /** A target that cannot be reached, so the controller's failure path is exercised. */
 private class FailingSyncTarget : SyncTarget by InMemorySyncTarget(changeCursor = false) {
     override suspend fun list(): List<SyncItem> = throw SyncTargetException("the WebDAV server is unreachable")
+}
+
+/**
+ * A dispatcher that counts the work it is handed and runs it inline, so a test
+ * can prove a blocking call was moved onto the injected dispatcher rather than
+ * left on the caller's scope (issue #116: Android forbids network on the main
+ * thread, and the composition scope is the main thread there).
+ */
+private fun countingDispatcher(dispatches: AtomicInteger): CoroutineDispatcher = object : CoroutineDispatcher() {
+    override fun dispatch(context: CoroutineContext, block: Runnable) {
+        dispatches.incrementAndGet()
+        block.run()
+    }
 }

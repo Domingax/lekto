@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The pieces a platform entry point supplies so sync can be configured from the
@@ -158,7 +159,7 @@ class SyncController(
             val result = if (secret == null) {
                 SyncResult.Failure(NO_PASSWORD)
             } else {
-                probe(_state.value.config, secret)
+                withContext(dispatcher) { probe(_state.value.config, secret) }
             }
             _state.update { current -> current.copy(testing = false, result = result) }
         }
@@ -218,7 +219,7 @@ class SyncController(
         }
         _state.update { current -> current.copy(syncing = true) }
         scope.launch {
-            val outcome = runSync(config, password)
+            val outcome = withContext(dispatcher) { runSync(config, password) }
             _state.update { current -> current.copy(syncing = false, lastSync = outcome) }
         }
     }
