@@ -10,8 +10,8 @@ import java.io.IOException
  * directory versus `Context.filesDir` — but the storage is the same Java file
  * API, so the vault behaves identically on both (ADR-0007's update records that
  * Android consumes the JVM artifact until `core` declares an Android target).
- * It is built on `java.io.File`, not `java.nio.file`, because the latter starts
- * at Android API 26 and the app's `minSdk` is lower.
+ * It is built on `java.io.File`; moving it to `java.nio.file` is a change to the
+ * write path below and is tracked separately (issue #126).
  *
  * Each write lands in a hidden sibling (`.name.tmp`) and is renamed into place,
  * so a reader sees the old file or the new one, never a half-written mix
