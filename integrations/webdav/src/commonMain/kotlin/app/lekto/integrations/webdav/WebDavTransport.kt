@@ -43,7 +43,7 @@ internal const val WEBDAV_REQUEST_TIMEOUT_SECONDS: Long = 30
  * It is deliberately the whole surface: no connection pooling, no redirect
  * policy, no cookie store leaks through it, so a platform is free to choose.
  */
-internal interface WebDavTransport {
+internal fun interface WebDavTransport {
 
     /** Performs [request]; an unreachable server or a broken connection is thrown. */
     fun execute(request: WebDavRequest): WebDavResponse
