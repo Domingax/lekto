@@ -37,6 +37,10 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
     /** When set, the next request answers this status instead of being handled. */
     var failNextRequestWith: Int? = null
 
+    /** How many `GET`s the server has served, so a test can pin how much a sync read. */
+    var getCount: Int = 0
+        private set
+
     /** When true a `PUT` omits its `ETag`, so the driver must fall back to `HEAD`. */
     var omitEtagOnPut: Boolean = false
 
@@ -119,6 +123,7 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
     }
 
     private fun get(exchange: HttpExchange, path: String) {
+        getCount++
         val stored = resources[path] ?: return respond(exchange, 404)
         exchange.responseHeaders.add("ETag", stored.etag)
         respond(exchange, 200, stored.bytes, "application/octet-stream")

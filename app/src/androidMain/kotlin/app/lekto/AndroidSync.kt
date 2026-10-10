@@ -2,6 +2,7 @@ package app.lekto
 
 import android.content.Context
 import app.lekto.core.Seams
+import app.lekto.core.sync.JsonRemoteIndexStore
 import app.lekto.core.sync.JsonSyncSettingsStore
 import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.sync.SyncEngine
@@ -19,9 +20,9 @@ import java.io.File
  * is now reachable from the first-class client, so this entry point is where the
  * Android target is built. Everything is app-private under `Context.filesDir`
  * (ADR-0010): the non-secret endpoint and the enable flag live in a document
- * under `sync/`, the tombstones live beside them (never in the vault, ADR-0005),
- * and the engine reads the vault the library writes — the same records the
- * reader and the vocabulary use.
+ * under `sync/`, the tombstones and the remote index live beside them (never in
+ * the vault, ADR-0005/ADR-0027), and the engine reads the vault the library
+ * writes — the same records the reader and the vocabulary use.
  *
  * It mirrors `desktopSync`; only the root differs. The **application password**
  * is not here: it lives in the `Secret store` (ADR-0021) the composition root
@@ -43,6 +44,7 @@ private fun androidWebDavTarget(settings: SyncSettings, password: String): SyncT
 private fun androidSyncEngine(root: File, state: File, target: SyncTarget): SyncEngine = SyncEngine(
     local = JsonVaultStore(JvmVaultFileSystem(root)),
     tombstones = JsonTombstoneStore(JvmVaultFileSystem(state)),
+    remoteIndex = JsonRemoteIndexStore(JvmVaultFileSystem(state)),
     target = target,
     clock = Seams.system().clock,
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),

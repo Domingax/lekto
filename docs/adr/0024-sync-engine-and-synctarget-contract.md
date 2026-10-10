@@ -77,3 +77,14 @@ tombstones or the remote index in the vault (they are not user data, ADR-0003 /
 ADR-0005); letting each driver invent its own merge or ignore a capability the
 other honours (the difference would leak into the merge, which ADR-0009 exists to
 prevent).
+
+## Update — the remote index is persisted, and the listing is told what the engine holds (issue #119)
+
+The "session state" note in "The engine's device-local state" is superseded: the
+`RemoteIndex` is now **persisted** through a `RemoteIndexStore` (`remote-index.json`
+beside `tombstones.json`), and the seam's listing is told the revisions the engine
+already holds — `list(known)` returns a `SyncListing(items, unchanged)` — so a
+driver reads only the new or changed items. ADR-0027 records why the memory
+stores the last item (revision **and** body, not the revision alone) and why this
+is device-local, never the vault. The merge, the capabilities and the record-by-
+record last-writer-wins are unchanged.

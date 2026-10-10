@@ -69,6 +69,15 @@ data class SyncItem(val version: VersionedRecord, val revision: Revision) {
  */
 data class SyncChanges(val items: List<SyncItem>, val cursor: SyncCursor)
 
+/**
+ * A target's items as of one listing (ADR-0027): the [items] whose body the
+ * caller must read — ids that are new and ids whose revision moved — and the
+ * [unchanged] ids whose revision the caller already held, so the driver did not
+ * read them again. An empty [known] passed to [SyncTarget.list] reads every item
+ * and leaves [unchanged] empty.
+ */
+data class SyncListing(val items: List<SyncItem>, val unchanged: Set<String> = emptySet())
+
 /** The result of writing one item: the new revision, or the conflict that stopped it. */
 sealed interface WriteOutcome {
     /** The write landed; [revision] is the item's new revision. */
@@ -98,8 +107,14 @@ interface SyncTarget {
     /** What this target can do, so the engine can degrade rather than assume. */
     fun capabilities(): SyncCapabilities
 
-    /** Every item the target holds, live records and tombstones alike. */
-    suspend fun list(): List<SyncItem>
+    /**
+     * The target's items. [known] maps each id to the revision the caller last
+     * saw; a driver reads the body only of items that are new or whose revision
+     * moved, and names the rest in [SyncListing.unchanged], never reading them
+     * again (ADR-0027). An empty [known] reads every item, so a first sync keeps
+     * its shape.
+     */
+    suspend fun list(known: Map<String, Revision> = emptyMap()): SyncListing
 
     /** The item with [id], or `null` when the target holds none. */
     suspend fun get(id: String): SyncItem?
@@ -110,7 +125,7 @@ interface SyncTarget {
      * a target without one is never asked, and the default below lists everything
      * so such a driver need not implement a stub.
      */
-    suspend fun changes(cursor: SyncCursor?): SyncChanges = SyncChanges(list(), SyncCursor(NO_CHANGE_CURSOR))
+    suspend fun changes(cursor: SyncCursor?): SyncChanges = SyncChanges(list().items, SyncCursor(NO_CHANGE_CURSOR))
 
     /**
      * Writes [version] as its id's item. When [expected] is non-null and the

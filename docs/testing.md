@@ -162,11 +162,13 @@ conditional headers (`If-None-Match`, `If-Match` and the DAV `If`) — so the
 driver's remote layout and conditional writes
 are proved without Docker. The fake mirrors the wrinkles that matter to the
 driver: a `PUT` that returns no ETag, which forces the driver's `HEAD` fallback,
-and a configurable status for a `MKCOL` on a collection that already exists,
+a configurable status for a `MKCOL` on a collection that already exists,
 which pins that the driver reads a collection's existence instead of trusting
-`405` (issue #117). A separate test drives the container lane, a rejected
-credential and a `500` (both surfaced as `SyncTargetException`), and a driver that
-claims a capability it lacks, which the contract must reject (ADR-0025).
+`405` (issue #117), and it counts its `GET`s, so the listing's re-read avoidance
+is pinned on the driver too (ADR-0027). A separate test drives the container
+lane, a rejected credential and a `500` (both surfaced as `SyncTargetException`),
+and a driver that claims a capability it lacks, which the contract must reject
+(ADR-0025).
 
 The driver's **Android** half (issue #116; ADR-0026) runs the same contract in
 `integrations/webdav/src/androidHostTest` under Robolectric, through the
@@ -381,7 +383,8 @@ tell two writers apart.
 The sync **engine** (ticket #26; ADR-0009, ADR-0015) is the domain service that
 moves those merged bytes, so its behaviours live in `core/commonTest`: a full
 sync reconciles two vaults that share no history, incremental sync takes a change
-cursor where the target offers one and a listing where it does not, a `delete`
+cursor where the target offers one and a listing where it does not, a listing
+re-reads only the records that changed since the last sync, a `delete`
 propagates and does not resurrect, a conflicting edit resolves by the merge
 rules, a conditional write that loses its race is re-read and re-applied, and an
 imported book's original follows its record to the other device while a deletion
@@ -390,15 +393,23 @@ takes it away on both (ADR-0016). The `SyncTarget` seam is a contract in
 the fake in every capability combination, so the cursor and compare-and-swap
 branches and the no-capability degraded path are all exercised, and it pins the
 attachment channel including that writing a tombstone drops the id's original;
-the WebDAV driver (ticket #27) runs the same contract against a container, and
+the contract's listing cases (ADR-0027) prove a target told the revisions the
+engine already holds reads only what moved and names the rest unchanged, and the
+WebDAV driver (ticket #27) runs the same contract against a container, and
 against `testkit`'s in-process `FakeWebDavServer` without Docker, so its remote
 layout — one JSON file per item named by the Base64-URL id, one binary file per
 book original — and its ETag compare-and-swap are pinned without Docker
-(ADR-0025). The
+(ADR-0025), and the fake counts its `GET`s so the saving is pinned too. The
 engine's own store of **tombstones** is a second seam, `TombstoneStore`:
 `TombstoneStoreContract` runs against `InMemoryTombstoneStore` in
 `core/commonTest` and against the JSON store (`JsonTombstoneStore`) over an
-in-memory filesystem there and a real directory in `core/jvmTest`. The engine
+in-memory filesystem there and a real directory in `core/jvmTest`. The device-local
+**remote index** is a third seam, `RemoteIndexStore` (ADR-0027):
+`RemoteIndexStoreContract` runs against `InMemoryRemoteIndexStore` in
+`core/commonTest` and against `JsonRemoteIndexStore` over an in-memory filesystem
+there and a real directory in `core/jvmTest`, and a corrupt document reads as an
+empty memory so a sync falls back to a full listing rather than failing over a
+cache. The engine
 pins no dispatcher: `sync` is `suspend` and runs on the caller's context, so the
 whole suite runs under `runTest`, and one test drives the fake's latency through
 the test scheduler to prove it.

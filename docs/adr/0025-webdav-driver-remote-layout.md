@@ -49,6 +49,18 @@ diffs it. Capabilities are the contract's gate: the `SyncTargetContract` only
 adds a case for a capability the driver claims, so a driver that claimed a cursor
 or a compare-and-swap it did not honour fails the case it is asked to pass.
 
+## Update — the listing's ETag is used to skip unchanged items (issue #119)
+
+The paragraph above ("the listing's ETags are ignored") and the consequence "every
+sync lists every item" are superseded. The driver now reads each listed item's
+`getetag` and passes the engine's known revisions to the listing; an item whose
+`ETag` is unchanged is named in `SyncListing.unchanged` and is not fetched at all,
+so a steady-state sync is one `PROPFIND` plus the changed records. A body the
+driver does read is tagged with the `ETag` the listing reported, so the next
+listing compares like with like; the conditional-write contract and the remote
+layout are unchanged. ADR-0027 records the seam change and the device-local index
+the engine keeps.
+
 ## Failure is typed and retryable
 
 Transport failures, unexpected statuses and unreadable documents raise

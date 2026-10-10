@@ -5,6 +5,7 @@ import app.lekto.core.sync.SyncCapabilities
 import app.lekto.core.sync.SyncChanges
 import app.lekto.core.sync.SyncCursor
 import app.lekto.core.sync.SyncItem
+import app.lekto.core.sync.SyncListing
 import app.lekto.core.sync.SyncTarget
 import app.lekto.core.sync.WriteOutcome
 import app.lekto.core.vault.VersionedRecord
@@ -20,10 +21,11 @@ import kotlin.time.Duration
  * It models what a real driver cannot avoid — an opaque [Revision] per write, an
  * optional change cursor over write order, an optional compare-and-swap, and a
  * binary attachment channel — and can be told to lose a write's race so the
- * engine's recovery path is reachable. [listCalls] and [changesCalls] let a test
- * prove which path the engine took, [attachmentWrites] proves an original is
- * uploaded once, [latency] lets it prove the engine runs under virtual time, and
- * [failNextConditionalWrite] simulates a competing writer.
+ * engine's recovery path is reachable. [listCalls], [changesCalls] and [reads]
+ * let a test prove which path the engine took and how many bodies a listing read,
+ * [attachmentWrites] proves an original is uploaded once, [latency] lets it prove
+ * the engine runs under virtual time, and [failNextConditionalWrite] simulates a
+ * competing writer.
  */
 @Suppress("TooManyFunctions") // A test double of a wide seam; its methods are the seam's.
 class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private val changeCursor: Boolean = true) :
@@ -39,6 +41,10 @@ class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private 
     var listCalls = 0
         private set
 
+    /** How many item bodies a listing read, so a test can prove an unchanged one is not read again. */
+    var reads = 0
+        private set
+
     /** How many times the engine asked for a change set. */
     var changesCalls = 0
         private set
@@ -52,10 +58,16 @@ class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private 
 
     override fun capabilities(): SyncCapabilities = SyncCapabilities(conditionalWrites, changeCursor)
 
-    override suspend fun list(): List<SyncItem> {
+    override suspend fun list(known: Map<String, Revision>): SyncListing {
         listCalls++
         delay(latency)
-        return items.values.sortedBy { it.id }
+        val toRead = mutableListOf<SyncItem>()
+        val unchanged = linkedSetOf<String>()
+        items.values.sortedBy { it.id }.forEach { item ->
+            if (known[item.id] == item.revision) unchanged += item.id else toRead += item
+        }
+        reads += toRead.size
+        return SyncListing(toRead, unchanged)
     }
 
     override suspend fun get(id: String): SyncItem? {
