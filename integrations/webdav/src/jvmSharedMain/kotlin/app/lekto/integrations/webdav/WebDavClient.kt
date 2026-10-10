@@ -4,10 +4,6 @@ package app.lekto.integrations.webdav
 
 import app.lekto.core.sync.SyncTargetException
 import java.io.IOException
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
 
 /** How a write is conditioned on an item's current revision. */
 internal sealed interface WriteCondition {
@@ -34,10 +30,11 @@ internal sealed interface WebDavWriteResult {
 }
 
 /**
- * The WebDAV verbs the driver speaks, over `java.net.http` (JDK 11+) rather than
- * `HttpURLConnection`, which rejects the `PROPFIND` and `MKCOL` methods
- * (`ProtocolException: Invalid HTTP method`) — the two verbs WebDAV listings and
- * collection creation need.
+ * The WebDAV verbs the driver speaks, over the platform's [WebDavTransport]
+ * (ADR-0026). The transport is the one platform call — `java.net.http` on the
+ * JVM, OkHttp on Android — chosen because `HttpURLConnection` rejects the
+ * `PROPFIND` and `MKCOL` methods (`ProtocolException: Invalid HTTP method`), the
+ * two verbs WebDAV listings and collection creation need.
  *
  * Every failure is a [SyncTargetException], and every method leaves a resource
  * untouched when it cannot complete, so a caller retries rather than seeing a
@@ -45,10 +42,11 @@ internal sealed interface WebDavWriteResult {
  * never named in an error.
  */
 @Suppress("TooManyFunctions") // One method per WebDAV verb and its small helpers; the seam is the protocol.
-internal class WebDavClient(connection: WebDavConnection, private val http: HttpClient = defaultClient()) {
+internal class WebDavClient(connection: WebDavConnection) {
 
     private val urls = WebDavUrls(connection.baseUrl)
     private val authorization = connection.authorization
+    private val transport: WebDavTransport = defaultWebDavTransport()
     private val ensuredCollections = mutableSetOf<String>()
     private var baseEnsured = false
 
@@ -73,8 +71,7 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
      */
     private fun requireBase() {
         if (exists("")) return
-        val request = WebDavRequests.mkcol(urls.collection(""))
-        val status = send(request, CREATE_COLLECTION, "").statusCode()
+        val status = send(WebDavRequests.mkcol(urls.collection("")), CREATE_COLLECTION, "").status
         if (status !in COLLECTION_SUCCESS) {
             throw SyncTargetException("the WebDAV server did not recognise the address as a collection (HTTP $status)")
         }
@@ -84,18 +81,18 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
     fun propfind(relative: String): List<String> {
         ensureCollection(relative)
         val response = send(WebDavRequests.propfind(urls.collection(relative)), "list", relative)
-        if (response.statusCode() != 207) throw failure("list", relative, response.statusCode())
-        return WebDavMultistatus.hrefs(response.body().decodeToString())
+        if (response.status != 207) throw failure("list", relative, response.status)
+        return WebDavMultistatus.hrefs(response.body.decodeToString())
             .mapNotNull { href -> urls.childOf(href, relative) }
     }
 
     /** Reads [relative], or `null` when the target holds no such resource. */
     fun read(relative: String): WebDavBlob? {
         val response = send(WebDavRequests.get(urls.resource(relative)), "read", relative)
-        return when (response.statusCode()) {
-            200 -> WebDavBlob(requireEtag(response, "read", relative), response.body())
+        return when (response.status) {
+            200 -> WebDavBlob(requireEtag(response, "read", relative), response.body)
             404 -> null
-            else -> throw failure("read", relative, response.statusCode())
+            else -> throw failure("read", relative, response.status)
         }
     }
 
@@ -106,20 +103,29 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
      */
     fun write(relative: String, bytes: ByteArray, condition: WriteCondition): WebDavWriteResult {
         val request = WebDavRequests.put(urls.resource(relative), bytes)
-        WebDavRequests.conditions(condition).forEach(request::header)
-        val response = send(request, "write", relative)
-        return when (response.statusCode()) {
-            in 200..299 -> WebDavWriteResult.Written(etag(response) ?: etagFromHead(relative))
+        val conditioned = request.copy(headers = request.headers + WebDavRequests.conditions(condition))
+        val response = send(conditioned, "write", relative)
+        return when (response.status) {
+            in 200..299 -> WebDavWriteResult.Written(response.etag ?: etagFromHead(relative))
             412 -> WebDavWriteResult.PreconditionFailed
-            else -> throw failure("write", relative, response.statusCode())
+            else -> throw failure("write", relative, response.status)
         }
     }
 
     /** Removes [relative]; a resource that is already absent is success. */
     fun delete(relative: String) {
-        val response = send(WebDavRequests.delete(urls.resource(relative)), "delete", relative)
-        val status = response.statusCode()
+        val status = send(WebDavRequests.delete(urls.resource(relative)), "delete", relative).status
         if (status !in 200..299 && status != 404) throw failure("delete", relative, status)
+    }
+
+    /**
+     * Renames [from] to [to] with a `MOVE`; a resource that is already gone is
+     * success, so a migration can be re-run without failing.
+     */
+    fun move(from: String, to: String) {
+        val request = WebDavRequests.move(urls.resource(from), urls.resource(to))
+        val status = send(request, "rename", from).status
+        if (status !in 200..299 && status != 404) throw failure("rename", from, status)
     }
 
     /** Creates [relative]'s collection chain, if it is not already there. */
@@ -128,8 +134,7 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
         val parent = relative.substringBeforeLast('/', "")
         if (parent.isNotEmpty()) createCollection(parent)
         if (!exists(relative)) {
-            val request = WebDavRequests.mkcol(urls.collection(relative))
-            val status = send(request, CREATE_COLLECTION, relative).statusCode()
+            val status = send(WebDavRequests.mkcol(urls.collection(relative)), CREATE_COLLECTION, relative).status
             if (status !in COLLECTION_SUCCESS) throw failure(CREATE_COLLECTION, relative, status)
         }
         ensuredCollections += relative
@@ -144,38 +149,29 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
      */
     private fun exists(relative: String): Boolean {
         val response = send(WebDavRequests.propfind(urls.collection(relative), depth = 0), "check", relative)
-        return when (response.statusCode()) {
+        return when (response.status) {
             207 -> true
             404 -> false
-            else -> throw failure("check", relative, response.statusCode())
+            else -> throw failure("check", relative, response.status)
         }
     }
 
     /** Reads a written item's revision when the server did not return it on the `PUT`. */
     private fun etagFromHead(relative: String): String {
         val response = send(WebDavRequests.head(urls.resource(relative)), READ_REVISION, relative)
-        if (response.statusCode() != 200) throw failure(READ_REVISION, relative, response.statusCode())
+        if (response.status != 200) throw failure(READ_REVISION, relative, response.status)
         return requireEtag(response, READ_REVISION, relative)
     }
 
-    /** Runs [request], mapping a transport failure to a [SyncTargetException]. */
-    private fun send(request: HttpRequest.Builder, what: String, path: String): HttpResponse<ByteArray> = try {
-        http.send(
-            request.timeout(TIMEOUT).header("Authorization", authorization).build(),
-            HttpResponse.BodyHandlers.ofByteArray(),
-        )
+    /** Runs [request] through the transport, mapping an I/O failure to a [SyncTargetException]. */
+    private fun send(request: WebDavRequest, what: String, path: String): WebDavResponse = try {
+        transport.execute(request.copy(headers = request.headers + ("Authorization" to authorization)))
     } catch (e: IOException) {
         throw SyncTargetException("could not $what '$path': the WebDAV server is unreachable", e)
-    } catch (e: InterruptedException) {
-        Thread.currentThread().interrupt()
-        throw SyncTargetException("could not $what '$path': the WebDAV request was interrupted", e)
     }
 
-    private fun etag(response: HttpResponse<ByteArray>): String? =
-        response.headers().firstValue("ETag").orElse(null)?.takeIf { it.isNotBlank() }
-
-    private fun requireEtag(response: HttpResponse<ByteArray>, what: String, path: String): String =
-        etag(response) ?: throw SyncTargetException("could not $what '$path': the server returned no ETag")
+    private fun requireEtag(response: WebDavResponse, what: String, path: String): String =
+        response.etag ?: throw SyncTargetException("could not $what '$path': the server returned no ETag")
 
     private fun failure(what: String, path: String, status: Int): SyncTargetException =
         SyncTargetException("could not $what '$path': the WebDAV server answered HTTP $status")
@@ -193,13 +189,5 @@ internal class WebDavClient(connection: WebDavConnection, private val http: Http
 
         /** The action label an error carries when the driver reads back a written revision. */
         const val READ_REVISION: String = "read the revision"
-
-        val TIMEOUT: Duration = Duration.ofSeconds(30)
-
-        fun defaultClient(): HttpClient = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(Duration.ofSeconds(15))
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build()
     }
 }

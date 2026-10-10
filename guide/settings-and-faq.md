@@ -6,7 +6,7 @@ answers the common questions.
 ## Settings
 
 - **Sync** — connect your own WebDAV server, test it, turn sync on and see its
-  status and last result (desktop for now); see [Vault and sync](/vault-and-sync).
+  status and last result; see [Vault and sync](/vault-and-sync).
 - **Vault export and import** — write your whole Vault to a bundle, or restore one.
 - **Dictionary pack** — the status of the offline dictionary pack and its download.
 - **LLM provider** — choose a provider, enter an API key, pick a model, and test the

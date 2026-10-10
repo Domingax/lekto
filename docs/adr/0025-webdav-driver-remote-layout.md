@@ -95,3 +95,28 @@ root — so a correctly configured account failed with *"could not create collec
 ''"* before any sync. Reading existence makes the driver independent of that
 status. The remote layout, the ETag revisions and the conditional-write contract
 are unchanged.
+
+## Update — the module gains an Android target (issue #116)
+
+The "JVM-only for now" consequence below is superseded: `integrations/webdav` now
+also targets Android, so **Settings → Sync** is usable on the first-class client.
+The HTTP call moved behind a `WebDavTransport` seam — `java.net.http` on the JVM
+(unchanged), OkHttp on Android, which performs the `PROPFIND`/`MKCOL` methods
+`HttpURLConnection` refuses. ADR-0026 records that decision. The remote layout,
+the ETag revisions and the conditional-write contract are unchanged.
+
+## Update — the attachment suffix is `.data`, not `.bin` (issue #116)
+
+The layout's second line above is superseded: a book original is now
+`<root>/attachments/<base64url(id)>.data`. Koofr's WebDAV accepts a `.bin`
+upload (`PUT` answers `201`) but **refuses to serve it back** — a `GET` returns
+the headers and then closes the connection, so the driver saw an I/O failure and
+an imported book could never follow its record to another device. Every other
+suffix tested (`.data`, `.dat`, `.blob`, `.raw`, no extension) is served, so the
+channel moved to `.data`. This is a remote-layout change, so the driver
+**migrates** what a pre-`.data` client wrote: listing the attachments collection
+renames a legacy `<id>.bin` to `<id>.data` with WebDAV's `MOVE`, in place, so an
+original is recovered without re-uploading it. A server that refuses the `MOVE`
+leaves the file ignored, exactly as it was before. The change landed before the
+feature shipped, so no released client depends on the old suffix.
+

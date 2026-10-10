@@ -36,6 +36,7 @@ without the other.
 | kotlinx.serialization (vault) | 1.9.0 | `gradle/libs.versions.toml` (`kotlinx-serialization`) |
 | sqlite-jdbc (dictionary pack) | 3.53.4.0 | `gradle/libs.versions.toml` (`sqlite-jdbc`) |
 | KSafe (desktop secret storage) | 3.3.0 | `gradle/libs.versions.toml` (`ksafe`) |
+| OkHttp (Android WebDAV) | 5.4.0 | `gradle/libs.versions.toml` (`okhttp`) |
 
 Compose Material 3 versions independently of Compose Multiplatform, which is
 why it carries its own pinned version. The JDK is pinned by *language version*:
@@ -218,7 +219,8 @@ linter reports are produced. The `webdav` lane needs Docker for the driver's
 container cases — present on GitHub's runners — while its non-container tests run
 anywhere, so the task still passes where Docker is absent; the `fast` lane excludes
 that task so the two lanes do not overlap. The `fast` lane also runs the Android host suites —
-`core`'s `:core:testAndroidHostTest` and the app's `:app:testDebugUnitTest` —
+`core`'s `:core:testAndroidHostTest`, the app's `:app:testDebugUnitTest` and
+`integrations/webdav`'s `:integrations:webdav:testAndroidHostTest` —
 which need the Android SDK the GitHub runners carry, and no emulator
 (`docs/testing.md#android-host-lane`).
 The `guide` lane builds the end-user guide and its npm licence gate on every pull
@@ -357,13 +359,24 @@ classpath. It was already on the test classpath through
 (`docs/testing.md`), so the change promotes it to an `api` dependency rather than
 adding a new component.
 
+**OkHttp** (Apache-2.0, AGPL-compatible) is the Android target's WebDAV transport
+(issue #116; ADR-0026). Android ships no `java.net.http` and `HttpURLConnection`
+rejects the `PROPFIND`/`MKCOL` methods WebDAV needs, so the driver's HTTP call
+sits behind a `WebDavTransport` seam: the desktop target keeps the
+dependency-free JDK client and the Android target uses OkHttp, which performs any
+method. OkHttp is a production dependency of `integrations/webdav`'s **Android**
+target only, so it is on the shipped app's classpath and held to the licence gate
+like any other. It is pinned at 5.4.0 because 5.5.0's Android artifact requires
+`compileSdk` 37 and this repository is pinned to 36.
+
+
 ## Modules
 
 | Module                  | What it is                                                          |
 | ----------------------- | ------------------------------------------------------------------- |
 | `core`                  | The domain: vault, records, merge, tokenisation, word identity, vocabulary, import and library, sync engine, parsers, the dictionary-pack reader. |
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
-| `integrations/webdav`   | The first sync driver, isolated from the domain.                    |
+| `integrations/webdav`   | The first sync driver, isolated from the domain; a JVM (desktop) and an Android target behind one `WebDavTransport` seam (ADR-0026). |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |
 | `tools/dictionaries`    | The offline dictionary-pack pipeline; published by its own CI workflow. |
 | `architecture`          | The architecture tests (ticket #9): the module boundaries and naming conventions as tests. Test-only, never published. |

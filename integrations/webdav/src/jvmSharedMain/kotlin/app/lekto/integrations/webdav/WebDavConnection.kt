@@ -1,7 +1,6 @@
 package app.lekto.integrations.webdav
 
-import java.nio.charset.StandardCharsets
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 /**
  * Where a driver syncs and as whom: the base URL, and the HTTP Basic credentials
@@ -19,7 +18,5 @@ internal class WebDavConnection(baseUrl: String, username: String, password: Str
     val baseUrl: String = baseUrl.trimEnd('/')
 
     /** The `Authorization` header value, built once from the credentials. */
-    val authorization: String = "Basic " + Base64.getEncoder().encodeToString(
-        "$username:$password".toByteArray(StandardCharsets.UTF_8),
-    )
+    val authorization: String = "Basic " + Base64.encode("$username:$password".toByteArray(Charsets.UTF_8))
 }

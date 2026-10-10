@@ -16,7 +16,7 @@ import kotlinx.serialization.SerializationException
  *
  * The remote layout is the driver's (ADR-0024), and lives in [WebDavNames]:
  * `<root>/records/<base64url(id)>.json` holds one [VersionedRecord]'s JSON (a
- * live record or a tombstone), and `<root>/attachments/<base64url(id)>.bin`
+ * live record or a tombstone), and `<root>/attachments/<base64url(id)>.data`
  * holds one book original.
  *
  * Capabilities are reported honestly: a create conditions with HTTP
@@ -53,7 +53,19 @@ class WebDavSyncTarget(baseUrl: String, username: String, password: String) : Sy
     }
 
     override suspend fun attachmentIds(): Set<String> =
-        client.propfind(WebDavNames.ATTACHMENTS).mapNotNull(WebDavNames::idFromAttachment).toSet()
+        client.propfind(WebDavNames.ATTACHMENTS).mapNotNull(::attachmentId).toSet()
+
+    /**
+     * The id a listed attachment names, migrating a legacy `.bin` file to `.data`
+     * first (issue #116). Koofr refuses to serve `.bin`, so an original a
+     * pre-`.data` client uploaded could never be read; a `MOVE` renames it in
+     * place, recovering the original without re-uploading it. A server that
+     * refuses the `MOVE` leaves the file ignored, exactly as it was before.
+     */
+    private fun attachmentId(path: String): String? = WebDavNames.idFromAttachment(path)
+        ?: WebDavNames.idFromLegacyAttachment(path)?.takeIf { id ->
+            runCatching { client.move(path, WebDavNames.attachmentPath(id)) }.isSuccess
+        }
 
     override suspend fun attachment(id: String): ByteArray? = client.read(WebDavNames.attachmentPath(id))?.bytes
 

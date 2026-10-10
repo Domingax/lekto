@@ -5,6 +5,7 @@ package app.lekto.testkit
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
@@ -70,18 +71,24 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
                 respond(exchange, status)
                 return
             }
-            val path = pathOf(exchange)
-            when (exchange.requestMethod.uppercase()) {
-                "MKCOL" -> mkcol(exchange, path)
-                "PROPFIND" -> propfind(exchange, path)
-                "GET" -> get(exchange, path)
-                "HEAD" -> head(exchange, path)
-                "PUT" -> put(exchange, path)
-                "DELETE" -> delete(exchange, path)
-                else -> respond(exchange, 405)
-            }
+            dispatch(exchange)
         } finally {
             exchange.close()
+        }
+    }
+
+    /** Runs the handler for the request's WebDAV method. */
+    private fun dispatch(exchange: HttpExchange) {
+        val path = pathOf(exchange)
+        when (exchange.requestMethod.uppercase()) {
+            "MKCOL" -> mkcol(exchange, path)
+            "PROPFIND" -> propfind(exchange, path)
+            "GET" -> get(exchange, path)
+            "HEAD" -> head(exchange, path)
+            "PUT" -> put(exchange, path)
+            "DELETE" -> delete(exchange, path)
+            "MOVE" -> move(exchange, path)
+            else -> respond(exchange, 405)
         }
     }
 
@@ -160,6 +167,36 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
 
     private fun delete(exchange: HttpExchange, path: String) {
         if (resources.remove(path) == null) respond(exchange, 404) else respond(exchange, 204)
+    }
+
+    private fun move(exchange: HttpExchange, path: String) {
+        val stored = resources[path] ?: return respond(exchange, 404)
+        val destination = destinationOf(exchange) ?: return respond(exchange, 400)
+        resources.remove(path)
+        resources[destination] = stored
+        respond(exchange, 201)
+    }
+
+    /** The path the `Destination` header names, e.g. a `MOVE`'s new name. */
+    private fun destinationOf(exchange: HttpExchange): String? {
+        val destination = exchange.requestHeaders.getFirst("Destination") ?: return null
+        val raw = URI(destination).path
+        return if (raw.length > 1) raw.trimEnd('/') else raw
+    }
+
+    /**
+     * Places [bytes] at [path] — a root-relative path such as
+     * `/base/attachments/x.bin` — creating the collections above it, so a test
+     * can plant a file the driver did not write, a legacy `.bin` say (issue #116).
+     */
+    fun seed(path: String, bytes: ByteArray) {
+        var parent = parentOf(path)
+        while (parent !in collections) {
+            collections += parent
+            if (parent == "/") break
+            parent = parentOf(parent)
+        }
+        resources[path] = Stored(bytes, "\"s${sequence.incrementAndGet()}\"")
     }
 
     private fun multistatus(collection: String, children: List<String>): String = buildString {

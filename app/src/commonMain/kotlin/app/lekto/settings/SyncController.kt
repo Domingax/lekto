@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The pieces a platform entry point supplies so sync can be configured from the
@@ -24,9 +25,10 @@ import kotlinx.coroutines.launch
  * like [app.lekto.LlmServices], so the root composable's signature grows in one
  * named place.
  *
- * A platform without a driver (Android, until a later ticket gives the WebDAV
- * module an Android target; ADR-0025) supplies no [SyncServices], so the section
- * says so rather than offering a dead action.
+ * A platform with no driver supplies no [SyncServices], so the section says so
+ * rather than offering a dead action. Both clients now wire one (issue #116;
+ * ADR-0026), so this is the degraded path a platform without a transport would
+ * take.
  */
 data class SyncServices(
     /** The app-private, non-secret sync configuration (issue #28). */
@@ -110,6 +112,11 @@ class SyncController(
     private val secrets: SecretStore,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
+    /**
+     * Called after a sync attempt, so a screen that reads the vault — the library
+     * — reloads what the sync moved rather than showing its stale list (issue #116).
+     */
+    private val onSynced: () -> Unit = {},
 ) {
 
     private val _state = MutableStateFlow(initialState())
@@ -157,7 +164,7 @@ class SyncController(
             val result = if (secret == null) {
                 SyncResult.Failure(NO_PASSWORD)
             } else {
-                probe(_state.value.config, secret)
+                withContext(dispatcher) { probe(_state.value.config, secret) }
             }
             _state.update { current -> current.copy(testing = false, result = result) }
         }
@@ -217,7 +224,8 @@ class SyncController(
         }
         _state.update { current -> current.copy(syncing = true) }
         scope.launch {
-            val outcome = runSync(config, password)
+            val outcome = withContext(dispatcher) { runSync(config, password) }
+            onSynced()
             _state.update { current -> current.copy(syncing = false, lastSync = outcome) }
         }
     }

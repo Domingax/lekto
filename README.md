@@ -32,7 +32,7 @@ APK with `./gradlew :app:assembleDebug`.
 | ----------------------- | ---------------------------------------------------------------- |
 | `core`                  | The domain — vault, records, merge, parsers, tokenisation, word identity, sync engine, dictionary reader. |
 | `testkit`               | Contract suites and in-memory fakes for the other modules' tests.|
-| `integrations/webdav`   | The first sync driver.                                            |
+| `integrations/webdav`   | The first sync driver (JVM + Android).                            |
 | `app`                   | The Compose Multiplatform application (Android + desktop).        |
 | `tools/dictionaries`    | The offline dictionary-pack pipeline.                             |
 | `architecture`          | The architecture tests: module boundaries and naming conventions.|

@@ -10,15 +10,21 @@ import kotlinx.coroutines.CoroutineScope
  * **Secret store** are wired, so [App] itself stays a flat wiring function. A
  * platform that supplies neither gets `null`, and the sync section says it is
  * unavailable rather than offering a dead action.
+ *
+ * [onSynced] runs after each sync attempt, so the library reloads the books a
+ * sync moved instead of showing its stale list (issue #116).
  */
 @Composable
-internal fun rememberSyncController(environment: AppEnvironment, scope: CoroutineScope): SyncController? =
-    remember(environment.sync, environment.secrets, environment.dispatcher, scope) {
-        val services = environment.sync
-        val secrets = environment.secrets
-        if (services != null && secrets != null) {
-            SyncController(services, secrets, environment.dispatcher, scope)
-        } else {
-            null
-        }
+internal fun rememberSyncController(
+    environment: AppEnvironment,
+    scope: CoroutineScope,
+    onSynced: () -> Unit = {},
+): SyncController? = remember(environment.sync, environment.secrets, environment.dispatcher, scope) {
+    val services = environment.sync
+    val secrets = environment.secrets
+    if (services != null && secrets != null) {
+        SyncController(services, secrets, environment.dispatcher, scope, onSynced)
+    } else {
+        null
     }
+}

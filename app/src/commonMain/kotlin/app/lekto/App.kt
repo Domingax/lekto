@@ -187,7 +187,7 @@ fun App(environment: AppEnvironment) {
         }
     }
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
-    val sync = rememberSyncController(environment, scope)
+    val sync = rememberSyncController(environment, scope, onSynced = controller::refresh)
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
     val settings = Settings(
         dictionary = dictionary,
