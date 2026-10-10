@@ -16,7 +16,7 @@ import kotlinx.serialization.SerializationException
  *
  * The remote layout is the driver's (ADR-0024), and lives in [WebDavNames]:
  * `<root>/records/<base64url(id)>.json` holds one [VersionedRecord]'s JSON (a
- * live record or a tombstone), and `<root>/attachments/<base64url(id)>.bin`
+ * live record or a tombstone), and `<root>/attachments/<base64url(id)>.data`
  * holds one book original.
  *
  * Capabilities are reported honestly: a create conditions with HTTP

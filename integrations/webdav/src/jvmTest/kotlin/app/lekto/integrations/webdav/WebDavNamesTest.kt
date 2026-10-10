@@ -24,7 +24,18 @@ class WebDavNamesTest {
     fun `a record path is a json file under records`() {
         assertTrue(WebDavNames.isRecord("records/YQ.json"))
         assertFalse(WebDavNames.isRecord("records/README.txt"))
-        assertFalse(WebDavNames.isRecord("attachments/YQ.bin"))
+        assertFalse(WebDavNames.isRecord("attachments/YQ.data"))
+    }
+
+    @Test
+    fun `an attachment path is a data file under attachments, and reads its id back`() {
+        // The suffix is `.data`, not `.bin`: Koofr accepts a `.bin` upload but
+        // refuses to serve it back, so an original could never be downloaded
+        // (issue #116). This pins the remote layout's attachment channel.
+        val path = WebDavNames.attachmentPath("a/b c-é")
+
+        assertTrue(path.endsWith(".data"), path)
+        assertEquals("a/b c-é", WebDavNames.idFromAttachment(path))
     }
 
     @Test

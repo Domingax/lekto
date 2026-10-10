@@ -105,3 +105,17 @@ The HTTP call moved behind a `WebDavTransport` seam — `java.net.http` on the J
 `HttpURLConnection` refuses. ADR-0026 records that decision. The remote layout,
 the ETag revisions and the conditional-write contract are unchanged.
 
+## Update — the attachment suffix is `.data`, not `.bin` (issue #116)
+
+The layout's second line above is superseded: a book original is now
+`<root>/attachments/<base64url(id)>.data`. Koofr's WebDAV accepts a `.bin`
+upload (`PUT` answers `201`) but **refuses to serve it back** — a `GET` returns
+the headers and then closes the connection, so the driver saw an I/O failure and
+an imported book could never follow its record to another device. Every other
+suffix tested (`.data`, `.dat`, `.blob`, `.raw`, no extension) is served, so the
+channel moved to `.data`. This is a remote-layout change and therefore a
+compatibility break for a collection a user already populated with `.bin` files:
+they are simply ignored, and the originals re-upload as `.data` on the next sync.
+The change landed before the feature shipped, so no released client depends on
+the old suffix.
+

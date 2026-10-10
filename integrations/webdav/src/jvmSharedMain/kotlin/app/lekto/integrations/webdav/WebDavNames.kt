@@ -6,7 +6,12 @@ import kotlin.io.encoding.Base64
  * The remote layout's names: where an item's file lives and what an id looks
  * like as a path segment. Ids are Base64-URL-encoded so any vault id — spaces,
  * slashes, non-ASCII — becomes a safe, collision-free file name, and the
- * `.json`/`.bin` suffixes keep the record and attachment channels apart.
+ * `.json`/`.data` suffixes keep the record and attachment channels apart.
+ *
+ * The attachment suffix is `.data`, not `.bin`: Koofr's WebDAV accepts a `.bin`
+ * upload but refuses to serve it back (it returns the headers and closes the
+ * connection), so a book original stored as `.bin` could never be downloaded
+ * (issue #116). `.data` is served by every host the driver has been run against.
  */
 internal object WebDavNames {
 
@@ -47,7 +52,7 @@ internal object WebDavNames {
     }
 
     private const val RECORD_SUFFIX = ".json"
-    private const val ATTACHMENT_SUFFIX = ".bin"
+    private const val ATTACHMENT_SUFFIX = ".data"
 
     /** The URL-safe alphabet with no padding, so a name is one path segment. */
     private val URL_SAFE: Base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
