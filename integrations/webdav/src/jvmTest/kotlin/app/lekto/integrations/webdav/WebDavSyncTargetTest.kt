@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
+import java.net.URI
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -144,5 +145,23 @@ class WebDavSyncTargetTest {
 
         assertEquals((outcome as WriteOutcome.Written).revision, readBack?.revision)
         assertEquals(VersionedRecord.of(record), readBack?.version)
+    }
+
+    @Test
+    fun `a legacy bin attachment is migrated to data and reads back`() {
+        // A pre-issue-#116 client wrote `.bin`, which Koofr refuses to serve; the
+        // driver renames it to `.data` in place, so the original is recovered
+        // without re-uploading it.
+        val base = "${server.baseUrl}/lekto-${UUID.randomUUID()}"
+        val id = "a/b c-é"
+        val bytes = byteArrayOf(0, 1, 2, -1)
+        server.seed("${URI(base).path}/attachments/${WebDavNames.encode(id)}.bin", bytes)
+        val target = WebDavSyncTarget(base, "lekto", "lekto")
+
+        val ids = runBlocking { target.attachmentIds() }
+        val readBack = runBlocking { target.attachment(id) }
+
+        assertTrue(id in ids, "the legacy attachment must be listed")
+        assertTrue(readBack?.contentEquals(bytes) == true, "the migrated attachment must read back")
     }
 }
