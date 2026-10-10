@@ -39,3 +39,13 @@ not a module. The document is JSON without an explicit version, because it holds
 primitive fields and a revision can add a defaulted field without a migration; a future
 change that cannot read the old shape degrades to "not configured", which is the same
 outcome as a corrupt file.
+
+## Update — the file seam is `java.nio.file` (issue #126)
+
+The implementation behind the byte-level file seam this decision leans on moved
+from `java.io.File` to `java.nio.file` (issue #126), so the sentence above that
+names `java.io.File` as the thing backing both clients identically now names the
+wrong class. The decision does not move: there is still one file seam for both
+clients, so a second platform seam still buys nothing, and the writer inside it
+is now the NIO atomic replace (ADR-0003). `java.nio.file` needs Android API 26,
+which the app's `minSdk` 27 clears (issue #125).

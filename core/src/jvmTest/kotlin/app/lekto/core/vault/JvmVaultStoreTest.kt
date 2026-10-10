@@ -7,6 +7,10 @@ import io.kotest.matchers.shouldBe
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.test.assertFailsWith
 
 /**
@@ -38,35 +42,79 @@ class JvmVaultStoreTest :
         }
 
         test("an atomic write replaces the previous bytes without a temporary file left behind") {
-            val files = JvmVaultFileSystem(newRoot())
+            val root = newRoot()
+            val files = JvmVaultFileSystem(root)
             files.writeAtomically("a/b.json", "first".encodeToByteArray())
             files.writeAtomically("a/b.json", "second".encodeToByteArray())
 
             files.read("a/b.json")!!.decodeToString() shouldBe "second"
+            root.resolve("a").listFiles()!!.map { it.name } shouldBe listOf("b.json")
         }
 
         test("the filesystem refuses a path that escapes the vault root") {
             val files = JvmVaultFileSystem(newRoot())
 
             assertFailsWith<IllegalArgumentException> { files.writeAtomically("../escape.json", byteArrayOf()) }
+            assertFailsWith<IllegalArgumentException> { files.writeAtomically("a/../../escape.json", byteArrayOf()) }
         }
 
-        test("an atomic write falls back when a rename cannot land on the target") {
+        test("an atomic write replaces the target in one move rather than deleting it first") {
             val root = newRoot()
             val files = JvmVaultFileSystem(root)
-            // A directory in the target's place makes the first rename fail, as
-            // it does where renaming over an existing file is refused.
+            // A rename cannot replace a directory with a file. The write must fail
+            // and leave the target alone, not delete it to make room — the retired
+            // delete-then-rename fallback opened a window with no file (ADR-0003).
             root.resolve("a/b.json").mkdirs()
 
-            files.writeAtomically("a/b.json", "bytes".encodeToByteArray())
+            assertFailsWith<IOException> { files.writeAtomically("a/b.json", "bytes".encodeToByteArray()) }
+            root.resolve("a/b.json").isDirectory shouldBe true
+        }
 
-            files.read("a/b.json")!!.decodeToString() shouldBe "bytes"
+        test("a reader never observes a half-written file while the store replaces it") {
+            val files = JvmVaultFileSystem(newRoot())
+            // A body large enough that a non-atomic write would be observable
+            // mid-write; the atomic move means a reader only ever sees one whole
+            // version or the other, and never the moment-with-no-file the retired
+            // delete-then-rename fallback opened.
+            val first = ByteArray(TORN_WRITE_BYTES) { 0x11 }
+            val second = ByteArray(TORN_WRITE_BYTES) { 0x22 }
+            files.writeAtomically("a/b.json", first)
+
+            val writing = AtomicBoolean(true)
+            val reads = AtomicInteger()
+            val observedFailure = AtomicReference<Throwable?>(null)
+            val reader = thread(name = "vault-reader") {
+                try {
+                    while (writing.get()) {
+                        val bytes = files.read("a/b.json")
+                            ?: error("a reader observed a moment with no file")
+                        reads.incrementAndGet()
+                        if (!bytes.contentEquals(first) && !bytes.contentEquals(second)) {
+                            error("a reader observed a half-written file: ${bytes.size} bytes")
+                        }
+                    }
+                } catch (failure: Throwable) {
+                    observedFailure.set(failure)
+                }
+            }
+            try {
+                repeat(REPLACEMENTS) { index ->
+                    files.writeAtomically("a/b.json", if (index % 2 == 0) second else first)
+                }
+            } finally {
+                writing.set(false)
+                reader.join()
+            }
+
+            observedFailure.get()?.let { throw it }
+            // The reader raced the replacements, so the guards above were exercised.
+            (reads.get() > 0) shouldBe true
         }
 
         test("an atomic write fails when it cannot replace the target") {
             val root = newRoot()
             val files = JvmVaultFileSystem(root)
-            root.resolve("a/b.json/child").apply { parentFile.mkdirs() }.writeText("occupies the target")
+            nonEmptyDirectoryAt(root, "a/b.json")
 
             assertFailsWith<IOException> { files.writeAtomically("a/b.json", byteArrayOf()) }
         }
@@ -78,7 +126,7 @@ class JvmVaultStoreTest :
         test("deleting a path that will not delete fails") {
             val root = newRoot()
             val files = JvmVaultFileSystem(root)
-            root.resolve("a/b.json/child").apply { parentFile.mkdirs() }.writeText("occupies the target")
+            nonEmptyDirectoryAt(root, "a/b.json")
 
             assertFailsWith<IOException> { files.delete("a/b.json") }
         }
@@ -95,4 +143,18 @@ class JvmVaultStoreTest :
             export.isFile shouldBe true
             restored.all().map { it.id } shouldBe listOf("a")
         }
-    })
+    }) {
+
+    private companion object {
+        /** Large enough that a non-atomic write would be caught mid-flight. */
+        const val TORN_WRITE_BYTES: Int = 128 * 1024
+
+        /** The number of replacements the reader races against. */
+        const val REPLACEMENTS: Int = 200
+    }
+}
+
+/** A non-empty directory at [path] under [root], so no file can be written or deleted in its place. */
+private fun nonEmptyDirectoryAt(root: File, path: String) {
+    root.resolve("$path/child").apply { parentFile.mkdirs() }.writeText("occupies the target")
+}
