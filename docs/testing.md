@@ -350,7 +350,10 @@ contract against the fake, and `core/jvmTest` runs the same contract against the
 real directory-backed store — so the two cannot drift (ticket #12, ADR-0014). The
 contract covers record storage and, since ticket #15, the binary **attachments**
 ADR-0016 adds, so a store cannot quietly lose a book's original on export or on
-removal.
+removal. The JVM store's own `JvmVaultStoreTest` also pins the write path the
+contract cannot: `writeAtomically` is one NIO move over a sibling, so a reader
+never observes a half-written file while the store replaces it, and the write
+leaves no temporary neighbour behind (issue #126).
 
 Word identity and tokenisation (ticket #13, ADR-0006) are a domain invariant, so
 their properties live in `core/commonTest`: the same surface form in the same

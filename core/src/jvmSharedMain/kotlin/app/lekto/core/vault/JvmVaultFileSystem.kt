@@ -1,61 +1,90 @@
 package app.lekto.core.vault
 
 import java.io.File
-import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 /**
  * The [VaultFileSystem] backed by a real directory, used by both clients.
  *
  * Desktop and Android share it: the app-private root differs — the OS app-data
- * directory versus `Context.filesDir` — but the storage is the same Java file
- * API, so the vault behaves identically on both (ADR-0007's update records that
- * Android consumes the JVM artifact until `core` declares an Android target).
- * It is built on `java.io.File`; moving it to `java.nio.file` is a change to the
- * write path below and is tracked separately (issue #126).
+ * directory versus `Context.filesDir` — but the storage is the same
+ * `java.nio.file` API on both, so the vault behaves identically (ADR-0007's
+ * update records that `jvmSharedMain` is compiled into both targets).
  *
- * Each write lands in a hidden sibling (`.name.tmp`) and is renamed into place,
- * so a reader sees the old file or the new one, never a half-written mix
- * (ADR-0003).
+ * Each write lands in a temporary sibling and is moved into place with an
+ * atomic replace, so a reader sees the old file or the new one, never a
+ * half-written mix (ADR-0003).
  */
-class JvmVaultFileSystem(private val root: File) : VaultFileSystem {
+class JvmVaultFileSystem(root: File) : VaultFileSystem {
 
-    override fun read(path: String): ByteArray? = resolve(path).takeIf { it.isFile }?.readBytes()
+    /** The root as an absolute, normalised path; the anchor every other path is resolved against. */
+    private val rootPath: Path = root.toPath().toAbsolutePath().normalize()
+
+    override fun read(path: String): ByteArray? {
+        val file = resolve(path)
+        if (!Files.isRegularFile(file)) return null
+        return try {
+            Files.readAllBytes(file)
+        } catch (_: NoSuchFileException) {
+            // The path was removed between the check and the read; treat it as absent.
+            null
+        }
+    }
 
     override fun writeAtomically(path: String, bytes: ByteArray) {
         val target = resolve(path)
-        target.parentFile?.mkdirs()
-        val temp = File(target.parentFile, ".${target.name}.tmp")
-        temp.writeBytes(bytes)
-        if (temp.renameTo(target)) return
-        // Windows refuses to rename over an existing file; removing it first
-        // risks a moment with no file, but never a partially written one.
-        if (target.delete() && temp.renameTo(target)) return
-        throw IOException("could not atomically replace '${target.path}'")
+        val parent = target.parent ?: rootPath
+        Files.createDirectories(parent)
+        val temporary = Files.createTempFile(parent, ".${target.fileName}.", TEMP_SUFFIX)
+        try {
+            Files.write(temporary, bytes)
+            // The temporary is a sibling, so source and target share a filesystem
+            // and the move is atomic; a cross-filesystem move would throw
+            // AtomicMoveNotSupportedException instead of falling back to a copy.
+            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
     }
 
     override fun delete(path: String) {
-        val file = resolve(path)
-        // An absent path is already deleted, not an error (VaultFileSystem);
-        // a present path that will not delete is a real failure.
-        if (!file.delete() && file.exists()) {
-            throw IOException("could not delete '${file.path}'")
+        // An absent path is already deleted, not an error (VaultFileSystem); a
+        // present path that will not delete — a non-empty directory, say —
+        // surfaces its IOException.
+        Files.deleteIfExists(resolve(path))
+    }
+
+    override fun listFiles(): List<String> {
+        if (!Files.isDirectory(rootPath)) return emptyList()
+        return Files.walk(rootPath).use { tree ->
+            tree.filter { Files.isRegularFile(it) }
+                .map { rootPath.relativize(it).joinToString("/") }
+                .toList()
         }
     }
 
-    override fun listFiles(): List<String> = root.walkTopDown()
-        .filter { it.isFile }
-        .map { it.relativeTo(root).invariantSeparatorsPath }
-        .toList()
+    override fun storedPath(path: String): String = resolve(path).toString()
 
-    override fun storedPath(path: String): String = resolve(path).path
-
-    /** Resolves [path] under the root and refuses anything that escapes it. */
-    private fun resolve(path: String): File {
-        val base = root.canonicalFile
-        val candidate = File(root, path).canonicalFile
-        require(candidate == base || candidate.path.startsWith(base.path + File.separator)) {
-            "'$path' escapes the vault root"
-        }
+    /**
+     * Resolves [path] under the root, refusing a path that normalises outside it.
+     *
+     * The guard is lexical: it folds `..` but does not follow symlinks, so it can
+     * anchor a path that does not exist yet — every write's target — which
+     * `Path.toRealPath` cannot. The root is app-private and `VaultPaths` rejects
+     * `..` and unsafe segments before the bytes reach here, so containment against
+     * untrusted ids is what the guard has to hold (issue #126).
+     */
+    private fun resolve(path: String): Path {
+        val candidate = rootPath.resolve(path).normalize()
+        require(candidate.startsWith(rootPath)) { "'$path' escapes the vault root" }
         return candidate
+    }
+
+    private companion object {
+        /** The suffix on a write's temporary neighbour; the move leaves none behind. */
+        const val TEMP_SUFFIX: String = ".tmp"
     }
 }
