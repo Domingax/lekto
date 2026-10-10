@@ -58,6 +58,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
         }
     }
     val vaultTransfer = rememberAndroidVaultTransfer(context, scope)
+    val sync = remember { androidSync(context) }
     App(
         AppEnvironment(
             segmenter = segmenter,
@@ -77,6 +78,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
             vaultTransfer = vaultTransfer,
             secrets = AndroidSecretStore(context),
             llm = androidLlm(context),
+            sync = sync,
         ),
     )
 }

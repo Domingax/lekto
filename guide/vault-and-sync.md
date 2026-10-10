@@ -15,14 +15,11 @@ Vault. Lekto can regenerate or re-download them, and they are never synced.
 
 ## Syncing your Vault
 
-::: info Desktop only for now
-Sync is in the desktop app today. The Android app does not offer it yet, and its
-Settings says so; Android support is coming in a later release.
-:::
-
-Sync is off until you turn it on. In **Settings → Sync**, enter the address of
-your own WebDAV server — Nextcloud, ownCloud, Synology or any WebDAV host — a
-username and an **application password**, test the connection, then enable sync.
+Sync works on Android and on the desktop, through the same **Settings → Sync**
+section on both. Sync is off until you turn it on. In **Settings → Sync**, enter
+the address of your own WebDAV server — Nextcloud, ownCloud, Synology or any
+WebDAV host — a username and an **application password**, test the connection,
+then enable sync.
 
 The address is kept on the device and the application password in the **Secret
 store**; neither enters the Vault, an export or a log. Only the Vault travels

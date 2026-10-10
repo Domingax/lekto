@@ -95,3 +95,13 @@ root — so a correctly configured account failed with *"could not create collec
 ''"* before any sync. Reading existence makes the driver independent of that
 status. The remote layout, the ETag revisions and the conditional-write contract
 are unchanged.
+
+## Update — the module gains an Android target (issue #116)
+
+The "JVM-only for now" consequence below is superseded: `integrations/webdav` now
+also targets Android, so **Settings → Sync** is usable on the first-class client.
+The HTTP call moved behind a `WebDavTransport` seam — `java.net.http` on the JVM
+(unchanged), OkHttp on Android, which performs the `PROPFIND`/`MKCOL` methods
+`HttpURLConnection` refuses. ADR-0026 records that decision. The remote layout,
+the ETag revisions and the conditional-write contract are unchanged.
+

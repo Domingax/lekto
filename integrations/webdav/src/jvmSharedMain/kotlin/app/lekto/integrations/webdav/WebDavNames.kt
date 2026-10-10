@@ -1,7 +1,6 @@
 package app.lekto.integrations.webdav
 
-import java.nio.charset.StandardCharsets
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 /**
  * The remote layout's names: where an item's file lives and what an id looks
@@ -38,16 +37,18 @@ internal object WebDavNames {
     fun isRecord(path: String): Boolean = path.startsWith("$RECORDS/") && path.endsWith(RECORD_SUFFIX)
 
     /** An id as a URL-safe path segment. */
-    fun encode(id: String): String =
-        Base64.getUrlEncoder().withoutPadding().encodeToString(id.toByteArray(StandardCharsets.UTF_8))
+    fun encode(id: String): String = URL_SAFE.encode(id.toByteArray(Charsets.UTF_8))
 
     /** The id a path segment names, or `null` when it is not Base64-URL. */
     fun decode(name: String): String? = try {
-        String(Base64.getUrlDecoder().decode(name), StandardCharsets.UTF_8)
+        URL_SAFE.decode(name).decodeToString()
     } catch (_: IllegalArgumentException) {
         null
     }
 
     private const val RECORD_SUFFIX = ".json"
     private const val ATTACHMENT_SUFFIX = ".bin"
+
+    /** The URL-safe alphabet with no padding, so a name is one path segment. */
+    private val URL_SAFE: Base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
 }

@@ -38,6 +38,7 @@ Force a re-run when Gradle marks the task up-to-date:
 | Architecture         | `architecture/src/test`        | `:architecture:test`            | a JVM        |
 | Dictionary pack      | `tools/dictionaries/src/test`  | `:tools:dictionaries:test`      | a JVM        |
 | WebDAV integration   | `integrations/webdav/src/jvmTest` | `:integrations:webdav:jvmTest` | a JVM; the container cases add Docker and skip without |
+| WebDAV on Android    | `integrations/webdav/src/androidHostTest` | `:integrations:webdav:testAndroidHostTest` | a JVM + an Android SDK (Robolectric downloads its runtime once) |
 | Android instrumented | `app/androidInstrumentedTest`  | `:app:connectedCheck`           | an emulator (nightly) |
 | Dependency licences  | build logic                    | `:checkDependencyLicences`      | resolved metadata |
 | Coverage             | build logic (merged)           | `:koverXmlReport`               | a JVM        |
@@ -167,6 +168,17 @@ which pins that the driver reads a collection's existence instead of trusting
 credential and a `500` (both surfaced as `SyncTargetException`), and a driver that
 claims a capability it lacks, which the contract must reject (ADR-0025).
 
+The driver's **Android** half (issue #116; ADR-0026) runs the same contract in
+`integrations/webdav/src/androidHostTest` under Robolectric, through the
+transport seam's Android implementation — OkHttp — against the same in-process
+`FakeWebDavServer`. The fake's `com.sun.net.httpserver` is a host-JVM API that
+Android never ships, but Robolectric runs the whole lane on the host JVM, so the
+fake stays one implementation in `testkit`'s `jvmMain` and the transport is
+proved without Docker and without a network. Because the JVM and Android
+transports satisfy one `WebDavTransport` interface and pass one
+`SyncTargetContract`, the two cannot drift.
+
+
 The nightly instrumented lane runs a launch smoke test on an emulator
 (`app/androidInstrumentedTest`, issue #71); the platform integrations that need a
 real device — SAF, TTS, Keystore — add their tests there. The lane stays off the
@@ -174,10 +186,12 @@ critical path.
 
 ## Android host lane
 
-Two host lanes run platform code on a **simulated Android runtime** through
+Three host lanes run platform code on a **simulated Android runtime** through
 Robolectric, on the host JVM and with no emulator: `core/androidHostTest` (ticket
-#49) and `app/androidUnitTest` (issue #71). `:core:testAndroidHostTest` and
-`:app:testDebugUnitTest` are part of `check`, so both run in the `fast` CI job
+#49), `app/androidUnitTest` (issue #71) and `integrations/webdav`'s
+`androidHostTest` (issue #116). `:core:testAndroidHostTest`,
+`:app:testDebugUnitTest` and `:integrations:webdav:testAndroidHostTest` are part
+of `check`, so all three run in the `fast` CI job
 (they need an Android SDK, which the GitHub runners carry; without one the modules
 build as JVM-only and the lanes are skipped).
 
@@ -314,7 +328,7 @@ where the change lands:
 | -------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------- |
 | A domain invariant — merge, identity, tokenisation, serialise/parse   | property test over generated data                       | `core/commonTest`           |
 | A seam — `SyncTarget`, `VaultStore`, a provider adapter               | contract suite + in-memory fake                         | `testkit/commonMain`        |
-| A driver under `integrations/`                                        | that contract suite, plus a containerised integration run | `integrations/webdav/jvmTest` |
+| A driver under `integrations/`                                        | that contract suite, plus a containerised integration run and the Android host lane | `integrations/webdav/jvmTest`, `integrations/webdav/androidHostTest` |
 | A parser — EPUB, TXT, PDF                                             | golden over a generated corpus, plus one awkward real fixture | `jvmTest`             |
 | UI behaviour in `app`                                                 | Compose UI-semantics test (desktop, and the same-named Android host lane) | `app/desktopTest`, `app/androidUnitTest` |
 | A visual or layout change                                             | + screenshot golden                                     | `app`, on the PR lane       |
@@ -397,9 +411,16 @@ in plain language, and disconnect without touching the local vault — is
 virtual time with `testkit`'s `InMemorySyncTarget` and a target that cannot be
 reached. `SyncReportSummaryTest` pins the plain-language summary, the section's
 controls, status line and folder-sync warning are `SettingsScreenSemanticsTest`
-on both lanes, and only the desktop composition root wires a real driver
-(ADR-0025) — without one the section says sync is unavailable and never gates the
-reader.
+on both lanes, and the loop — reach settings, save the endpoint and find it
+persisted — is driven through `AppSemanticsTest` on both lanes. The
+composition roots now both wire a real driver (issue #116; ADR-0026):
+`desktopSync` and `androidSync` build the same `WebDavSyncTarget` over their
+platform's transport, rooted app-privately under the client's own directory. The
+Android wiring is proved on the host lane by `AndroidSyncHostTest` — the settings
+document, the tombstone store and the device id under `Context.filesDir`, and the
+engine reconciling the Android vault — so **Settings → Sync** is usable on the
+first-class client, not only desktop. Without a driver the section says sync is
+unavailable and never gates the reader.
 
 The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
 so its level is its own: `PackBuilderTest` pins the transform's rules,

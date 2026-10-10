@@ -52,6 +52,12 @@ kotlin {
         if (androidEnabled) {
             getByName("androidMain").dependencies {
                 implementation(libs.androidx.activity.compose)
+                // The WebDAV sync driver (issue #116; ADR-0026): the Android
+                // client now owns a real sync target, wired under `Context.filesDir`
+                // in `androidSync`, so Settings → Sync is usable on the
+                // first-class client. The domain never names it; only this entry
+                // point does.
+                implementation(project(":integrations:webdav"))
             }
         }
         getByName("desktopMain").dependencies {

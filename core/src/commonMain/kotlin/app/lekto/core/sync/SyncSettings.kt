@@ -56,8 +56,8 @@ interface SyncSettingsStore {
  * document over any [VaultFileSystem], the same write-temp-rename byte seam as
  * the vault and the derived assets, rooted elsewhere (ADR-0003, ADR-0010). It is
  * shared by both clients because `java.io.File` backs it identically on desktop
- * and Android; only the root differs, and only desktop wires a driver yet
- * (ADR-0025).
+ * and Android; only the root differs. Both clients wire a driver now (issue
+ * #116; ADR-0026), so the endpoint is app-private on each.
  */
 class JsonSyncSettingsStore(private val files: VaultFileSystem, private val json: Json = Json) : SyncSettingsStore {
 

@@ -24,9 +24,10 @@ import kotlinx.coroutines.launch
  * like [app.lekto.LlmServices], so the root composable's signature grows in one
  * named place.
  *
- * A platform without a driver (Android, until a later ticket gives the WebDAV
- * module an Android target; ADR-0025) supplies no [SyncServices], so the section
- * says so rather than offering a dead action.
+ * A platform with no driver supplies no [SyncServices], so the section says so
+ * rather than offering a dead action. Both clients now wire one (issue #116;
+ * ADR-0026), so this is the degraded path a platform without a transport would
+ * take.
  */
 data class SyncServices(
     /** The app-private, non-secret sync configuration (issue #28). */
