@@ -84,3 +84,13 @@ classpath, where it would never work on a device anyway.
   well-licensed, Android-first dependency is not a trade worth making.
 - **An Android target for `testkit`** — the fake server is host-JVM-only, so an
   Android variant would compile a class that could never run on a device.
+
+## Update — the app's `minSdk` is 27 (issue #125)
+
+The "Android's `minSdk` is 24" premise in the consequences above is superseded: the
+app's floor moved from 24 to 27 (Android 8.1, issue #125), so `java.util.Base64`
+(API 26+) is now reachable and the `AndroidPackDatabase` deprecation workaround the
+old floor forced is gone. The `kotlin.io.encoding.Base64` choice above stands on
+its own — it is one implementation on every target with no API-level trap — which
+is a better reason than the floor was. The transport seam, the remote layout and
+the conditional-write contract are unchanged.

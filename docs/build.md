@@ -278,6 +278,13 @@ Node itself is pinned to 22 in `guide/package.json`'s `engines` and in the
 
 ## Android
 
+The app's `minSdk` is **27** (Android 8.1) — `android-minSdk` in
+`gradle/libs.versions.toml`, read by the app, `core` and `integrations/webdav`. It
+is the first level where `SQLiteDatabase.openDatabase(File, OpenParams)` exists,
+so the Android dictionary-pack reader carries no deprecation workaround; it also
+clears the official Dropbox Android SDK's floor (API 26) for the second sync
+driver (#123). Android 8.0 and older are out of support (issue #125).
+
 ```sh
 ./gradlew :app:assembleDebug             # build the debug APK
 ./gradlew :app:installDebug              # install on a running device/emulator

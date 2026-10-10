@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION") // SQLiteDatabase.openDatabase(path, factory, flags) is the API available at minSdk 24.
-
 package app.lekto.core.dictionary
 
 import android.database.Cursor
@@ -34,6 +32,10 @@ object AndroidPackDatabaseFactory : PackDatabaseFactory {
     override fun open(path: String): PackDatabase {
         val file = File(path)
         if (!file.isFile) throw DictionaryPackMissing()
-        return AndroidPackDatabase(SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY))
+        // The non-deprecated `openDatabase(File, OpenParams)` (API 27), not the
+        // 3-arg overload the minSdk-24 floor once forced; the `isFile` check above
+        // rules out the create path, so `OPEN_READONLY` is the only parameter.
+        val openParams = SQLiteDatabase.OpenParams.Builder().setOpenFlags(SQLiteDatabase.OPEN_READONLY).build()
+        return AndroidPackDatabase(SQLiteDatabase.openDatabase(file, openParams))
     }
 }

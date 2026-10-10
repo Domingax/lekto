@@ -10,7 +10,8 @@ compose-material3 = "1.11.0-alpha07"
 
 # Android platform levels. The pinned SDK in CI provides platform 36.
 android-compileSdk = "36"
-android-minSdk = "24"
+# 27 (Android 8.1) — the floor and its reasons live in docs/build.md (issue #125).
+android-minSdk = "27"
 android-targetSdk = "36"
 
 # Libraries.
