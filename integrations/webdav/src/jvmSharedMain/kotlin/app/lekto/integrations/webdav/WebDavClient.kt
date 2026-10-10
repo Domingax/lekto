@@ -118,6 +118,16 @@ internal class WebDavClient(connection: WebDavConnection) {
         if (status !in 200..299 && status != 404) throw failure("delete", relative, status)
     }
 
+    /**
+     * Renames [from] to [to] with a `MOVE`; a resource that is already gone is
+     * success, so a migration can be re-run without failing.
+     */
+    fun move(from: String, to: String) {
+        val request = WebDavRequests.move(urls.resource(from), urls.resource(to))
+        val status = send(request, "rename", from).status
+        if (status !in 200..299 && status != 404) throw failure("rename", from, status)
+    }
+
     /** Creates [relative]'s collection chain, if it is not already there. */
     private fun createCollection(relative: String) {
         if (relative in ensuredCollections) return

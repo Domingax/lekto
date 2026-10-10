@@ -113,9 +113,10 @@ upload (`PUT` answers `201`) but **refuses to serve it back** — a `GET` return
 the headers and then closes the connection, so the driver saw an I/O failure and
 an imported book could never follow its record to another device. Every other
 suffix tested (`.data`, `.dat`, `.blob`, `.raw`, no extension) is served, so the
-channel moved to `.data`. This is a remote-layout change and therefore a
-compatibility break for a collection a user already populated with `.bin` files:
-they are simply ignored, and the originals re-upload as `.data` on the next sync.
-The change landed before the feature shipped, so no released client depends on
-the old suffix.
+channel moved to `.data`. This is a remote-layout change, so the driver
+**migrates** what a pre-`.data` client wrote: listing the attachments collection
+renames a legacy `<id>.bin` to `<id>.data` with WebDAV's `MOVE`, in place, so an
+original is recovered without re-uploading it. A server that refuses the `MOVE`
+leaves the file ignored, exactly as it was before. The change landed before the
+feature shipped, so no released client depends on the old suffix.
 

@@ -176,7 +176,11 @@ Android never ships, but Robolectric runs the whole lane on the host JVM, so the
 fake stays one implementation in `testkit`'s `jvmMain` and the transport is
 proved without Docker and without a network. Because the JVM and Android
 transports satisfy one `WebDavTransport` interface and pass one
-`SyncTargetContract`, the two cannot drift.
+`SyncTargetContract`, the two cannot drift. The driver also **migrates** a legacy
+`<id>.bin` attachment to `<id>.data` when it lists the attachments collection,
+with WebDAV's `MOVE` (ADR-0025), so an original a pre-`.data` client uploaded is
+recovered rather than lost; `WebDavSyncTargetTest` and the Android host lane pin
+it, and the `FakeWebDavServer` speaks `MOVE`.
 
 
 The nightly instrumented lane runs a launch smoke test on an emulator
@@ -410,8 +414,9 @@ in plain language, and disconnect without touching the local vault — is
 `SyncControllerTest` in `app/desktopTest`, driven by `kotlinx-coroutines-test`'s
 virtual time with `testkit`'s `InMemorySyncTarget` and a target that cannot be
 reached. It also pins that the blocking probe and sync move onto the injected
-dispatcher rather than the caller's scope, so Android never runs a network call on
-the main thread (issue #116). `SyncReportSummaryTest` pins the plain-language
+dispatcher rather than the caller's scope — so Android never runs a network call
+on the main thread — and that a completed sync refreshes the library rather than
+leaving it stale (issue #116). `SyncReportSummaryTest` pins the plain-language
 summary, the section's
 controls, status line and folder-sync warning are `SettingsScreenSemanticsTest`
 on both lanes, and the loop — reach settings, save the endpoint and find it

@@ -112,6 +112,11 @@ class SyncController(
     private val secrets: SecretStore,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
+    /**
+     * Called after a sync attempt, so a screen that reads the vault — the library
+     * — reloads what the sync moved rather than showing its stale list (issue #116).
+     */
+    private val onSynced: () -> Unit = {},
 ) {
 
     private val _state = MutableStateFlow(initialState())
@@ -220,6 +225,7 @@ class SyncController(
         _state.update { current -> current.copy(syncing = true) }
         scope.launch {
             val outcome = withContext(dispatcher) { runSync(config, password) }
+            onSynced()
             _state.update { current -> current.copy(syncing = false, lastSync = outcome) }
         }
     }

@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.net.URI
 import java.util.UUID
 
 /**
@@ -80,6 +81,23 @@ class WebDavSyncTargetAndroidHostTest {
         server.failNextRequestWith = SERVER_ERROR_STATUS
 
         assertThrows(SyncTargetException::class.java) { runBlocking { target.get("a") } }
+    }
+
+    @Test
+    fun `the Android transport migrates a legacy bin attachment to data`() {
+        // OkHttp must speak the MOVE the migration uses, not only the verbs the
+        // contract exercises (issue #116).
+        val base = "${server.baseUrl}/lekto-${UUID.randomUUID()}"
+        val id = "a/b c-é"
+        val bytes = byteArrayOf(0, 1, 2, -1)
+        server.seed("${URI(base).path}/attachments/${WebDavNames.encode(id)}.bin", bytes)
+        val target = WebDavSyncTarget(base, "lekto", "lekto")
+
+        val ids = runBlocking { target.attachmentIds() }
+        val readBack = runBlocking { target.attachment(id) }
+
+        assertTrue("the legacy attachment must be listed", id in ids)
+        assertTrue("the migrated attachment must read back", readBack?.contentEquals(bytes) == true)
     }
 }
 

@@ -365,6 +365,24 @@ class SyncControllerTest {
         assertTrue(dispatches.get() > 0, "the sync must run on the injected dispatcher")
     }
 
+    @Test
+    fun `a completed sync refreshes the vault readers`() = runTest {
+        // The library reads the vault once; a sync writes to it directly, so the
+        // controller must tell the library to reload or it shows a stale list
+        // (issue #116).
+        val refreshes = AtomicInteger()
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val controller = controller(secrets = secrets, onSynced = { refreshes.incrementAndGet() })
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.save("")
+
+        controller.enable()
+        advanceUntilIdle()
+
+        assertTrue(refreshes.get() > 0, "a sync must refresh the library")
+    }
+
     @Suppress("LongParameterList") // The test's own inputs, bundled so every case reads the same.
     private fun TestScope.controller(
         settings: InMemorySyncSettingsStore = InMemorySyncSettingsStore(),
@@ -372,6 +390,7 @@ class SyncControllerTest {
         target: SyncTarget = InMemorySyncTarget(),
         vault: InMemoryVaultStore = InMemoryVaultStore(),
         dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
+        onSynced: () -> Unit = {},
     ): SyncController = SyncController(
         services = SyncServices(
             settings = settings,
@@ -383,6 +402,7 @@ class SyncControllerTest {
         secrets = secrets,
         dispatcher = dispatcher,
         scope = this,
+        onSynced = onSynced,
     )
 }
 

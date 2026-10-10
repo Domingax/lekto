@@ -28,9 +28,18 @@ internal object WebDavNames {
     fun attachmentPath(id: String): String = "$ATTACHMENTS/${encode(id)}$ATTACHMENT_SUFFIX"
 
     /** The id an attachment path names, or `null` when it names something else. */
-    fun idFromAttachment(path: String): String? =
-        if (path.startsWith("$ATTACHMENTS/") && path.endsWith(ATTACHMENT_SUFFIX)) {
-            decode(path.removePrefix("$ATTACHMENTS/").removeSuffix(ATTACHMENT_SUFFIX))
+    fun idFromAttachment(path: String): String? = decodeSuffixed(path, ATTACHMENT_SUFFIX)
+
+    /**
+     * The id a **legacy** attachment path names, or `null`. A pre-issue-#116
+     * client wrote `.bin`; the driver migrates it to [attachmentPath] on the next
+     * listing, so an original is recovered rather than lost.
+     */
+    fun idFromLegacyAttachment(path: String): String? = decodeSuffixed(path, LEGACY_ATTACHMENT_SUFFIX)
+
+    private fun decodeSuffixed(path: String, suffix: String): String? =
+        if (path.startsWith("$ATTACHMENTS/") && path.endsWith(suffix)) {
+            decode(path.removePrefix("$ATTACHMENTS/").removeSuffix(suffix))
         } else {
             null
         }
@@ -53,6 +62,9 @@ internal object WebDavNames {
 
     private const val RECORD_SUFFIX = ".json"
     private const val ATTACHMENT_SUFFIX = ".data"
+
+    /** The suffix a pre-issue-#116 client wrote, which the driver migrates to [ATTACHMENT_SUFFIX]. */
+    private const val LEGACY_ATTACHMENT_SUFFIX = ".bin"
 
     /** The URL-safe alphabet with no padding, so a name is one path segment. */
     private val URL_SAFE: Base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)

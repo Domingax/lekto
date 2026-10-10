@@ -30,6 +30,10 @@ internal object WebDavRequests {
 
     fun delete(url: String): WebDavRequest = WebDavRequest("DELETE", url)
 
+    /** A `MOVE` that renames [url] to [destination], overwriting any file already there. */
+    fun move(url: String, destination: String): WebDavRequest =
+        WebDavRequest("MOVE", url, mapOf("Destination" to destination, "Overwrite" to "T"))
+
     fun put(url: String, bytes: ByteArray): WebDavRequest =
         WebDavRequest("PUT", url, mapOf("Content-Type" to "application/octet-stream"), bytes)
 
