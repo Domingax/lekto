@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,8 @@ import app.lekto.vocabulary.searchVocabulary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -109,6 +112,12 @@ data class AppEnvironment(
     val secrets: SecretStore? = null,
     val llm: LlmServices? = null,
     val sync: SyncServices? = null,
+    /**
+     * A signal the app returned to the foreground (issue #121): each emission asks
+     * sync to run if it is on. Desktop raises it on window focus; a platform with
+     * no lifecycle leaves it empty, and the bounded periodic run still applies.
+     */
+    val onResume: Flow<Unit> = emptyFlow(),
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
 
@@ -189,6 +198,13 @@ fun App(environment: AppEnvironment) {
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
     val sync = rememberSyncController(environment, scope, onSynced = controller::refresh)
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
+    // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
+    // an app-start run plus the periodic timer — and ask for a run whenever the
+    // platform reports the app has resumed.
+    LaunchedEffect(sync, environment.onResume) {
+        sync?.start()
+        environment.onResume.collect { sync?.onResumed() }
+    }
     val settings = Settings(
         dictionary = dictionary,
         vaultTransfer = vaultTransfer,

@@ -453,6 +453,25 @@ engine reconciling the Android vault — so **Settings → Sync** is usable on t
 first-class client, not only desktop. Without a driver the section says sync is
 unavailable and never gates the reader.
 
+The automatic triggers (issue #121; ADR-0028) are proved at their own levels. The
+**schedule** is a pure `SyncSchedule` in `core`, so `SyncScheduleTest` pins that
+the wait starts at the base, doubles with each consecutive failure and never
+exceeds the cap; the **last outcome** is a fourth device-local seam,
+`SyncOutcomeStore`: `SyncOutcomeStoreContract` runs against
+`InMemorySyncOutcomeStore` in `core/commonTest` and against the JSON document
+store (`JsonSyncOutcomeStore`) over an in-memory filesystem there and a real
+directory in `core/jvmTest`, and `JsonSyncOutcomeStoreTest` pins that a corrupt
+document reads as "no outcome yet". The state holder's triggers — an app-start
+run with sync on, the periodic run after the interval, a resume run, a run
+coalesced when one is already in flight, the backoff after a failure, the outcome
+kept across a restart, and every trigger stopped when sync is turned off — are
+`SyncControllerTest` in `app/desktopTest`, driven by `kotlinx-coroutines-test`'s
+virtual time (`advanceTimeBy`/`runCurrent` for the timer), and the wiring that
+arms them is `App.kt`'s `LaunchedEffect`, which also collects the resume signal
+the composition root raises (desktop: the `Main.kt` window-focus listener).
+Android's platform scheduling (WorkManager) is deliberately not here: the
+in-process triggers are shared and the OS-level one is a follow-up.
+
 The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
 so its level is its own: `PackBuilderTest` pins the transform's rules,
 `SqlitePackWriterTest` reads the written pack back and proves two builds are

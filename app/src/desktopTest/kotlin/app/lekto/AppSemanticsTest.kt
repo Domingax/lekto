@@ -64,6 +64,7 @@ import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.testkit.InMemorySyncOutcomeStore
 import app.lekto.testkit.InMemorySyncSettingsStore
 import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
@@ -368,6 +369,7 @@ class AppSemanticsTest {
                     DeviceId("device-a"),
                 )
             },
+            outcomes = InMemorySyncOutcomeStore(),
         )
         setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }
 
