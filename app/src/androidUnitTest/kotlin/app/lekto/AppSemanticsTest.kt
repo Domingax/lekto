@@ -394,7 +394,6 @@ class AppSemanticsTest {
                     InMemoryRemoteIndexStore(),
                     target,
                     TestClock(),
-                    DeviceId("device-a"),
                 )
             },
             outcomes = InMemorySyncOutcomeStore(),

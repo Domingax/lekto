@@ -1,9 +1,7 @@
 package app.lekto.core.sync
 
-import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.MergeOutcome
 import app.lekto.core.vault.RecordMerge
-import app.lekto.core.vault.Tombstone
 import app.lekto.core.vault.VaultMerge
 import app.lekto.core.vault.VaultStore
 import app.lekto.core.vault.VersionedRecord
@@ -70,48 +68,32 @@ data class SyncReport(
  * completed a sync, so a device that has been away past [TOMBSTONE_RETENTION] is
  * treated as new and takes the target's records in a full resync (ADR-0015).
  *
- * **Deletions go through [delete].** A record removed from the vault with no
- * tombstone is only absent — the next sync would copy it back from a device that
- * has not seen the delete — so [delete] removes the record *and* leaves the
- * tombstone the merge compares on (ADR-0015). A tombstone older than
- * [TOMBSTONE_RETENTION] is dropped on the next sync, from the local store, the
- * device-local index and the target, so the deletion does not accumulate forever.
+ * **Deletions travel as tombstones.** The engine has no delete of its own: the
+ * user-facing writers remove their own record and leave the tombstone the merge
+ * compares on beside it, in the same [TombstoneStore] the engine reads (ADR-0015;
+ * issue #131). Without that tombstone a removed record is only absent — the next
+ * sync would copy it back from a device that has not seen the delete. A tombstone
+ * older than [TOMBSTONE_RETENTION] is dropped on the next sync, from the local
+ * store, the device-local index and the target, so the deletion does not
+ * accumulate forever.
  *
- * The engine reads no wall clock and pins no dispatcher: [delete] and [sync] take
- * their time from the injected [clock] and [sync] runs on the caller's context,
- * so the whole engine is exercised under `runTest`'s virtual time (docs/testing.md,
- * "Deterministic seams").
+ * The engine reads no wall clock and pins no dispatcher: [sync] takes its time
+ * from the injected [clock] and runs on the caller's context, so the whole engine
+ * is exercised under `runTest`'s virtual time (docs/testing.md, "Deterministic
+ * seams").
  */
-@Suppress("LongParameterList", "TooManyFunctions") // Its collaborators are seams; each method is one step of the sync.
+@Suppress("TooManyFunctions") // Each method is one step of the sync.
 class SyncEngine(
     private val local: VaultStore,
     private val tombstones: TombstoneStore,
     private val remoteIndex: RemoteIndexStore,
     private val target: SyncTarget,
     private val clock: Clock,
-    private val deviceId: DeviceId,
 ) {
 
     private val remote = RemoteIndex().apply { replaceAll(remoteIndex.all()) }
     private var cursor: SyncCursor? = null
     private var lastSyncedAt: Instant? = remoteIndex.lastSyncedAt()
-
-    /**
-     * Removes [id] from the local vault and leaves a tombstone for it, so the
-     * deletion propagates on the next [sync] instead of resurrecting. Deleting
-     * an id the vault does not hold is a no-op, matching the vocabulary's own
-     * "deleting an unsaved word is not an error".
-     *
-     * This is **not** the path the app deletes through: the user-facing writers —
-     * the vocabulary and the library — remove their own record and write the
-     * tombstone beside it (issue #131). Reconciling this method with that pattern
-     * is issue #137.
-     */
-    fun delete(id: String) {
-        if (local.get(id) == null) return
-        local.remove(id)
-        tombstones.put(Tombstone(id = id, updatedAt = clock.now(), deviceId = deviceId))
-    }
 
     /** Reconciles the local vault and the target, and reports what moved. */
     suspend fun sync(): SyncReport {

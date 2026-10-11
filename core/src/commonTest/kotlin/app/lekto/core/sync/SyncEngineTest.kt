@@ -1,6 +1,7 @@
 package app.lekto.core.sync
 
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.Tombstone
 import app.lekto.core.vault.VersionedRecord
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySyncTarget
@@ -177,7 +178,7 @@ class SyncEngineTest :
                 b.vault.get("word") shouldBe testVaultRecord("word", updatedAtMillis = 1, device = "device-a")
 
                 a.at(millis = 10)
-                a.engine.delete("word")
+                a.delete("word")
                 a.engine.sync()
                 b.engine.sync()
 
@@ -268,7 +269,7 @@ class SyncEngineTest :
                 b.engine.sync()
 
                 a.at(millis = 10)
-                a.engine.delete("word")
+                a.delete("word")
                 a.engine.sync()
                 b.engine.sync()
 
@@ -315,7 +316,7 @@ class SyncEngineTest :
                 (b.vault.getAttachment("book")?.contentEquals(byteArrayOf(1, 2, 3))) shouldBe true
 
                 a.at(millis = 10)
-                a.engine.delete("book")
+                a.delete("book")
                 a.engine.sync()
                 b.engine.sync()
 
@@ -341,23 +342,13 @@ class SyncEngineTest :
             }
         }
 
-        test("deleting an unknown id leaves nothing behind") {
-            runTest {
-                val a = Device("device-a", InMemorySyncTarget())
-
-                a.engine.delete("absent")
-
-                a.tombstones.all() shouldBe emptyList()
-            }
-        }
-
         test("a tombstone older than the retention window is dropped, on the target too") {
             runTest {
                 val target = InMemorySyncTarget()
                 val a = Device("device-a", target)
                 a.at(0)
                 a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
-                a.engine.delete("word")
+                a.delete("word")
                 a.engine.sync()
                 target.stored("word")?.version shouldBe VersionedRecord.of(testTombstone("word", 0, "device-a"))
 
@@ -375,7 +366,7 @@ class SyncEngineTest :
                 val a = Device("device-a", target)
                 a.at(0)
                 a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
-                a.engine.delete("word")
+                a.delete("word")
                 a.engine.sync()
 
                 a.at(TOMBSTONE_RETENTION_MILLIS)
@@ -396,7 +387,7 @@ class SyncEngineTest :
                 target.put(VersionedRecord.of(live), null)
                 a.at(1)
                 a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
-                a.engine.delete("word")
+                a.delete("word")
 
                 a.at(TOMBSTONE_RETENTION_MILLIS + 2)
                 a.engine.sync()
@@ -426,7 +417,7 @@ class SyncEngineTest :
                 stale.vault.get("book") shouldBe book
 
                 creator.at(1)
-                creator.engine.delete("word")
+                creator.delete("word")
                 creator.engine.sync()
                 purger.at(2)
                 purger.engine.sync()
@@ -489,10 +480,23 @@ private class Device(name: String, target: SyncTarget, remoteIndex: RemoteIndexS
     val vault = InMemoryVaultStore()
     val tombstones = InMemoryTombstoneStore()
     private val clock = TestClock()
-    val engine = SyncEngine(vault, tombstones, remoteIndex, target, clock, DeviceId(name))
+    private val deviceId = DeviceId(name)
+    val engine = SyncEngine(vault, tombstones, remoteIndex, target, clock)
 
-    /** Fixes the clock, so a deletion the engine records has a chosen timestamp. */
+    /** Fixes the clock, so a delete's tombstone carries a chosen timestamp. */
     fun at(millis: Long) {
         clock.set(Instant.fromEpochMilliseconds(millis))
+    }
+
+    /**
+     * Deletes [id] the way a user-facing writer does: remove the record and leave
+     * the tombstone the merge compares on beside it (issue #131). The engine has no
+     * delete of its own (#137), so an id the vault does not hold is a no-op, as it
+     * is for the vocabulary and the library.
+     */
+    fun delete(id: String) {
+        if (vault.get(id) == null) return
+        vault.remove(id)
+        tombstones.put(Tombstone(id = id, updatedAt = clock.now(), deviceId = deviceId))
     }
 }

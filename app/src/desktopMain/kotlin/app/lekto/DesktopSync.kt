@@ -8,7 +8,6 @@ import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.sync.SyncEngine
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.sync.SyncTarget
-import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.integrations.webdav.WebDavSyncTarget
@@ -47,5 +46,4 @@ private fun desktopSyncEngine(root: File, state: File, target: SyncTarget): Sync
     remoteIndex = JsonRemoteIndexStore(JvmVaultFileSystem(state)),
     target = target,
     clock = Seams.system().clock,
-    deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )

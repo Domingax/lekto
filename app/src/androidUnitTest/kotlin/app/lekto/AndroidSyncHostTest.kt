@@ -22,9 +22,10 @@ import java.io.File
  * device id — and that the driver it builds is the real WebDAV one.
  *
  * The settings document is app-private (never the vault, ADR-0005), a delete
- * leaves its tombstone under `sync/`, the engine reconciles the Android vault the
- * library writes, and the driver is the WebDAV [WebDavSyncTarget] the Android
- * transport reaches (ADR-0026). The section's controls are proved on this lane by
+ * through the library leaves its tombstone under `sync/`, the library persists
+ * the device id there, the engine reconciles the Android vault the library
+ * writes, and the driver is the WebDAV [WebDavSyncTarget] the Android transport
+ * reaches (ADR-0026). The section's controls are proved on this lane by
  * `SettingsScreenSemanticsTest` and `AppSemanticsTest`.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -42,7 +43,7 @@ class AndroidSyncHostTest {
     }
 
     @Test
-    fun `the engine reconciles the Android vault and persists a device id under filesDir`() {
+    fun `the engine reconciles the Android vault under filesDir`() {
         val record = testVaultRecord("vocabulary-1")
         androidVaultStore(context()).put(record)
         val target = InMemorySyncTarget()
@@ -52,7 +53,6 @@ class AndroidSyncHostTest {
 
         assertEquals(1, report.uploaded)
         assertTrue(uploaded.any { item -> item.id == record.id })
-        assertTrue(File(context().filesDir, "device-id").isFile)
     }
 
     @Test
@@ -65,11 +65,18 @@ class AndroidSyncHostTest {
     }
 
     @Test
-    fun `a delete leaves its tombstone app-privately under filesDir`() {
+    fun `the library persists a device id app-privately under filesDir`() {
+        androidBookLibrary(context())
+
+        assertTrue(File(context().filesDir, "device-id").isFile)
+    }
+
+    @Test
+    fun `a delete through the library leaves its tombstone app-privately under filesDir`() {
         val record = testVaultRecord("vocabulary-1")
         androidVaultStore(context()).put(record)
 
-        androidSync(context()).engine(InMemorySyncTarget()).delete(record.id)
+        androidBookLibrary(context()).delete(record.id)
 
         assertTrue(File(context().filesDir, "sync/tombstones.json").isFile)
     }

@@ -1,6 +1,5 @@
 package app.lekto.core.sync
 
-import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.VersionedRecord
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySyncTarget
@@ -51,7 +50,6 @@ class TombstonePurgePropertyTest :
                     remoteIndex = InMemoryRemoteIndexStore(),
                     target = target,
                     clock = clock,
-                    deviceId = DeviceId("device-a"),
                 )
                 deletionTimes.forEachIndexed { index, at ->
                     target.put(VersionedRecord.of(testTombstone("tomb-$index", updatedAtMillis = at)), null)
@@ -81,7 +79,6 @@ class TombstonePurgePropertyTest :
                     ),
                     target = target,
                     clock = clock,
-                    deviceId = DeviceId("device-a"),
                 )
 
                 val report = stale.sync()
