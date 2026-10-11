@@ -19,6 +19,7 @@ import app.lekto.core.vault.VaultCodec
 import app.lekto.core.vault.VaultRecord
 import app.lekto.core.vault.VaultStore
 import app.lekto.settings.VaultTransfer
+import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.deterministicSeams
@@ -107,6 +108,7 @@ private fun libraryOver(vault: VaultStore): BookLibrary = VaultBookLibrary(
     vault = vault,
     derived = DerivedAssetStore(InMemoryVaultFileSystem()),
     parsers = emptyMap(),
+    tombstones = InMemoryTombstoneStore(),
     seams = deterministicSeams(),
     deviceId = DeviceId("test-device"),
 )

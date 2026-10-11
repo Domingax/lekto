@@ -26,12 +26,12 @@ data class LibraryUiState(
 )
 
 /**
- * The library's state holder: it lists the vault's books and runs imports off
- * the main thread (issue #15).
+ * The library's state holder: it lists the vault's books, runs imports off the
+ * main thread (issue #15), and deletes a book (issue #131).
  *
- * Import is an occasional action that must not block the app, so it launches on
- * an injected [dispatcher], reports [ImportProgress], and lands a failure in
- * [LibraryUiState.error] rather than throwing. The [dispatcher] is injected
+ * Import and delete are occasional actions that must not block the app, so each
+ * launches on an injected [dispatcher], reports its outcome, and lands a failure
+ * in [LibraryUiState.error] rather than throwing. The [dispatcher] is injected
  * because a hard-coded one cannot be driven by virtual time (docs/testing.md,
  * "Deterministic seams").
  */
@@ -69,6 +69,28 @@ class LibraryController(
     /** Dismisses the current error, so the app stays usable after a failure. */
     fun dismissError() {
         _state.update { current -> current.copy(error = null) }
+    }
+
+    /**
+     * Deletes the book with [bookId] from the vault — its record, its original,
+     * its cached text and its reading position — off the main thread, refreshes
+     * the list and notifies the local-change signal so sync pushes the deletion
+     * (issue #131). A failure lands in [LibraryUiState.error] rather than
+     * throwing, exactly as an import does.
+     */
+    @Suppress("TooGenericExceptionCaught") // Any delete failure becomes a message; the app stays usable.
+    fun delete(bookId: String) {
+        scope.launch {
+            try {
+                library.delete(bookId)
+                changes.contentChanged()
+                _state.update { current -> current.copy(books = library.books(), error = null) }
+            } catch (failure: Exception) { // Any delete failure must surface as a message, not a crash.
+                _state.update { current ->
+                    current.copy(error = failure.message ?: "The book could not be deleted.")
+                }
+            }
+        }
     }
 
     /**

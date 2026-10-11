@@ -709,6 +709,11 @@ internal class InMemoryLibrary : BookLibrary {
         )
     }
 
+    override fun delete(id: String) {
+        stored = stored.filterNot { book -> book.id == id }
+        positions.remove(id)
+    }
+
     override fun position(bookId: String): ReadingPosition? = positions[bookId]?.let { ReadingPosition(bookId, it) }
 
     override fun savePosition(position: ReadingPosition) {

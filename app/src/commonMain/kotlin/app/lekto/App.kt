@@ -588,6 +588,7 @@ private fun libraryActions(
             withContext(environment.dispatcher) { environment.library.open(book.id) }?.let(navigation.onOpen)
         }
     },
+    onDelete = { book -> controller.delete(book.id) },
     onDismissError = controller::dismissError,
     onOpenSettings = navigation.onOpenSettings,
     onOpenVocabulary = navigation.onOpenVocabulary,

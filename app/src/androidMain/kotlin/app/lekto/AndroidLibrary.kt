@@ -24,12 +24,15 @@ import java.io.File
  *
  * The parser set and the stable device id are the pieces the domain cannot reach
  * for; the vault and derived stores sit in app-private storage, so nothing here
- * needs a permission or a user-chosen folder.
+ * needs a permission or a user-chosen folder. The library's tombstones live
+ * under the same `sync/` directory the engine uses (ADR-0015), so a deleted book
+ * is propagated rather than resurrected.
  */
 fun androidBookLibrary(context: Context): BookLibrary = VaultBookLibrary(
     vault = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context))),
     derived = DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived"))),
     parsers = androidParsers(),
+    tombstones = JsonTombstoneStore(JvmVaultFileSystem(File(context.filesDir, "sync"))),
     seams = Seams.system(),
     deviceId = androidDeviceId(context),
 )

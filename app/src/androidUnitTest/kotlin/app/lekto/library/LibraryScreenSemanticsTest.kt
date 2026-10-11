@@ -8,12 +8,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
+import app.lekto.ui.CONFIRM_DIALOG_CANCEL_TAG
+import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -93,13 +97,54 @@ class LibraryScreenSemanticsTest {
         compose.onNodeWithText("Import").assertIsNotEnabled()
     }
 
+    @Test
+    fun theDeleteActionAsksForConfirmationBeforeDeleting() {
+        var deleted: Book? = null
+        compose.setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+
+        compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+
+        compose.onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
+        compose.onNodeWithText("This cannot be undone.").assertIsDisplayed()
+        assertNull("the vault must be untouched until the user confirms", deleted)
+    }
+
+    @Test
+    fun confirmingTheDialogDeletesTheBook() {
+        var deleted: Book? = null
+        compose.setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+
+        compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
+
+        assertEquals(book, deleted)
+    }
+
+    @Test
+    fun cancellingTheDialogLeavesTheBook() {
+        var deleted: Book? = null
+        compose.setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+
+        compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        compose.onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
+
+        compose.onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
+        assertNull(deleted)
+    }
+
     @Composable
-    private fun Library(state: LibraryUiState, onOpen: (Book) -> Unit = {}, onDismissError: () -> Unit = {}) {
+    private fun Library(
+        state: LibraryUiState,
+        onOpen: (Book) -> Unit = {},
+        onDelete: (Book) -> Unit = {},
+        onDismissError: () -> Unit = {},
+    ) {
         MaterialTheme {
             LibraryScreen(
                 state = state,
                 actions = LibraryActions(
                     onOpen = onOpen,
+                    onDelete = onDelete,
                     onDismissError = onDismissError,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),

@@ -2,6 +2,8 @@ package app.lekto.core.book
 
 import app.lekto.core.Seams
 import app.lekto.core.epub.EpubParser
+import app.lekto.core.sync.JsonTombstoneStore
+import app.lekto.core.sync.TombstoneStore
 import app.lekto.core.text.TxtParser
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
@@ -10,6 +12,7 @@ import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.testkit.EpubFixtures
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import java.io.File
 import java.nio.file.Files
@@ -30,10 +33,19 @@ class JvmBookLibraryTest :
         fun derivedBeside(root: File): DerivedAssetStore =
             DerivedAssetStore(JvmVaultFileSystem(File(root.parentFile, "${root.name}-derived")))
 
-        fun libraryOver(root: File, derived: DerivedAssetStore = derivedBeside(root)) = VaultBookLibrary(
+        /** The tombstone store is a sibling of the vault too, as the composition root wires it. */
+        fun tombstonesBeside(root: File): TombstoneStore =
+            JsonTombstoneStore(JvmVaultFileSystem(File(root.parentFile, "${root.name}-sync")))
+
+        fun libraryOver(
+            root: File,
+            derived: DerivedAssetStore = derivedBeside(root),
+            tombstones: TombstoneStore = tombstonesBeside(root),
+        ) = VaultBookLibrary(
             vault = JsonVaultStore(JvmVaultFileSystem(root)),
             derived = derived,
             parsers = mapOf(BookFormat.EPUB to EpubParser(), BookFormat.TXT to TxtParser()),
+            tombstones = tombstones,
             seams = Seams.system(),
             deviceId = DeviceId("device-test"),
         )
@@ -91,5 +103,23 @@ class JvmBookLibraryTest :
             root.resolve("progress/${ReadingPositionRecord.idOf(book.id)}.json").isFile shouldBe true
             library.position(book.id) shouldBe ReadingPosition(book.id, 987)
             library.open(book.id)?.position shouldBe ReadingPosition(book.id, 987)
+        }
+
+        test("deleting a book removes its files on disk and writes both tombstones") {
+            val root = newRoot()
+            val tombstones = tombstonesBeside(root)
+            val library = libraryOver(root, tombstones = tombstones)
+            val book = library.import("awkward.epub", EpubFixtures.awkward())
+            library.savePosition(ReadingPosition(book.id, offset = 12))
+
+            library.delete(book.id)
+
+            root.resolve("books/${book.id}.json").isFile shouldBe false
+            root.resolve("_attachments/${book.id}").isFile shouldBe false
+            root.resolve("progress/${ReadingPositionRecord.idOf(book.id)}.json").isFile shouldBe false
+            File(root.parentFile, "${root.name}-derived/book-text/${book.id}.json").isFile shouldBe false
+            library.books() shouldBe emptyList()
+            tombstones.get(book.id) shouldNotBe null
+            tombstones.get(ReadingPositionRecord.idOf(book.id)) shouldNotBe null
         }
     })

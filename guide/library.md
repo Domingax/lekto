@@ -21,6 +21,17 @@ Tap a book to open a [reading session](/reading). Lekto restores your **Reading
 position** automatically, so you continue where you left off; see
 [Reading](/reading) for how that position survives a change of screen or font.
 
+## Deleting a book
+
+Each row has a **Delete** action. Lekto asks you to confirm first — *Delete
+« title »? This cannot be undone.* — and only then removes the **Book**: its
+original file, the text derived from it and your **Reading position** for it. If
+sync is on, the deletion travels to your other devices instead of the book coming
+back; see [Vault and sync](/vault-and-sync) for how a deletion is remembered.
+
+Deleting a book is permanent, so Lekto offers it only from the Library, never
+from inside a [reading session](/reading).
+
 ## Bringing books in
 
 **Import** brings a book into the Library. See [Import](/import) for the formats

@@ -101,6 +101,11 @@ class SyncEngine(
      * deletion propagates on the next [sync] instead of resurrecting. Deleting
      * an id the vault does not hold is a no-op, matching the vocabulary's own
      * "deleting an unsaved word is not an error".
+     *
+     * This is **not** the path the app deletes through: the user-facing writers —
+     * the vocabulary and the library — remove their own record and write the
+     * tombstone beside it (issue #131). Reconciling this method with that pattern
+     * is issue #137.
      */
     fun delete(id: String) {
         if (local.get(id) == null) return

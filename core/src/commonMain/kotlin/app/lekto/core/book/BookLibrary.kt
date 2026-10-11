@@ -25,6 +25,21 @@ interface BookLibrary {
     fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit = {}): Book
 
     /**
+     * Removes the book with [id] from the vault — its record, its original
+     * attachment, its cached parsed text and its reading position — and leaves a
+     * **Tombstone** for the book and for its position (ADR-0015), so neither
+     * resurrects on the next sync. An unknown [id] is a no-op (issue #131).
+     *
+     * The steps are ordered so a failure never leaves a half-deleted book
+     * visible: the derived cache goes first, the reading position next, and the
+     * book record and attachment last, so a failure before the last step leaves
+     * the book fully listed and re-deletable. An all-or-nothing transaction is
+     * not achievable over [VaultStore][app.lekto.core.vault.VaultStore]; a
+     * replayed delete completes one that failed part-way.
+     */
+    fun delete(id: String)
+
+    /**
      * The reading session for the book with [id], or `null` when it is unknown.
      * The session carries the saved [ReadingPosition], or `null` when the book
      * was never opened.
