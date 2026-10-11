@@ -12,18 +12,20 @@ import kotlinx.coroutines.CoroutineScope
  * unavailable rather than offering a dead action.
  *
  * [onSynced] runs after each sync attempt, so the library reloads the books a
- * sync moved instead of showing its stale list (issue #116).
+ * sync moved instead of showing its stale list (issue #116). [changes] is the
+ * signal the writers raise, so sync pushes a run on a local change (issue #121).
  */
 @Composable
 internal fun rememberSyncController(
     environment: AppEnvironment,
     scope: CoroutineScope,
+    changes: LocalChanges,
     onSynced: () -> Unit = {},
-): SyncController? = remember(environment.sync, environment.secrets, environment.dispatcher, scope) {
+): SyncController? = remember(environment.sync, environment.secrets, environment.dispatcher, scope, changes) {
     val services = environment.sync
     val secrets = environment.secrets
     if (services != null && secrets != null) {
-        SyncController(services, secrets, environment.dispatcher, scope, onSynced)
+        SyncController(services, secrets, environment.dispatcher, scope, onSynced, changes)
     } else {
         null
     }

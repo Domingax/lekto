@@ -17,17 +17,24 @@ import kotlinx.coroutines.launch
  * replaces the pending one — flipping fast coalesces to the last page instead of
  * queueing every turn. A save that fails is swallowed: losing one position is
  * better than bringing the reader down, and the next page turn writes again.
+ *
+ * A landed save notifies [changes], so sync pushes the new position after the
+ * reader pauses rather than waiting for its timer (issue #121; ADR-0028).
  */
 class ReadingProgressWriter(
     scope: CoroutineScope,
     dispatcher: CoroutineDispatcher,
+    /** Notified after each position write, so sync pushes reading progress (issue #121). */
+    private val changes: LocalChanges,
     private val save: suspend (ReadingPosition) -> Unit,
 ) {
     private val latest = MutableStateFlow<ReadingPosition?>(null)
 
     init {
         scope.launch(dispatcher) {
-            latest.filterNotNull().collect { position -> runCatching { save(position) } }
+            latest.filterNotNull().collect { position ->
+                runCatching { save(position) }.onSuccess { changes.progressChanged() }
+            }
         }
     }
 

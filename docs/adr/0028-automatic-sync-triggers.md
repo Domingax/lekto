@@ -15,7 +15,7 @@ user's act, and it never stops reporting.
 
 ## The trigger set
 
-Automatic sync arms only when the user has turned sync on, and it has three
+Automatic sync arms only when the user has turned sync on, and it has four
 triggers:
 
 - **App start** — one run as the app composes, so a return to the app reconciles
@@ -25,8 +25,33 @@ triggers:
   platform through the composition root's `onResume` signal (desktop: window
   focus; a platform with no lifecycle leaves it empty and the periodic trigger
   still applies).
+- **Local change (push)** — a run after the user changes the vault: a book
+  imported, a word saved or deleted, or a reading position moved. This is the
+  trigger that makes sync feel immediate on one device instead of waiting for the
+  timer.
 
 A manual **Sync now** is the same gate, so it can never race the automatic runs.
+
+## Push on a local change, with a settle
+
+The local writers — the library's import, the vocabulary's save and delete, and
+the reading-progress writer — raise a shared `LocalChanges` signal (content
+changes and reading-progress changes are two flows, because their tempos differ),
+and the sync controller subscribes. The signal is deliberately **not** emitted by
+the vault: the sync engine writes to the vault during a run, so a vault-level
+signal would make every sync trigger the next one.
+
+A change pushes a run only after it has settled, so a burst is one run, not one
+per edit or per page:
+
+- a **content** change (book, word) settles for `contentChangeDelay` (5 seconds)
+  — long enough to coalesce a save and a follow-up mastery tweak;
+- a **reading-progress** change settles for `progressChangeDelay` (30 seconds) —
+  a page turn must not sync on its own, and a reader who keeps turning pages
+  gives the timer's fallback the job of catching up.
+
+A change raised while sync is off is ignored, and turning sync off stops the
+subscribers as well as the timer.
 
 ## Runs never overlap; triggers coalesce
 
@@ -44,7 +69,9 @@ resets it. Fifteen minutes bounds the load a large vault puts on its target —
 ADR-0027 already made a no-op run one listing, but a listing a second would
 still be abuse — and the doubling means a target that is reachable but broken is
 polled *less*, not more, until it recovers. A failure is retried on the next
-trigger and its plain-language line is kept; it is never silently swallowed.
+trigger and its plain-language line is kept; it is never silently swallowed. The
+same `SyncSchedule` carries the two change settles above, so every timing policy
+is one pure value.
 
 ## The last outcome is device-local
 
@@ -58,18 +85,21 @@ off stops every trigger; disconnecting also clears the stored outcome.
 
 ## Consequences
 
-- With sync on, a device stays reconciled without a manual press, and the last
-  outcome is visible from the first frame after a restart.
-- Provider load is bounded by the interval and the cap, so a vault of thousands
-  of records is not hammered; a failing target is backed off.
+- With sync on, a device stays reconciled without a manual press — pushed by the
+  user's own changes and pulled by the timer — and the last outcome is visible
+  from the first frame after a restart.
+- Provider load is bounded by the interval, the cap and the change settles, so a
+  vault of thousands of records is not hammered and a page turn is not a request;
+  a failing target is backed off.
 - The scheduling stays in the sync state holder (`SyncController`), which owns
-  the coroutine scope; the interval policy is a pure `SyncSchedule` in `core`,
-  so the backoff is tested as a function and the state holder is tested under
-  `runTest`'s virtual time.
+  the coroutine scope and subscribes to `LocalChanges`; the timing policy is a
+  pure `SyncSchedule` in `core`, so the backoff and the settles are tested as a
+  function and the state holder is tested under `runTest`'s virtual time.
 - **Android** is desktop-first: the platform's background-execution limits need
   WorkManager and a wakeup policy, which is left to #116's follow-up. The
-  in-process triggers (start, resume, periodic-while-open) are shared, so the
-  Android client gets them when it is foregrounded without new platform work.
+  in-process triggers (start, resume, periodic-while-open and local changes) are
+  shared, so the Android client gets them when it is foregrounded without new
+  platform work.
 
 ## Rejected
 
@@ -78,6 +108,12 @@ off stops every trigger; disconnecting also clears the stored outcome.
   the run invisible, against ADR-0009's explicit-act promise.
 - **An unbounded or very short interval** — hammering the target is the failure
   this feature would otherwise introduce; the cap and the doubling bound it.
+- **Syncing on every local change with no settle** — a page turn would be a
+  request, and a run per keystroke of a mastery slider a burst; the settles and
+  the coalescing gate bound it.
+- **Emitting the change signal from the vault** — the sync engine writes to the
+  vault during a run, so that would make every sync trigger the next one; the
+  signal is raised by the user-facing writers instead.
 - **Overlapping runs (no coalescing)** — two writers on the same vault defeats
   the merge and doubles the load; one run plus one follow-up is enough.
 - **Storing the last outcome in the Vault or the `SecretStore`** — it is neither

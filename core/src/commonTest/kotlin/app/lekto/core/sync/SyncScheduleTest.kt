@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The automatic-sync backoff policy (issue #121; ADR-0028): the wait between
@@ -20,6 +21,13 @@ class SyncScheduleTest :
 
             schedule.baseInterval shouldBe 15.minutes
             schedule.maxInterval shouldBe 1.hours
+        }
+
+        test("the default change settles are a short content settle and a longer reading pause") {
+            val schedule = SyncSchedule()
+
+            schedule.contentChangeDelay shouldBe 5.seconds
+            schedule.progressChangeDelay shouldBe 30.seconds
         }
 
         test("a success or a first failure waits the base interval") {

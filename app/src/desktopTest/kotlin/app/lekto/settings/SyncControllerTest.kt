@@ -1,5 +1,6 @@
 package app.lekto.settings
 
+import app.lekto.LocalChanges
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.sync.Revision
@@ -38,6 +39,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+
+/** How many rapid page turns the coalescing test emits; only the count matters, not the value. */
+private const val PAGE_TURNS = 10
 
 /**
  * The sync section's state holder (issue #28): loading the stored endpoint,
@@ -532,6 +536,127 @@ class SyncControllerTest {
     }
 
     @Test
+    fun `a content change pushes a sync after a short settle`() = runTest {
+        // A book import or a saved word is discrete, so it pushes a run (issue #121).
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        changes.contentChanged()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "the content change pushes a run")
+        controller.disable()
+    }
+
+    @Test
+    fun `a burst of content changes coalesces into one pushed run`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        changes.contentChanged()
+        advanceTimeBy(2.seconds)
+        changes.contentChanged()
+        advanceTimeBy(2.seconds)
+        changes.contentChanged()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "a burst settles into one run")
+        controller.disable()
+    }
+
+    @Test
+    fun `a reading change pushes a run only after a pause`() = runTest {
+        // A page turn is frequent, so it waits for the reader to settle (issue #121).
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        changes.progressChanged()
+        advanceTimeBy(20.seconds)
+        runCurrent()
+
+        assertEquals(baseline, target.changesCalls, "no run before the reading pause")
+
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "the run after the reading pause")
+        controller.disable()
+    }
+
+    @Test
+    fun `a burst of page turns coalesces into one pushed run`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        repeat(PAGE_TURNS) {
+            changes.progressChanged()
+            advanceTimeBy(1.seconds)
+        }
+        advanceTimeBy(30.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "a burst of turns settles into one run")
+        controller.disable()
+    }
+
+    @Test
+    fun `a local change raises no trigger while sync is off`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = controller(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        changes.contentChanged()
+        changes.progressChanged()
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        assertEquals(0, target.changesCalls)
+    }
+
+    @Test
+    fun `turning sync off stops the change push`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        controller.disable()
+        val afterTurningOff = target.changesCalls
+
+        changes.contentChanged()
+        changes.progressChanged()
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        assertEquals(afterTurningOff, target.changesCalls, "no change may push a run after sync is off")
+    }
+
+    @Test
     fun `a failing target is backed off, so its runs grow apart`() = runTest {
         val target = CountingFailingTarget()
         val controller = enabledController(target = target, schedule = SyncSchedule(1.minutes, 4.minutes))
@@ -558,6 +683,31 @@ class SyncControllerTest {
         advanceTimeBy(1.minutes)
         runCurrent()
         assertEquals(afterTwoFailures + 1, target.attempts.get(), "the run after the next backed-off interval")
+        controller.disable()
+    }
+
+    @Test
+    fun `a success rebases the periodic wait, so a recovered target is not left waiting long`() = runTest {
+        val target = FailOnceTarget()
+        val changes = LocalChanges()
+        val schedule = SyncSchedule(1.minutes, 4.minutes)
+        val controller = enabledController(target = target, changes = changes, schedule = schedule)
+
+        controller.start()
+        runCurrent()
+        assertEquals(1, target.attempts.get(), "the app-start run fails and backs the timer off to two minutes")
+
+        // A push that now succeeds resets the failure count and the wait to the base.
+        changes.contentChanged()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        val afterPush = target.attempts.get()
+        assertEquals(2, afterPush, "the pushed run succeeds")
+
+        // The timer fires at the base one minute later, not the stale two-minute wait.
+        advanceTimeBy(1.minutes)
+        runCurrent()
+        assertEquals(afterPush + 1, target.attempts.get(), "the timer uses the rebased wait")
         controller.disable()
     }
 
@@ -600,13 +750,20 @@ class SyncControllerTest {
     /** A controller with sync already on and a stored password, ready to be started. */
     private fun TestScope.enabledController(
         target: SyncTarget,
+        changes: LocalChanges = LocalChanges(),
         schedule: SyncSchedule = SyncSchedule(),
     ): SyncController {
         val settings = InMemorySyncSettingsStore(
             SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
         )
         val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
-        return controller(settings = settings, secrets = secrets, target = target, schedule = schedule)
+        return controller(
+            settings = settings,
+            secrets = secrets,
+            target = target,
+            changes = changes,
+            schedule = schedule,
+        )
     }
 
     @Suppress("LongParameterList") // The test's own inputs, bundled so every case reads the same.
@@ -616,6 +773,7 @@ class SyncControllerTest {
         target: SyncTarget = InMemorySyncTarget(),
         vault: InMemoryVaultStore = InMemoryVaultStore(),
         outcomes: InMemorySyncOutcomeStore = InMemorySyncOutcomeStore(),
+        changes: LocalChanges = LocalChanges(),
         schedule: SyncSchedule = SyncSchedule(),
         dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
         onSynced: () -> Unit = {},
@@ -639,6 +797,7 @@ class SyncControllerTest {
         dispatcher = dispatcher,
         scope = this,
         onSynced = onSynced,
+        changes = changes,
         schedule = schedule,
     )
 }
@@ -656,6 +815,17 @@ private class CountingFailingTarget : SyncTarget by InMemorySyncTarget(changeCur
     override suspend fun list(known: Map<String, Revision>): SyncListing {
         attempts.incrementAndGet()
         throw SyncTargetException("the WebDAV server is unreachable")
+    }
+}
+
+/** A target that fails its first attempt and then answers, so a rebase can be observed. */
+private class FailOnceTarget(private val delegate: InMemorySyncTarget = InMemorySyncTarget(changeCursor = false)) :
+    SyncTarget by delegate {
+    val attempts = AtomicInteger()
+
+    override suspend fun list(known: Map<String, Revision>): SyncListing {
+        if (attempts.incrementAndGet() == 1) throw SyncTargetException("the WebDAV server is unreachable")
+        return delegate.list(known)
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.lekto.LocalChanges
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.text.WordKey
@@ -23,9 +24,10 @@ import app.lekto.core.vocabulary.VocabularyEntry
  * The save itself is blocking (it is a vault write), so the caller runs it off
  * the UI thread; once it returns, the in-memory map is updated and the reader
  * recomposes. A delete (issue #23) is a vault write too, and it bumps the same
- * revision, so the reader drops the word's colour.
+ * revision, so the reader drops the word's colour. Each landed save or delete
+ * notifies [changes], so sync pushes the change (issue #121; ADR-0028).
  */
-class VocabularyController(private val vocabulary: Vocabulary) {
+class VocabularyController(private val vocabulary: Vocabulary, private val changes: LocalChanges) {
 
     private val saved = mutableStateMapOf<WordKey, VocabularyEntry>()
 
@@ -55,6 +57,7 @@ class VocabularyController(private val vocabulary: Vocabulary) {
         vocabulary.save(entry)
         saved[entry.key] = entry
         revision++
+        changes.contentChanged()
     }
 
     /**
@@ -66,6 +69,7 @@ class VocabularyController(private val vocabulary: Vocabulary) {
         vocabulary.delete(key)
         saved.remove(key)
         revision++
+        changes.contentChanged()
     }
 
     private companion object {

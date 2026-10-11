@@ -1,5 +1,6 @@
 package app.lekto.library
 
+import app.lekto.LocalChanges
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
@@ -9,7 +10,9 @@ import app.lekto.core.book.ImportStage
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -28,7 +31,7 @@ class LibraryControllerTest {
     @Test
     fun aBookImportedThroughTheControllerAppearsInTheList() = runTest {
         val library = FakeLibrary()
-        val controller = LibraryController(library, StandardTestDispatcher(testScheduler), this)
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
 
         controller.import("book.epub", byteArrayOf(1))
         advanceUntilIdle()
@@ -41,7 +44,7 @@ class LibraryControllerTest {
     @Test
     fun aFinishedImportLeavesProgressAtOne() = runTest {
         val library = FakeLibrary()
-        val controller = LibraryController(library, StandardTestDispatcher(testScheduler), this)
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
 
         controller.import("book.epub", byteArrayOf(1))
         advanceUntilIdle()
@@ -52,7 +55,7 @@ class LibraryControllerTest {
     @Test
     fun aFailedImportIsCapturedAsAnErrorAndStopsImporting() = runTest {
         val library = FakeLibrary(failure = ImportException("Could not read 'broken.epub'."))
-        val controller = LibraryController(library, StandardTestDispatcher(testScheduler), this)
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
 
         controller.import("broken.epub", byteArrayOf(1))
         advanceUntilIdle()
@@ -64,7 +67,7 @@ class LibraryControllerTest {
     @Test
     fun dismissingAnErrorClearsItAndLeavesTheLibraryUsable() = runTest {
         val library = FakeLibrary(failure = ImportException("nope"))
-        val controller = LibraryController(library, StandardTestDispatcher(testScheduler), this)
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
         controller.import("broken.epub", byteArrayOf(1))
         advanceUntilIdle()
 
@@ -76,7 +79,7 @@ class LibraryControllerTest {
     @Test
     fun progressReportedByTheImportReachesTheState() = runTest {
         val library = FakeLibrary(progress = REPORTED_PROGRESS)
-        val controller = LibraryController(library, StandardTestDispatcher(testScheduler), this)
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
 
         controller.import("book.epub", byteArrayOf(1))
         advanceUntilIdle()
@@ -87,7 +90,7 @@ class LibraryControllerTest {
     @Test
     fun aRefreshPicksUpBooksStoredOutsideTheController() = runTest {
         val library = FakeLibrary()
-        val controller = LibraryController(library, StandardTestDispatcher(testScheduler), this)
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
 
         // A vault import replaces the store under the controller; it only sees
         // the restored book after a refresh (issue #20).
@@ -96,6 +99,21 @@ class LibraryControllerTest {
         advanceUntilIdle()
 
         assertEquals(listOf("b1"), controller.state.value.books.map { book -> book.id })
+    }
+
+    @Test
+    fun aLandedImportNotifiesTheLocalChangeSignal() = runTest {
+        // A book import is a local change, so sync pushes it rather than waiting
+        // for its timer (issue #121).
+        val changes = LocalChanges()
+        val received = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.content.collect { received += it } }
+        val controller = LibraryController(FakeLibrary(), changes, StandardTestDispatcher(testScheduler), this)
+
+        controller.import("book.epub", byteArrayOf(1))
+        advanceUntilIdle()
+
+        assertTrue(received.isNotEmpty(), "an import must notify the local-change signal")
     }
 }
 

@@ -167,13 +167,18 @@ private sealed interface Destination {
 @Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
 @Composable
 fun App(environment: AppEnvironment) {
-    val controller = remember(environment.library, environment.dispatcher) {
-        LibraryController(environment.library, environment.dispatcher)
+    // The one signal the local writers raise and sync subscribes to (issue #121):
+    // a book imported, a word saved or deleted, a reading position moved.
+    val changes = remember { LocalChanges() }
+    val controller = remember(environment.library, environment.dispatcher, changes) {
+        LibraryController(environment.library, changes, environment.dispatcher)
     }
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
-    val progress = remember(environment.library, environment.dispatcher, scope) {
-        ReadingProgressWriter(scope, environment.dispatcher) { position -> environment.library.savePosition(position) }
+    val progress = remember(environment.library, environment.dispatcher, scope, changes) {
+        ReadingProgressWriter(scope, environment.dispatcher, changes) { position ->
+            environment.library.savePosition(position)
+        }
     }
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
         environment.dictionary?.let { services -> DictionaryController(services, environment.dispatcher) }
@@ -183,8 +188,8 @@ fun App(environment: AppEnvironment) {
         environment.vaultTransfer?.let { transfer -> VaultTransferController(transfer, environment.dispatcher, scope) }
     }
     val vaultState = vaultTransfer?.state?.collectAsState()?.value ?: VaultUiState()
-    val vocabulary = remember(environment.vocabulary) {
-        environment.vocabulary?.let { store -> VocabularyController(store) }
+    val vocabulary = remember(environment.vocabulary, changes) {
+        environment.vocabulary?.let { store -> VocabularyController(store, changes) }
     }
     val provider = remember(environment.llm, environment.secrets, environment.dispatcher, scope) {
         val llm = environment.llm
@@ -196,7 +201,7 @@ fun App(environment: AppEnvironment) {
         }
     }
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
-    val sync = rememberSyncController(environment, scope, onSynced = controller::refresh)
+    val sync = rememberSyncController(environment, scope, changes, onSynced = controller::refresh)
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
     // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
     // an app-start run plus the periodic timer — and ask for a run whenever the

@@ -1,5 +1,6 @@
 package app.lekto.settings
 
+import app.lekto.LocalChanges
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.sync.SyncEngine
@@ -13,12 +14,14 @@ import app.lekto.core.sync.SyncTarget
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -112,11 +115,13 @@ data class SyncUiState(
  *
  * Since issue #121 it also runs sync **automatically** while it is on
  * (ADR-0028): [start] triggers a run at app start and begins a bounded periodic
- * timer, [onResumed] triggers a run when the app returns to the foreground, and
- * any trigger raised while a run is in flight is coalesced into one follow-up
- * rather than a storm. Turning sync off ([disable], [disconnect]) stops every
- * trigger. The last outcome is persisted device-locally ([SyncServices.outcomes])
- * so it survives a restart, and a failure is retried on the next trigger.
+ * timer, [onResumed] triggers a run when the app returns to the foreground, and a
+ * local change — a book imported, a word saved or deleted, a reading position
+ * moved — pushes a run after a short settle. Any trigger raised while a run is in
+ * flight is coalesced into one follow-up rather than a storm. Turning sync off
+ * ([disable], [disconnect]) stops every trigger. The last outcome is persisted
+ * device-locally ([SyncServices.outcomes]) so it survives a restart, and a failure
+ * is retried on the next trigger.
  *
  * The [dispatcher] is injected because testing a connection and syncing block,
  * and a hard-coded one cannot be driven by virtual time; the [scope] carries that
@@ -133,6 +138,8 @@ class SyncController(
      * — reloads what the sync moved rather than showing its stale list (issue #116).
      */
     private val onSynced: () -> Unit = {},
+    /** Notified by the writers of local content and progress changes (issue #121). */
+    private val changes: LocalChanges,
     /** The automatic-run cadence and its backoff (issue #121; ADR-0028). */
     private val schedule: SyncSchedule = SyncSchedule(),
 ) {
@@ -150,16 +157,19 @@ class SyncController(
     private var failures = 0
     private var run: Job? = null
     private var ticker: Job? = null
+    private var changeJobs: List<Job> = emptyList()
 
     /**
      * Arms automatic sync (issue #121; ADR-0028): an app-start run once sync is on,
-     * and a bounded periodic timer for as long as it stays on. Calling it again is
-     * harmless. Turning sync on later ([enable]) arms the same timer.
+     * a bounded periodic timer for as long as it stays on, and a push for each
+     * local change. Calling it again is harmless. Turning sync on later ([enable])
+     * arms the same triggers.
      */
     fun start() {
         if (started) return
         started = true
         if (!_state.value.config.enabled) return
+        startCollectingChanges()
         requestSync()
         scheduleTicker()
     }
@@ -243,7 +253,10 @@ class SyncController(
             current.copy(config = current.config.copy(enabled = true), result = SyncResult.Success(SyncUiState.SYNC_ON))
         }
         syncNow()
-        if (started) scheduleTicker()
+        if (started) {
+            startCollectingChanges()
+            scheduleTicker()
+        }
     }
 
     /** Turns sync off, leaving the endpoint configured and the vault local and usable. */
@@ -367,29 +380,58 @@ class SyncController(
             pending = false
             if (_state.value.config.enabled) requestSync()
         }
+        // Rebase the periodic wait on this run's outcome, so a push or resume that
+        // just changed the failure count is not left waiting on a stale delay.
+        if (started && _state.value.config.enabled) scheduleTicker()
     }
 
     /**
      * Runs the periodic trigger for as long as sync is on (issue #121; ADR-0028):
-     * it waits for the current run to finish, then waits the backoff interval for
-     * the last outcome's failure count, so a failing target is polled less rather
-     * than hammered, and triggers never pile onto a run in flight.
+     * it waits the backoff interval for the last outcome's failure count, so a
+     * failing target is polled less rather than hammered. [recordRun] restarts it
+     * after every run, so the wait always reflects the latest outcome, and a
+     * trigger raised while a run is in flight coalesces in [requestSync].
      */
     private fun scheduleTicker() {
         ticker?.cancel()
         ticker = scope.launch {
             while (isActive) {
-                run?.join()
                 delay(schedule.intervalAfter(failures))
                 requestSync()
             }
         }
     }
 
+    /**
+     * Pushes a run on each local change (issue #121; ADR-0028): a discrete content
+     * change after [SyncSchedule.contentChangeDelay], a reading-progress change
+     * after [SyncSchedule.progressChangeDelay], so a burst of edits or of page
+     * turns settles into one run rather than one run per edit or turn.
+     */
+    @OptIn(FlowPreview::class) // `debounce` is the settle this needs; it is a preview Flow operator.
+    private fun startCollectingChanges() {
+        if (changeJobs.isNotEmpty()) return
+        changeJobs = listOf(
+            scope.launch {
+                changes.content.debounce(schedule.contentChangeDelay).collect { requestSync() }
+            },
+            scope.launch {
+                changes.progress.debounce(schedule.progressChangeDelay).collect { requestSync() }
+            },
+        )
+    }
+
+    /** Stops the change subscribers, so turning sync off leaves nothing pending. */
+    private fun stopCollectingChanges() {
+        changeJobs.forEach { job -> job.cancel() }
+        changeJobs = emptyList()
+    }
+
     /** Stops every automatic trigger, so turning sync off leaves nothing pending. */
     private fun stopTriggers() {
         ticker?.cancel()
         ticker = null
+        stopCollectingChanges()
         pending = false
     }
 

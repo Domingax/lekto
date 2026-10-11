@@ -3,11 +3,12 @@ package app.lekto.core.sync
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The policy for automatic sync runs while the app is open (issue #121;
- * ADR-0028): how long to wait between runs, and how that wait grows when runs
- * keep failing.
+ * ADR-0028): how long to wait between runs, how that wait grows when runs keep
+ * failing, and how long to let local changes settle before pushing a run.
  *
  * The interval is bounded — a vault of ten thousand records is not a reason to
  * poll often, so the base is a quarter of an hour — and the wait doubles with
@@ -15,12 +16,21 @@ import kotlin.time.Duration.Companion.minutes
  * broken is backed off rather than hammered. A success resets the wait to
  * [baseInterval]. The first run needs no wait at all: app start and resume raise
  * one directly.
+ *
+ * A local change pushes a run sooner than the timer would: [contentChangeDelay]
+ * after the last discrete change (a book imported, a word saved or deleted), and
+ * [progressChangeDelay] after the last reading-position change, which fires on
+ * every page turn and so needs a longer pause to be quiet.
  */
 data class SyncSchedule(
     /** The wait between runs once the last run succeeded. */
     val baseInterval: Duration = 15.minutes,
     /** The longest wait, so a failing target is polled at most once an hour. */
     val maxInterval: Duration = 1.hours,
+    /** The settle after a discrete content change before sync pushes a run. */
+    val contentChangeDelay: Duration = 5.seconds,
+    /** The pause in reading after which a progress change pushes a run. */
+    val progressChangeDelay: Duration = 30.seconds,
 ) {
 
     /**
