@@ -164,7 +164,9 @@ are proved without Docker. The fake mirrors the wrinkles that matter to the
 driver: a `PUT` that returns no ETag, which forces the driver's `HEAD` fallback,
 a configurable status for a `MKCOL` on a collection that already exists,
 which pins that the driver reads a collection's existence instead of trusting
-`405` (issue #117), and it counts its `GET`s, so the listing's re-read avoidance
+`405` (issue #117), a mode that refuses the DAV `If` header while honouring
+`If-Match`, the Koofr condition the driver falls back on (issue #133), and it
+counts its `GET`s, so the listing's re-read avoidance
 is pinned on the driver too (ADR-0027). A separate test drives the container
 lane, a rejected credential and a `500` (both surfaced as `SyncTargetException`),
 and a driver that claims a capability it lacks, which the contract must reject

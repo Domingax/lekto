@@ -51,6 +51,20 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
      */
     var mkcolExistingStatus: Int = 405
 
+    /**
+     * When true a `PUT` that carries the DAV `If` header answers `412` however
+     * correct its revision is, as Koofr does — it implements HTTP `If-Match` but
+     * not WebDAV's `If` (issue #133) — so the driver's fallback is exercised.
+     */
+    var rejectDavIfHeader: Boolean = false
+
+    /**
+     * When true an `If-Match` header is ignored, as a server that implements only
+     * the DAV `If` would: a test pins that the driver does not blind-overwrite a
+     * lost race through its `If-Match` fallback (issue #133).
+     */
+    var ignoreIfMatch: Boolean = false
+
     private val expectedAuthorization: String =
         "Basic " + Base64.getEncoder().encodeToString("$username:$password".toByteArray(StandardCharsets.UTF_8))
 
@@ -151,8 +165,12 @@ class FakeWebDavServer(username: String = "lekto", password: String = "lekto") :
         val ifHeader = exchange.requestHeaders.getFirst("If")
         return when {
             ifNoneMatch == "*" -> current != null
-            ifMatch != null -> ifMatch != current?.etag
-            ifHeader != null -> opaque(etagOf(ifHeader)) != current?.let { stored -> opaque(stored.etag) }
+
+            ifMatch != null -> !ignoreIfMatch && ifMatch != current?.etag
+
+            ifHeader != null ->
+                rejectDavIfHeader || opaque(etagOf(ifHeader)) != current?.let { stored -> opaque(stored.etag) }
+
             else -> false
         }
     }

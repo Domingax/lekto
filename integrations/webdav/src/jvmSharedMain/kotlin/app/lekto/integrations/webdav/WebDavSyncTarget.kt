@@ -21,14 +21,18 @@ import kotlinx.serialization.SerializationException
  * holds one book original.
  *
  * Capabilities are reported honestly: a create conditions with HTTP
- * `If-None-Match: *` and an update with WebDAV's `If` header (RFC 4918), so
- * **conditional writes are supported**; RFC 6578 `sync-collection` is
+ * `If-None-Match: *` and an update with WebDAV's `If` header (RFC 4918), falling
+ * back to HTTP `If-Match` when a refused DAV `If` leaves the revision unmoved —
+ * a server that does not implement the DAV `If` (Koofr answers 412 to it however
+ * correct the revision is — issue #133) — so **conditional writes are
+ * supported**; RFC 6578 `sync-collection` is
  * server-dependent, so **no change cursor** is claimed and the engine lists the
  * whole collection — but reads the body only of items whose ETag moved, so a
  * steady-state sync is one `PROPFIND` plus the changed records (ADR-0027). A
  * driver that claimed a capability it lacked fails the shared [SyncTarget]
  * contract, which only adds the cases a claimed capability demands.
  */
+@Suppress("TooManyFunctions") // One method per WebDAV operation plus its small write helper; the seam is the protocol.
 class WebDavSyncTarget(baseUrl: String, username: String, password: String) : SyncTarget {
 
     private val client = WebDavClient(WebDavConnection(baseUrl, username, password))
@@ -67,15 +71,41 @@ class WebDavSyncTarget(baseUrl: String, username: String, password: String) : Sy
 
     override suspend fun put(version: VersionedRecord, expected: Revision?): WriteOutcome {
         client.ensureCollection(WebDavNames.RECORDS)
-        val condition = expected?.let { WriteCondition.MatchesRevision(it.value) } ?: WriteCondition.CreateOnly
         val path = WebDavNames.recordPath(version.id)
-        return when (val result = client.write(path, WebDavRecords.encode(version), condition)) {
+        val bytes = WebDavRecords.encode(version)
+        // A create is `If-None-Match: *`, honoured by every server including Koofr.
+        val written = expected?.let { revision -> update(path, version.id, bytes, revision) }
+            ?: client.write(path, bytes, WriteCondition.CreateOnly)
+        return when (written) {
             is WebDavWriteResult.Written -> {
+                // A tombstone says the id is gone, so its original must not linger (ADR-0016).
                 if (version is VersionedRecord.Deleted) client.delete(WebDavNames.attachmentPath(version.id))
-                WriteOutcome.Written(Revision(result.etag))
+                WriteOutcome.Written(Revision(written.etag))
             }
 
             WebDavWriteResult.PreconditionFailed -> WriteOutcome.Conflicted(get(version.id))
+        }
+    }
+
+    /**
+     * A conditional update: the DAV `If` first, whose weak comparison tolerates an
+     * Apache fresh ETag. A refusal is a lost race only when the revision moved —
+     * when it did not, the server does not honour the DAV `If` (Koofr answers 412
+     * however correct the revision is, issue #133) — so the write is retried with
+     * HTTP `If-Match`. That is a strong comparison, so a revision that really moved
+     * fails it too: the fallback can never turn a lost race into a blind overwrite.
+     */
+    private suspend fun update(path: String, id: String, bytes: ByteArray, expected: Revision): WebDavWriteResult {
+        val davIf = client.write(path, bytes, WriteCondition.WeakMatch(expected.value))
+        return when {
+            davIf is WebDavWriteResult.Written -> davIf
+
+            // The DAV `If` was refused. A revision that moved is a lost race, settled
+            // as a conflict; only a revision that did not move means the server does
+            // not honour the DAV `If` (Koofr), so the write is retried with `If-Match`.
+            get(id)?.revision != expected -> WebDavWriteResult.PreconditionFailed
+
+            else -> client.write(path, bytes, WriteCondition.StrongMatch(expected.value))
         }
     }
 
