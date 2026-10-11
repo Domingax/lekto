@@ -2,7 +2,10 @@ package app.lekto
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -163,10 +166,20 @@ private sealed interface Destination {
  * [AppEnvironment.dispatcher] rather than the composition thread; it is injected
  * because a hard-coded dispatcher cannot be driven by virtual time
  * (docs/testing.md, "Deterministic seams").
+ *
+ * [windowInsets] is the space the window's system UI occupies — the status and
+ * navigation bars and any display cutout on Android — and it is a parameter
+ * rather than a direct read of [WindowInsets.safeDrawing] for the same reason:
+ * it is a deterministic seam a test drives with a known inset, which on Android
+ * a host test cannot otherwise supply. It defaults to [WindowInsets.safeDrawing]
+ * so a platform entry point passes nothing.
  */
 @Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
 @Composable
-fun App(environment: AppEnvironment) {
+fun App(
+    environment: AppEnvironment,
+    windowInsets: WindowInsets = WindowInsets.safeDrawing,
+) {
     // The one signal the local writers raise and sync subscribes to (issue #121):
     // a book imported, a word saved or deleted, a reading position moved.
     val changes = remember { LocalChanges() }
@@ -223,7 +236,13 @@ fun App(environment: AppEnvironment) {
         state = SettingsUiState(dictionaryState, vaultState, providerState, syncState),
     )
 
-    AppScreens(environment, controller, state, scope, progress, settings, vocabulary)
+    // The window's system UI — the status and navigation bars and any display
+    // cutout — is kept out of every screen. An app targeting Android 15+ draws
+    // edge to edge whether it asks to or not, so without this the chrome sits
+    // under the status bar and the system, which owns that strip, eats its taps.
+    Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
+        AppScreens(environment, controller, state, scope, progress, settings, vocabulary)
+    }
 }
 
 /** The app's destinations, so [App] stays a wiring function and each screen is small. */
