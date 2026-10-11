@@ -91,15 +91,28 @@ fast, SDK-free twin.
 
 The library that imports a book and opens a reading session (ticket #15) is a
 domain service in `core/book`: `VaultBookLibrary` composes a `VaultStore`, a
-`DerivedAssetStore` and the parser map, so its fast-loop tests run against the
-in-memory fakes in `core/commonTest`, and a real-EPUB run over a temporary
-directory lives in `core/jvmTest`. The vault's binary **attachments** (ADR-0016)
-are proven in the shared `VaultStoreContract`, so the in-memory and on-disk
-stores cannot drift, and a property in `VaultCodecPropertyTest` round-trips
-arbitrary bytes through export and import. The library UI's semantics are proved
-in `app/desktopTest` and its same-named Android twin in `app/androidUnitTest`
-(issue #74), and the `LibraryController`'s async import is driven with
+`DerivedAssetStore`, the parser map and the engine's `TombstoneStore`, so its
+fast-loop tests run against the in-memory fakes in `core/commonTest`, and a
+real-EPUB run over a temporary directory lives in `core/jvmTest`. The vault's
+binary **attachments** (ADR-0016) are proven in the shared `VaultStoreContract`,
+so the in-memory and on-disk stores cannot drift, and a property in
+`VaultCodecPropertyTest` round-trips arbitrary bytes through export and import.
+The library UI's semantics are proved in `app/desktopTest` and its same-named
+Android twin in `app/androidUnitTest` (issue #74), and the
+`LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
+
+Deleting a book (issue #131) is proved at the same levels. It is a domain
+behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
+record, its original, its derived text and its reading position and leaves a
+tombstone for the book id and for the reading-position id — each only when the id
+exists — in an order that leaves a failed delete fully listed and re-deletable,
+with a real-directory run in `core/jvmTest` that checks the files are gone and the
+tombstones are written beside the vault. The controller's `delete` is proved by
+`LibraryControllerTest` in `app/desktopTest`, and the screen's delete action
+behind its confirmation `Dialog` — untouched until the user confirms — is
+`LibraryScreenSemanticsTest` on both lanes, so a screen cannot gain a delete on
+the desktop and no Android twin without failing `check`.
 
 The reader on a real book and its **resume** (issue #16) are proven at the same
 levels. The reading position — a character offset, so it survives a reflow — is a

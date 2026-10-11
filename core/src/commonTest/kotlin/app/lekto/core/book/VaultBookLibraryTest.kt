@@ -1,5 +1,6 @@
 package app.lekto.core.book
 
+import app.lekto.core.sync.TombstoneStore
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.StructuredText
@@ -8,12 +9,16 @@ import app.lekto.core.text.TextRun
 import app.lekto.core.text.TxtParser
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.Tombstone
+import app.lekto.core.vault.VaultStore
+import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.deterministicSeams
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlin.test.assertFailsWith
 
 /**
@@ -40,11 +45,13 @@ class VaultBookLibraryTest :
         fun newLibrary(
             vault: InMemoryVaultStore = InMemoryVaultStore(),
             derived: DerivedAssetStore = DerivedAssetStore(InMemoryVaultFileSystem()),
+            tombstones: TombstoneStore = InMemoryTombstoneStore(),
             deviceId: DeviceId = DeviceId("device-a"),
         ): VaultBookLibrary = VaultBookLibrary(
             vault = vault,
             derived = derived,
             parsers = parsers,
+            tombstones = tombstones,
             seams = deterministicSeams(),
             deviceId = deviceId,
         )
@@ -173,6 +180,7 @@ class VaultBookLibraryTest :
                 vault = vault,
                 derived = derived,
                 parsers = mapOf(BookFormat.EPUB to BookTextParser { error("not an epub") }),
+                tombstones = InMemoryTombstoneStore(),
                 seams = deterministicSeams(),
                 deviceId = DeviceId("device-a"),
             )
@@ -193,6 +201,7 @@ class VaultBookLibraryTest :
                 vault = failingVault,
                 derived = derived,
                 parsers = parsers,
+                tombstones = InMemoryTombstoneStore(),
                 seams = deterministicSeams(),
                 deviceId = DeviceId("device-a"),
             )
@@ -210,7 +219,145 @@ class VaultBookLibraryTest :
 
             library.books().map { it.title } shouldContainExactly listOf("Alpha", "An EPUB")
         }
+
+        test("deleting a book removes its record, its original, its cached text and its position") {
+            val vault = InMemoryVaultStore()
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val library = newLibrary(vault = vault, derived = derived)
+            val book = library.import("Lantern.epub", byteArrayOf(1, 2, 3))
+            library.savePosition(ReadingPosition(book.id, offset = 42))
+
+            library.delete(book.id)
+
+            library.books() shouldBe emptyList()
+            vault.get(book.id) shouldBe null
+            vault.getAttachment(book.id) shouldBe null
+            vault.get(ReadingPositionRecord.idOf(book.id)) shouldBe null
+            derived.paths() shouldBe emptyList()
+        }
+
+        test("deleting a book leaves a tombstone for the book and for its position") {
+            val vault = InMemoryVaultStore()
+            val tombstones = InMemoryTombstoneStore()
+            val library = newLibrary(vault = vault, tombstones = tombstones)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            library.savePosition(ReadingPosition(book.id, offset = 7))
+
+            library.delete(book.id)
+
+            tombstones.get(book.id) shouldNotBe null
+            tombstones.get(ReadingPositionRecord.idOf(book.id)) shouldNotBe null
+        }
+
+        test("deleting a book with no reading position leaves only the book's tombstone") {
+            val tombstones = InMemoryTombstoneStore()
+            val library = newLibrary(tombstones = tombstones)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            library.delete(book.id)
+
+            tombstones.all().map { tombstone -> tombstone.id } shouldContainExactly listOf(book.id)
+        }
+
+        test("deleting a book leaves the other books untouched") {
+            val vault = InMemoryVaultStore()
+            val library = newLibrary(vault = vault)
+            val kept = library.import("Alpha.epub", byteArrayOf(1))
+            val removed = library.import("Lantern.epub", byteArrayOf(2))
+
+            library.delete(removed.id)
+
+            library.books() shouldContainExactly listOf(kept)
+            vault.getAttachment(kept.id) shouldBe byteArrayOf(1)
+        }
+
+        test("deleting an unknown book is a no-op and leaves no tombstone") {
+            val tombstones = InMemoryTombstoneStore()
+
+            newLibrary(tombstones = tombstones).delete("absent")
+
+            tombstones.all() shouldBe emptyList()
+        }
+
+        test("a deleted book stays gone after a restart over the same vault") {
+            val vault = InMemoryVaultStore()
+            val book = newLibrary(vault = vault).import("Lantern.epub", byteArrayOf(1))
+
+            newLibrary(vault = vault).delete(book.id)
+
+            newLibrary(vault = vault).books() shouldBe emptyList()
+        }
+
+        test("a failure before the last step leaves the book listed and re-deletable") {
+            val vault = InMemoryVaultStore()
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val tombstones = InMemoryTombstoneStore()
+            val library = newLibrary(vault = vault, derived = derived, tombstones = tombstones)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            library.savePosition(ReadingPosition(book.id, offset = 3))
+            val failing = VaultBookLibrary(
+                vault = FailingRemoval(vault, book.id),
+                derived = derived,
+                parsers = parsers,
+                tombstones = tombstones,
+                seams = deterministicSeams(),
+                deviceId = DeviceId("device-a"),
+            )
+
+            // The book record's removal is the last step and it fails: the book
+            // must stay fully listed, its position gone and both tombstones — the
+            // write-ahead marks — already written.
+            assertFailsWith<IllegalStateException> { failing.delete(book.id) }
+
+            library.books() shouldContainExactly listOf(book)
+            vault.get(ReadingPositionRecord.idOf(book.id)) shouldBe null
+            tombstones.get(ReadingPositionRecord.idOf(book.id)) shouldNotBe null
+            tombstones.get(book.id) shouldNotBe null
+
+            // Replaying the delete over a working vault completes it.
+            library.delete(book.id)
+
+            library.books() shouldBe emptyList()
+            vault.get(book.id) shouldBe null
+            tombstones.get(book.id) shouldNotBe null
+        }
+
+        test("a failed tombstone write leaves the book listed and is completed by a replay") {
+            val vault = InMemoryVaultStore()
+            val tombstones = InMemoryTombstoneStore()
+            val book = newLibrary(vault = vault, tombstones = tombstones).import("Lantern.epub", byteArrayOf(1))
+            val failing = newLibrary(vault = vault, tombstones = FailingTombstoneWrite(tombstones, book.id))
+
+            // The book's tombstone is written before its record is removed, so a
+            // failed write leaves the record for the replay to key on.
+            assertFailsWith<IllegalStateException> { failing.delete(book.id) }
+
+            vault.get(book.id) shouldNotBe null
+            tombstones.get(book.id) shouldBe null
+
+            newLibrary(vault = vault, tombstones = tombstones).delete(book.id)
+
+            vault.get(book.id) shouldBe null
+            tombstones.get(book.id) shouldNotBe null
+        }
     })
+
+/** A vault whose [remove] fails for one id, so a delete can be made to fail part-way. */
+private class FailingRemoval(private val backing: VaultStore, private val failingId: String) : VaultStore by backing {
+    override fun remove(id: String) {
+        if (id == failingId) error("disk full")
+        backing.remove(id)
+    }
+}
+
+/** A tombstone store whose [put] fails for one id, so a delete can be made to fail on its tombstone. */
+private class FailingTombstoneWrite(private val backing: TombstoneStore, private val failingId: String) :
+    TombstoneStore by backing {
+    override fun put(tombstone: Tombstone) {
+        if (tombstone.id == failingId) error("disk full")
+        backing.put(tombstone)
+    }
+}
 
 private fun failedImportLeavesNothing(
     library: VaultBookLibrary,

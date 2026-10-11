@@ -115,12 +115,74 @@ class LibraryControllerTest {
 
         assertTrue(received.isNotEmpty(), "an import must notify the local-change signal")
     }
+
+    @Test
+    fun deletingABookRemovesItFromTheList() = runTest {
+        val library = FakeLibrary().apply { recognize(book("b1")) }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        controller.delete("b1")
+        advanceUntilIdle()
+
+        assertEquals(emptyList(), controller.state.value.books)
+        assertNull(controller.state.value.error)
+    }
+
+    @Test
+    fun aDeleteRunsOffTheCallersThread() = runTest {
+        val library = FakeLibrary().apply { recognize(book("b1")) }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        controller.delete("b1")
+
+        // The blocking vault write is launched on the injected dispatcher, not
+        // run on the caller's thread (docs/testing.md, "Deterministic seams").
+        assertEquals(listOf("b1"), library.books().map { stored -> stored.id })
+        advanceUntilIdle()
+        assertEquals(emptyList(), library.books())
+    }
+
+    @Test
+    fun aFailedDeleteIsCapturedAsAnErrorAndLeavesTheBookListed() = runTest {
+        val library = FakeLibrary(deleteFailure = RuntimeException("Could not delete 'Lantern'."))
+            .apply { recognize(book("b1")) }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        controller.delete("b1")
+        advanceUntilIdle()
+
+        assertEquals("Could not delete 'Lantern'.", controller.state.value.error)
+        assertEquals(listOf("b1"), controller.state.value.books.map { stored -> stored.id })
+    }
+
+    @Test
+    fun aLandedDeleteNotifiesTheLocalChangeSignal() = runTest {
+        // A deletion is a local change, so sync pushes it rather than waiting for
+        // its timer (issue #131; ADR-0028).
+        val changes = LocalChanges()
+        val received = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.content.collect { received += it } }
+        val library = FakeLibrary().apply { recognize(book("b1")) }
+        val controller = LibraryController(library, changes, StandardTestDispatcher(testScheduler), this)
+
+        controller.delete("b1")
+        advanceUntilIdle()
+
+        assertTrue(received.isNotEmpty(), "a delete must notify the local-change signal")
+    }
 }
+
+/** A book with [id], so a controller test has something to list and delete. */
+private fun book(id: String): Book = Book(id, "Lantern", "en", BookFormat.TXT, "lantern.txt")
 
 /** The progress the fake import reports mid-way, below the final 1.0. */
 private const val REPORTED_PROGRESS = 0.4f
 
-private class FakeLibrary(private val progress: Float = 0f, private val failure: Exception? = null) : BookLibrary {
+private class FakeLibrary(
+    private val progress: Float = 0f,
+    private val failure: Exception? = null,
+    private val deleteFailure: Exception? = null,
+) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
 
@@ -137,6 +199,11 @@ private class FakeLibrary(private val progress: Float = 0f, private val failure:
         val book = Book(fileName, "Title", "en", BookFormat.EPUB, fileName)
         stored = stored + book
         return book
+    }
+
+    override fun delete(id: String) {
+        deleteFailure?.let { throw it }
+        stored = stored.filterNot { book -> book.id == id }
     }
 
     override fun open(id: String): ReadingSession? = null

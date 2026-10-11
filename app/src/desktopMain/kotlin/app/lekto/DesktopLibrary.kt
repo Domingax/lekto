@@ -22,7 +22,9 @@ import java.io.File
  *
  * The vault and derived stores sit under the app-private data directory
  * (ADR-0010); the parser set and the device id are the two pieces the domain
- * cannot reach for. The file picker lives in `DesktopFilePicker.kt`, kept apart
+ * cannot reach for. The library's tombstones live under the same `sync/`
+ * directory the engine uses (ADR-0015), so a deleted book is propagated rather
+ * than resurrected. The file picker lives in `DesktopFilePicker.kt`, kept apart
  * so this testable wiring carries no Swing dependency.
  *
  * @param root the vault root, defaulting to [desktopVaultRoot]; the parameter is
@@ -32,6 +34,7 @@ fun desktopBookLibrary(root: File = desktopVaultRoot()): BookLibrary = VaultBook
     vault = JsonVaultStore(JvmVaultFileSystem(root)),
     derived = DerivedAssetStore(JvmVaultFileSystem(File(root.parentFile, "derived"))),
     parsers = desktopParsers(),
+    tombstones = JsonTombstoneStore(JvmVaultFileSystem(File(root.parentFile, "sync"))),
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )

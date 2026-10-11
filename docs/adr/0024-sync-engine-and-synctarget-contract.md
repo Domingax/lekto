@@ -113,3 +113,21 @@ changes of every device at the moment it upgrades, which is worse; the cost is
 that a device already offline past the window when this lands can, on that first
 sync, re-upload a live copy whose tombstone another device has since purged. The
 merge, the capabilities and the record-by-record last-writer-wins are unchanged.
+
+## Update — a delete's tombstone is written by the domain writer, not by the engine (issue #131)
+
+The `SyncEngine.delete` in "The engine's device-local state" is **not** the path
+the app deletes through. A user-facing writer removes its own record and writes
+the tombstone beside it, into the same `TombstoneStore` the engine reads: the
+vocabulary has done this since issue #23, and the library's `BookLibrary.delete`
+now does the same (issue #131). Deleting a book removes its record, its original
+attachment, its derived parsed text and its reading position, and leaves a
+tombstone for the book id and for the reading-position id — each written only
+when the id exists — in an order that leaves a failed delete fully listed and
+re-deletable. The engine's `delete` is retained for the engine's own use and is
+reached by no composition root; reconciling the two is issue #137.
+
+The merge, the `TombstoneStore` and the binary attachment channel are unchanged: a
+tombstone a writer writes is the same comparison key the engine already merges
+against, so a deleted book's record and original travel as a deletion on both
+devices rather than resurrecting.
