@@ -8,6 +8,18 @@ import app.lekto.core.vault.VaultMerge
 import app.lekto.core.vault.VaultStore
 import app.lekto.core.vault.VersionedRecord
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
+
+/**
+ * The longest offline window the product supports (ADR-0015): a tombstone is
+ * kept at least this long, so a device that has been away for less is still told
+ * the item was deleted. Past it the engine drops the tombstone — from its own
+ * store, the device-local remote index, and the target — and treats a returning
+ * device as new, so a stale live copy cannot resurrect a deleted item.
+ */
+val TOMBSTONE_RETENTION: Duration = 90.days
 
 /**
  * What one [SyncEngine.sync] moved: live records each way, deletions, the binary
@@ -18,6 +30,7 @@ import kotlin.time.Clock
  * race; a non-zero value is recoverable — the next sync retries — so a caller
  * reports it rather than treating it as loss.
  */
+@Suppress("LongParameterList") // One field per axis the caller reports on.
 data class SyncReport(
     /** Live records the local vault won and the target had to adopt. */
     val uploaded: Int,
@@ -29,6 +42,13 @@ data class SyncReport(
     val attachments: Int,
     /** Writes the target rejected and the engine could not settle. */
     val unresolved: Int,
+    /**
+     * Whether this sync treated the device as new because it had been away past
+     * [TOMBSTONE_RETENTION] (ADR-0015): its local records were replaced by the
+     * target's, so the caller can tell the user the vault restarted from the
+     * server rather than appearing to have lost data silently.
+     */
+    val resynced: Boolean = false,
 )
 
 /**
@@ -46,19 +66,23 @@ data class SyncReport(
  * The engine remembers the last item it saw per id in a device-local
  * [RemoteIndexStore] beside the tombstones, and passes those revisions to a
  * listing, so a sync reads only the records that changed rather than the whole
- * target every run (ADR-0027).
+ * target every run (ADR-0027). The same memory records when the device last
+ * completed a sync, so a device that has been away past [TOMBSTONE_RETENTION] is
+ * treated as new and takes the target's records in a full resync (ADR-0015).
  *
  * **Deletions go through [delete].** A record removed from the vault with no
  * tombstone is only absent — the next sync would copy it back from a device that
  * has not seen the delete — so [delete] removes the record *and* leaves the
- * tombstone the merge compares on (ADR-0015).
+ * tombstone the merge compares on (ADR-0015). A tombstone older than
+ * [TOMBSTONE_RETENTION] is dropped on the next sync, from the local store, the
+ * device-local index and the target, so the deletion does not accumulate forever.
  *
- * The engine reads no wall clock and pins no dispatcher: [delete] takes its time
- * from the injected [clock] and [sync] runs on the caller's context, so the
- * whole engine is exercised under `runTest`'s virtual time (docs/testing.md,
+ * The engine reads no wall clock and pins no dispatcher: [delete] and [sync] take
+ * their time from the injected [clock] and [sync] runs on the caller's context,
+ * so the whole engine is exercised under `runTest`'s virtual time (docs/testing.md,
  * "Deterministic seams").
  */
-@Suppress("LongParameterList") // The engine's collaborators are independent seams the composition root wires.
+@Suppress("LongParameterList", "TooManyFunctions") // Its collaborators are seams; each method is one step of the sync.
 class SyncEngine(
     private val local: VaultStore,
     private val tombstones: TombstoneStore,
@@ -70,6 +94,7 @@ class SyncEngine(
 
     private val remote = RemoteIndex().apply { replaceAll(remoteIndex.all()) }
     private var cursor: SyncCursor? = null
+    private var lastSyncedAt: Instant? = remoteIndex.lastSyncedAt()
 
     /**
      * Removes [id] from the local vault and leaves a tombstone for it, so the
@@ -85,19 +110,75 @@ class SyncEngine(
 
     /** Reconciles the local vault and the target, and reports what moved. */
     suspend fun sync(): SyncReport {
-        val remoteVersions = fetchRemote()
-        val outcome = VaultMerge.merge(local = localVersions(), remote = remoteVersions)
+        val now = clock.now()
+        val resynced = isResync(now)
+        if (resynced) resetLocal()
+        fetchRemote()
+        purgeTombstones(now)
+        val outcome = VaultMerge.merge(local = localVersions(), remote = remote.all().map { it.version })
         val appliedLocally = applyLocally(outcome)
         val remoteWrites = applyRemotely(outcome)
         val attachments = reconcileAttachments()
         remoteIndex.replaceAll(remote.all())
+        remoteIndex.markSynced(now)
+        lastSyncedAt = now
         return SyncReport(
             uploaded = remoteWrites.uploaded,
             downloaded = appliedLocally + remoteWrites.downloaded,
             deletions = outcome.toDeleteLocally.size + outcome.toDeleteRemotely.size,
             attachments = attachments,
             unresolved = remoteWrites.unresolved,
+            resynced = resynced,
         )
+    }
+
+    /**
+     * Whether this device has been away past [TOMBSTONE_RETENTION] and must be
+     * treated as new (ADR-0015): it has synced before, but not within the window,
+     * so its local records are replaced by the target's in a full resync rather
+     * than merged — a stale live copy could otherwise resurrect a deleted item
+     * whose tombstone the engine has dropped. A device that has never synced is
+     * not new: its first sync merges, so local records it already holds are
+     * uploaded rather than discarded.
+     */
+    private fun isResync(now: Instant): Boolean =
+        lastSyncedAt?.let { last -> now - last > TOMBSTONE_RETENTION } ?: false
+
+    /**
+     * Drops the device's local history before a full resync: the vault, the
+     * tombstones, the remembered target and the change cursor, so the merge sees
+     * a new device and reads the target whole rather than pushing local records.
+     */
+    private fun resetLocal() {
+        local.all().forEach { local.remove(it.id) }
+        tombstones.all().forEach { tombstones.remove(it.id) }
+        remote.replaceAll(emptyList())
+        remoteIndex.replaceAll(emptyList())
+        cursor = null
+    }
+
+    /**
+     * Drops every tombstone older than [TOMBSTONE_RETENTION], from the local
+     * store, the device-local index and the target, so a deletion does not
+     * accumulate forever (ADR-0015). A tombstone whose deletion has not reached
+     * the other side — its id still has a live copy there — is kept: dropping it
+     * would let that copy resurrect, so the merge re-propagates the delete first.
+     */
+    private suspend fun purgeTombstones(now: Instant) {
+        val cutoff = now - TOMBSTONE_RETENTION
+        val liveLocally = local.all().mapTo(mutableSetOf()) { it.id }
+        remote.all()
+            .filter { it.version is VersionedRecord.Deleted && it.version.updatedAt < cutoff && it.id !in liveLocally }
+            .forEach { item ->
+                target.delete(item.id)
+                remote.remove(item.id)
+            }
+        val liveRemotely = remote.all()
+            .filter { it.version is VersionedRecord.Live }
+            .mapTo(mutableSetOf()) { it.id }
+        tombstones.all()
+            .filter { it.updatedAt < cutoff && it.id !in liveRemotely }
+            .forEach { tombstones.remove(it.id) }
     }
 
     /**
@@ -110,7 +191,7 @@ class SyncEngine(
      * (ADR-0027); the index then keeps the body it already held for those,
      * turning the listing into a full picture to merge.
      */
-    private suspend fun fetchRemote(): List<VersionedRecord> {
+    private suspend fun fetchRemote() {
         if (!target.capabilities().changeCursor) {
             remote.replaceAll(resolveUncached(target.list(remote.knownRevisions())))
         } else {
@@ -118,7 +199,6 @@ class SyncEngine(
             cursor = changes.cursor
             remote.apply(changes.items)
         }
-        return remote.all().map { it.version }
     }
 
     /**

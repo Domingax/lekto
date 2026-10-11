@@ -60,6 +60,11 @@ class WebDavSyncTarget(baseUrl: String, username: String, password: String) : Sy
 
     override suspend fun get(id: String): SyncItem? = readItem(WebDavNames.recordPath(id), null)
 
+    override suspend fun delete(id: String) {
+        client.delete(WebDavNames.recordPath(id))
+        client.delete(WebDavNames.attachmentPath(id))
+    }
+
     override suspend fun put(version: VersionedRecord, expected: Revision?): WriteOutcome {
         client.ensureCollection(WebDavNames.RECORDS)
         val condition = expected?.let { WriteCondition.MatchesRevision(it.value) } ?: WriteCondition.CreateOnly

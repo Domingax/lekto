@@ -30,6 +30,20 @@ what moved in plain language. A run that fails says so and changes nothing
 locally, so the app stays fully usable offline. **Disconnect** clears the address
 and the password and leaves your Vault on the device.
 
+## Deletions, and coming back after a long time
+
+When you delete a word, a book or your reading progress, Lekto remembers the
+deletion so it travels to your other devices instead of the item coming back. It
+remembers it for **90 days** — the longest we support a device being offline —
+and then forgets it, so deletions do not pile up.
+
+If a device has not synced for longer than that, it is treated as a new device:
+it takes what is on the server rather than sending its own older copy back, so a
+deletion you made on another device cannot reappear. When that happens, **Sync
+now** says the device restarted from the server. Anything you did on that device
+since its last sync is replaced by the server's copy, so keep a device you care
+about syncing within 90 days.
+
 ::: warning Do not point a folder-sync tool at your Vault
 Syncthing, Dropbox, iCloud Drive and the like put a second writer on the same
 files and can corrupt them. Use Lekto's own sync instead — it merges changes

@@ -2,6 +2,7 @@ package app.lekto.testkit
 
 import app.lekto.core.sync.RemoteIndexStore
 import app.lekto.core.sync.SyncItem
+import kotlin.time.Instant
 
 /**
  * The in-memory [RemoteIndexStore] (ADR-0027): the engine's memory of the target
@@ -10,11 +11,14 @@ import app.lekto.core.sync.SyncItem
  * cannot drift.
  *
  * A store starts as empty as a fresh install's, and can be handed [initial]
- * items to model a previous session's memory that survived a restart.
+ * items — and a [lastSyncedAt] — to model a previous session's memory that
+ * survived a restart.
  */
-class InMemoryRemoteIndexStore(initial: List<SyncItem> = emptyList()) : RemoteIndexStore {
+class InMemoryRemoteIndexStore(initial: List<SyncItem> = emptyList(), initialLastSyncedAt: Instant? = null) :
+    RemoteIndexStore {
 
     private val items = linkedMapOf<String, SyncItem>()
+    private var lastSyncedAt = initialLastSyncedAt
 
     init {
         initial.forEach { items[it.id] = it }
@@ -25,5 +29,11 @@ class InMemoryRemoteIndexStore(initial: List<SyncItem> = emptyList()) : RemoteIn
     override fun replaceAll(items: List<SyncItem>) {
         this.items.clear()
         items.forEach { this.items[it.id] = it }
+    }
+
+    override fun lastSyncedAt(): Instant? = lastSyncedAt
+
+    override fun markSynced(at: Instant) {
+        lastSyncedAt = at
     }
 }

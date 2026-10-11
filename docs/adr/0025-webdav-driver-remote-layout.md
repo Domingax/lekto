@@ -132,3 +132,12 @@ original is recovered without re-uploading it. A server that refuses the `MOVE`
 leaves the file ignored, exactly as it was before. The change landed before the
 feature shipped, so no released client depends on the old suffix.
 
+## Update — a purged tombstone is removed from the collection (issue #120)
+
+The driver now also removes a record file when the engine purges a tombstone past
+the retention window (ADR-0015): `SyncTarget.delete(id)` maps to a `DELETE` of
+`<root>/records/<base64url(id)>.json` and of any
+`<root>/attachments/<base64url(id)>.data`. The remote layout, the ETag revisions
+and the conditional-write contract are unchanged, and a `DELETE` of an absent
+resource is success, so a purge can be retried.
+

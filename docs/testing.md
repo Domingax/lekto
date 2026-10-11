@@ -388,7 +388,12 @@ re-reads only the records that changed since the last sync, a `delete`
 propagates and does not resurrect, a conflicting edit resolves by the merge
 rules, a conditional write that loses its race is re-read and re-applied, and an
 imported book's original follows its record to the other device while a deletion
-takes it away on both (ADR-0016). The `SyncTarget` seam is a contract in
+takes it away on both (ADR-0016). A tombstone older than the retention window is
+dropped — from the local store, the device-local index and the target — and a
+device whose last sync is older than the window is treated as new and takes the
+target's records in a full resync, so a stale copy cannot resurrect a deleted
+item (issue #120; ADR-0015); a generated retain/purge/resync workload pins the
+bound in `TombstonePurgePropertyTest`. The `SyncTarget` seam is a contract in
 `testkit` — `SyncTargetContract` with the `InMemorySyncTarget` fake — run against
 the fake in every capability combination, so the cursor and compare-and-swap
 branches and the no-capability degraded path are all exercised, and it pins the
@@ -409,7 +414,9 @@ in-memory filesystem there and a real directory in `core/jvmTest`. The device-lo
 `core/commonTest` and against `JsonRemoteIndexStore` over an in-memory filesystem
 there and a real directory in `core/jvmTest`, and a corrupt document reads as an
 empty memory so a sync falls back to a full listing rather than failing over a
-cache. The engine
+cache; it also remembers when the device last completed a sync, which is what
+tells a device that has been away past the retention window to resync
+(issue #120). The engine
 pins no dispatcher: `sync` is `suspend` and runs on the caller's context, so the
 whole suite runs under `runTest`, and one test drives the fake's latency through
 the test scheduler to prove it.

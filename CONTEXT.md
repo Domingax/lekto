@@ -31,6 +31,13 @@ identity and update metadata without its content. A tombstone with a later updat
 timestamp beats a live copy, so a deletion does not resurrect on the next sync.
 _Avoid_: Delete marker, soft delete, tomb
 
+**Tombstone retention window**:
+The longest offline window the product supports: how long a **Tombstone** is kept
+before the engine may drop it. A device that has been away longer is treated as
+new and restarts from a full resync, so an old live copy cannot resurrect a
+deleted item.
+_Avoid_: Expiry, TTL, grace period
+
 **Sync**:
 Reconciling the **Vault** with a remote copy the user owns, so the same books,
 reading positions and vocabulary appear on every device. It is off by default,
