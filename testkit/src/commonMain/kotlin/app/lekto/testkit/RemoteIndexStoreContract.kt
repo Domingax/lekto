@@ -4,6 +4,7 @@ import app.lekto.core.sync.RemoteIndexStore
 import app.lekto.core.sync.Revision
 import app.lekto.core.sync.SyncItem
 import app.lekto.core.vault.VersionedRecord
+import kotlin.time.Instant
 
 /**
  * The specification of the [RemoteIndexStore] seam, as executable cases
@@ -17,7 +18,9 @@ import app.lekto.core.vault.VersionedRecord
 class RemoteIndexStoreContract(private val newStore: () -> RemoteIndexStore) {
 
     /** Every behaviour the seam promises, as `(name, run)` pairs. */
-    fun cases(): List<ContractCase> = listOf(
+    fun cases(): List<ContractCase> = itemCases() + syncTimeCases()
+
+    private fun itemCases(): List<ContractCase> = listOf(
         ContractCase("an empty store remembers nothing") {
             expectTrue(newStore().all().isEmpty(), "an empty store must hold no item")
         },
@@ -46,4 +49,30 @@ class RemoteIndexStoreContract(private val newStore: () -> RemoteIndexStore) {
             expectEquals(VersionedRecord.of(record), item.version, "the remembered body")
         },
     )
+
+    private fun syncTimeCases(): List<ContractCase> = listOf(
+        ContractCase("a store that never synced remembers no sync time") {
+            expectTrue(newStore().lastSyncedAt() == null, "a store that never synced must remember no time")
+        },
+        ContractCase("a marked sync time reads back unchanged") {
+            val store = newStore()
+            store.markSynced(SYNCED_AT)
+            expectEquals(SYNCED_AT, store.lastSyncedAt(), "the remembered sync time")
+        },
+        ContractCase("replacing the items keeps the last sync time") {
+            val store = newStore()
+            store.markSynced(SYNCED_AT)
+            store.replaceAll(listOf(SyncItem(VersionedRecord.of(testVaultRecord("a")), Revision("rev-a"))))
+            expectEquals(SYNCED_AT, store.lastSyncedAt(), "the sync time survives an item replace")
+        },
+        ContractCase("marking a sync keeps the remembered items") {
+            val store = newStore()
+            store.replaceAll(listOf(SyncItem(VersionedRecord.of(testVaultRecord("a")), Revision("rev-a"))))
+            store.markSynced(SYNCED_AT)
+            expectEquals(listOf("a"), store.all().map { it.id }, "the items survive a sync mark")
+        },
+    )
 }
+
+/** A fixed sync time, so a case's assertion reads as a value rather than a literal. */
+private val SYNCED_AT: Instant = Instant.fromEpochMilliseconds(1_700_000_000_000)

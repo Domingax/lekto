@@ -75,6 +75,13 @@ class InMemorySyncTarget(private val conditionalWrites: Boolean = true, private 
         return items[id]
     }
 
+    override suspend fun delete(id: String) {
+        delay(latency)
+        items.remove(id)
+        sequences.remove(id)
+        attachments.remove(id)
+    }
+
     override suspend fun changes(cursor: SyncCursor?): SyncChanges {
         changesCalls++
         delay(latency)

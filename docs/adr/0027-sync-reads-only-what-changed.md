@@ -74,3 +74,11 @@ against and the saving would never happen.
 - **Reusing a cached body without comparing the revision** — the revision is the
   whole change detector; skipping the compare would resurface an edit as a stale
   body.
+
+## Update — the memory also records when the device last synced (issue #120)
+
+The seam now also carries when the device last completed a sync (`lastSyncedAt`
+and `markSynced`), which the engine reads to treat a device away past the
+tombstone retention window as new (ADR-0015). It is device-local and derived like
+the rest of the memory, so losing it costs at most one full read; the items, the
+known-revision listing and the merge are unchanged.

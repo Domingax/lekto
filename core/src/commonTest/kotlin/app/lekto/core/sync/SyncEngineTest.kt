@@ -6,6 +6,7 @@ import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
+import app.lekto.testkit.TOMBSTONE_RETENTION_MILLIS
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.testTombstone
 import app.lekto.testkit.testVaultRecord
@@ -347,6 +348,121 @@ class SyncEngineTest :
                 a.engine.delete("absent")
 
                 a.tombstones.all() shouldBe emptyList()
+            }
+        }
+
+        test("a tombstone older than the retention window is dropped, on the target too") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                a.at(0)
+                a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
+                a.engine.delete("word")
+                a.engine.sync()
+                target.stored("word")?.version shouldBe VersionedRecord.of(testTombstone("word", 0, "device-a"))
+
+                a.at(TOMBSTONE_RETENTION_MILLIS + 1)
+                a.engine.sync()
+
+                a.tombstones.get("word") shouldBe null
+                target.stored("word") shouldBe null
+            }
+        }
+
+        test("a tombstone within the retention window is kept") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                a.at(0)
+                a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
+                a.engine.delete("word")
+                a.engine.sync()
+
+                a.at(TOMBSTONE_RETENTION_MILLIS)
+                a.engine.sync()
+
+                a.tombstones.get("word") shouldBe testTombstone("word", 0, "device-a")
+                target.stored("word")?.version shouldBe VersionedRecord.of(testTombstone("word", 0, "device-a"))
+            }
+        }
+
+        test("a tombstone whose deletion has not reached the target is kept") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                // The target still holds a live copy: this device's deletion never
+                // propagated, so dropping the tombstone would resurrect the item.
+                val live = testVaultRecord("word", updatedAtMillis = 0, device = "device-b")
+                target.put(VersionedRecord.of(live), null)
+                a.at(1)
+                a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
+                a.engine.delete("word")
+
+                a.at(TOMBSTONE_RETENTION_MILLIS + 2)
+                a.engine.sync()
+
+                a.tombstones.get("word") shouldBe testTombstone("word", 1, "device-a")
+                target.stored("word")?.version shouldBe VersionedRecord.of(testTombstone("word", 1, "device-a"))
+            }
+        }
+
+        test("a device away past the window resyncs, so a stale copy cannot resurrect") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val creator = Device("device-b", target)
+                val purger = Device("device-c", target)
+                val stale = Device("device-a", target)
+
+                creator.at(0)
+                creator.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-b"))
+                val book = testVaultRecord("book", kind = "books", updatedAtMillis = 0, device = "device-b")
+                creator.vault.put(book)
+                creator.engine.sync()
+                stale.at(0)
+                stale.engine.sync()
+                purger.at(0)
+                purger.engine.sync()
+                stale.vault.get("word") shouldBe testVaultRecord("word", updatedAtMillis = 0, device = "device-b")
+                stale.vault.get("book") shouldBe book
+
+                creator.at(1)
+                creator.engine.delete("word")
+                creator.engine.sync()
+                purger.at(2)
+                purger.engine.sync()
+
+                // The purger has synced since the delete, so it is not new; it
+                // drops the tombstone once it is past the window.
+                purger.at(TOMBSTONE_RETENTION_MILLIS + 2)
+                purger.engine.sync()
+                target.stored("word") shouldBe null
+
+                // The stale device returns past the window and is treated as new:
+                // it adopts the target whole, including the record it had already
+                // seen, rather than pushing its stale copy of the deleted one.
+                stale.at(TOMBSTONE_RETENTION_MILLIS + 3)
+                val report = stale.engine.sync()
+
+                report.resynced shouldBe true
+                stale.vault.get("book") shouldBe book
+                stale.vault.get("word") shouldBe null
+                target.stored("word") shouldBe null
+            }
+        }
+
+        test("a device away within the window keeps its records and does not resync") {
+            runTest {
+                val target = InMemorySyncTarget()
+                val a = Device("device-a", target)
+                a.at(0)
+                a.vault.put(testVaultRecord("word", updatedAtMillis = 0, device = "device-a"))
+                a.engine.sync()
+
+                a.at(TOMBSTONE_RETENTION_MILLIS)
+                val report = a.engine.sync()
+
+                report.resynced shouldBe false
+                a.vault.get("word") shouldBe testVaultRecord("word", updatedAtMillis = 0, device = "device-a")
             }
         }
 

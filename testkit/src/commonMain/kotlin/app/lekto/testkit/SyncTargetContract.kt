@@ -27,6 +27,7 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
         val capabilities = newTarget().capabilities()
         return buildList {
             addAll(baseCases())
+            addAll(deleteCases())
             addAll(listingCases())
             addAll(attachmentCases())
             if (capabilities.changeCursor) addAll(cursorCases())
@@ -63,6 +64,22 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
             target.write(VersionedRecord.of(testVaultRecord("a")))
             target.write(VersionedRecord.of(testVaultRecord("b", kind = "progress")))
             expectEquals(listOf("a", "b"), target.list().items.map { it.id }.sorted(), "the listed ids")
+        },
+    )
+
+    /** The removal the engine's tombstone purge uses (ADR-0015). */
+    private fun deleteCases(): List<SuspendContractCase> = listOf(
+        SuspendContractCase("a deleted item is gone, and deleting an absent id is not an error") {
+            val target = newTarget()
+            target.write(VersionedRecord.of(testVaultRecord("a")))
+            target.putAttachment("a", SAMPLE_ATTACHMENT)
+
+            target.delete("a")
+
+            expectTrue(target.get("a") == null, "a deleted item must read as null")
+            expectTrue("a" !in target.list().items.map { it.id }, "a deleted item must not be listed")
+            expectTrue(target.attachment("a") == null, "a deleted item must have no attachment")
+            target.delete("absent")
         },
     )
 

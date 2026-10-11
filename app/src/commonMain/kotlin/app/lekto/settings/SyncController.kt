@@ -313,14 +313,23 @@ class SyncController(
  * retry.
  */
 internal fun SyncReport.summary(): String {
-    val parts = buildList {
-        if (downloaded > 0) add("downloaded $downloaded")
-        if (uploaded > 0) add("uploaded $uploaded")
-        if (deletions > 0) add("removed $deletions")
-        if (attachments > 0) add("carried $attachments book ${plural("original", attachments)}")
-    }
-    val base = if (parts.isEmpty()) "Everything was already up to date." else "Synced: ${parts.joinToString(", ")}."
-    return if (unresolved > 0) "$base Some changes couldn't be settled; they'll retry next time." else base
+    val moved = movedParts()
+    val base = if (moved.isEmpty()) "Everything was already up to date." else "Synced: ${moved.joinToString(", ")}."
+    return (listOf(base) + notes()).joinToString(" ")
+}
+
+/** The changes this report names, in the order the section reads them. */
+private fun SyncReport.movedParts(): List<String> = buildList {
+    if (downloaded > 0) add("downloaded $downloaded")
+    if (uploaded > 0) add("uploaded $uploaded")
+    if (deletions > 0) add("removed $deletions")
+    if (attachments > 0) add("carried $attachments book ${plural("original", attachments)}")
+}
+
+/** The honest notes that follow the move count: a resync, and a write that will retry. */
+private fun SyncReport.notes(): List<String> = buildList {
+    if (resynced) add("This device had been away, so it restarted from the server.")
+    if (unresolved > 0) add("Some changes couldn't be settled; they'll retry next time.")
 }
 
 private fun plural(noun: String, count: Int): String = if (count == 1) noun else "${noun}s"

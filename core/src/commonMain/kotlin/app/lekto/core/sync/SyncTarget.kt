@@ -120,6 +120,15 @@ interface SyncTarget {
     suspend fun get(id: String): SyncItem?
 
     /**
+     * Removes the item with [id] from the target, together with its
+     * [attachment]. The engine calls this to purge a tombstone older than the
+     * retention window, so a deletion does not accumulate on the target forever
+     * (ADR-0015); an id the target does not hold is not an error, so a purge can
+     * be retried.
+     */
+    suspend fun delete(id: String)
+
+    /**
      * The items changed since [cursor], or every item when [cursor] is `null`.
      * Only meaningful when [capabilities] reports [SyncCapabilities.changeCursor];
      * a target without one is never asked, and the default below lists everything

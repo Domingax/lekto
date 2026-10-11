@@ -88,3 +88,28 @@ driver reads only the new or changed items. ADR-0027 records why the memory
 stores the last item (revision **and** body, not the revision alone) and why this
 is device-local, never the vault. The merge, the capabilities and the record-by-
 record last-writer-wins are unchanged.
+
+## Update — tombstones are purged, and a stale device resyncs (issue #120)
+
+The "Not yet: tombstone purge" section is superseded. The engine now drops a
+tombstone older than the longest offline window (`TOMBSTONE_RETENTION`, 90 days)
+from its `TombstoneStore`, from the `RemoteIndexStore`, and — through a new
+`SyncTarget.delete(id)` — from the target, so the record count is bounded on both
+sides. A tombstone whose deletion has not reached the other side is kept: the
+merge re-propagates it first, so the guard remains the "no live copy survives"
+rule this ADR already fixed.
+
+The `RemoteIndexStore` now also remembers when the device last completed a sync.
+A device whose last completed sync is older than the window is treated as new: it
+clears its local vault, tombstones and remote index and takes the target's
+records in a full resync, which is why a dropped tombstone cannot let an old live
+copy resurrect. A device that has never synced is not new, so its first sync
+merges and uploads the records it already holds rather than discarding them.
+
+**Accepted transition limit.** A device that synced before this change carries a
+persisted remote index but no recorded sync time, so it is not new until its own
+first sync records one. Treating that state as new would discard the local
+changes of every device at the moment it upgrades, which is worse; the cost is
+that a device already offline past the window when this lands can, on that first
+sync, re-upload a live copy whose tombstone another device has since purged. The
+merge, the capabilities and the record-by-record last-writer-wins are unchanged.

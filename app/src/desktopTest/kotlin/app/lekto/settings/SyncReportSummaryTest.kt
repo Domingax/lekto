@@ -41,6 +41,13 @@ class SyncReportSummaryTest {
         assertTrue(summary.contains("couldn't be settled"), "the retry is named: $summary")
     }
 
+    @Test
+    fun `a resynced device says it restarted from the server`() {
+        val summary = report(resynced = true).summary()
+
+        assertTrue(summary.contains("restarted from the server"), "the resync is named: $summary")
+    }
+
     @Suppress("LongParameterList") // The report's own fields, each an axis a case varies.
     private fun report(
         uploaded: Int = 0,
@@ -48,5 +55,6 @@ class SyncReportSummaryTest {
         deletions: Int = 0,
         attachments: Int = 0,
         unresolved: Int = 0,
-    ) = SyncReport(uploaded, downloaded, deletions, attachments, unresolved)
+        resynced: Boolean = false,
+    ) = SyncReport(uploaded, downloaded, deletions, attachments, unresolved, resynced)
 }

@@ -52,3 +52,21 @@ is an indistinguishable key, and the fold visits each id's versions in a stable
 order, so the merge stays deterministic. When the same record is edited on two
 devices offline, the later write silently wins and the earlier one is lost, as
 ADR-0004 already accepts for a single-user vault.
+
+## Update — the window is fixed at 90 days, and the purge lands (issue #120)
+
+The paragraph above defers the retention duration and the purge to the engine;
+this is that landing. The longest offline window the product supports is **90
+days** (`TOMBSTONE_RETENTION`): a tombstone is kept at least that long, and the
+engine drops one older than it on a sync — from its own `TombstoneStore`, from
+the device-local remote index, and from the target itself, so a deletion
+accumulates on neither side. A tombstone whose deletion has not yet reached the
+other side — its id still has a live copy there — is kept, so the merge
+re-propagates the delete before it can be dropped.
+
+Because a dropped tombstone is no longer there to tell a returning device, a
+device whose last completed sync is older than the same window is **treated as
+new**: its local records are replaced by the target's in a full resync, so a
+stale live copy cannot resurrect a deleted item. The merge, and the properties
+that make it sound, are unchanged; this only adds the clock and the store this
+ADR said the engine would supply.
