@@ -47,10 +47,15 @@ internal object WebDavRequests {
      * `ap_make_etag_ex` cannot rule out a change within the same second), so an
      * immediate `If-Match` update is rejected. The `If` header compares ETags
      * weakly (RFC 4918 §10.4.1), so it works on both strong and weak ETags.
+     *
+     * [WriteCondition.StrongMatch] is the fallback for a server that does not
+     * implement the DAV `If` header — Koofr answers `412` to it however correct
+     * the revision is, but honours HTTP `If-Match` (issue #133).
      */
     fun conditions(condition: WriteCondition): Map<String, String> = when (condition) {
         WriteCondition.CreateOnly -> mapOf("If-None-Match" to "*")
-        is WriteCondition.MatchesRevision -> mapOf("If" to "([${condition.revision}])")
+        is WriteCondition.WeakMatch -> mapOf("If" to "([${condition.revision}])")
+        is WriteCondition.StrongMatch -> mapOf("If-Match" to condition.revision)
         WriteCondition.Unconditional -> emptyMap()
     }
 }

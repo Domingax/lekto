@@ -141,3 +141,34 @@ the retention window (ADR-0015): `SyncTarget.delete(id)` maps to a `DELETE` of
 and the conditional-write contract are unchanged, and a `DELETE` of an absent
 resource is success, so a purge can be retried.
 
+## Update — an update falls back to `If-Match` when the DAV `If` is refused (issue #133)
+
+The "Revisions and conditional writes" section conditions an update with WebDAV's
+`If` header, chosen because it compares ETags **weakly** and so tolerates the weak
+ETag Apache `mod_dav` issues for a second after a write; its sentence that an
+update does **not** use HTTP `If-Match` is superseded here. Koofr does not
+implement the DAV `If` header: it answers `412 Precondition Failed` however
+correct the revision is — both the No-tag `If: (["<etag>"])` and the tagged
+`If: <url> (["<etag>"])` forms were tried — while it honours HTTP
+`If-None-Match: *` for a create and HTTP `If-Match` for an update. Every edit (a
+mastery level, a translation, a reading position) was therefore refused, three
+times, and the sync reported "…changes couldn't be settled" while the target
+already held the record.
+
+So the driver now tries the DAV `If` first and, when the target refuses it, reads
+the item back: **only if the revision has not moved** — which a server that
+honoured the DAV `If` could not have refused — does it retry the same write with
+`If-Match`. The gate is what keeps the fallback safe: a revision that really moved
+fails the read-back `Conflicted` before the retry, and `If-Match` is a strong
+comparison that a moved revision fails too, so a lost race can never become a
+blind overwrite. The create path (`If-None-Match: *`), the remote layout, the
+ETag revisions and the capability claim (`conditionalWrites = true`) are
+unchanged. A server that ignores *unknown* conditional headers altogether cannot
+be detected from a successful `PUT` — this was already true before the fallback,
+and is the limit of the `conditionalWrites` claim the driver makes.
+
+`FakeWebDavServer` gained two modes — `rejectDavIfHeader` (the Koofr condition,
+so the fallback runs) and `ignoreIfMatch` (a server that enforces the DAV `If`
+but not `If-Match`, so the lost-race gate is pinned) — and the driver runs the
+whole `SyncTargetContract` against the first, without Docker.
+

@@ -50,10 +50,74 @@ class WebDavSyncTargetTest {
         WebDavSyncTarget("${server.baseUrl}/lekto-${UUID.randomUUID()}", "lekto", "lekto")
 
     @TestFactory
-    fun `passes the shared SyncTarget contract`(): List<DynamicTest> =
-        SyncTargetContract(::newTarget).cases().map { case ->
-            DynamicTest.dynamicTest(case.name) { runBlocking { case.body() } }
+    fun `passes the shared SyncTarget contract`(): List<DynamicTest> = contractCases()
+
+    @TestFactory
+    fun `passes the shared SyncTarget contract when the server refuses the DAV If header`(): List<DynamicTest> {
+        // Koofr answers 412 to the DAV `If` however correct the revision is but
+        // honours HTTP `If-Match`, so every conditional update goes through the
+        // fallback (issue #133). The whole contract must still hold.
+        server.rejectDavIfHeader = true
+        return contractCases()
+    }
+
+    /** The shared contract against the fake, so the two factories above differ only by the server's quirk. */
+    private fun contractCases(): List<DynamicTest> = SyncTargetContract(::newTarget).cases().map { case ->
+        DynamicTest.dynamicTest(case.name) { runBlocking { case.body() } }
+    }
+
+    @Test
+    fun `an update lands through If-Match when the server refuses the DAV If header`() {
+        server.rejectDavIfHeader = true
+        val target = newTarget()
+        val first = runBlocking { target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)), null) }
+        val revision = (first as WriteOutcome.Written).revision
+
+        val second = runBlocking {
+            target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 2)), revision)
         }
+
+        assertTrue(second is WriteOutcome.Written, "the update must land via If-Match, not be refused")
+        assertEquals(
+            VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 2)),
+            runBlocking { target.get("a") }?.version,
+        )
+    }
+
+    @Test
+    fun `a stale revision on a server that refuses the DAV If header is still a conflict`() {
+        // The fallback is a real compare-and-swap, not a blind write: a revision
+        // that moved must still fail and be settled by the engine.
+        server.rejectDavIfHeader = true
+        val target = newTarget()
+        runBlocking { target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)), null) }
+
+        val outcome = runBlocking {
+            target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 2)), Revision("\"stale\""))
+        }
+
+        assertTrue(outcome is WriteOutcome.Conflicted, "a moved revision must still conflict")
+    }
+
+    @Test
+    fun `a lost race is not overwritten through the fallback`() {
+        // A server that enforces the DAV `If` (so a real conflict 412s) but ignores
+        // `If-Match`: the driver must report the conflict and never retry blindly
+        // over the competing change (issue #133).
+        server.ignoreIfMatch = true
+        val target = newTarget()
+        val first = runBlocking { target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)), null) }
+        val stale = (first as WriteOutcome.Written).revision
+        val competing = VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 2))
+        runBlocking { target.put(competing, stale) }
+
+        val outcome = runBlocking {
+            target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 3)), stale)
+        }
+
+        assertTrue(outcome is WriteOutcome.Conflicted, "a moved revision must conflict, not overwrite")
+        assertEquals(competing, runBlocking { target.get("a") }?.version, "the competing change must survive")
+    }
 
     @Test
     fun `reports conditional writes and no change cursor`() {

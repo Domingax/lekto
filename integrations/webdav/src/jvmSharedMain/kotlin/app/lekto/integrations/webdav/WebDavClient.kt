@@ -10,8 +10,11 @@ internal sealed interface WriteCondition {
     /** Fail unless the target holds no item at the path. */
     data object CreateOnly : WriteCondition
 
-    /** Fail unless the item's revision is [revision]. */
-    data class MatchesRevision(val revision: String) : WriteCondition
+    /** Fail unless the item's revision is [revision], compared weakly (the DAV `If` header). */
+    data class WeakMatch(val revision: String) : WriteCondition
+
+    /** Fail unless the item's revision is [revision], compared strongly (HTTP `If-Match`). */
+    data class StrongMatch(val revision: String) : WriteCondition
 
     /** Write regardless of the current revision. */
     data object Unconditional : WriteCondition
