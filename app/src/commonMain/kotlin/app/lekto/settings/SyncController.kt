@@ -489,7 +489,15 @@ class SyncController(
  */
 internal fun SyncReport.summary(): String {
     val moved = movedParts()
-    val base = if (moved.isEmpty()) "Everything was already up to date." else "Synced: ${moved.joinToString(", ")}."
+    val base = when {
+        moved.isNotEmpty() -> "Synced: ${moved.joinToString(", ")}."
+
+        // A run that moved nothing because every write was refused is not "up to
+        // date": say so, or the user reads success into a sync that reached nothing.
+        unresolved > 0 -> "Nothing was synced."
+
+        else -> "Everything was already up to date."
+    }
     return (listOf(base) + notes()).joinToString(" ")
 }
 

@@ -48,6 +48,14 @@ class SyncReportSummaryTest {
         assertTrue(summary.contains("restarted from the server"), "the resync is named: $summary")
     }
 
+    @Test
+    fun `a run that moved nothing and left writes unsettled does not claim success`() {
+        val summary = report(unresolved = 2).summary()
+
+        assertTrue(summary.startsWith("Nothing was synced"), "a refused run is not up to date: $summary")
+        assertEquals("Nothing was synced. Some changes couldn't be settled; they'll retry next time.", summary)
+    }
+
     @Suppress("LongParameterList") // The report's own fields, each an axis a case varies.
     private fun report(
         uploaded: Int = 0,
