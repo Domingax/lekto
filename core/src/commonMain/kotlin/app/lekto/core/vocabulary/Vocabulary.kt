@@ -29,9 +29,9 @@ interface Vocabulary {
     /**
      * Deletes the entry for [key]; an absent key is not an error. The record is
      * removed from the vault, so the word is gone when the vault is read again,
-     * including after a restart. No tombstone is written yet, so the deletion
-     * cannot travel to another device until the sync engine lands and writes one
-     * (ADR-0015).
+     * including after a restart, and a **tombstone** is left in the sync engine's
+     * own store (ADR-0015), so the deletion travels to another device instead of
+     * being copied back on the next sync.
      */
     fun delete(key: WordKey)
 }

@@ -25,10 +25,14 @@ The address is kept on the device and the application password in the **Secret
 store**; neither enters the Vault, an export or a log. Only the Vault travels
 between your devices — the dictionary pack and your **API key** do not.
 
-Once sync is on, **Sync now** reconciles this device with the server and reports
-what moved in plain language. A run that fails says so and changes nothing
-locally, so the app stays fully usable offline. **Disconnect** clears the address
-and the password and leaves your Vault on the device.
+Once sync is on, it runs **by itself**: when you open Lekto, every so often while
+it is open, when you come back to it, and shortly after you change something — an
+imported book, a saved or deleted word — or pause your reading. **Sync now** runs
+one straight away. Each run reconciles this device with the server and shows the
+last outcome in plain language. A run that fails says so and changes nothing
+locally, so the app stays fully usable offline; Lekto waits longer between runs
+after a failure, so a server that is not answering is not hammered. **Disconnect**
+clears the address and the password and leaves your Vault on the device.
 
 ## Deletions, and coming back after a long time
 

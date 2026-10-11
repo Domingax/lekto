@@ -1,20 +1,29 @@
 package app.lekto.settings
 
+import app.lekto.LocalChanges
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.sync.SyncEngine
+import app.lekto.core.sync.SyncOutcome
+import app.lekto.core.sync.SyncOutcomeStore
 import app.lekto.core.sync.SyncReport
+import app.lekto.core.sync.SyncSchedule
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.sync.SyncSettingsStore
 import app.lekto.core.sync.SyncTarget
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -37,6 +46,8 @@ data class SyncServices(
     val target: (SyncSettings, String) -> SyncTarget,
     /** Builds the engine that moves the local vault through a [SyncTarget]. */
     val engine: (SyncTarget) -> SyncEngine,
+    /** Keeps the last run's outcome device-locally, so it survives a restart (issue #121). */
+    val outcomes: SyncOutcomeStore,
 )
 
 /**
@@ -102,11 +113,21 @@ data class SyncUiState(
  * off as a deliberate act, runs a manual sync, and disconnects without leaving
  * the local vault unusable.
  *
+ * Since issue #121 it also runs sync **automatically** while it is on
+ * (ADR-0028): [start] triggers a run at app start and begins a bounded periodic
+ * timer, [onResumed] triggers a run when the app returns to the foreground, and a
+ * local change — a book imported, a word saved or deleted, a reading position
+ * moved — pushes a run after a short settle. Any trigger raised while a run is in
+ * flight is coalesced into one follow-up rather than a storm. Turning sync off
+ * ([disable], [disconnect]) stops every trigger. The last outcome is persisted
+ * device-locally ([SyncServices.outcomes]) so it survives a restart, and a failure
+ * is retried on the next trigger.
+ *
  * The [dispatcher] is injected because testing a connection and syncing block,
  * and a hard-coded one cannot be driven by virtual time; the [scope] carries that
  * work (docs/testing.md, "Deterministic seams").
  */
-@Suppress("TooManyFunctions") // One state holder with one small method per action; splitting scatters the state.
+@Suppress("TooManyFunctions", "LongParameterList") // One state holder; its constructor threads the injected seams.
 class SyncController(
     private val services: SyncServices,
     private val secrets: SecretStore,
@@ -117,10 +138,50 @@ class SyncController(
      * — reloads what the sync moved rather than showing its stale list (issue #116).
      */
     private val onSynced: () -> Unit = {},
+    /** Notified by the writers of local content and progress changes (issue #121). */
+    private val changes: LocalChanges,
+    /** The automatic-run cadence and its backoff (issue #121; ADR-0028). */
+    private val schedule: SyncSchedule = SyncSchedule(),
 ) {
 
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<SyncUiState> = _state.asStateFlow()
+
+    /**
+     * Whether the app has asked for automatic sync ([start] was called). The
+     * periodic timer is armed only once the app is running, so a controller built
+     * in a test that never starts automation raises no trigger of its own.
+     */
+    private var started = false
+    private var pending = false
+    private var failures = 0
+    private var run: Job? = null
+    private var ticker: Job? = null
+    private var changeJobs: List<Job> = emptyList()
+
+    /**
+     * Arms automatic sync (issue #121; ADR-0028): an app-start run once sync is on,
+     * a bounded periodic timer for as long as it stays on, and a push for each
+     * local change. Calling it again is harmless. Turning sync on later ([enable])
+     * arms the same triggers.
+     */
+    fun start() {
+        if (started) return
+        started = true
+        if (!_state.value.config.enabled) return
+        startCollectingChanges()
+        requestSync()
+        scheduleTicker()
+    }
+
+    /**
+     * Asks for a run because the app returned to the foreground (issue #121): the
+     * platform raises it on resume, and it coalesces with any run in flight like
+     * the periodic trigger. A no-op while sync is off.
+     */
+    fun onResumed() {
+        requestSync()
+    }
 
     /** Sets the WebDAV server address the driver connects to. */
     fun setServerUrl(value: String) {
@@ -192,10 +253,15 @@ class SyncController(
             current.copy(config = current.config.copy(enabled = true), result = SyncResult.Success(SyncUiState.SYNC_ON))
         }
         syncNow()
+        if (started) {
+            startCollectingChanges()
+            scheduleTicker()
+        }
     }
 
     /** Turns sync off, leaving the endpoint configured and the vault local and usable. */
     fun disable() {
+        stopTriggers()
         services.settings.save(_state.value.config.copy(enabled = false))
         _state.update { current ->
             current.copy(
@@ -206,28 +272,18 @@ class SyncController(
     }
 
     /**
-     * Runs one manual sync (issue #28): the engine reconciles the local vault with
-     * the target off the UI thread, and its outcome — moved records, or a
-     * recoverable failure — is reported in plain language. A sync that fails
-     * changes nothing locally, so the app stays fully usable.
+     * Asks for one run (issue #28, issue #121): the engine reconciles the local
+     * vault with the target off the UI thread, and its outcome — moved records, or
+     * a recoverable failure — is reported in plain language and kept device-locally
+     * so it survives a restart. A sync that fails changes nothing locally, so the
+     * app stays fully usable.
+     *
+     * The manual action, the periodic timer, app start and resume all funnel here,
+     * so a trigger raised while a run is in flight is coalesced into a single
+     * follow-up: runs never overlap, and a burst of triggers is not a storm.
      */
     fun syncNow() {
-        val config = _state.value.config
-        if (_state.value.syncing || !config.enabled) return
-        // A run needs both halves: the endpoint and the stored password. When
-        // either is missing the honest reason names the one that is.
-        val password = if (config.isConfigured) storedPassword() else null
-        if (password == null) {
-            val reason = if (config.isConfigured) NO_PASSWORD else NOT_CONFIGURED
-            _state.update { current -> current.copy(lastSync = SyncResult.Failure(reason)) }
-            return
-        }
-        _state.update { current -> current.copy(syncing = true) }
-        scope.launch {
-            val outcome = withContext(dispatcher) { runSync(config, password) }
-            onSynced()
-            _state.update { current -> current.copy(syncing = false, lastSync = outcome) }
-        }
+        requestSync()
     }
 
     /**
@@ -237,7 +293,9 @@ class SyncController(
      * password stays behind and that is reported honestly (ADR-0021).
      */
     fun disconnect() {
+        stopTriggers()
         services.settings.save(SyncSettings.DEFAULT)
+        services.outcomes.clear()
         val deletion = secrets.delete(PASSWORD_KEY)
         _state.update { current ->
             current.copy(
@@ -257,7 +315,124 @@ class SyncController(
 
     private fun initialState(): SyncUiState {
         val config = services.settings.load()
-        return SyncUiState(available = true, config = config, hasStoredPassword = storedPassword() != null)
+        return SyncUiState(
+            available = true,
+            config = config,
+            hasStoredPassword = storedPassword() != null,
+            lastSync = services.outcomes.load()?.toResult(),
+        )
+    }
+
+    /**
+     * The one gate every automatic trigger passes (issue #121): a no-op while sync
+     * is off, a single follow-up when a run is already in flight, and otherwise a
+     * run. This is what stops triggers from overlapping or from becoming a storm.
+     */
+    private fun requestSync() {
+        val config = _state.value.config
+        if (!config.enabled) return
+        if (run?.isActive == true) {
+            pending = true
+            return
+        }
+        beginRun(config)
+    }
+
+    /**
+     * Starts one run for [config]: it needs both halves — the endpoint and the
+     * stored password — and when either is missing the honest reason names the one
+     * that is, recorded like any other outcome.
+     */
+    private fun beginRun(config: SyncSettings) {
+        val password = if (config.isConfigured) storedPassword() else null
+        if (password == null) {
+            recordRun(SyncResult.Failure(if (config.isConfigured) NO_PASSWORD else NOT_CONFIGURED))
+            return
+        }
+        _state.update { current -> current.copy(syncing = true) }
+        run = scope.launch {
+            val outcome = withContext(dispatcher) { runSync(config, password) }
+            onSynced()
+            // Clear the slot before recording, so a coalesced follow-up can start a
+            // fresh run instead of seeing this (still-active) coroutine and keeping
+            // the trigger pending forever.
+            run = null
+            recordRun(outcome)
+        }
+    }
+
+    /**
+     * Records a finished run (issue #121): the outcome is kept device-locally so it
+     * survives a restart, the failure count drives the next backoff, and a trigger
+     * that arrived mid-run is honoured once rather than dropped. A run that finishes
+     * after sync was turned off is not recorded, so disabling or disconnecting
+     * cannot have a late run resurrect an outcome the user just cleared.
+     */
+    private fun recordRun(outcome: SyncResult) {
+        failures = if (outcome is SyncResult.Failure) failures + 1 else 0
+        if (_state.value.config.enabled) {
+            services.outcomes.save(outcome.toOutcome())
+            _state.update { current -> current.copy(syncing = false, lastSync = outcome) }
+        } else {
+            _state.update { current -> current.copy(syncing = false) }
+        }
+        if (pending) {
+            pending = false
+            if (_state.value.config.enabled) requestSync()
+        }
+        // Rebase the periodic wait on this run's outcome, so a push or resume that
+        // just changed the failure count is not left waiting on a stale delay.
+        if (started && _state.value.config.enabled) scheduleTicker()
+    }
+
+    /**
+     * Runs the periodic trigger for as long as sync is on (issue #121; ADR-0028):
+     * it waits the backoff interval for the last outcome's failure count, so a
+     * failing target is polled less rather than hammered. [recordRun] restarts it
+     * after every run, so the wait always reflects the latest outcome, and a
+     * trigger raised while a run is in flight coalesces in [requestSync].
+     */
+    private fun scheduleTicker() {
+        ticker?.cancel()
+        ticker = scope.launch {
+            while (isActive) {
+                delay(schedule.intervalAfter(failures))
+                requestSync()
+            }
+        }
+    }
+
+    /**
+     * Pushes a run on each local change (issue #121; ADR-0028): a discrete content
+     * change after [SyncSchedule.contentChangeDelay], a reading-progress change
+     * after [SyncSchedule.progressChangeDelay], so a burst of edits or of page
+     * turns settles into one run rather than one run per edit or turn.
+     */
+    @OptIn(FlowPreview::class) // `debounce` is the settle this needs; it is a preview Flow operator.
+    private fun startCollectingChanges() {
+        if (changeJobs.isNotEmpty()) return
+        changeJobs = listOf(
+            scope.launch {
+                changes.content.debounce(schedule.contentChangeDelay).collect { requestSync() }
+            },
+            scope.launch {
+                changes.progress.debounce(schedule.progressChangeDelay).collect { requestSync() }
+            },
+        )
+    }
+
+    /** Stops the change subscribers, so turning sync off leaves nothing pending. */
+    private fun stopCollectingChanges() {
+        changeJobs.forEach { job -> job.cancel() }
+        changeJobs = emptyList()
+    }
+
+    /** Stops every automatic trigger, so turning sync off leaves nothing pending. */
+    private fun stopTriggers() {
+        ticker?.cancel()
+        ticker = null
+        stopCollectingChanges()
+        pending = false
     }
 
     /** Lists the target as the lightest proof that the URL and credentials reach it. */
@@ -314,7 +489,15 @@ class SyncController(
  */
 internal fun SyncReport.summary(): String {
     val moved = movedParts()
-    val base = if (moved.isEmpty()) "Everything was already up to date." else "Synced: ${moved.joinToString(", ")}."
+    val base = when {
+        moved.isNotEmpty() -> "Synced: ${moved.joinToString(", ")}."
+
+        // A run that moved nothing because every write was refused is not "up to
+        // date": say so, or the user reads success into a sync that reached nothing.
+        unresolved > 0 -> "Nothing was synced."
+
+        else -> "Everything was already up to date."
+    }
     return (listOf(base) + notes()).joinToString(" ")
 }
 
@@ -333,3 +516,10 @@ private fun SyncReport.notes(): List<String> = buildList {
 }
 
 private fun plural(noun: String, count: Int): String = if (count == 1) noun else "${noun}s"
+
+/** The outcome as it is kept device-locally, so it can be read back after a restart (issue #121). */
+private fun SyncResult.toOutcome(): SyncOutcome = SyncOutcome(succeeded = this is SyncResult.Success, message = message)
+
+/** The stored outcome back as the section's value, so a restart shows the same line. */
+private fun SyncOutcome.toResult(): SyncResult =
+    if (succeeded) SyncResult.Success(message) else SyncResult.Failure(message)

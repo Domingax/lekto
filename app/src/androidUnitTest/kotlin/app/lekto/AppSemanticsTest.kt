@@ -67,6 +67,7 @@ import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.testkit.InMemorySyncOutcomeStore
 import app.lekto.testkit.InMemorySyncSettingsStore
 import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
@@ -396,6 +397,7 @@ class AppSemanticsTest {
                     DeviceId("device-a"),
                 )
             },
+            outcomes = InMemorySyncOutcomeStore(),
         )
         compose.setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }
 
@@ -453,7 +455,7 @@ class AppSemanticsTest {
     @Test
     fun aWordSavedInAnEarlierSessionIsShownAsSaved() {
         val vault = InMemoryVaultStore()
-        val vocabulary = VaultVocabulary(vault, deterministicSeams(), DeviceId("device-a"))
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
         vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.MASTERED))
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
@@ -616,7 +618,7 @@ internal fun environment(
 
 /** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
 private fun inMemoryVocabulary(): Vocabulary =
-    VaultVocabulary(InMemoryVaultStore(), deterministicSeams(), DeviceId("device-a"))
+    VaultVocabulary(InMemoryVaultStore(), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
 
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
 private fun ComposeTestRule.tapFirstWord() {

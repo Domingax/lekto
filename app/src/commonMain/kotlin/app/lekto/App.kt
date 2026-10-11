@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,8 @@ import app.lekto.vocabulary.searchVocabulary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -109,6 +112,12 @@ data class AppEnvironment(
     val secrets: SecretStore? = null,
     val llm: LlmServices? = null,
     val sync: SyncServices? = null,
+    /**
+     * A signal the app returned to the foreground (issue #121): each emission asks
+     * sync to run if it is on. Desktop raises it on window focus; a platform with
+     * no lifecycle leaves it empty, and the bounded periodic run still applies.
+     */
+    val onResume: Flow<Unit> = emptyFlow(),
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 )
 
@@ -158,13 +167,18 @@ private sealed interface Destination {
 @Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
 @Composable
 fun App(environment: AppEnvironment) {
-    val controller = remember(environment.library, environment.dispatcher) {
-        LibraryController(environment.library, environment.dispatcher)
+    // The one signal the local writers raise and sync subscribes to (issue #121):
+    // a book imported, a word saved or deleted, a reading position moved.
+    val changes = remember { LocalChanges() }
+    val controller = remember(environment.library, environment.dispatcher, changes) {
+        LibraryController(environment.library, changes, environment.dispatcher)
     }
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
-    val progress = remember(environment.library, environment.dispatcher, scope) {
-        ReadingProgressWriter(scope, environment.dispatcher) { position -> environment.library.savePosition(position) }
+    val progress = remember(environment.library, environment.dispatcher, scope, changes) {
+        ReadingProgressWriter(scope, environment.dispatcher, changes) { position ->
+            environment.library.savePosition(position)
+        }
     }
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
         environment.dictionary?.let { services -> DictionaryController(services, environment.dispatcher) }
@@ -174,8 +188,8 @@ fun App(environment: AppEnvironment) {
         environment.vaultTransfer?.let { transfer -> VaultTransferController(transfer, environment.dispatcher, scope) }
     }
     val vaultState = vaultTransfer?.state?.collectAsState()?.value ?: VaultUiState()
-    val vocabulary = remember(environment.vocabulary) {
-        environment.vocabulary?.let { store -> VocabularyController(store) }
+    val vocabulary = remember(environment.vocabulary, changes) {
+        environment.vocabulary?.let { store -> VocabularyController(store, changes) }
     }
     val provider = remember(environment.llm, environment.secrets, environment.dispatcher, scope) {
         val llm = environment.llm
@@ -187,8 +201,20 @@ fun App(environment: AppEnvironment) {
         }
     }
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
-    val sync = rememberSyncController(environment, scope, onSynced = controller::refresh)
+    val sync = rememberSyncController(environment, scope, changes, onSynced = {
+        // Reload what the run moved, so a book, a word or a mastery change from
+        // another device shows without relaunching the app (issues #116, #132).
+        controller.refresh()
+        scope.launch { withContext(environment.dispatcher) { vocabulary?.refresh() } }
+    })
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
+    // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
+    // an app-start run plus the periodic timer — and ask for a run whenever the
+    // platform reports the app has resumed.
+    LaunchedEffect(sync, environment.onResume) {
+        sync?.start()
+        environment.onResume.collect { sync?.onResumed() }
+    }
     val settings = Settings(
         dictionary = dictionary,
         vaultTransfer = vaultTransfer,

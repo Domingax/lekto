@@ -1,27 +1,41 @@
 package app.lekto.settings
 
+import app.lekto.LocalChanges
+import app.lekto.core.MasteryLevel
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.sync.Revision
 import app.lekto.core.sync.SyncEngine
 import app.lekto.core.sync.SyncListing
+import app.lekto.core.sync.SyncOutcome
+import app.lekto.core.sync.SyncSchedule
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.sync.SyncTarget
 import app.lekto.core.sync.SyncTargetException
+import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.VersionedRecord
+import app.lekto.core.vocabulary.VaultVocabulary
+import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.core.vocabulary.VocabularyRecord
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.testkit.InMemorySyncOutcomeStore
 import app.lekto.testkit.InMemorySyncSettingsStore
 import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
+import app.lekto.testkit.deterministicSeams
 import app.lekto.testkit.testVaultRecord
+import app.lekto.vocabulary.VocabularyController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.CoroutineContext
@@ -29,7 +43,13 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+/** How many rapid page turns the coalescing test emits; only the count matters, not the value. */
+private const val PAGE_TURNS = 10
 
 /**
  * The sync section's state holder (issue #28): loading the stored endpoint,
@@ -40,7 +60,7 @@ import kotlin.test.assertTrue
  * is driven by virtual time.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("TooManyFunctions") // One state holder, one test per behaviour; splitting the class hides it.
+@Suppress("TooManyFunctions", "LargeClass") // One state holder, one test per behaviour; splitting the class hides it.
 class SyncControllerTest {
 
     @Test
@@ -265,11 +285,10 @@ class SyncControllerTest {
     fun `sync now runs the engine and reports what moved in plain language`() = runTest {
         val vault = InMemoryVaultStore().apply { put(testVaultRecord(id = "vocabulary-1")) }
         val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
-        val controller = controller(vault = vault, secrets = secrets)
-        controller.setServerUrl("https://cloud.example.test/dav")
-        controller.setUsername("reader")
-        controller.save("")
-        controller.enable()
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+        )
+        val controller = controller(settings = settings, vault = vault, secrets = secrets)
 
         controller.syncNow()
         advanceUntilIdle()
@@ -385,12 +404,425 @@ class SyncControllerTest {
         assertTrue(refreshes.get() > 0, "a sync must refresh the library")
     }
 
+    @Test
+    fun `the last outcome is shown at startup from the device-local store`() = runTest {
+        // The outcome must survive a restart, so a fresh controller shows what the
+        // previous session ended with (issue #121).
+        val outcomes = InMemorySyncOutcomeStore(SyncOutcome(succeeded = true, message = "Synced: uploaded 3."))
+
+        val controller = controller(outcomes = outcomes)
+
+        assertEquals(SyncResult.Success("Synced: uploaded 3."), controller.state.value.lastSync)
+    }
+
+    @Test
+    fun `a completed sync keeps its outcome for the next launch`() = runTest {
+        val outcomes = InMemorySyncOutcomeStore()
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val controller = controller(secrets = secrets, outcomes = outcomes)
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.save("")
+
+        controller.enable()
+        advanceUntilIdle()
+
+        val saved = outcomes.load()
+        assertIs<SyncOutcome>(saved)
+        assertTrue(saved.succeeded, "a successful run is remembered as a success")
+    }
+
+    @Test
+    fun `a failed sync keeps its plain-language outcome for the next launch`() = runTest {
+        val outcomes = InMemorySyncOutcomeStore()
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val controller = controller(target = FailingSyncTarget(), secrets = secrets, outcomes = outcomes)
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.save("")
+
+        controller.enable()
+        advanceUntilIdle()
+
+        val saved = outcomes.load()
+        assertIs<SyncOutcome>(saved)
+        assertFalse(saved.succeeded)
+        assertTrue(saved.message.contains("unreachable"), "the reason is kept: ${saved.message}")
+    }
+
+    @Test
+    fun `starting with sync on runs a sync without a manual press`() = runTest {
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target)
+
+        controller.start()
+        runCurrent()
+
+        assertEquals(1, target.changesCalls, "an app-start run")
+        controller.disable()
+    }
+
+    @Test
+    fun `starting with sync off raises no trigger`() = runTest {
+        val target = InMemorySyncTarget()
+        val controller = controller(target = target)
+
+        controller.start()
+        runCurrent()
+
+        assertEquals(0, target.changesCalls)
+    }
+
+    @Test
+    fun `the periodic timer runs a sync after the interval`() = runTest {
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, schedule = SyncSchedule(1.minutes, 4.minutes))
+
+        controller.start()
+        runCurrent()
+        assertEquals(1, target.changesCalls, "the app-start run")
+
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        assertEquals(2, target.changesCalls, "the periodic run")
+        controller.disable()
+    }
+
+    @Test
+    fun `a trigger while a run is in flight coalesces into one follow-up`() = runTest {
+        // Runs never overlap: a burst of triggers raised during one run must
+        // collapse to a single follow-up, not a storm (issue #121).
+        val target = InMemorySyncTarget().apply { latency = 1.seconds }
+        val controller = enabledController(target = target)
+
+        controller.syncNow()
+        controller.syncNow()
+        controller.syncNow()
+        advanceUntilIdle()
+
+        assertEquals(2, target.changesCalls, "one run plus a single coalesced follow-up")
+    }
+
+    @Test
+    fun `resuming the app runs a sync when sync is on`() = runTest {
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target)
+
+        controller.onResumed()
+        runCurrent()
+
+        assertEquals(1, target.changesCalls)
+        controller.disable()
+    }
+
+    @Test
+    fun `resuming the app raises no trigger while sync is off`() = runTest {
+        val target = InMemorySyncTarget()
+        val controller = controller(target = target)
+
+        controller.onResumed()
+        runCurrent()
+
+        assertEquals(0, target.changesCalls)
+    }
+
+    @Test
+    fun `turning sync off stops the periodic trigger`() = runTest {
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, schedule = SyncSchedule(1.minutes, 4.minutes))
+
+        controller.start()
+        runCurrent()
+        controller.disable()
+        val afterTurningOff = target.changesCalls
+
+        advanceTimeBy(10.minutes)
+        runCurrent()
+
+        assertEquals(afterTurningOff, target.changesCalls, "no trigger may fire after sync is off")
+    }
+
+    @Test
+    fun `a content change pushes a sync after a short settle`() = runTest {
+        // A book import or a saved word is discrete, so it pushes a run (issue #121).
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        changes.contentChanged()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "the content change pushes a run")
+        controller.disable()
+    }
+
+    @Test
+    fun `changing a word's mastery pushes the updated record to the target`() = runTest {
+        // Does a mastery change sync? Yes: the level lives on the vocabulary
+        // record, so moving it is a content change that pushes a run (issue #121).
+        val vault = InMemoryVaultStore()
+        val changes = LocalChanges()
+        val words = VocabularyController(
+            VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a")),
+            changes,
+        )
+        val target = InMemorySyncTarget(changeCursor = false)
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+        )
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val sync = controller(settings = settings, secrets = secrets, target = target, vault = vault, changes = changes)
+        sync.start()
+        runCurrent()
+
+        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+        words.save(entry)
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        val id = VocabularyRecord.idOf(entry.key)
+        assertEquals(MasteryLevel.FAMILIAR, storedMastery(target, id), "the first save pushes the word")
+
+        words.save(entry.copy(mastery = MasteryLevel.MASTERED))
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(MasteryLevel.MASTERED, storedMastery(target, id), "the mastery change pushes the update")
+        sync.disable()
+    }
+
+    /** The mastery the target now holds for [id], decoded from the pushed record. */
+    private fun storedMastery(target: InMemorySyncTarget, id: String): MasteryLevel? {
+        val live = target.stored(id)?.version as? VersionedRecord.Live
+        return live?.let { version -> VocabularyRecord.entryOf(version.record).mastery }
+    }
+
+    @Test
+    fun `a burst of content changes coalesces into one pushed run`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        changes.contentChanged()
+        advanceTimeBy(2.seconds)
+        changes.contentChanged()
+        advanceTimeBy(2.seconds)
+        changes.contentChanged()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "a burst settles into one run")
+        controller.disable()
+    }
+
+    @Test
+    fun `a reading change pushes a run only after a pause`() = runTest {
+        // A page turn is frequent, so it waits for the reader to settle (issue #121).
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        changes.progressChanged()
+        advanceTimeBy(20.seconds)
+        runCurrent()
+
+        assertEquals(baseline, target.changesCalls, "no run before the reading pause")
+
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "the run after the reading pause")
+        controller.disable()
+    }
+
+    @Test
+    fun `a burst of page turns coalesces into one pushed run`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        val baseline = target.changesCalls
+
+        repeat(PAGE_TURNS) {
+            changes.progressChanged()
+            advanceTimeBy(1.seconds)
+        }
+        advanceTimeBy(30.seconds)
+        runCurrent()
+
+        assertEquals(baseline + 1, target.changesCalls, "a burst of turns settles into one run")
+        controller.disable()
+    }
+
+    @Test
+    fun `a local change raises no trigger while sync is off`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = controller(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        changes.contentChanged()
+        changes.progressChanged()
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        assertEquals(0, target.changesCalls)
+    }
+
+    @Test
+    fun `turning sync off stops the change push`() = runTest {
+        val changes = LocalChanges()
+        val target = InMemorySyncTarget()
+        val controller = enabledController(target = target, changes = changes)
+
+        controller.start()
+        runCurrent()
+        controller.disable()
+        val afterTurningOff = target.changesCalls
+
+        changes.contentChanged()
+        changes.progressChanged()
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        assertEquals(afterTurningOff, target.changesCalls, "no change may push a run after sync is off")
+    }
+
+    @Test
+    fun `a failing target is backed off, so its runs grow apart`() = runTest {
+        val target = CountingFailingTarget()
+        val controller = enabledController(target = target, schedule = SyncSchedule(1.minutes, 4.minutes))
+
+        controller.start()
+        runCurrent()
+        assertEquals(1, target.attempts.get(), "the app-start run")
+
+        // After the failure the wait doubles to two minutes: nothing at one.
+        advanceTimeBy(1.minutes)
+        runCurrent()
+        assertEquals(1, target.attempts.get(), "no run before the backed-off interval")
+
+        advanceTimeBy(1.minutes)
+        runCurrent()
+        assertEquals(2, target.attempts.get(), "the run after the backed-off interval")
+
+        // The second failure doubles again to four minutes.
+        val afterTwoFailures = target.attempts.get()
+        advanceTimeBy(3.minutes)
+        runCurrent()
+        assertEquals(afterTwoFailures, target.attempts.get(), "no run before the next backed-off interval")
+
+        advanceTimeBy(1.minutes)
+        runCurrent()
+        assertEquals(afterTwoFailures + 1, target.attempts.get(), "the run after the next backed-off interval")
+        controller.disable()
+    }
+
+    @Test
+    fun `a success rebases the periodic wait, so a recovered target is not left waiting long`() = runTest {
+        val target = FailOnceTarget()
+        val changes = LocalChanges()
+        val schedule = SyncSchedule(1.minutes, 4.minutes)
+        val controller = enabledController(target = target, changes = changes, schedule = schedule)
+
+        controller.start()
+        runCurrent()
+        assertEquals(1, target.attempts.get(), "the app-start run fails and backs the timer off to two minutes")
+
+        // A push that now succeeds resets the failure count and the wait to the base.
+        changes.contentChanged()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        val afterPush = target.attempts.get()
+        assertEquals(2, afterPush, "the pushed run succeeds")
+
+        // The timer fires at the base one minute later, not the stale two-minute wait.
+        advanceTimeBy(1.minutes)
+        runCurrent()
+        assertEquals(afterPush + 1, target.attempts.get(), "the timer uses the rebased wait")
+        controller.disable()
+    }
+
+    @Test
+    fun `disconnecting forgets the stored outcome`() = runTest {
+        val outcomes = InMemorySyncOutcomeStore(SyncOutcome(succeeded = true, message = "Synced."))
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+        )
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val controller = controller(settings = settings, secrets = secrets, outcomes = outcomes)
+
+        controller.disconnect()
+
+        assertNull(outcomes.load())
+        assertNull(controller.state.value.lastSync)
+    }
+
+    @Test
+    fun `a run that finishes after disconnecting does not resurrect the outcome`() = runTest {
+        // The in-flight run completes after the user disconnected; it must not
+        // re-save an outcome the disconnect just cleared (issue #121).
+        val outcomes = InMemorySyncOutcomeStore()
+        val target = InMemorySyncTarget().apply { latency = 1.seconds }
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+        )
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val controller = controller(settings = settings, secrets = secrets, target = target, outcomes = outcomes)
+
+        controller.syncNow()
+        controller.disconnect()
+        advanceUntilIdle()
+
+        assertNull(outcomes.load())
+        assertNull(controller.state.value.lastSync)
+        assertFalse(controller.state.value.syncing)
+    }
+
+    /** A controller with sync already on and a stored password, ready to be started. */
+    private fun TestScope.enabledController(
+        target: SyncTarget,
+        changes: LocalChanges = LocalChanges(),
+        schedule: SyncSchedule = SyncSchedule(),
+    ): SyncController {
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+        )
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        return controller(
+            settings = settings,
+            secrets = secrets,
+            target = target,
+            changes = changes,
+            schedule = schedule,
+        )
+    }
+
     @Suppress("LongParameterList") // The test's own inputs, bundled so every case reads the same.
     private fun TestScope.controller(
         settings: InMemorySyncSettingsStore = InMemorySyncSettingsStore(),
         secrets: InMemorySecretStore = InMemorySecretStore(),
         target: SyncTarget = InMemorySyncTarget(),
         vault: InMemoryVaultStore = InMemoryVaultStore(),
+        outcomes: InMemorySyncOutcomeStore = InMemorySyncOutcomeStore(),
+        changes: LocalChanges = LocalChanges(),
+        schedule: SyncSchedule = SyncSchedule(),
         dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
         onSynced: () -> Unit = {},
     ): SyncController = SyncController(
@@ -407,11 +839,14 @@ class SyncControllerTest {
                     DeviceId("device-a"),
                 )
             },
+            outcomes = outcomes,
         ),
         secrets = secrets,
         dispatcher = dispatcher,
         scope = this,
         onSynced = onSynced,
+        changes = changes,
+        schedule = schedule,
     )
 }
 
@@ -419,6 +854,27 @@ class SyncControllerTest {
 private class FailingSyncTarget : SyncTarget by InMemorySyncTarget(changeCursor = false) {
     override suspend fun list(known: Map<String, Revision>): SyncListing =
         throw SyncTargetException("the WebDAV server is unreachable")
+}
+
+/** A target that cannot be reached and counts its attempts, so the backoff is observable. */
+private class CountingFailingTarget : SyncTarget by InMemorySyncTarget(changeCursor = false) {
+    val attempts = AtomicInteger()
+
+    override suspend fun list(known: Map<String, Revision>): SyncListing {
+        attempts.incrementAndGet()
+        throw SyncTargetException("the WebDAV server is unreachable")
+    }
+}
+
+/** A target that fails its first attempt and then answers, so a rebase can be observed. */
+private class FailOnceTarget(private val delegate: InMemorySyncTarget = InMemorySyncTarget(changeCursor = false)) :
+    SyncTarget by delegate {
+    val attempts = AtomicInteger()
+
+    override suspend fun list(known: Map<String, Revision>): SyncListing {
+        if (attempts.incrementAndGet() == 1) throw SyncTargetException("the WebDAV server is unreachable")
+        return delegate.list(known)
+    }
 }
 
 /**

@@ -42,9 +42,11 @@ import app.lekto.core.text.TextRun
 import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.VersionedRecord
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.core.vocabulary.VocabularyRecord
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.reader.READER_PAGE_TAG
@@ -55,6 +57,7 @@ import app.lekto.settings.ProviderController
 import app.lekto.settings.SYNC_HOST_FIELD_TAG
 import app.lekto.settings.SYNC_SAVE_TAG
 import app.lekto.settings.SYNC_USERNAME_FIELD_TAG
+import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
@@ -64,6 +67,7 @@ import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.testkit.InMemorySyncOutcomeStore
 import app.lekto.testkit.InMemorySyncSettingsStore
 import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
@@ -79,6 +83,7 @@ import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
 import app.lekto.vocabulary.vocabularyMasteryTag
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -368,6 +373,7 @@ class AppSemanticsTest {
                     DeviceId("device-a"),
                 )
             },
+            outcomes = InMemorySyncOutcomeStore(),
         )
         setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }
 
@@ -380,6 +386,36 @@ class AppSemanticsTest {
             SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
             settings.load(),
         )
+    }
+
+    @Test
+    fun aWordSyncedFromAnotherDeviceAppearsWithoutARestart() = runComposeUiTest {
+        // A mastery change (or a new word) on another device reaches this one by
+        // sync; the reader must show it without relaunching the app (issue #132).
+        val vault = InMemoryVaultStore()
+        val target = InMemorySyncTarget(changeCursor = false)
+        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+        val record = VocabularyRecord.of(entry, deterministicSeams().clock.now(), DeviceId("device-b"))
+        runBlocking { target.put(VersionedRecord.of(record), null) }
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    vocabulary = vocabulary,
+                    secrets = secrets,
+                    sync = enabledSyncServices(vault, target),
+                ),
+            )
+        }
+
+        onNodeWithText("Vocabulary").performClick()
+
+        waitUntil(timeoutMillis = 10_000) {
+            onAllNodesWithText("lantern").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("lantern").assertIsDisplayed()
     }
 
     @Test
@@ -425,7 +461,7 @@ class AppSemanticsTest {
     @Test
     fun aWordSavedInAnEarlierSessionIsShownAsSaved() = runComposeUiTest {
         val vault = InMemoryVaultStore()
-        val vocabulary = VaultVocabulary(vault, deterministicSeams(), DeviceId("device-a"))
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
         vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.MASTERED))
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         setContent { App(environment(library, vocabulary = vocabulary)) }
@@ -587,7 +623,30 @@ internal fun environment(
 
 /** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
 private fun inMemoryVocabulary(): Vocabulary =
-    VaultVocabulary(InMemoryVaultStore(), deterministicSeams(), DeviceId("device-a"))
+    VaultVocabulary(InMemoryVaultStore(), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+
+/**
+ * Sync services over [vault] and [target], turned on with a stored password, so
+ * composing the app runs a sync; the test seeds [target] with what another device
+ * pushed.
+ */
+private fun enabledSyncServices(vault: InMemoryVaultStore, target: InMemorySyncTarget): SyncServices = SyncServices(
+    settings = InMemorySyncSettingsStore(
+        SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+    ),
+    target = { _, _ -> target },
+    engine = { chosen ->
+        SyncEngine(
+            vault,
+            InMemoryTombstoneStore(),
+            InMemoryRemoteIndexStore(),
+            chosen,
+            TestClock(),
+            DeviceId("device-a"),
+        )
+    },
+    outcomes = InMemorySyncOutcomeStore(),
+)
 
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
 @OptIn(ExperimentalTestApi::class)

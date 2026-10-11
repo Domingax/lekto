@@ -1,5 +1,6 @@
 package app.lekto.library
 
+import app.lekto.LocalChanges
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportProgress
@@ -36,6 +37,8 @@ data class LibraryUiState(
  */
 class LibraryController(
     private val library: BookLibrary,
+    /** Notified after an import lands, so sync pushes the new book (issue #121). */
+    private val changes: LocalChanges,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
 ) {
@@ -51,6 +54,7 @@ class LibraryController(
         scope.launch {
             try {
                 library.import(fileName, bytes) { progress -> report(progress) }
+                changes.contentChanged()
                 _state.update { current ->
                     current.copy(books = library.books(), importing = false, progress = 1f, error = null)
                 }

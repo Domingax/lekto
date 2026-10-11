@@ -2,6 +2,7 @@ package app.lekto
 
 import app.lekto.core.Seams
 import app.lekto.core.sync.JsonRemoteIndexStore
+import app.lekto.core.sync.JsonSyncOutcomeStore
 import app.lekto.core.sync.JsonSyncSettingsStore
 import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.sync.SyncEngine
@@ -17,8 +18,9 @@ import java.io.File
 /**
  * The desktop wiring of sync (issue #28; ADR-0009, ADR-0025): the WebDAV driver
  * is one real target, built here for the JVM client. The non-secret endpoint and
- * the enable flag live in an app-private document under `sync/`, the tombstones
- * and the remote index live beside them (never in the vault, ADR-0005/ADR-0027),
+ * the enable flag live in an app-private document under `sync/`, the last run's
+ * outcome lives beside them so it survives a restart (issue #121), the tombstones
+ * and the remote index live there too (never in the vault, ADR-0005/ADR-0027),
  * and the engine reads the vault the library writes — all under [root]'s parent,
  * so the same records sync that the reader and the vocabulary use. `androidSync`
  * is the mirror for the Android client (issue #116; ADR-0026).
@@ -32,6 +34,7 @@ fun desktopSync(root: File = desktopVaultRoot()): SyncServices {
         settings = JsonSyncSettingsStore(JvmVaultFileSystem(state)),
         target = { settings, password -> webDavTarget(settings, password) },
         engine = { target -> desktopSyncEngine(root, state, target) },
+        outcomes = JsonSyncOutcomeStore(JvmVaultFileSystem(state)),
     )
 }
 

@@ -5,6 +5,7 @@ package app.lekto
 import app.lekto.core.book.ReadingPosition
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -28,7 +29,11 @@ class ReadingProgressWriterTest {
     fun burstOfTurnsCoalescesRatherThanRacingTheVault() = runTest {
         val saved = mutableListOf<ReadingPosition>()
         // A save that suspends, so several turns can arrive while it is in flight.
-        val writer = ReadingProgressWriter(backgroundScope, StandardTestDispatcher(testScheduler)) { position ->
+        val writer = ReadingProgressWriter(
+            backgroundScope,
+            StandardTestDispatcher(testScheduler),
+            LocalChanges(),
+        ) { position ->
             saved += position
             delay(50)
         }
@@ -49,7 +54,11 @@ class ReadingProgressWriterTest {
     @Test
     fun everySaveRunsWhenTurnsAreSpaced() = runTest {
         val saved = mutableListOf<ReadingPosition>()
-        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler)) { position ->
+        val writer = ReadingProgressWriter(
+            backgroundScope,
+            UnconfinedTestDispatcher(testScheduler),
+            LocalChanges(),
+        ) { position ->
             saved += position
         }
 
@@ -63,11 +72,40 @@ class ReadingProgressWriterTest {
 
     @Test
     fun aFailingSaveDoesNotEscape() = runTest {
-        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler)) {
+        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler), LocalChanges()) {
             error("disk full")
         }
 
         writer.record(ReadingPosition("book", 1))
         advanceUntilIdle()
+    }
+
+    @Test
+    fun aLandedSaveNotifiesTheLocalChangeSignal() = runTest {
+        // A written position is a local change, so sync pushes it (issue #121).
+        val changes = LocalChanges()
+        val received = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.progress.collect { received += it } }
+        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler), changes) { }
+
+        writer.record(ReadingPosition("book", 1))
+        advanceUntilIdle()
+
+        assertTrue(received.isNotEmpty(), "a landed position write must notify the local-change signal")
+    }
+
+    @Test
+    fun aFailedSaveDoesNotNotifyTheLocalChangeSignal() = runTest {
+        val changes = LocalChanges()
+        val received = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.progress.collect { received += it } }
+        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler), changes) {
+            error("disk full")
+        }
+
+        writer.record(ReadingPosition("book", 1))
+        advanceUntilIdle()
+
+        assertTrue(received.isEmpty(), "a failed write must not notify the change signal")
     }
 }
