@@ -568,7 +568,10 @@ class SyncControllerTest {
         // record, so moving it is a content change that pushes a run (issue #121).
         val vault = InMemoryVaultStore()
         val changes = LocalChanges()
-        val words = VocabularyController(VaultVocabulary(vault, deterministicSeams(), DeviceId("device-a")), changes)
+        val words = VocabularyController(
+            VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a")),
+            changes,
+        )
         val target = InMemorySyncTarget(changeCursor = false)
         val settings = InMemorySyncSettingsStore(
             SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),

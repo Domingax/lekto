@@ -61,6 +61,19 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
     }
 
     /**
+     * Re-reads the vault and folds it into the reader's state, bumping [revision]
+     * so a word the sync moved — added, removed or re-levelled on another device
+     * — is shown without relaunching the app (issue #132). Called after a sync run;
+     * the vault read is blocking, so the caller runs it off the UI thread.
+     */
+    fun refresh() {
+        val entries = vocabulary.all()
+        saved.clear()
+        entries.forEach { entry -> saved[entry.key] = entry }
+        revision++
+    }
+
+    /**
      * Deletes [key]'s entry from the vault and the reader's state, bumping
      * [revision] so the reader drops the word's colour at once. An absent key is
      * not an error.

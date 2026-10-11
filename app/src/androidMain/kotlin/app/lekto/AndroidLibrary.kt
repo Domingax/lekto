@@ -6,6 +6,7 @@ import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.VaultBookLibrary
 import app.lekto.core.epub.EpubParser
+import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.TxtParser
 import app.lekto.core.vault.DerivedAssetStore
@@ -36,10 +37,13 @@ fun androidBookLibrary(context: Context): BookLibrary = VaultBookLibrary(
 /**
  * The Android vocabulary (issue #22) over `Context.filesDir`. The manifest is
  * derived from the record files, so this store is the same vault
- * [androidBookLibrary] writes to even though each builds its own view of it.
+ * [androidBookLibrary] writes to even though each builds its own view of it. Its
+ * tombstones live under the same `sync/` directory the engine uses (ADR-0015),
+ * so a delete is propagated rather than resurrected.
  */
 fun androidVocabulary(context: Context): Vocabulary = VaultVocabulary(
     vault = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context))),
+    tombstones = JsonTombstoneStore(JvmVaultFileSystem(File(context.filesDir, "sync"))),
     seams = Seams.system(),
     deviceId = androidDeviceId(context),
 )

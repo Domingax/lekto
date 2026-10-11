@@ -201,7 +201,12 @@ fun App(environment: AppEnvironment) {
         }
     }
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
-    val sync = rememberSyncController(environment, scope, changes, onSynced = controller::refresh)
+    val sync = rememberSyncController(environment, scope, changes, onSynced = {
+        // Reload what the run moved, so a book, a word or a mastery change from
+        // another device shows without relaunching the app (issues #116, #132).
+        controller.refresh()
+        scope.launch { withContext(environment.dispatcher) { vocabulary?.refresh() } }
+    })
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
     // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
     // an app-start run plus the periodic timer — and ask for a run whenever the

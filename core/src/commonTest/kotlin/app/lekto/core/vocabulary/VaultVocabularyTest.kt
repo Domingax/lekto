@@ -5,11 +5,13 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.text.wordKeyOf
 import app.lekto.core.vault.DeviceId
 import app.lekto.testkit.InMemoryLemmaLookup
+import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.deterministicSeams
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -23,8 +25,9 @@ class VaultVocabularyTest :
 
         fun newVocabulary(
             vault: InMemoryVaultStore = InMemoryVaultStore(),
+            tombstones: InMemoryTombstoneStore = InMemoryTombstoneStore(),
             deviceId: DeviceId = DeviceId("device-a"),
-        ): VaultVocabulary = VaultVocabulary(vault, deterministicSeams(), deviceId)
+        ): VaultVocabulary = VaultVocabulary(vault, tombstones, deterministicSeams(), deviceId)
 
         test("a saved word is read back by its key") {
             val vocabulary = newVocabulary()
@@ -94,6 +97,26 @@ class VaultVocabularyTest :
 
             vault.all().none { record -> record.kind == VocabularyRecord.KIND } shouldBe true
             newVocabulary(vault).entryFor(entry.key) shouldBe null
+        }
+
+        test("a deleted word leaves a tombstone, so a sync does not resurrect it") {
+            val vault = InMemoryVaultStore()
+            val tombstones = InMemoryTombstoneStore()
+            val vocabulary = newVocabulary(vault, tombstones)
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern")
+            vocabulary.save(entry)
+
+            vocabulary.delete(entry.key)
+
+            tombstones.get(VocabularyRecord.idOf(entry.key)) shouldNotBe null
+        }
+
+        test("deleting an unsaved word leaves no tombstone") {
+            val tombstones = InMemoryTombstoneStore()
+
+            newVocabulary(tombstones = tombstones).delete(WordKey("en", "lantern"))
+
+            tombstones.all() shouldBe emptyList()
         }
 
         test("deleting an unsaved word is not an error") {
