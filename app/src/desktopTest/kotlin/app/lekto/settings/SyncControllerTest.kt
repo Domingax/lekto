@@ -836,7 +836,6 @@ class SyncControllerTest {
                     InMemoryRemoteIndexStore(),
                     chosen,
                     TestClock(),
-                    DeviceId("device-a"),
                 )
             },
             outcomes = outcomes,

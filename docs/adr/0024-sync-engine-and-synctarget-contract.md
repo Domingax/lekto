@@ -131,3 +131,19 @@ The merge, the `TombstoneStore` and the binary attachment channel are unchanged:
 tombstone a writer writes is the same comparison key the engine already merges
 against, so a deleted book's record and original travel as a deletion on both
 devices rather than resurrecting.
+
+## Update — the engine holds no delete of its own (issue #137)
+
+The writer-side `Update` (#131) retained `SyncEngine.delete` "for the engine's own
+use" and left the reconciliation to this ticket. It is **removed**, which
+supersedes the two places that still named an engine `delete`: the sentence in "The
+engine's device-local state" and the `delete` clause in "Consequences". The engine
+never used the method, and the only path a deletion takes to the merge is a
+tombstone a writer leaves in the `TombstoneStore` the engine reads. The `deviceId`
+the engine used to stamp that tombstone went with it — the engine writes no record
+or tombstone of its own, so it needs no device identity. The `SyncEngineTest`
+fixtures now write the tombstone directly, exactly as the writers do, so the
+deletion's propagation and its attachment removal are covered unchanged; deleting
+an id the store does not hold is the writer's no-op, not the engine's.
+
+The merge, the `TombstoneStore` and the binary attachment channel are unchanged.

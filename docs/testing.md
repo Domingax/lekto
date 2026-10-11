@@ -409,7 +409,7 @@ The sync **engine** (ticket #26; ADR-0009, ADR-0015) is the domain service that
 moves those merged bytes, so its behaviours live in `core/commonTest`: a full
 sync reconciles two vaults that share no history, incremental sync takes a change
 cursor where the target offers one and a listing where it does not, a listing
-re-reads only the records that changed since the last sync, a `delete`
+re-reads only the records that changed since the last sync, a deletion
 propagates and does not resurrect, a conflicting edit resolves by the merge
 rules, a conditional write that loses its race is re-read and re-applied, and an
 imported book's original follows its record to the other device while a deletion
@@ -471,10 +471,10 @@ composition roots now both wire a real driver (issue #116; ADR-0026):
 `desktopSync` and `androidSync` build the same `WebDavSyncTarget` over their
 platform's transport, rooted app-privately under the client's own directory. The
 Android wiring is proved on the host lane by `AndroidSyncHostTest` — the settings
-document, the tombstone store and the device id under `Context.filesDir`, and the
-engine reconciling the Android vault — so **Settings → Sync** is usable on the
-first-class client, not only desktop. Without a driver the section says sync is
-unavailable and never gates the reader.
+document under `Context.filesDir`, the library's device id and a delete's
+tombstone there, and the engine reconciling the Android vault — so **Settings →
+Sync** is usable on the first-class client, not only desktop. Without a driver the
+section says sync is unavailable and never gates the reader.
 
 The automatic triggers (issue #121; ADR-0028) are proved at their own levels. The
 **schedule** is a pure `SyncSchedule` in `core`, so `SyncScheduleTest` pins that

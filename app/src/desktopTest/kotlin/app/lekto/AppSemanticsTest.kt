@@ -370,7 +370,6 @@ class AppSemanticsTest {
                     InMemoryRemoteIndexStore(),
                     target,
                     TestClock(),
-                    DeviceId("device-a"),
                 )
             },
             outcomes = InMemorySyncOutcomeStore(),
@@ -642,7 +641,6 @@ private fun enabledSyncServices(vault: InMemoryVaultStore, target: InMemorySyncT
             InMemoryRemoteIndexStore(),
             chosen,
             TestClock(),
-            DeviceId("device-a"),
         )
     },
     outcomes = InMemorySyncOutcomeStore(),
