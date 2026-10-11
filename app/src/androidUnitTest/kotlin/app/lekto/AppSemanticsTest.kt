@@ -676,8 +676,12 @@ private fun dictionaryServices(): DictionaryServices {
 /** Enough one-line paragraphs to span several pages at any test viewport. */
 private const val PARAGRAPHS = 40
 
-/** A [BookLibrary] held in memory: import, open and reading progress without a vault. */
-private class InMemoryLibrary : BookLibrary {
+/**
+ * A [BookLibrary] held in memory: import, open and reading progress without a
+ * vault. Shared with `AppWindowInsetsSemanticsTest`, which needs a book to open
+ * without standing a vault up.
+ */
+internal class InMemoryLibrary : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val positions = mutableMapOf<String, Int>()

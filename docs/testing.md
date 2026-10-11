@@ -327,6 +327,16 @@ own: `sync` is a `suspend` function that runs on the caller's context, so
 that must move work off the caller's thread takes a `CoroutineDispatcher`
 parameter, the way `Seams` threads its clock, ids and randomness.
 
+The **window insets** are a seam of the same kind. `App` takes a `WindowInsets`
+that defaults to `WindowInsets.safeDrawing`, so every screen clears the status
+and navigation bars and any display cutout — Android 15 draws an app targeting
+SDK 35+ edge to edge whether it asks to or not, and the status bar then owns the
+taps in the strip the chrome used to sit in. It is a parameter rather than a
+direct read because a test window reports no insets and the Android host lane
+cannot supply them: `AppWindowInsetsSemanticsTest` injects a known strip and
+asserts each screen's chrome clears it, on both lanes (the parity rule). The
+padding is applied once, at the app's root, so no screen can forget it.
+
 ## Test levels
 
 A ticket states the **behaviour** it wants; the level that proves it comes from
