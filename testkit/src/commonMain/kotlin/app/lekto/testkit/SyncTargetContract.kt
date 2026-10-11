@@ -27,6 +27,7 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
         val capabilities = newTarget().capabilities()
         return buildList {
             addAll(baseCases())
+            addAll(listingCases())
             addAll(attachmentCases())
             if (capabilities.changeCursor) addAll(cursorCases())
             if (capabilities.conditionalWrites) addAll(conditionalCases()) else add(unconditionalCase())
@@ -55,13 +56,57 @@ class SyncTargetContract(private val newTarget: () -> SyncTarget) {
             val second = testVaultRecord("a", updatedAtMillis = 2)
             target.write(VersionedRecord.of(second))
             expectEquals(VersionedRecord.of(second), target.get("a")?.version, "the replaced record")
-            expectEquals(1, target.list().count { it.id == "a" }, "one item per id")
+            expectEquals(1, target.list().items.count { it.id == "a" }, "one item per id")
         },
         SuspendContractCase("list returns every written item") {
             val target = newTarget()
             target.write(VersionedRecord.of(testVaultRecord("a")))
             target.write(VersionedRecord.of(testVaultRecord("b", kind = "progress")))
-            expectEquals(listOf("a", "b"), target.list().map { it.id }.sorted(), "the listed ids")
+            expectEquals(listOf("a", "b"), target.list().items.map { it.id }.sorted(), "the listed ids")
+        },
+    )
+
+    /**
+     * The listing's re-read avoidance (ADR-0027): a target told the revisions the
+     * caller already holds reads only what moved, and names the rest unchanged. A
+     * driver that ignored [known] and read everything would fail these cases —
+     * the bodies would come back as `items` rather than `unchanged`.
+     */
+    private fun listingCases(): List<SuspendContractCase> = listOf(
+        SuspendContractCase("a listing told the known revisions does not re-read them") {
+            val target = newTarget()
+            target.write(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)))
+            target.write(VersionedRecord.of(testVaultRecord("b", kind = "progress", updatedAtMillis = 2)))
+            val known = target.list().items.associate { it.id to it.revision }
+
+            val again = target.list(known)
+
+            expectTrue(again.items.isEmpty(), "an unchanged item must not be read again")
+            expectEquals(setOf("a", "b"), again.unchanged, "the unchanged ids")
+        },
+        SuspendContractCase("a listing re-reads an item whose revision moved") {
+            val target = newTarget()
+            target.write(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)))
+            val known = target.list().items.associate { it.id to it.revision }
+            val edited = testVaultRecord("a", updatedAtMillis = 2)
+            target.write(VersionedRecord.of(edited))
+
+            val again = target.list(known)
+
+            expectEquals(setOf("a"), again.items.map { it.id }.toSet(), "an item whose revision moved must be read")
+            expectEquals(VersionedRecord.of(edited), again.items.single().version, "the re-read body")
+            expectTrue("a" !in again.unchanged, "a moved revision is not unchanged")
+        },
+        SuspendContractCase("a listing reads a new item even when other revisions are known") {
+            val target = newTarget()
+            target.write(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)))
+            val known = target.list().items.associate { it.id to it.revision }
+            target.write(VersionedRecord.of(testTombstone("b", updatedAtMillis = 2)))
+
+            val again = target.list(known)
+
+            expectEquals(setOf("b"), again.items.map { it.id }.toSet(), "the new item to read")
+            expectEquals(setOf("a"), again.unchanged, "the unchanged ids")
         },
     )
 

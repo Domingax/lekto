@@ -48,11 +48,20 @@ class AndroidSyncHostTest {
         val target = InMemorySyncTarget()
 
         val report = runBlocking { androidSync(context()).engine(target).sync() }
-        val uploaded = runBlocking { target.list() }
+        val uploaded = runBlocking { target.list().items }
 
         assertEquals(1, report.uploaded)
         assertTrue(uploaded.any { item -> item.id == record.id })
         assertTrue(File(context().filesDir, "device-id").isFile)
+    }
+
+    @Test
+    fun `a sync remembers the remote index app-privately under filesDir`() {
+        androidVaultStore(context()).put(testVaultRecord("vocabulary-1"))
+
+        runBlocking { androidSync(context()).engine(InMemorySyncTarget()).sync() }
+
+        assertTrue(File(context().filesDir, "sync/remote-index.json").isFile)
     }
 
     @Test

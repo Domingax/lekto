@@ -2,12 +2,14 @@ package app.lekto.settings
 
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
+import app.lekto.core.sync.Revision
 import app.lekto.core.sync.SyncEngine
-import app.lekto.core.sync.SyncItem
+import app.lekto.core.sync.SyncListing
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.sync.SyncTarget
 import app.lekto.core.sync.SyncTargetException
 import app.lekto.core.vault.DeviceId
+import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncSettingsStore
 import app.lekto.testkit.InMemorySyncTarget
@@ -396,7 +398,14 @@ class SyncControllerTest {
             settings = settings,
             target = { _, _ -> target },
             engine = { chosen ->
-                SyncEngine(vault, InMemoryTombstoneStore(), chosen, TestClock(), DeviceId("device-a"))
+                SyncEngine(
+                    vault,
+                    InMemoryTombstoneStore(),
+                    InMemoryRemoteIndexStore(),
+                    chosen,
+                    TestClock(),
+                    DeviceId("device-a"),
+                )
             },
         ),
         secrets = secrets,
@@ -408,7 +417,8 @@ class SyncControllerTest {
 
 /** A target that cannot be reached, so the controller's failure path is exercised. */
 private class FailingSyncTarget : SyncTarget by InMemorySyncTarget(changeCursor = false) {
-    override suspend fun list(): List<SyncItem> = throw SyncTargetException("the WebDAV server is unreachable")
+    override suspend fun list(known: Map<String, Revision>): SyncListing =
+        throw SyncTargetException("the WebDAV server is unreachable")
 }
 
 /**

@@ -2,6 +2,7 @@ package app.lekto.core.sync
 
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.VersionedRecord
+import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
@@ -86,6 +87,81 @@ class SyncEngineTest :
 
                 target.changesCalls shouldBe 0
                 (target.listCalls >= 2) shouldBe true
+            }
+        }
+
+        test("a second sync re-reads no remote item when nothing changed") {
+            runTest {
+                val target = InMemorySyncTarget(changeCursor = false)
+                val b = Device("device-b", target)
+                b.vault.put(testVaultRecord("word", updatedAtMillis = 1, device = "device-b"))
+                b.engine.sync()
+                val a = Device("device-a", target)
+                a.engine.sync()
+                val afterFirst = target.reads
+
+                a.engine.sync()
+
+                (afterFirst >= 1) shouldBe true
+                target.reads shouldBe afterFirst
+            }
+        }
+
+        test("the remembered revisions survive a fresh engine, so a restart re-reads nothing") {
+            runTest {
+                val target = InMemorySyncTarget(changeCursor = false)
+                val b = Device("device-b", target)
+                b.vault.put(testVaultRecord("word", updatedAtMillis = 1, device = "device-b"))
+                b.engine.sync()
+                val index = InMemoryRemoteIndexStore()
+                val a = Device("device-a", target, index)
+                a.engine.sync()
+                val afterFirst = target.reads
+
+                // A new engine over the same device-local index, as the next launch builds.
+                Device("device-a", target, index).engine.sync()
+
+                target.reads shouldBe afterFirst
+            }
+        }
+
+        test("a changed remote record is read again on the next sync") {
+            runTest {
+                val target = InMemorySyncTarget(changeCursor = false)
+                val a = Device("device-a", target)
+                val b = Device("device-b", target)
+                a.vault.put(testVaultRecord("word", updatedAtMillis = 1, device = "device-a"))
+                a.engine.sync()
+                b.engine.sync()
+                val afterFirst = target.reads
+
+                b.vault.put(testVaultRecord("word", updatedAtMillis = 5, device = "device-b"))
+                b.engine.sync()
+                a.engine.sync()
+
+                (target.reads > afterFirst) shouldBe true
+                a.vault.get("word") shouldBe testVaultRecord("word", updatedAtMillis = 5, device = "device-b")
+            }
+        }
+
+        test("an unchanged id the index does not hold is re-read rather than dropped") {
+            runTest {
+                val backing = InMemorySyncTarget(changeCursor = false)
+                // A driver that names every id unchanged even when the engine has
+                // never seen it: the engine must re-read it, not treat it as absent.
+                val liar = object : SyncTarget by backing {
+                    override suspend fun list(known: Map<String, Revision>): SyncListing {
+                        val all = backing.list(emptyMap())
+                        return SyncListing(emptyList(), all.items.map { it.id }.toSet())
+                    }
+                }
+                val word = testVaultRecord("word", updatedAtMillis = 1, device = "device-b")
+                backing.put(VersionedRecord.of(word), null)
+                val a = Device("device-a", liar)
+
+                a.engine.sync()
+
+                a.vault.get("word") shouldBe word
             }
         }
 
@@ -293,11 +369,11 @@ class SyncEngineTest :
  * the engine that ties them to a shared [target]. Each [Device] has a distinct
  * [DeviceId], so the merge's tie-break is exercised rather than shadowed.
  */
-private class Device(name: String, target: SyncTarget) {
+private class Device(name: String, target: SyncTarget, remoteIndex: RemoteIndexStore = InMemoryRemoteIndexStore()) {
     val vault = InMemoryVaultStore()
     val tombstones = InMemoryTombstoneStore()
     private val clock = TestClock()
-    val engine = SyncEngine(vault, tombstones, target, clock, DeviceId(name))
+    val engine = SyncEngine(vault, tombstones, remoteIndex, target, clock, DeviceId(name))
 
     /** Fixes the clock, so a deletion the engine records has a chosen timestamp. */
     fun at(millis: Long) {

@@ -20,6 +20,9 @@ internal sealed interface WriteCondition {
 /** A remote resource's bytes together with the revision it was read at. */
 internal data class WebDavBlob(val etag: String, val bytes: ByteArray)
 
+/** One resource a `PROPFIND` named: its path and its reported ETag. */
+internal data class WebDavResource(val path: String, val etag: String?)
+
 /** The outcome of a conditional write. */
 internal sealed interface WebDavWriteResult {
     /** The write landed; [etag] is the item's new revision. */
@@ -77,13 +80,15 @@ internal class WebDavClient(connection: WebDavConnection) {
         }
     }
 
-    /** The paths of the files directly under the collection [relative]. */
-    fun propfind(relative: String): List<String> {
+    /** The paths of the files directly under the collection [relative], each with its reported ETag. */
+    fun propfind(relative: String): List<WebDavResource> {
         ensureCollection(relative)
         val response = send(WebDavRequests.propfind(urls.collection(relative)), "list", relative)
         if (response.status != 207) throw failure("list", relative, response.status)
-        return WebDavMultistatus.hrefs(response.body.decodeToString())
-            .mapNotNull { href -> urls.childOf(href, relative) }
+        return WebDavMultistatus.entries(response.body.decodeToString())
+            .mapNotNull { resource ->
+                urls.childOf(resource.path, relative)?.let { path -> WebDavResource(path, resource.etag) }
+            }
     }
 
     /** Reads [relative], or `null` when the target holds no such resource. */

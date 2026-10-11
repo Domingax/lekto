@@ -1,8 +1,10 @@
 package app.lekto.integrations.webdav
 
+import app.lekto.core.sync.Revision
 import app.lekto.core.sync.SyncCapabilities
 import app.lekto.core.sync.SyncChanges
 import app.lekto.core.sync.SyncCursor
+import app.lekto.core.sync.SyncListing
 import app.lekto.core.sync.SyncTarget
 import app.lekto.core.sync.SyncTargetException
 import app.lekto.core.sync.WriteOutcome
@@ -85,12 +87,57 @@ class WebDavSyncTargetTest {
                 SyncCapabilities(conditionalWrites = false, changeCursor = true)
 
             override suspend fun changes(cursor: SyncCursor?): SyncChanges =
-                SyncChanges(list(), SyncCursor("everything"))
+                SyncChanges(list().items, SyncCursor("everything"))
         }
         val cursorCase = SyncTargetContract { liar }.cases()
             .single { case -> case.name == "a cursor returns only the items changed after it" }
 
         assertFailsWith<AssertionError> { runBlocking { cursorCase.body() } }
+    }
+
+    @Test
+    fun `a driver that ignores the known revisions fails the contract`() {
+        // A driver that re-reads every item would make the whole optimisation a
+        // no-op; the contract's listing case must catch it (ADR-0027).
+        val delegate = InMemorySyncTarget(changeCursor = false)
+        val liar = object : SyncTarget by delegate {
+            override suspend fun list(known: Map<String, Revision>): SyncListing =
+                delegate.list(emptyMap()).let { SyncListing(it.items, emptySet()) }
+        }
+        val reReadCase = SyncTargetContract { liar }.cases()
+            .single { case -> case.name == "a listing told the known revisions does not re-read them" }
+
+        assertFailsWith<AssertionError> { runBlocking { reReadCase.body() } }
+    }
+
+    @Test
+    fun `a listing told the known revisions does not GET an unchanged record`() {
+        // The point of issue #119: a steady-state listing is one PROPFIND plus the
+        // changed records, not a GET per record.
+        val target = newTarget()
+        val record = testVaultRecord("a", updatedAtMillis = 1)
+        runBlocking { target.put(VersionedRecord.of(record), null) }
+        val known = runBlocking { target.list() }.items.associate { it.id to it.revision }
+        val getsBefore = server.getCount
+
+        val again = runBlocking { target.list(known) }
+
+        assertEquals(getsBefore, server.getCount, "an unchanged record must not be fetched")
+        assertTrue("a" in again.unchanged, "an unchanged record must be named unchanged")
+        assertTrue(again.items.isEmpty(), "an unchanged record must not be read again")
+    }
+
+    @Test
+    fun `a record whose ETag moved is fetched again`() {
+        val target = newTarget()
+        runBlocking { target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 1)), null) }
+        val known = runBlocking { target.list() }.items.associate { it.id to it.revision }
+        runBlocking { target.put(VersionedRecord.of(testVaultRecord("a", updatedAtMillis = 2)), known.getValue("a")) }
+
+        val again = runBlocking { target.list(known) }
+
+        assertTrue(again.items.any { it.id == "a" }, "a moved ETag must be fetched again")
+        assertTrue("a" !in again.unchanged, "a moved ETag is not unchanged")
     }
 
     @Test
@@ -120,9 +167,12 @@ class WebDavSyncTargetTest {
         val record = testVaultRecord("a", updatedAtMillis = 1)
         runBlocking { WebDavSyncTarget(base, "lekto", "lekto").put(VersionedRecord.of(record), null) }
 
-        val items = runBlocking { WebDavSyncTarget(base, "lekto", "lekto").list() }
+        val listing = runBlocking { WebDavSyncTarget(base, "lekto", "lekto").list() }
 
-        assertTrue(items.any { item -> item.id == "a" }, "a collection that already exists must still be listed")
+        assertTrue(
+            listing.items.any { item -> item.id == "a" },
+            "a collection that already exists must still be listed",
+        )
     }
 
     @Test

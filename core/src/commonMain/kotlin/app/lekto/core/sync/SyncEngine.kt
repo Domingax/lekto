@@ -43,6 +43,11 @@ data class SyncReport(
  * attachments that travel with live records, so an imported book's original
  * follows its record (ADR-0016).
  *
+ * The engine remembers the last item it saw per id in a device-local
+ * [RemoteIndexStore] beside the tombstones, and passes those revisions to a
+ * listing, so a sync reads only the records that changed rather than the whole
+ * target every run (ADR-0027).
+ *
  * **Deletions go through [delete].** A record removed from the vault with no
  * tombstone is only absent — the next sync would copy it back from a device that
  * has not seen the delete — so [delete] removes the record *and* leaves the
@@ -53,15 +58,17 @@ data class SyncReport(
  * whole engine is exercised under `runTest`'s virtual time (docs/testing.md,
  * "Deterministic seams").
  */
+@Suppress("LongParameterList") // The engine's collaborators are independent seams the composition root wires.
 class SyncEngine(
     private val local: VaultStore,
     private val tombstones: TombstoneStore,
+    private val remoteIndex: RemoteIndexStore,
     private val target: SyncTarget,
     private val clock: Clock,
     private val deviceId: DeviceId,
 ) {
 
-    private val remote = RemoteIndex()
+    private val remote = RemoteIndex().apply { replaceAll(remoteIndex.all()) }
     private var cursor: SyncCursor? = null
 
     /**
@@ -83,6 +90,7 @@ class SyncEngine(
         val appliedLocally = applyLocally(outcome)
         val remoteWrites = applyRemotely(outcome)
         val attachments = reconcileAttachments()
+        remoteIndex.replaceAll(remote.all())
         return SyncReport(
             uploaded = remoteWrites.uploaded,
             downloaded = appliedLocally + remoteWrites.downloaded,
@@ -96,15 +104,36 @@ class SyncEngine(
      * The target's current items: a full listing where there is no cursor, or a
      * change set applied to the index where there is. A null cursor asks a change
      * set for everything, so the first sync is the same shape either way.
+     *
+     * A listing is told [RemoteIndex.knownRevisions], so a driver reads only the
+     * items that are new or whose revision moved and names the rest unchanged
+     * (ADR-0027); the index then keeps the body it already held for those,
+     * turning the listing into a full picture to merge.
      */
     private suspend fun fetchRemote(): List<VersionedRecord> {
         if (!target.capabilities().changeCursor) {
-            return target.list().also(remote::replaceAll).map { it.version }
+            remote.replaceAll(resolveUncached(target.list(remote.knownRevisions())))
+        } else {
+            val changes = target.changes(cursor)
+            cursor = changes.cursor
+            remote.apply(changes.items)
         }
-        val changes = target.changes(cursor)
-        cursor = changes.cursor
-        remote.apply(changes.items)
         return remote.all().map { it.version }
+    }
+
+    /**
+     * A driver promises not to name an id [unchanged][SyncListing.unchanged]
+     * unless the caller already holds it, so an unchanged id the index does not
+     * hold is a driver bug: it is re-read here rather than silently dropped from
+     * the merge. A correct driver makes this a no-op.
+     */
+    private suspend fun resolveUncached(listing: SyncListing): SyncListing {
+        val uncached = listing.unchanged.filter { remote.get(it) == null }
+        if (uncached.isEmpty()) return listing
+        return SyncListing(
+            items = listing.items + uncached.mapNotNull { target.get(it) },
+            unchanged = listing.unchanged - uncached.toSet(),
+        )
     }
 
     /**

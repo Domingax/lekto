@@ -65,6 +65,7 @@ import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLlmSettingsStore
+import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncSettingsStore
 import app.lekto.testkit.InMemorySyncTarget
@@ -386,7 +387,14 @@ class AppSemanticsTest {
             settings = settings,
             target = { _, _ -> InMemorySyncTarget() },
             engine = { target ->
-                SyncEngine(InMemoryVaultStore(), InMemoryTombstoneStore(), target, TestClock(), DeviceId("device-a"))
+                SyncEngine(
+                    InMemoryVaultStore(),
+                    InMemoryTombstoneStore(),
+                    InMemoryRemoteIndexStore(),
+                    target,
+                    TestClock(),
+                    DeviceId("device-a"),
+                )
             },
         )
         compose.setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }

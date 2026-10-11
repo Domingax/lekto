@@ -28,18 +28,21 @@ internal object WebDavNames {
     fun attachmentPath(id: String): String = "$ATTACHMENTS/${encode(id)}$ATTACHMENT_SUFFIX"
 
     /** The id an attachment path names, or `null` when it names something else. */
-    fun idFromAttachment(path: String): String? = decodeSuffixed(path, ATTACHMENT_SUFFIX)
+    fun idFromAttachment(path: String): String? = decodeSuffixed(path, ATTACHMENTS, ATTACHMENT_SUFFIX)
+
+    /** The id a record path names, or `null` when it names something else. */
+    fun idFromRecord(path: String): String? = decodeSuffixed(path, RECORDS, RECORD_SUFFIX)
 
     /**
      * The id a **legacy** attachment path names, or `null`. A pre-issue-#116
      * client wrote `.bin`; the driver migrates it to [attachmentPath] on the next
      * listing, so an original is recovered rather than lost.
      */
-    fun idFromLegacyAttachment(path: String): String? = decodeSuffixed(path, LEGACY_ATTACHMENT_SUFFIX)
+    fun idFromLegacyAttachment(path: String): String? = decodeSuffixed(path, ATTACHMENTS, LEGACY_ATTACHMENT_SUFFIX)
 
-    private fun decodeSuffixed(path: String, suffix: String): String? =
-        if (path.startsWith("$ATTACHMENTS/") && path.endsWith(suffix)) {
-            decode(path.removePrefix("$ATTACHMENTS/").removeSuffix(suffix))
+    private fun decodeSuffixed(path: String, collection: String, suffix: String): String? =
+        if (path.startsWith("$collection/") && path.endsWith(suffix)) {
+            decode(path.removePrefix("$collection/").removeSuffix(suffix))
         } else {
             null
         }

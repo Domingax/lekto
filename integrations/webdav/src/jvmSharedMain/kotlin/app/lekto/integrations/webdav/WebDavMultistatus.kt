@@ -9,19 +9,19 @@ import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.parsers.ParserConfigurationException
 
 /**
- * The one thing the driver reads out of a WebDAV `207 Multi-Status`: the `href`
- * of each response, under the `DAV:` namespace. The listing's ETags are ignored
- * because the driver reads a changed item's bytes anyway, so the GET's ETag is
- * the authoritative revision.
+ * The two things the driver reads out of a WebDAV `207 Multi-Status`: each
+ * `DAV:response`'s `href`, under the `DAV:` namespace, and its `getetag`, so a
+ * listing can tell an unchanged item from a moved one without a `GET`
+ * (ADR-0027).
  *
  * The XML arrives over the network, so the parser is hardened against external
  * entities and doctypes before it sees a document.
  */
 internal object WebDavMultistatus {
 
-    /** Every `DAV:response`'s href, in document order. */
+    /** Every `DAV:response`'s href and ETag, in document order. */
     @Suppress("TooGenericExceptionCaught") // Any parse failure is one honest message, never a crash.
-    fun hrefs(xml: String): List<String> {
+    fun entries(xml: String): List<WebDavResource> {
         val document = try {
             factory().newDocumentBuilder().parse(InputSource(StringReader(xml)))
         } catch (e: Exception) {
@@ -30,7 +30,8 @@ internal object WebDavMultistatus {
         val responses = document.getElementsByTagNameNS(DAV, "response")
         return (0 until responses.length).mapNotNull { index ->
             val response = responses.item(index) as? Element ?: return@mapNotNull null
-            response.getElementsByTagNameNS(DAV, "href").item(0)?.textContent
+            val path = response.getElementsByTagNameNS(DAV, "href").item(0)?.textContent ?: return@mapNotNull null
+            WebDavResource(path, response.getElementsByTagNameNS(DAV, "getetag").item(0)?.textContent)
         }
     }
 

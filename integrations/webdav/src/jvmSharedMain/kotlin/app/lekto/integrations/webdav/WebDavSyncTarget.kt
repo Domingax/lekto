@@ -3,6 +3,7 @@ package app.lekto.integrations.webdav
 import app.lekto.core.sync.Revision
 import app.lekto.core.sync.SyncCapabilities
 import app.lekto.core.sync.SyncItem
+import app.lekto.core.sync.SyncListing
 import app.lekto.core.sync.SyncTarget
 import app.lekto.core.sync.SyncTargetException
 import app.lekto.core.sync.WriteOutcome
@@ -23,9 +24,10 @@ import kotlinx.serialization.SerializationException
  * `If-None-Match: *` and an update with WebDAV's `If` header (RFC 4918), so
  * **conditional writes are supported**; RFC 6578 `sync-collection` is
  * server-dependent, so **no change cursor** is claimed and the engine lists the
- * whole collection instead. A driver that claimed a capability it lacked fails
- * the shared [SyncTarget] contract, which only adds the cases a claimed
- * capability demands.
+ * whole collection — but reads the body only of items whose ETag moved, so a
+ * steady-state sync is one `PROPFIND` plus the changed records (ADR-0027). A
+ * driver that claimed a capability it lacked fails the shared [SyncTarget]
+ * contract, which only adds the cases a claimed capability demands.
  */
 class WebDavSyncTarget(baseUrl: String, username: String, password: String) : SyncTarget {
 
@@ -33,10 +35,30 @@ class WebDavSyncTarget(baseUrl: String, username: String, password: String) : Sy
 
     override fun capabilities(): SyncCapabilities = SyncCapabilities(conditionalWrites = true, changeCursor = false)
 
-    override suspend fun list(): List<SyncItem> =
-        client.propfind(WebDavNames.RECORDS).filter(WebDavNames::isRecord).mapNotNull(::readItem)
+    /**
+     * Lists the records collection, reading the body only of items that are new
+     * or whose ETag moved since [known] (ADR-0027): an unchanged item costs a
+     * `PROPFIND` line, not a `GET`. A body that is read is tagged with the ETag
+     * the listing reported, so a later listing compares like with like.
+     */
+    override suspend fun list(known: Map<String, Revision>): SyncListing {
+        val items = mutableListOf<SyncItem>()
+        val unchanged = mutableSetOf<String>()
+        client.propfind(WebDavNames.RECORDS)
+            .filter { WebDavNames.isRecord(it.path) }
+            .forEach { resource ->
+                val id = WebDavNames.idFromRecord(resource.path) ?: return@forEach
+                val revision = resource.etag?.takeIf { it.isNotBlank() }?.let(::Revision)
+                if (revision != null && known[id] == revision) {
+                    unchanged += id
+                } else {
+                    readItem(resource.path, revision)?.let { items += it }
+                }
+            }
+        return SyncListing(items, unchanged)
+    }
 
-    override suspend fun get(id: String): SyncItem? = readItem(WebDavNames.recordPath(id))
+    override suspend fun get(id: String): SyncItem? = readItem(WebDavNames.recordPath(id), null)
 
     override suspend fun put(version: VersionedRecord, expected: Revision?): WriteOutcome {
         client.ensureCollection(WebDavNames.RECORDS)
@@ -53,7 +75,7 @@ class WebDavSyncTarget(baseUrl: String, username: String, password: String) : Sy
     }
 
     override suspend fun attachmentIds(): Set<String> =
-        client.propfind(WebDavNames.ATTACHMENTS).mapNotNull(::attachmentId).toSet()
+        client.propfind(WebDavNames.ATTACHMENTS).mapNotNull { attachmentId(it.path) }.toSet()
 
     /**
      * The id a listed attachment names, migrating a legacy `.bin` file to `.data`
@@ -74,9 +96,9 @@ class WebDavSyncTarget(baseUrl: String, username: String, password: String) : Sy
         client.write(WebDavNames.attachmentPath(id), bytes, WriteCondition.Unconditional)
     }
 
-    private fun readItem(path: String): SyncItem? {
+    private fun readItem(path: String, revision: Revision?): SyncItem? {
         val blob = client.read(path) ?: return null
-        return SyncItem(decode(blob.bytes, path), Revision(blob.etag))
+        return SyncItem(decode(blob.bytes, path), revision ?: Revision(blob.etag))
     }
 
     private fun decode(bytes: ByteArray, path: String): VersionedRecord = try {
