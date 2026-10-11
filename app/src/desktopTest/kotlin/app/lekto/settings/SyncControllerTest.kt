@@ -1,6 +1,7 @@
 package app.lekto.settings
 
 import app.lekto.LocalChanges
+import app.lekto.core.MasteryLevel
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.sync.Revision
@@ -11,7 +12,12 @@ import app.lekto.core.sync.SyncSchedule
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.sync.SyncTarget
 import app.lekto.core.sync.SyncTargetException
+import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.VersionedRecord
+import app.lekto.core.vocabulary.VaultVocabulary
+import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.core.vocabulary.VocabularyRecord
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
@@ -20,7 +26,9 @@ import app.lekto.testkit.InMemorySyncTarget
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
+import app.lekto.testkit.deterministicSeams
 import app.lekto.testkit.testVaultRecord
+import app.lekto.vocabulary.VocabularyController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -552,6 +560,43 @@ class SyncControllerTest {
 
         assertEquals(baseline + 1, target.changesCalls, "the content change pushes a run")
         controller.disable()
+    }
+
+    @Test
+    fun `changing a word's mastery pushes the updated record to the target`() = runTest {
+        // Does a mastery change sync? Yes: the level lives on the vocabulary
+        // record, so moving it is a content change that pushes a run (issue #121).
+        val vault = InMemoryVaultStore()
+        val changes = LocalChanges()
+        val words = VocabularyController(VaultVocabulary(vault, deterministicSeams(), DeviceId("device-a")), changes)
+        val target = InMemorySyncTarget(changeCursor = false)
+        val settings = InMemorySyncSettingsStore(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
+        )
+        val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
+        val sync = controller(settings = settings, secrets = secrets, target = target, vault = vault, changes = changes)
+        sync.start()
+        runCurrent()
+
+        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+        words.save(entry)
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        val id = VocabularyRecord.idOf(entry.key)
+        assertEquals(MasteryLevel.FAMILIAR, storedMastery(target, id), "the first save pushes the word")
+
+        words.save(entry.copy(mastery = MasteryLevel.MASTERED))
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(MasteryLevel.MASTERED, storedMastery(target, id), "the mastery change pushes the update")
+        sync.disable()
+    }
+
+    /** The mastery the target now holds for [id], decoded from the pushed record. */
+    private fun storedMastery(target: InMemorySyncTarget, id: String): MasteryLevel? {
+        val live = target.stored(id)?.version as? VersionedRecord.Live
+        return live?.let { version -> VocabularyRecord.entryOf(version.record).mastery }
     }
 
     @Test
