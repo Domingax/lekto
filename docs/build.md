@@ -117,15 +117,17 @@ The module boundaries and naming conventions are themselves tested, so a
 violation fails `./gradlew check` instead of waiting for a human review
 (ticket #9). The suite lives in the test-only `architecture` module — the rule
 engine in `src/main`, its tests in `src/test`. It reads
-`settings.gradle.kts`, each module's `build.gradle.kts` and every Kotlin file
-into a pure model, then asserts: the module dependency graph (the domain depends
-on no module, only the application may depend on an integration, nothing depends
-on the application), import purity (the domain's shared sources name neither the
-application, nor an integration, nor Android — its `androidMain` platform set may
-name the Android API it backs; the testkit never reaches production), and
-naming and placement (a package matches its directory, a source sits under its
-module's package root, a test class is `*Test.kt` in a test source set, and a
-desktop `*SemanticsTest` has a same-named Android host-lane twin — issue #73).
+`settings.gradle.kts`, each module's `build.gradle.kts`, every Kotlin file and the
+dependency manifests the repository ships into a pure model, then asserts: the
+module dependency graph (the domain depends on no module, only the application may
+depend on an integration, nothing depends on the application), import purity (the
+domain's shared sources name neither the application, nor an integration, nor
+Android — its `androidMain` platform set may name the Android API it backs; the
+testkit never reaches production), naming and placement (a package matches its
+directory, a source sits under its module's package root, a test class is `*Test.kt`
+in a test source set, and a desktop `*SemanticsTest` has a same-named Android
+host-lane twin — issue #73), and that every manifest has a `.github/dependabot.yml`
+entry ([Alert triage](#alert-triage); issue #153).
 
 The rules are hand-rolled rather than Konsist or ArchUnit, so the suite adds no
 dependency and can read the Gradle module graph, which a bytecode analyser
@@ -133,7 +135,11 @@ cannot; ADR-0013 records the decision. Each rule is proven against a deliberatel
 broken repository in `ArchitectureViolationTest`, and the real tree is asserted
 by `LektoArchitectureTest` — a boundary can only be relaxed by editing
 `LektoArchitecture.policies`, and a screen's missing Android twin only by removing
-its path from `LektoArchitecture.uiTestParityAllowlist`.
+its path from `LektoArchitecture.uiTestParityAllowlist`. Two guards sit beside the
+policy engine rather than inside it, because each spans two artefacts instead of
+describing the module graph: `DictionaryFormatSynchronisationTest` (the pack format
+the producer and the consumer declare) and `DependabotWatchRulesTest`, which proves
+`DependabotWatchRules` against hand-built values and then asserts the real tree.
 
 ### Dependency licences
 
@@ -228,12 +234,42 @@ request, and deploys the site to GitHub Pages only on a push to `main` that
 touches the guide ([User guide](#user-guide), ADR-0024).
 The `instrumented` lane is the only one that needs an emulator; it is scheduled,
 so it never slows a change, and it runs the app's launch smoke test
-(`app/androidInstrumentedTest`, issue #71). Vulnerability alerts are a repository
-setting, enabled once with
-`gh api --method PUT repos/<owner>/<repo>/vulnerability-alerts`.
+(`app/androidInstrumentedTest`, issue #71).
 
 `tools/dictionaries` builds and publishes by its own workflow (ticket #17), which
 never blocks application CI. Its fast unit tests still run in `check`.
+
+## Alert triage
+
+Vulnerability alerts are a repository setting, enabled once with
+`gh api --method PUT repos/<owner>/<repo>/vulnerability-alerts`. The setting is what
+raises an alert; `.github/dependabot.yml` is what turns a dependency bump into a
+pull request, weekly and grouped by ecosystem. The two are independent: dismissing
+an alert does not stop its entry from opening an update pull request, and an entry
+opening one does not by itself close an alert.
+
+The question asked of an alert is **which classpath is it on**. It is acted on when
+the vulnerable code sits on a classpath the application ships. It is dismissed when
+it does not — which was the state of the whole backlog this policy was written
+against (issue #153). Of the 63 alerts on `main`, none reached a shipped artifact:
+the Maven ones were transitives of the **build** classpath (AGP 8.13.2's
+`io.grpc:grpc-netty` and `com.android.tools.utp` pull netty, bouncycastle,
+protobuf-java, jose4j, jdom2, freemarker and commons-compress; ktlint 1.8.0 pulls
+logback) or of a **test** classpath (Robolectric's bouncycastle and guava,
+Testcontainers' commons-compress), and the npm ones were the guide's dev toolchain —
+Vite's and esbuild's development-server advisories.
+
+Two commands produce that evidence. `./gradlew checkDependencyLicences` resolves the
+classpath of every module and writes `build/reports/dependency-licences.txt`, which
+marks each component `[production]` or `[test]` and names the configurations it
+appears in; `./gradlew buildEnvironment` prints the build classpath the plugins
+resolve. A dismissal records the reason `tolerable_risk` and cites this section, so
+the answer survives the alert.
+
+Two guards keep the list honest. `DependabotWatchRulesTest` fails `check` when a
+manifest the repository ships has no `.github/dependabot.yml` entry, so a second
+npm project cannot go unwatched. And a dismissal is not a mute button: a new alert
+arrives open, and the question to ask of it is still the one above.
 
 ## User guide
 
