@@ -19,6 +19,7 @@ internal data class DifficultyOptions(val input: Path, val output: Path, val out
  *
  * The input is the raw Wiktextract `.jsonl[.gz]`; the output is the SQLite pack.
  * An optional frequency source adds the per-language **Difficulty table**. The
+ * **Language manifest** the run publishes is written to [languageManifest]. The
  * provenance values are recorded, never a timestamp. The workflow supplies every
  * path; defaults are only conveniences for a local run.
  */
@@ -28,6 +29,7 @@ internal data class CliOptions(
     val provenance: PackProvenance,
     val gate: GateOptions,
     val outputs: OutputPaths,
+    val languageManifest: Path,
     val difficulty: DifficultyOptions?,
 ) {
     companion object {
@@ -52,6 +54,8 @@ internal data class CliOptions(
                     notice = optionalPath(values, "--notice") ?: output.resolveSibling("NOTICE"),
                     manifest = optionalPath(values, "--manifest") ?: output.resolveSibling("manifest.json"),
                 ),
+                languageManifest = optionalPath(values, "--language-manifest")
+                    ?: output.resolveSibling("language-manifest.json"),
                 difficulty = difficultyOptions(values),
             )
         }
@@ -81,6 +85,7 @@ private val KNOWN_FLAGS = setOf(
     "--collapse-threshold",
     "--notice",
     "--manifest",
+    "--language-manifest",
     "--frequency-input",
     "--difficulty-output",
     "--difficulty-notice",

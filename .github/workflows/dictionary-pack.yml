@@ -122,6 +122,7 @@ jobs:
             --extraction-date "${{ steps.download.outputs.extraction_date }}"
             --notice "$RUNNER_TEMP/NOTICE"
             --manifest "$RUNNER_TEMP/manifest.json"
+            --language-manifest "$RUNNER_TEMP/language-manifest.json"
           )
           if [ -n "$PREVIOUS_LEMMA_COUNT" ] && [ "$PREVIOUS_LEMMA_COUNT" != "null" ]; then
             args+=(--previous-lemma-count "$PREVIOUS_LEMMA_COUNT")
@@ -148,7 +149,8 @@ jobs:
             "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" \
             "lekto-dictionary-en-fr.sqlite.gz" \
             "lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz" \
-            "lekto-difficulty-en.sqlite.gz" > SHA256SUMS
+            "lekto-difficulty-en.sqlite.gz" \
+            "language-manifest.json" > SHA256SUMS
 
       # A short, generated release body (provenance + counts + verification),
       # not the full NOTICE: the legal text stays in the NOTICE asset and inside
@@ -163,6 +165,7 @@ jobs:
           bytes="$(numfmt --grouping "$(stat -c%s "$gz")") bytes"
           diff_bytes="$(numfmt --grouping "$(stat -c%s "$diff_gz")") bytes"
           sed \
+            -e "s|{{REPOSITORY}}|${{ github.repository }}|g" \
             -e "s|{{ASSET}}|$(basename "$gz")|g" \
             -e "s|{{STABLE_URL}}|https://github.com/${{ github.repository }}/releases/latest/download/lekto-dictionary-en-fr.sqlite.gz|g" \
             -e "s|{{SIZE}}|$bytes|g" \
@@ -200,6 +203,7 @@ jobs:
             "$RUNNER_TEMP/DIFFICULTY-NOTICE"
             "$RUNNER_TEMP/manifest.json"
             "$RUNNER_TEMP/difficulty-manifest.json"
+            "$RUNNER_TEMP/language-manifest.json"
           )
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release edit "$tag" --notes-file "$notes"

@@ -32,6 +32,14 @@ versioned so a reader can refuse one it does not understand. It is what the
 default-mastery rule reads; never authored by the user and never synced.
 _Avoid_: Frequency list, word list, difficulty pack
 
+**Language manifest**:
+The catalogue of what Lekto offers for reading: each **Reading language** and the
+artefacts published for it — a **Difficulty table** per reading language, and a
+**Dictionary pack** per (Reading language × **Translation language**) pair, each
+naming its translation language. A **Derived asset**, versioned so a reader can
+refuse one it does not understand, and never authored by the user.
+_Avoid_: Catalog, index, registry
+
 **Tombstone**:
 The mark a deleted item leaves behind so the deletion itself can sync: the item's
 identity and update metadata without its content. A tombstone with a later update

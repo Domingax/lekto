@@ -27,6 +27,14 @@ class CliOptionsTest {
 
         assertEquals(options.output.resolveSibling("NOTICE"), options.outputs.notice)
         assertEquals(options.output.resolveSibling("manifest.json"), options.outputs.manifest)
+        assertEquals(options.output.resolveSibling("language-manifest.json"), options.languageManifest)
+    }
+
+    @Test
+    fun `takes an explicit language manifest path`() {
+        val options = CliOptions.parse(validArgs("--language-manifest", "published/language-manifest.json"))
+
+        assertEquals("published/language-manifest.json", options.languageManifest.toString())
     }
 
     @Test

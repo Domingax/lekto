@@ -508,6 +508,15 @@ so its level is its own: `PackBuilderTest` pins the transform's rules,
 `SqlitePackWriterTest` reads the written pack back and proves two builds are
 byte-for-byte identical, and `DictionaryPackGoldenTest` pins the canonical output
 of a committed JSONL fixture — the reproducibility evidence for ticket #17. The
+**language manifest** (issue #145) is built from that same fixture's pack and
+difficulty table by `LanguageManifestGoldenTest`, pinned in
+`golden/language-manifest.json`, so the catalogue and the artefacts cannot drift,
+and `LanguageManifestTest` pins that a run which published nothing yields an
+empty manifest; its format handshake is the producer's
+`LanguageManifestFormat.VERSION` against `core`'s
+`LanguageManifest.FORMAT_VERSION`, which
+`LanguageManifestFormatSynchronisationTest` in `architecture` keeps in step
+(ADR-0013). The
 sanity gate and the command line are unit-tested the same way. The module's tests
 run in `check` like any other module's, but the module sits outside the
 application's coverage, licence and publication graph, so nothing it builds ships
