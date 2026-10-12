@@ -262,14 +262,26 @@ class SettingsScreenSemanticsTest {
 
     @Test
     fun aCustomProviderOffersABaseUrlField() {
-        render(provider = ProviderUiState(true, config = LlmProviderConfig(LlmProvider.CUSTOM, "my-model")))
+        render(
+            provider = ProviderUiState(
+                available = true,
+                providerChosen = true,
+                config = LlmProviderConfig(LlmProvider.CUSTOM, "my-model"),
+            ),
+        )
 
         compose.onNodeWithTag(BASE_URL_FIELD_TAG).performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun aNamedProviderHidesTheBaseUrlField() {
-        render(provider = ProviderUiState(true, config = LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini")))
+        render(
+            provider = ProviderUiState(
+                available = true,
+                providerChosen = true,
+                config = LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini"),
+            ),
+        )
 
         compose.onNodeWithTag(BASE_URL_FIELD_TAG).assertDoesNotExist()
     }
@@ -278,7 +290,7 @@ class SettingsScreenSemanticsTest {
     fun savingPassesTheTypedKeyToTheController() {
         var saved: String? = null
         render(
-            provider = ProviderUiState(available = true),
+            provider = ProviderUiState(available = true, providerChosen = true),
             actions = SettingsActions(onSaveProvider = { key -> saved = key }),
         )
 
@@ -293,7 +305,7 @@ class SettingsScreenSemanticsTest {
     fun testingPassesTheTypedKeyToTheController() {
         var tested: String? = null
         render(
-            provider = ProviderUiState(available = true),
+            provider = ProviderUiState(available = true, providerChosen = true),
             actions = SettingsActions(onTestProvider = { key -> tested = key }),
         )
 
@@ -307,7 +319,11 @@ class SettingsScreenSemanticsTest {
     fun aSuccessfulConnectionIsReportedAndDismissed() {
         var dismissed = false
         render(
-            provider = ProviderUiState(available = true, result = ProviderResult.Success("The provider answered.")),
+            provider = ProviderUiState(
+                available = true,
+                providerChosen = true,
+                result = ProviderResult.Success("The provider answered."),
+            ),
             actions = SettingsActions(onDismissProviderResult = { dismissed = true }),
         )
 
@@ -322,6 +338,7 @@ class SettingsScreenSemanticsTest {
         render(
             provider = ProviderUiState(
                 available = true,
+                providerChosen = true,
                 result = ProviderResult.Failure("The provider rejected the API key."),
             ),
         )
@@ -333,7 +350,7 @@ class SettingsScreenSemanticsTest {
     fun aStoredKeyOffersRemoval() {
         var removed = false
         render(
-            provider = ProviderUiState(available = true, hasStoredKey = true),
+            provider = ProviderUiState(available = true, providerChosen = true, hasStoredKey = true),
             actions = SettingsActions(onRemoveProviderKey = { removed = true }),
         )
 
@@ -352,57 +369,66 @@ class SettingsScreenSemanticsTest {
     }
 
     @Test
+    fun anUnchosenProviderShowsThePlaceholderAndHidesItsControls() {
+        render(provider = ProviderUiState(available = true))
+
+        compose.onNodeWithText("Choose a provider").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(MODEL_FIELD_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(API_KEY_FIELD_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun aKeylessProviderOffersNoApiKeyField() {
-        render(provider = ProviderUiState(true, config = LlmProviderConfig(LlmProvider.OLLAMA, "llama3")))
+        render(
+            provider = ProviderUiState(
+                available = true,
+                providerChosen = true,
+                config = LlmProviderConfig(LlmProvider.OLLAMA, "llama3"),
+            ),
+        )
 
         compose.onNodeWithTag(API_KEY_FIELD_TAG).assertDoesNotExist()
     }
 
     @Test
     fun testingInProgressDisablesTheActions() {
-        render(provider = ProviderUiState(available = true, testing = true))
+        render(provider = ProviderUiState(available = true, providerChosen = true, testing = true))
 
         compose.onNodeWithText("Save").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().assertIsNotEnabled()
     }
 
     @Test
-    fun loadingTheModelsPassesTheTypedKeyToTheController() {
+    fun openingTheModelFieldAsksToLoadTheModelsWithTheTypedKey() {
         var loaded: String? = null
         render(
-            provider = ProviderUiState(available = true),
+            provider = ProviderUiState(available = true, providerChosen = true),
             actions = SettingsActions(onLoadModels = { key -> loaded = key }),
         )
 
         compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        compose.onNodeWithTag(LOAD_MODELS_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performClick()
 
         assertEquals("sk-live-123", loaded)
     }
 
     @Test
-    fun aLoadedModelListIsOfferedAsAChoice() {
+    fun aLoadedModelListIsOfferedFromTheModelField() {
         var chosen: String? = null
         render(
             provider = ProviderUiState(
                 available = true,
+                providerChosen = true,
                 config = LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini"),
                 models = listOf("gpt-4o-mini", "gpt-4o"),
             ),
             actions = SettingsActions(onModelChange = { model -> chosen = model }),
         )
 
-        compose.onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performClick()
         compose.onNodeWithText("gpt-4o").performClick()
 
         assertEquals("gpt-4o", chosen)
-    }
-
-    @Test
-    fun noModelPickerIsShownBeforeTheListIsLoaded() {
-        render(provider = ProviderUiState(available = true, models = emptyList()))
-
-        compose.onNodeWithTag(MODEL_PICKER_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -410,6 +436,7 @@ class SettingsScreenSemanticsTest {
         render(
             provider = ProviderUiState(
                 available = true,
+                providerChosen = true,
                 result = ProviderResult.Failure(LlmModelsResult.UNSUPPORTED),
             ),
         )

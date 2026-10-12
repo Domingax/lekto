@@ -52,9 +52,7 @@ import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
-import app.lekto.settings.LOAD_MODELS_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
-import app.lekto.settings.MODEL_PICKER_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
 import app.lekto.settings.SYNC_HOST_FIELD_TAG
@@ -376,16 +374,15 @@ class AppSemanticsTest {
         onNodeWithText("Settings").performClick()
         onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
         onNodeWithText("Anthropic").performClick()
-        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        onNodeWithTag(LOAD_MODELS_TAG).performScrollTo().performClick()
 
-        waitUntil(timeoutMillis = 10_000) {
-            onAllNodesWithTag(MODEL_PICKER_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().performClick()
+        // Choosing the provider loads its models with no separate action.
+        waitUntil(timeoutMillis = 10_000) { client.listed.isNotEmpty() }
+        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performClick()
         onNodeWithText("claude-3-5").performClick()
 
-        onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().assertTextEquals("claude-3-5")
+        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo()
+        onNodeWithText("claude-3-5").assertIsDisplayed()
     }
 
     @Test

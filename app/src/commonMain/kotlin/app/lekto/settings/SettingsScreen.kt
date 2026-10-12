@@ -13,8 +13,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -39,8 +43,6 @@ internal const val BASE_URL_FIELD_TAG: String = "settings-provider-base-url"
 internal const val API_KEY_FIELD_TAG: String = "settings-provider-api-key"
 internal const val TEST_CONNECTION_TAG: String = "settings-provider-test"
 internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
-internal const val LOAD_MODELS_TAG: String = "settings-provider-load-models"
-internal const val MODEL_PICKER_TAG: String = "settings-provider-model-picker"
 
 /**
  * The settings screen: the dictionary pack (issue #18), the vault's
@@ -124,11 +126,14 @@ private fun VaultSection(state: VaultUiState, actions: SettingsActions) {
 }
 
 /**
- * The **LLM provider** section (issue #88; ADR-0022): choose one provider preset
- * or a custom base URL, name the model, and enter the **API key** in a masked
- * field. The key is handed to the controller only to be stored or tested — it
- * never enters this screen's state. Save persists the app-private configuration
- * and the key; Test reports the provider's answer inline.
+ * The **LLM provider** section (issues #88, #93; ADR-0022): choose one provider
+ * preset — the picker starts empty, reading "Choose a provider" — or a custom base
+ * URL, enter the **API key** in a masked field, and pick the model from the list
+ * the provider offers. Choosing a provider loads that list automatically, and
+ * opening the model field refreshes it with the key now typed, so there is no
+ * separate action to press. The key is handed to the controller only to be stored
+ * or tested — it never enters this screen's state. Save persists the app-private
+ * configuration and the key; Test reports the provider's answer inline.
  */
 @Composable
 private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
@@ -145,8 +150,10 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
         return
     }
 
-    ProviderPicker(state.providers, state.config.provider, actions.onSelectProvider)
-    if (state.config.provider == LlmProvider.CUSTOM) {
+    ProviderPicker(state.providers, state.selectedProvider, actions.onSelectProvider)
+    val chosen = state.selectedProvider ?: return
+
+    if (chosen == LlmProvider.CUSTOM) {
         ProviderField(
             value = state.config.customBaseUrl,
             onValueChange = actions.onBaseUrlChange,
@@ -154,16 +161,10 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
             tag = BASE_URL_FIELD_TAG,
         )
     }
-    ProviderField(
-        value = state.config.model,
-        onValueChange = actions.onModelChange,
-        label = "Model",
-        tag = MODEL_FIELD_TAG,
-    )
     // A key typed for one provider must not survive a switch to another, so the
     // field resets with the provider; a keyless Ollama shows no field at all.
     var apiKey by remember(state.config.provider) { mutableStateOf("") }
-    if (state.config.provider.requiresKey) {
+    if (chosen.requiresKey) {
         SecretField(
             value = apiKey,
             onValueChange = { typed -> apiKey = typed },
@@ -172,50 +173,54 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
         )
     }
 
-    ProviderModels(state, apiKey, actions)
+    ModelField(state, apiKey, actions)
     ProviderFooter(state, apiKey, actions)
 }
 
 /**
- * Load the provider's model list (issue #93) and, once loaded, choose a model
- * from it. Manual entry in the model field stays for a provider that does not
- * implement `/models`; the load never blocks the reader, reporting an unsupported
- * or failed list inline through the section's shared status.
+ * The model, as an editable exposed dropdown (issue #93): the provider's list
+ * drops straight out of the field, and manual typing stays for a provider that
+ * does not implement `/models`. Opening it refreshes the list with the key now
+ * typed, so entering a key and then picking a model needs no separate action; a
+ * failure or an unsupported list is reported inline through the shared status and
+ * never blocks the reader.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProviderModels(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
-    if (state.loadingModels) LinearProgressIndicator(Modifier.fillMaxWidth())
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(
-            onClick = { actions.onLoadModels(apiKey) },
-            enabled = !state.loadingModels,
-            modifier = Modifier.testTag(LOAD_MODELS_TAG),
-        ) { Text("Load models") }
-        if (state.models.isNotEmpty()) {
-            ModelPicker(state.models, state.config.model, actions.onModelChange)
-        }
-    }
-}
-
-/** The models the provider listed: the current choice, and the list to pick another from. */
-@Composable
-private fun ModelPicker(models: List<String>, model: String, onSelect: (String) -> Unit) {
+private fun ModelField(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(MODEL_PICKER_TAG)) {
-            Text(model.ifBlank { "Choose a model" })
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            models.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        expanded = false
-                        onSelect(option)
-                    },
-                )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { open ->
+                expanded = open
+                if (open) actions.onLoadModels(apiKey)
+            },
+        ) {
+            OutlinedTextField(
+                value = state.config.model,
+                onValueChange = actions.onModelChange,
+                label = { Text("Model") },
+                singleLine = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryEditable)
+                    .testTag(MODEL_FIELD_TAG),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                state.models.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            expanded = false
+                            actions.onModelChange(option)
+                        },
+                    )
+                }
             }
         }
+        if (state.loadingModels) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
 }
 
@@ -229,11 +234,11 @@ private fun ProviderFooter(state: ProviderUiState, apiKey: String, actions: Sett
 
 /** The active provider's preset picker: the current choice, and the presets this platform can reach. */
 @Composable
-private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider, onSelect: (LlmProvider) -> Unit) {
+private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider?, onSelect: (LlmProvider) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(PROVIDER_PICKER_TAG)) {
-            Text(provider.label)
+            Text(provider?.label ?: "Choose a provider")
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             providers.forEach { option ->

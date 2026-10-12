@@ -18,6 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -48,6 +49,7 @@ class ProviderControllerTest {
 
         assertEquals(LlmProviderConfig.DEFAULT, controller.state.value.config)
         assertFalse(controller.state.value.hasStoredKey)
+        assertFalse(controller.state.value.providerChosen)
     }
 
     @Test
@@ -266,7 +268,28 @@ class ProviderControllerTest {
 
         controller.selectProvider(LlmProvider.ANTHROPIC)
 
+        // Cleared synchronously on the switch; the new list loads on its own.
         assertTrue(controller.state.value.models.isEmpty())
+        assertTrue(controller.state.value.providerChosen)
+    }
+
+    @Test
+    fun `choosing a provider loads its models automatically`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("gpt-4o-mini")))
+        val controller = controller(client = client)
+
+        controller.selectProvider(LlmProvider.OPENAI)
+        advanceUntilIdle()
+
+        assertEquals(listOf("gpt-4o-mini"), controller.state.value.models)
+        assertEquals(LlmProvider.OPENAI, controller.state.value.selectedProvider)
+    }
+
+    @Test
+    fun `an unchosen provider has no selected provider`() = runTest {
+        val controller = controller()
+
+        assertNull(controller.state.value.selectedProvider)
     }
 
     @Test

@@ -667,14 +667,17 @@ the OpenCode gateways loading keyless, a missing key reported rather than sent, 
 `404` and an unparseable body falling back to manual entry, an empty catalogue
 reported, and a rejected key classified without rendering the provider's text.
 The state holder — read the active provider and its key, load off the UI thread,
-store the list or report a failure inline, and clear the list when the provider
-changes — is `ProviderControllerTest` in `app/desktopTest`, driven by virtual time.
-The section's controls — the **Load models** action passing the typed key, the
-model picker that raises the chosen model, no picker before a list is loaded, and
-an unsupported list reported inline while the manual field stays — are
-`SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach settings,
-choose a provider, type a key, load the models, pick one and see the field fill —
-runs through `AppSemanticsTest` on both lanes. The list is device-local UI state:
+store the list or report a failure inline, clear the list when the provider
+changes, and drop a list that arrives after the provider moved — is
+`ProviderControllerTest` in `app/desktopTest`, driven by virtual time; it also
+pins that choosing a provider loads its models with no separate action. The
+section's controls — the provider picker reading "Choose a provider" until one is
+chosen, opening the model field raising the typed key, the model field offering
+the loaded list as an exposed dropdown that still accepts manual typing, and an
+unsupported list reported inline — are `SettingsScreenSemanticsTest` on both
+lanes, and the whole loop — reach settings, choose a provider, watch its models
+load, pick one and see the field fill — runs through `AppSemanticsTest` on both
+lanes. The list is device-local UI state:
 it never enters the vault, an export or a log.
 
 The settings screen's vault export/import (issue #20) is proved at the same

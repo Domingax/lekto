@@ -61,7 +61,19 @@ data class ProviderUiState(
     val models: List<String> = emptyList(),
     /** Whether a model list is being fetched, so the control can say so and not double-fire. */
     val loadingModels: Boolean = false,
-)
+    /**
+     * Whether the reader has chosen a provider yet (issue #93). A fresh install
+     * starts unchosen, so the picker reads "Choose a provider" rather than a preset
+     * the reader never picked; choosing one reveals the model and key controls and
+     * loads the model list. A stored, non-default configuration, or a stored key,
+     * reads as already chosen.
+     */
+    val providerChosen: Boolean = false,
+) {
+    /** The provider in effect, or `null` while the reader has not chosen one. */
+    val selectedProvider: LlmProvider?
+        get() = config.provider.takeIf { providerChosen }
+}
 
 /**
  * The LLM provider's state holder (issue #88; ADR-0022): it chooses one active
@@ -87,10 +99,11 @@ class ProviderController(
     val state: StateFlow<ProviderUiState> = _state.asStateFlow()
 
     /**
-     * Makes [provider] the single active provider. Switching is a deliberate
-     * reset — the previous provider's model does not carry over, because a model
-     * name is provider-specific — while a custom base URL is kept for the next
-     * time Custom is chosen.
+     * Makes [provider] the single active provider and loads the models it offers
+     * (issue #93), so the list is ready without a separate action. Switching is a
+     * deliberate reset — the previous provider's model does not carry over, because
+     * a model name is provider-specific — while a custom base URL is kept for the
+     * next time Custom is chosen.
      */
     fun selectProvider(provider: LlmProvider) {
         _state.update { current ->
@@ -99,8 +112,10 @@ class ProviderController(
                 hasStoredKey = storedKey(provider) != null,
                 result = null,
                 models = emptyList(),
+                providerChosen = true,
             )
         }
+        loadModels(apiKey = "")
     }
 
     /** Sets the model the active provider is called with. */
@@ -211,11 +226,13 @@ class ProviderController(
 
     private fun initialState(): ProviderUiState {
         val config = settings.load()
+        val hasStoredKey = storedKey(config.provider) != null
         return ProviderUiState(
             available = true,
             providers = providers,
             config = config,
-            hasStoredKey = storedKey(config.provider) != null,
+            hasStoredKey = hasStoredKey,
+            providerChosen = config != LlmProviderConfig.DEFAULT || hasStoredKey,
         )
     }
 
