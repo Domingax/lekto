@@ -88,15 +88,35 @@ jobs:
       - name: Build the CLI
         run: ./gradlew --no-daemon :tools:dictionaries:installDist
 
-      - name: Build the pack
+      # The difficulty build reads wordfreq's per-surface frequencies, which the
+      # pipeline aggregates onto the pack's lemmas (ADR-0029). `10 ** zipf` is the
+      # per-billion occurrence count the Zipf score is the logarithm of.
+      - name: Build the wordfreq frequency list
+        run: |
+          python3 -m pip install --quiet "wordfreq==3.0.2"
+          python3 - "$RUNNER_TEMP/wordfreq-en.tsv" <<'PY'
+          import sys
+          from wordfreq import iter_wordlist, zipf_frequency
+          with open(sys.argv[1], "w", encoding="utf-8") as handle:
+              for word in iter_wordlist("en"):
+                  handle.write(f"{word}\t{10 ** zipf_frequency(word, 'en')}\n")
+          PY
+          gzip -9 -n "$RUNNER_TEMP/wordfreq-en.tsv"
+
+      - name: Build the pack and the difficulty table
         env:
           PREVIOUS_LEMMA_COUNT: ${{ steps.previous.outputs.lemma_count }}
         run: |
           cli=tools/dictionaries/build/install/dictionaries/bin/dictionaries
           sqlite="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
+          difficulty="$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite"
           args=(
             --input "$RUNNER_TEMP/raw-wiktextract-data.jsonl.gz"
             --output "$sqlite"
+            --frequency-input "$RUNNER_TEMP/wordfreq-en.tsv.gz"
+            --difficulty-output "$difficulty"
+            --difficulty-notice "$RUNNER_TEMP/DIFFICULTY-NOTICE"
+            --difficulty-manifest "$RUNNER_TEMP/difficulty-manifest.json"
             --source-url "https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz"
             --source-sha256 "${{ steps.source.outputs.sha256 }}"
             --extraction-date "${{ steps.download.outputs.extraction_date }}"
@@ -109,21 +129,26 @@ jobs:
           "$cli" "${args[@]}"
 
       # `-n` omits the gzip timestamp and filename, so compression adds no
-      # non-determinism of its own. A date-free alias is published alongside the
-      # dated asset so the app can fetch the latest pack from the stable
-      # `releases/latest/download/lekto-dictionary-en-fr.sqlite.gz` URL (issue #18).
-      - name: Compress the pack deterministically
+      # non-determinism of its own. A date-free alias is published alongside each
+      # dated asset so the app can fetch the latest pack and difficulty table from
+      # stable `releases/latest/download/<name>` URLs (issues #18, #64).
+      - name: Compress the pack and the difficulty table deterministically
         run: |
-          dated="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
+          pack_dated="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
           gzip -9 -n "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
-          cp "$dated" "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
+          cp "$pack_dated" "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
+          diff_dated="$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz"
+          gzip -9 -n "$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite"
+          cp "$diff_dated" "$RUNNER_TEMP/lekto-difficulty-en.sqlite.gz"
 
       - name: Write the checksums
         run: |
           cd "$RUNNER_TEMP"
           sha256sum \
             "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" \
-            "lekto-dictionary-en-fr.sqlite.gz" > SHA256SUMS
+            "lekto-dictionary-en-fr.sqlite.gz" \
+            "lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz" \
+            "lekto-difficulty-en.sqlite.gz" > SHA256SUMS
 
       # A short, generated release body (provenance + counts + verification),
       # not the full NOTICE: the legal text stays in the NOTICE asset and inside
@@ -132,8 +157,11 @@ jobs:
       - name: Write the release notes
         run: |
           manifest="$RUNNER_TEMP/manifest.json"
+          difficulty="$RUNNER_TEMP/difficulty-manifest.json"
           gz="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
+          diff_gz="$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz"
           bytes="$(numfmt --grouping "$(stat -c%s "$gz")") bytes"
+          diff_bytes="$(numfmt --grouping "$(stat -c%s "$diff_gz")") bytes"
           sed \
             -e "s|{{ASSET}}|$(basename "$gz")|g" \
             -e "s|{{STABLE_URL}}|https://github.com/${{ github.repository }}/releases/latest/download/lekto-dictionary-en-fr.sqlite.gz|g" \
@@ -146,7 +174,13 @@ jobs:
             -e "s|{{SOURCE_URL}}|$(jq -r '.provenance.sourceUrl' "$manifest")|g" \
             -e "s|{{SOURCE_SHA256}}|$(jq -r '.provenance.sourceSha256' "$manifest")|g" \
             -e "s|{{EXTRACTION_DATE}}|$(jq -r '.provenance.extractionDate' "$manifest")|g" \
-            -e "s|{{ASSET_SHA256}}|$(cut -d' ' -f1 "$RUNNER_TEMP/SHA256SUMS")|g" \
+            -e "s|{{ASSET_SHA256}}|$(grep 'lekto-dictionary-en-fr-[0-9]*\.sqlite\.gz' "$RUNNER_TEMP/SHA256SUMS" | cut -d' ' -f1)|g" \
+            -e "s|{{DIFFICULTY_ASSET}}|$(basename "$diff_gz")|g" \
+            -e "s|{{DIFFICULTY_STABLE_URL}}|https://github.com/${{ github.repository }}/releases/latest/download/lekto-difficulty-en.sqlite.gz|g" \
+            -e "s|{{DIFFICULTY_SIZE}}|$diff_bytes|g" \
+            -e "s|{{DIFFICULTY_FORMAT_VERSION}}|$(jq -r '.formatVersion' "$difficulty")|g" \
+            -e "s|{{DIFFICULTY_WORDS}}|$(jq -r '.stats.bandedWords' "$difficulty" | numfmt --grouping)|g" \
+            -e "s|{{DIFFICULTY_SHA256}}|$(grep 'lekto-difficulty-en-[0-9]*\.sqlite\.gz' "$RUNNER_TEMP/SHA256SUMS" | cut -d' ' -f1)|g" \
             .github/release-notes/dictionary-pack.md > "$RUNNER_TEMP/RELEASE_NOTES.md"
           cat "$RUNNER_TEMP/RELEASE_NOTES.md"
 
@@ -159,9 +193,13 @@ jobs:
           assets=(
             "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
             "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
+            "$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz"
+            "$RUNNER_TEMP/lekto-difficulty-en.sqlite.gz"
             "$RUNNER_TEMP/SHA256SUMS"
             "$RUNNER_TEMP/NOTICE"
+            "$RUNNER_TEMP/DIFFICULTY-NOTICE"
             "$RUNNER_TEMP/manifest.json"
+            "$RUNNER_TEMP/difficulty-manifest.json"
           )
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release edit "$tag" --notes-file "$notes"

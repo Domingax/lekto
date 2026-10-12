@@ -30,6 +30,7 @@ import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
+import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
@@ -46,10 +47,14 @@ import app.lekto.dictionary.Pronunciation
 import app.lekto.dictionary.VocabularyPanel
 import app.lekto.dictionary.WordLookupActions
 import app.lekto.dictionary.WordLookupPanel
+import app.lekto.difficulty.DifficultyController
+import app.lekto.difficulty.DifficultyServices
+import app.lekto.difficulty.DifficultyUiState
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
+import app.lekto.reader.MasteryController
 import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
 import app.lekto.reader.ReaderChapter
@@ -60,6 +65,7 @@ import app.lekto.reader.WordTap
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.ProviderController
 import app.lekto.settings.ProviderUiState
+import app.lekto.settings.ReadingUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
 import app.lekto.settings.SettingsUiState
@@ -94,7 +100,9 @@ import kotlinx.coroutines.withContext
  * panel speaks through (issue #21), the [openUrl] the lookup panel's reference
  * shortcuts open in the platform browser (issue #19), the [vaultTransfer] that
  * exports and imports the vault (issue #20), the saved [vocabulary] the reader
- * colours by and the lookup panel saves into (issue #22), the [secrets] store an
+ * colours by and the lookup panel saves into (issue #22), the [readerLevels] the
+ * reader declares per language and the [difficulty] table its words are banded by
+ * (issue #64), the [secrets] store an
  * API key is kept in and never in the vault (issue #24; ADR-0021), the [lemmas]
  * that give each word its identity, the [sync] services that reconcile the vault
  * with a WebDAV server (issue #28), and the [dispatcher] blocking work runs on.
@@ -107,8 +115,10 @@ data class AppEnvironment(
     val mastery: MasteryLookup = MasteryLookup.AllKnown,
     val lemmas: LemmaLookup = LemmaLookup.None,
     val vocabulary: Vocabulary? = null,
+    val readerLevels: ReaderLevels? = null,
     val pickFile: (suspend () -> PickedFile?)? = null,
     val dictionary: DictionaryServices? = null,
+    val difficulty: DifficultyServices? = null,
     val pronouncer: Pronouncer? = null,
     val openUrl: (String) -> Unit = {},
     val vaultTransfer: VaultTransfer? = null,
@@ -174,7 +184,7 @@ private sealed interface Destination {
  * a host test cannot otherwise supply. It defaults to [WindowInsets.safeDrawing]
  * so a platform entry point passes nothing.
  */
-@Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
+@Suppress("LongMethod", "CyclomaticComplexMethod") // The composition root wires each independent seam once.
 @Composable
 fun App(
     environment: AppEnvironment,
@@ -204,6 +214,24 @@ fun App(
     val vocabulary = remember(environment.vocabulary, changes) {
         environment.vocabulary?.let { store -> VocabularyController(store, changes) }
     }
+    // The reader's single mastery composition (ADR-0030): saved vocabulary, the
+    // reader level and the difficulty table, with one revision the reader keys
+    // its word layer on. The difficulty accessor is a function because the table
+    // is installed at runtime.
+    val mastery = remember(vocabulary, environment.readerLevels, environment.difficulty, changes) {
+        vocabulary?.let { store ->
+            MasteryController(
+                vocabulary = store,
+                levels = environment.readerLevels ?: ReaderLevels.None,
+                difficulty = { environment.difficulty?.table?.invoke() },
+                changes = changes,
+            )
+        }
+    }
+    val difficulty = remember(environment.difficulty, environment.dispatcher) {
+        environment.difficulty?.let { services -> DifficultyController(services, environment.dispatcher) }
+    }
+    val difficultyState = difficulty?.state?.collectAsState()?.value ?: DifficultyUiState()
     val provider = remember(environment.llm, environment.secrets, environment.dispatcher, scope) {
         val llm = environment.llm
         val secrets = environment.secrets
@@ -215,10 +243,11 @@ fun App(
     }
     val providerState = provider?.state?.collectAsState()?.value ?: ProviderUiState()
     val sync = rememberSyncController(environment, scope, changes, onSynced = {
-        // Reload what the run moved, so a book, a word or a mastery change from
-        // another device shows without relaunching the app (issues #116, #132).
+        // Reload what the run moved, so a book, a word, a level or a mastery
+        // change from another device shows without relaunching the app
+        // (issues #116, #132).
         controller.refresh()
-        scope.launch { withContext(environment.dispatcher) { vocabulary?.refresh() } }
+        scope.launch { withContext(environment.dispatcher) { mastery?.refresh() ?: vocabulary?.refresh() } }
     })
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
     // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
@@ -228,12 +257,31 @@ fun App(
         sync?.start()
         environment.onResume.collect { sync?.onResumed() }
     }
+    val readingLevels = mastery?.levels().orEmpty()
+    val readingLanguages = (state.books.mapNotNull { book -> book.language }.map(::baseLanguage) + readingLevels.keys)
+        .filter { language -> language.isNotBlank() }
+        .distinct()
+        .sorted()
     val settings = Settings(
         dictionary = dictionary,
+        difficulty = difficulty,
+        mastery = mastery,
         vaultTransfer = vaultTransfer,
         provider = provider,
         sync = sync,
-        state = SettingsUiState(dictionaryState, vaultState, providerState, syncState),
+        state = SettingsUiState(
+            dictionary = dictionaryState,
+            vault = vaultState,
+            provider = providerState,
+            sync = syncState,
+            reading = ReadingUiState(
+                languages = readingLanguages,
+                levels = readingLevels,
+                difficulty = difficultyState.status,
+                installing = difficultyState.installing,
+                error = difficultyState.error,
+            ),
+        ),
     )
 
     // The window's system UI — the status and navigation bars and any display
@@ -241,7 +289,7 @@ fun App(
     // edge to edge whether it asks to or not, so without this the chrome sits
     // under the status bar and the system, which owns that strip, eats its taps.
     Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-        AppScreens(environment, controller, state, scope, progress, settings, vocabulary)
+        AppScreens(environment, controller, state, scope, progress, settings, vocabulary, mastery)
     }
 }
 
@@ -256,6 +304,7 @@ private fun AppScreens(
     progress: ReadingProgressWriter,
     settings: Settings,
     vocabulary: VocabularyController?,
+    mastery: MasteryController?,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -267,7 +316,7 @@ private fun AppScreens(
                 settings.dictionary,
                 scope,
                 progress,
-                vocabulary,
+                mastery,
                 onBack = { destination = Destination.Library },
                 onOpenSettings = { destination = Destination.Settings },
             )
@@ -313,7 +362,7 @@ private fun ReaderDestination(
     dictionary: DictionaryController?,
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
-    vocabulary: VocabularyController?,
+    mastery: MasteryController?,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -321,15 +370,17 @@ private fun ReaderDestination(
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
-    val mastery = vocabulary?.mastery ?: environment.mastery
+    val wordMastery = mastery?.mastery ?: environment.mastery
     val translation = rememberTranslation(environment, scope)
     val lookup = Lookup(
         selection = selection,
         phrase = phrase,
         pronunciation = pronunciationFor(selection, speech, speak),
         vocabulary = VocabularyPanel(
-            entry = selection?.let { selected -> vocabulary?.entryFor(selected.tap.token.key) },
-            onSave = { level -> selection?.let { chosen -> saveWord(vocabulary, scope, environment, chosen, level) } },
+            entry = selection?.let { selected -> mastery?.entryFor(selected.tap.token.key) },
+            onSave = { level -> selection?.let { chosen -> saveWord(mastery, scope, environment, chosen, level) } },
+            defaultLevel = selection?.let { selected -> mastery?.freshSaveLevel(selected.tap.token.key) }
+                ?: MasteryLevel.RECOGNIZED,
         ),
         translation = translation.state,
         onOpenSettings = onOpenSettings,
@@ -353,8 +404,8 @@ private fun ReaderDestination(
     ReaderSession(
         session = session,
         environment = environment,
-        mastery = mastery,
-        masteryRevision = vocabulary?.revision ?: 0,
+        mastery = wordMastery,
+        masteryRevision = mastery?.revision ?: 0,
         lookup = lookup,
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
@@ -379,13 +430,13 @@ private fun pronunciationFor(
  */
 @Suppress("LongParameterList") // The save's inputs are the reader's own pieces; a bundle would only hide that.
 private fun saveWord(
-    vocabulary: VocabularyController?,
+    mastery: MasteryController?,
     scope: CoroutineScope,
     environment: AppEnvironment,
     selection: WordSelection,
     level: MasteryLevel,
 ) {
-    vocabulary ?: return
+    mastery ?: return
     val entry = VocabularyEntry(
         key = selection.tap.token.key,
         surface = selection.tap.token.surface,
@@ -393,7 +444,7 @@ private fun saveWord(
         contextSentence = selection.tap.contextSentence,
         mastery = level,
     )
-    scope.launch { withContext(environment.dispatcher) { vocabulary.save(entry) } }
+    scope.launch { withContext(environment.dispatcher) { mastery.save(entry) } }
 }
 
 /** The translation an offline lookup found, or `null` when it found none. */
@@ -425,8 +476,11 @@ private class Lookup(
  * The settings screen's live pieces, bundled so [AppScreens] stays within the
  * parameter bound: the two controllers it drives and the state it renders.
  */
+@Suppress("LongParameterList") // The settings controllers; bundling a bundle adds a type, not clarity.
 private class Settings(
     val dictionary: DictionaryController?,
+    val difficulty: DifficultyController?,
+    val mastery: MasteryController?,
     val vaultTransfer: VaultTransferController?,
     val provider: ProviderController?,
     val sync: SyncController?,
@@ -451,6 +505,9 @@ private fun SettingsDestination(
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
+            onSetLevel = { language, level -> settings.mastery?.setLevel(language, level) },
+            onDownloadDifficulty = { settings.difficulty?.install() },
+            onDismissDifficultyError = { settings.difficulty?.dismissError() },
             onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
             onModelChange = { model -> settings.provider?.setModel(model) },
             onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },

@@ -1,5 +1,9 @@
 package app.lekto
 
+import app.lekto.core.Seams
+import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.readinglevel.VaultReaderLevels
+import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.core.vault.VaultStore
@@ -23,6 +27,18 @@ fun desktopVaultRoot(): File = File(appDataDirectory("lekto"), "vault")
  * temporary directory.
  */
 fun desktopVaultStore(root: File = desktopVaultRoot()): VaultStore = JsonVaultStore(JvmVaultFileSystem(root))
+
+/**
+ * The desktop **Reader levels** (issue #64; ADR-0030) over [root], defaulting to
+ * [desktopVaultRoot]. A level is a vault record, so this store is the same vault
+ * [desktopBookLibrary] writes to; its stable device id is the one the library
+ * stamps its records with.
+ */
+fun desktopReaderLevels(root: File = desktopVaultRoot()): ReaderLevels = VaultReaderLevels(
+    vault = JsonVaultStore(JvmVaultFileSystem(root)),
+    seams = Seams.system(),
+    deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
+)
 
 /**
  * The vault's whole-file transfer (issue #20) over [root], with the platform's

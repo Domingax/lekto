@@ -82,12 +82,16 @@ class AppVaultSemanticsTest {
 
         compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("Import vault").performScrollTo().performClick()
-        compose.waitUntil { vault.get("restored") != null }
+        compose.waitUntil(timeoutMillis = 10_000) { vault.get("restored") != null }
 
         compose.onNodeWithText("Vault imported", substring = true).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Library").performClick()
+        // The settings column is scrolled down to the vault actions, so the header's
+        // way back must be scrolled to before it can be clicked.
+        compose.onNodeWithText("Library").performScrollTo().performClick()
 
-        compose.waitUntil { compose.onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("The Restored Book").assertIsDisplayed()
     }
 

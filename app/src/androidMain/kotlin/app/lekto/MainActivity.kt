@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
  * The Android composition root: the platform pieces the [MainActivity] supplies
  * to the shared [App], wired where the Activity's `Context` is in scope.
  */
+@Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
 @Composable
 private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: AndroidPronouncer?) {
     val context = LocalContext.current
@@ -48,6 +49,8 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
     val segmenter = remember { IcuTextSegmenter() }
     val picker = remember { AndroidFilePicker() }
     val dictionary = remember { androidDictionary(context) }
+    val difficulty = remember { androidDifficulty(context) }
+    val readerLevels = remember { androidReaderLevels(context) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) {
             picker.resolve(null)
@@ -65,6 +68,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
             library = library,
             lemmas = dictionary.lemmas,
             vocabulary = vocabulary,
+            readerLevels = readerLevels,
             pickFile = {
                 // Arm the picker before launching, then park the import until
                 // it answers — the order closes the resolve-before-await race.
@@ -73,6 +77,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
                 picker.await()
             },
             dictionary = dictionary,
+            difficulty = difficulty,
             pronouncer = speech,
             openUrl = { url -> openInBrowser(context, url) },
             vaultTransfer = vaultTransfer,

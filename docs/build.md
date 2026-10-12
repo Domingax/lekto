@@ -321,6 +321,24 @@ the same rule as `core`'s `normaliseSurface` (NFC + lower case), and writes a
 read-only SQLite file whose `user_version` is the pack format version. It also
 writes a `NOTICE` (attribution) and a `manifest.json` (provenance and counts).
 
+The same run optionally produces the per-language **Difficulty table** (issue
+#64; ADR-0029) from a wordfreq frequency list, keyed by the pack's own word
+identity:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz --output pack.sqlite \
+  --frequency-input wordfreq-en.tsv.gz --difficulty-output difficulty-en.sqlite \
+  --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
+```
+
+`--frequency-input` is one `form<TAB>weight` line per surface form (for wordfreq,
+`10 ** zipf_frequency(form)`); the builder aggregates each form's weight onto the
+lemma the pack's form index knows — or the normalised surface form — ranks the
+keys and cuts them into CEFR bands A1–C2 at the calibrated sizes, writing
+`difficulty-en.sqlite` behind its own `user_version` handshake and its own
+wordfreq `NOTICE`. `DifficultyGoldenTest` and `SqliteDifficultyWriterTest` pin
+the transform and its byte-for-byte reproducibility.
+
 The pack is a **Derived asset**: it is never committed.
 `.github/workflows/dictionary-pack.yml` downloads the source, runs the CLI and
 publishes a GitHub Release tagged `dictionary-en-fr-<YYYYMMDD>` with the pack, a

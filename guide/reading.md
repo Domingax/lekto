@@ -36,6 +36,19 @@ Levels 0–3 are highlighted so unfamiliar words stand out. Level 4 is invisible
 a word you know sits in the text like any other. As you save words and raise their
 levels, the page slowly clears.
 
+## Your reading level
+
+You can tell Lekto the level you read at in a language — one of the CEFR bands
+A1 to C2 — in **Settings**. A word at or below that level then reads as normal
+text straight away, without you saving it, and a harder word stays highlighted by
+how far above your level it is. A word you have saved keeps the level you gave
+it, whatever your reading level is.
+
+The comparison needs word-difficulty data for the language, which you download
+once from **Settings**; it is device-local and never part of your vault or an
+export. Until it is installed, or for a language you have not set a level for,
+nothing changes and every unsaved word stays highlighted.
+
 ## Look a word up
 
 Tap a **Word token** to open the lookup panel. See [Word lookup](/word-lookup).

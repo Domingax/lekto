@@ -14,7 +14,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import app.lekto.core.CefrLevel
 import app.lekto.core.dictionary.DictionaryPackState
+import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
@@ -41,7 +43,7 @@ class SettingsScreenSemanticsTest {
         var downloaded = false
         settings(actions = SettingsActions(onDownload = { downloaded = true }))
 
-        onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
+        onNodeWithText("The offline dictionary isn't installed yet", substring = true).assertIsDisplayed()
         onNodeWithText("Download").performClick()
 
         assertTrue(downloaded)
@@ -102,6 +104,67 @@ class SettingsScreenSemanticsTest {
     }
 
     @Test
+    fun theReadingSectionOffersALevelPerLanguage() = runComposeUiTest {
+        var chosen: Pair<String, CefrLevel>? = null
+        settings(
+            reading = ReadingUiState(languages = listOf("en", "fr")),
+            actions = SettingsActions(onSetLevel = { language, level -> chosen = language to level }),
+        )
+
+        onNodeWithTag(readingLevelPickerTag("en")).performScrollTo().performClick()
+        onNodeWithText("B1").performClick()
+
+        assertEquals("en" to CefrLevel.B1, chosen)
+    }
+
+    @Test
+    fun theReadingSectionShowsTheLevelAlreadySet() = runComposeUiTest {
+        settings(reading = ReadingUiState(languages = listOf("en"), levels = mapOf("en" to CefrLevel.B2)))
+
+        onNodeWithTag(readingLevelPickerTag("en")).performScrollTo().assertIsDisplayed()
+        onNodeWithText("B2").assertIsDisplayed()
+    }
+
+    @Test
+    fun noBookMeansNoLevelPicker() = runComposeUiTest {
+        settings(reading = ReadingUiState(languages = emptyList()))
+
+        onNodeWithText("Import a book to set your reading level.").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aMissingDifficultyTableSaysSoAndOffersADownload() = runComposeUiTest {
+        var downloaded = false
+        settings(actions = SettingsActions(onDownloadDifficulty = { downloaded = true }))
+
+        onNodeWithText("Reading-level data isn't installed yet", substring = true).performScrollTo().assertIsDisplayed()
+        onNodeWithTag(DOWNLOAD_DIFFICULTY_TAG).performScrollTo().performClick()
+
+        assertTrue(downloaded)
+    }
+
+    @Test
+    fun anIncompatibleDifficultyTableTellsTheUserToDownloadAgain() = runComposeUiTest {
+        settings(reading = ReadingUiState(difficulty = DifficultyState.Incompatible(found = 9, expected = 1)))
+
+        onNodeWithText("format 9", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aDifficultyDownloadFailureShowsAndDismisses() = runComposeUiTest {
+        var dismissed = false
+        settings(
+            reading = ReadingUiState(error = "The download failed."),
+            actions = SettingsActions(onDismissDifficultyError = { dismissed = true }),
+        )
+
+        onNodeWithText("The download failed.").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Dismiss").performScrollTo().performClick()
+
+        assertTrue(dismissed)
+    }
+
+    @Test
     fun theVaultSectionOffersExportAndImport() = runComposeUiTest {
         var exported = false
         var imported = false
@@ -110,9 +173,9 @@ class SettingsScreenSemanticsTest {
             actions = SettingsActions(onExportVault = { exported = true }, onImportVault = { imported = true }),
         )
 
-        onNodeWithText("Vault exported.").assertIsDisplayed()
-        onNodeWithText("Export vault").performClick()
-        onNodeWithText("Import vault").performClick()
+        onNodeWithText("Vault exported.").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Export vault").performScrollTo().performClick()
+        onNodeWithText("Import vault").performScrollTo().performClick()
 
         assertTrue(exported)
         assertTrue(imported)
@@ -122,9 +185,11 @@ class SettingsScreenSemanticsTest {
     fun anUnwiredVaultTransferSaysSoAndDisablesTheActions() = runComposeUiTest {
         settings(vault = VaultUiState(available = false))
 
-        onNodeWithText("aren't available", substring = true).assertIsDisplayed()
-        onNodeWithText("Export vault").assertIsNotEnabled()
-        onNodeWithText("Import vault").assertIsNotEnabled()
+        onNodeWithText("Vault export and import aren't available", substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+        onNodeWithText("Export vault").performScrollTo().assertIsNotEnabled()
+        onNodeWithText("Import vault").performScrollTo().assertIsNotEnabled()
     }
 
     @Test
@@ -135,8 +200,8 @@ class SettingsScreenSemanticsTest {
             actions = SettingsActions(onDismissVaultMessage = { dismissed = true }),
         )
 
-        onNodeWithText("That file isn't a Lekto vault.").assertIsDisplayed()
-        onNodeWithText("Dismiss").performClick()
+        onNodeWithText("That file isn't a Lekto vault.").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Dismiss").performScrollTo().performClick()
 
         assertTrue(dismissed)
     }
@@ -462,12 +527,13 @@ private fun ComposeUiTest.settings(
     vault: VaultUiState = VaultUiState(),
     provider: ProviderUiState = ProviderUiState(),
     sync: SyncUiState = SyncUiState(),
+    reading: ReadingUiState = ReadingUiState(),
     actions: SettingsActions = SettingsActions(),
 ) {
     setContent {
         MaterialTheme {
             SettingsScreen(
-                state = SettingsUiState(dictionary, vault, provider, sync),
+                state = SettingsUiState(dictionary, vault, provider, sync, reading),
                 actions = actions,
                 modifier = Modifier.size(width = 360.dp, height = 720.dp),
             )

@@ -741,6 +741,34 @@ list's filter and the lookup panel's level selector cannot drift;
 chip clears it, and a filter that matches nothing says so, and `AppSemanticsTest`
 filters the list to a level and finds only that level's word.
 
+Default mastery from the reader's level (issue #64; ADR-0029, ADR-0030) is proved
+at the same levels. The rule itself is a domain invariant, so `DefaultMasteryTest`
+in `core/commonTest` walks every band combination as a property and pins the
+arithmetic — a saved level wins, a word at or below the reader's band is known,
+each band above drops one level, and either band absent is unknown. The **Reader
+level** is a vault record, so `ReaderLevelRecordPropertyTest` pins its round-trip
+and its deterministic base-tag id and `VaultReaderLevelsTest` proves it survives a
+restart and travels in an export. The **Difficulty table** is a seam: the shared
+`WordDifficultyContract` in `testkit` runs against the in-memory table in
+`core/commonTest`, against the real SQLite artifact the pipeline produces —
+committed as `difficulty/en-sample.sqlite` under `core/src/commonTest/resources` —
+in `core/jvmTest`, and against the Android framework's SQLite in the Robolectric
+`androidHostTest` lane, so the two clients cannot answer a band differently; the
+installer's lifecycle (download, the format-handshake refusal and removal,
+corruption, and the table's exclusion from the vault's export) is a
+`core/commonTest` behaviour over the `testkit` fakes. The transform that builds
+the artifact is pinned in `tools/dictionaries` by `DifficultyBuilderTest`,
+`SqliteDifficultyWriterTest` and `DifficultyGoldenTest`, and the producer and
+consumer agree on the format version through
+`DifficultyFormatSynchronisationTest` in `architecture` (ADR-0013). The app's
+single `MasteryController` — the composition of saved vocabulary, the reader
+level and the difficulty, with the one revision the reader recolours on — is
+`MasteryControllerTest` in `app/desktopTest`, the download's state holder is
+`DifficultyControllerTest`, and the settings section's level pickers and the
+difficulty table's state and download are `SettingsScreenSemanticsTest` on both
+lanes. The level UI lands in Settings for now; a dedicated profile/languages
+surface is a companion issue.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

@@ -1,15 +1,17 @@
 package app.lekto.settings
 
+import app.lekto.core.CefrLevel
 import app.lekto.core.llm.LlmProvider
 
 /**
  * The actions the settings screen raises: download the dictionary pack, open
  * attributions, dismiss a download failure, export or import the vault, dismiss
- * the vault's last outcome, go back, and the two sections that carry a secret —
- * the LLM provider (issue #88) and sync (issue #28). The provider and sync
- * actions carry the secret the field owns, so a key or a password never enters
- * the screen's state; the rest come from the screen's own controls. Bundled so
- * the screen's signature stays small as more settings land.
+ * the vault's last outcome, go back, the two sections that carry a secret — the
+ * LLM provider (issue #88) and sync (issue #28) — and the reading-level section
+ * (issue #64). The provider and sync actions carry the secret the field owns, so
+ * a key or a password never enters the screen's state; the rest come from the
+ * screen's own controls. Bundled so the screen's signature stays small as more
+ * settings land.
  */
 data class SettingsActions(
     val onDownload: () -> Unit = {},
@@ -19,6 +21,9 @@ data class SettingsActions(
     val onExportVault: () -> Unit = {},
     val onImportVault: () -> Unit = {},
     val onDismissVaultMessage: () -> Unit = {},
+    val onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
+    val onDownloadDifficulty: () -> Unit = {},
+    val onDismissDifficultyError: () -> Unit = {},
     val onSelectProvider: (LlmProvider) -> Unit = {},
     val onModelChange: (String) -> Unit = {},
     val onBaseUrlChange: (String) -> Unit = {},
