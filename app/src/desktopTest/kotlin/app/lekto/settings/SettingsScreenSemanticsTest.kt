@@ -21,6 +21,7 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
 import app.lekto.dictionary.DictionaryUiState
+import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testPackMetadata
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -148,6 +149,22 @@ class SettingsScreenSemanticsTest {
         settings(readerLevel = ReaderLevelUiState(difficulty = DifficultyState.Incompatible(found = 9, expected = 1)))
 
         onNodeWithText("format 9", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun anInstalledDifficultyTableOffersADownloadAgain() = runComposeUiTest {
+        settings(readerLevel = ReaderLevelUiState(difficulty = DifficultyState.Ready(testDifficultyMetadata())))
+
+        onNodeWithText("is installed", substring = true).performScrollTo().assertIsDisplayed()
+        onNodeWithText("Download again").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun downloadingDifficultyDataDisablesTheActionAndReportsProgress() = runComposeUiTest {
+        settings(readerLevel = ReaderLevelUiState(installing = true))
+
+        onNodeWithText("Downloading reading-level data", substring = true).performScrollTo().assertIsDisplayed()
+        onNodeWithTag(DOWNLOAD_DIFFICULTY_TAG).performScrollTo().assertIsNotEnabled()
     }
 
     @Test

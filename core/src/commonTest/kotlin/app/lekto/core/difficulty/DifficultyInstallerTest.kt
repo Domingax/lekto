@@ -122,6 +122,16 @@ class DifficultyInstallerTest :
             installed.open() shouldBe null
         }
 
+        test("closing the installer releases the open table") {
+            val (installed, _) = installer()
+            installed.install()
+
+            installed.close()
+
+            // The file is still installed, so a fresh installer opens it again.
+            installed.status().shouldBeInstanceOf<DifficultyState.Ready>()
+        }
+
         test("the installed table is a derived asset that never reaches the vault or its export") {
             val vault = JsonVaultStore(InMemoryVaultFileSystem())
             vault.put(testVaultRecord("a"))

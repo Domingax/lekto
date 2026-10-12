@@ -89,6 +89,31 @@ class DifficultyControllerTest {
     }
 
     @Test
+    fun `a failed install does not notify`() = runTest {
+        val (services, files) = services()
+        files.failure = IOException("offline")
+        val controller = DifficultyController(services, StandardTestDispatcher(testScheduler), this)
+        var notified = false
+
+        controller.install { notified = true }
+        advanceUntilIdle()
+
+        assertTrue(!notified, "a failed download changed nothing, so nothing recolours")
+    }
+
+    @Test
+    fun `an install already in progress is not started again`() = runTest {
+        val (services, files) = services()
+        val controller = DifficultyController(services, StandardTestDispatcher(testScheduler), this)
+
+        controller.install()
+        controller.install()
+        advanceUntilIdle()
+
+        assertEquals(1, files.downloads)
+    }
+
+    @Test
     fun `the installed table opens for the mastery composition`() = runTest {
         val (services, _) = services()
         val controller = DifficultyController(services, StandardTestDispatcher(testScheduler), this)

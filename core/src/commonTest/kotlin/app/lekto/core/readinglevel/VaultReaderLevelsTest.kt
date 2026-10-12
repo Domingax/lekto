@@ -82,4 +82,14 @@ class VaultReaderLevelsTest :
 
             levels(restored).levelFor("en") shouldBe CefrLevel.B1
         }
+
+        test("the no-op ReaderLevels knows none and stores nothing") {
+            val none = ReaderLevels.None
+
+            none.levelFor("en") shouldBe null
+            none.levelFor(null) shouldBe null
+            none.levels() shouldBe emptyMap()
+            none.setLevel("en", CefrLevel.B2)
+            none.levelFor("en") shouldBe null
+        }
     })

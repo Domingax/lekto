@@ -20,6 +20,7 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
 import app.lekto.dictionary.DictionaryUiState
+import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testPackMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -45,7 +46,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("TooManyFunctions") // One screen, one test per control; splitting the class hides the section.
+@Suppress("TooManyFunctions", "LargeClass") // One screen, one test per control; splitting hides the section.
 class SettingsScreenSemanticsTest {
 
     @get:Rule
@@ -162,6 +163,22 @@ class SettingsScreenSemanticsTest {
         render(readerLevel = ReaderLevelUiState(difficulty = DifficultyState.Incompatible(found = 9, expected = 1)))
 
         compose.onNodeWithText("format 9", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun anInstalledDifficultyTableOffersADownloadAgain() {
+        render(readerLevel = ReaderLevelUiState(difficulty = DifficultyState.Ready(testDifficultyMetadata())))
+
+        compose.onNodeWithText("is installed", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Download again").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun downloadingDifficultyDataDisablesTheActionAndReportsProgress() {
+        render(readerLevel = ReaderLevelUiState(installing = true))
+
+        compose.onNodeWithText("Downloading reading-level data", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(DOWNLOAD_DIFFICULTY_TAG).performScrollTo().assertIsNotEnabled()
     }
 
     @Test
