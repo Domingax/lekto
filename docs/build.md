@@ -356,6 +356,20 @@ and `DictionaryPackGoldenTest` proves the transform on a committed fixture; a
 sanity gate fails a run only on a changed source schema or a coverage collapse
 below 80% of the previous build's lemma count.
 
+The same run also writes a **language manifest**
+(`--language-manifest`, default `language-manifest.json` beside the pack): the
+catalogue of what the release offers for reading — each **Reading language** with
+the **Difficulty table** published for it and the **Dictionary pack**s published
+for its pairs, each pair naming its **Translation language** (issue #145). It is
+built from the run's own output, so a run that published nothing yields an empty
+manifest and the catalogue can never advertise an artefact that was not built.
+The workflow uploads it under its own date-free name beside the aliases, so the
+app can fetch one constant address,
+`releases/latest/download/language-manifest.json`. Its format version is declared
+by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
+`LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test
+(ADR-0013).
+
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
 the alias into the device-local **derived store**, validates the format handshake
 and opens the SQLite file in place — `sqlite-jdbc` on the JVM, the Android

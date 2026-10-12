@@ -30,3 +30,12 @@ code Apache-2.0), which contains data from Google Books Ngram Viewer, OpenSubtit
 and the SUBTLEX word lists by Brysbaert et al. Full texts in the attached `NOTICE`
 and `DIFFICULTY-NOTICE`. Lekto is not affiliated with, nor endorsed by, the
 Wikimedia Foundation, Wiktionary or wordfreq.
+
+## Language manifest
+
+The same run writes `language-manifest.json`, the catalogue the app reads for
+reading: every **Reading language** with the difficulty table it publishes and the
+dictionary packs published for its pairs, each naming its translation language.
+
+- **Stable download (latest):** <https://github.com/{{REPOSITORY}}/releases/latest/download/language-manifest.json>
+

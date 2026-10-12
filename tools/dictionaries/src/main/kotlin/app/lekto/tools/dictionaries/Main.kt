@@ -48,7 +48,10 @@ private fun runPipeline(options: CliOptions) {
     val manifest = manifestJson.encodeToString(PackManifest(PackFormat.VERSION, content.provenance, content.stats))
     Files.writeString(options.outputs.manifest, manifest)
     println(manifest)
-    options.difficulty?.let { difficulty -> buildDifficulty(content, difficulty) }
+    val difficulty = options.difficulty?.let { buildDifficulty(content, it) }
+    val languageManifest = buildLanguageManifest(content, difficulty).canonicalJson()
+    Files.writeString(options.languageManifest, languageManifest)
+    println(languageManifest)
 }
 
 /**
@@ -56,7 +59,7 @@ private fun runPipeline(options: CliOptions) {
  * (ADR-0029): the same input plus a frequency source, keyed by the word identity
  * the pack's form index gives.
  */
-private fun buildDifficulty(pack: PackContent, options: DifficultyOptions) {
+private fun buildDifficulty(pack: PackContent, options: DifficultyOptions): DifficultyContent {
     val content = openInput(options.input).use { stream ->
         BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { reader ->
             DifficultyBuilder(pack).build(reader)
@@ -69,6 +72,7 @@ private fun buildDifficulty(pack: PackContent, options: DifficultyOptions) {
     )
     Files.writeString(options.outputs.manifest, manifest)
     println(manifest)
+    return content
 }
 
 private fun build(options: CliOptions): PackContent = openInput(options.input).use { stream ->

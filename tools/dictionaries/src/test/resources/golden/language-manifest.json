@@ -1,0 +1,17 @@
+{
+    "formatVersion": 1,
+    "languages": [
+        {
+            "language": "en",
+            "difficulty": {
+                "name": "lekto-difficulty-en.sqlite.gz"
+            },
+            "dictionaries": [
+                {
+                    "translationLanguage": "fr",
+                    "name": "lekto-dictionary-en-fr.sqlite.gz"
+                }
+            ]
+        }
+    ]
+}
