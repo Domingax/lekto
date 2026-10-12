@@ -180,6 +180,16 @@ class MasteryControllerTest {
     }
 
     @Test
+    fun invalidatingBumpsTheRevisionSoAnInstalledTableRecolours() {
+        val controller = controller()
+        val before = controller.revision
+
+        controller.invalidate()
+
+        assertEquals(before + 1, controller.revision)
+    }
+
+    @Test
     fun refreshingAdoptsALevelTheSyncMoved() {
         val levels = InMemoryReaderLevels()
         val controller = controller(levels = levels)

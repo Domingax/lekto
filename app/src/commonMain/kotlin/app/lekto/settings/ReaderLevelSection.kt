@@ -27,11 +27,10 @@ import app.lekto.core.difficulty.DifficultyState
 import app.lekto.difficulty.summary
 
 /** The test tag on a language's level picker, so a UI test can click exactly one. */
-internal fun readingLevelPickerTag(language: String): String = "settings-level-$language"
+internal fun readerLevelPickerTag(language: String): String = "settings-level-$language"
 
 /** The test tag on a level option in a language's picker. */
-internal fun readingLevelOptionTag(language: String, level: CefrLevel): String =
-    "settings-level-$language-${level.name}"
+internal fun readerLevelOptionTag(language: String, level: CefrLevel): String = "settings-level-$language-${level.name}"
 
 /** The test tag on the difficulty table's download button. */
 internal const val DOWNLOAD_DIFFICULTY_TAG: String = "settings-difficulty-download"
@@ -44,7 +43,7 @@ internal const val DOWNLOAD_DIFFICULTY_TAG: String = "settings-difficulty-downlo
  * synced.
  */
 @Composable
-internal fun ReadingSection(state: ReadingUiState, actions: SettingsActions) {
+internal fun ReaderLevelSection(state: ReaderLevelUiState, actions: SettingsActions) {
     Text(
         "Set the level you read at in each language. A word at or below it reads as normal text; " +
             "a harder word stays highlighted.",
@@ -82,7 +81,7 @@ private fun LevelRow(language: String, level: CefrLevel?, actions: SettingsActio
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
-                modifier = Modifier.testTag(readingLevelPickerTag(language)),
+                modifier = Modifier.testTag(readerLevelPickerTag(language)),
             ) {
                 Text(level?.name ?: "Not set")
             }
@@ -94,7 +93,7 @@ private fun LevelRow(language: String, level: CefrLevel?, actions: SettingsActio
                             expanded = false
                             actions.onSetLevel(language, option)
                         },
-                        modifier = Modifier.testTag(readingLevelOptionTag(language, option)),
+                        modifier = Modifier.testTag(readerLevelOptionTag(language, option)),
                     )
                 }
             }

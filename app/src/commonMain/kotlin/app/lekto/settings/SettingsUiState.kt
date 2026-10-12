@@ -14,18 +14,18 @@ data class SettingsUiState(
     val vault: VaultUiState = VaultUiState(),
     val provider: ProviderUiState = ProviderUiState(),
     val sync: SyncUiState = SyncUiState(),
-    val reading: ReadingUiState = ReadingUiState(),
+    val readerLevel: ReaderLevelUiState = ReaderLevelUiState(),
 )
 
 /**
- * The reading-level section (issue #64; ADR-0030): the languages the reader has
+ * The reader-level section (issue #64; ADR-0030): the languages the reader has
  * a book in, the level declared in each, and the difficulty table's state.
  *
  * [languages] is what the screen offers a picker for — every language present in
  * the library, plus every language a level is already set for — so a reader can
  * declare a level for each language they read.
  */
-data class ReadingUiState(
+data class ReaderLevelUiState(
     val languages: List<String> = emptyList(),
     val levels: Map<String, CefrLevel> = emptyMap(),
     val difficulty: DifficultyState = DifficultyState.NotInstalled,

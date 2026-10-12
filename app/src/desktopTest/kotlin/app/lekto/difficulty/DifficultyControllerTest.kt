@@ -77,6 +77,18 @@ class DifficultyControllerTest {
     }
 
     @Test
+    fun `a successful install notifies so the reader recolours`() = runTest {
+        val (services, _) = services()
+        val controller = DifficultyController(services, StandardTestDispatcher(testScheduler), this)
+        var notified = false
+
+        controller.install { notified = true }
+        advanceUntilIdle()
+
+        assertTrue(notified, "the mastery composition must recolour once the table is installed")
+    }
+
+    @Test
     fun `the installed table opens for the mastery composition`() = runTest {
         val (services, _) = services()
         val controller = DifficultyController(services, StandardTestDispatcher(testScheduler), this)

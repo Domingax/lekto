@@ -27,6 +27,7 @@ import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.translationShortcut
+import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -65,7 +66,7 @@ import app.lekto.reader.WordTap
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.ProviderController
 import app.lekto.settings.ProviderUiState
-import app.lekto.settings.ReadingUiState
+import app.lekto.settings.ReaderLevelUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
 import app.lekto.settings.SettingsUiState
@@ -274,7 +275,7 @@ fun App(
             vault = vaultState,
             provider = providerState,
             sync = syncState,
-            reading = ReadingUiState(
+            readerLevel = ReaderLevelUiState(
                 languages = readingLanguages,
                 levels = readingLevels,
                 difficulty = difficultyState.status,
@@ -323,6 +324,7 @@ private fun AppScreens(
 
             Destination.Attribution -> AttributionScreen(
                 metadata = (settings.state.dictionary.status as? DictionaryPackState.Ready)?.metadata,
+                difficulty = (settings.state.readerLevel.difficulty as? DifficultyState.Ready)?.metadata,
                 onBack = { destination = Destination.Settings },
             )
 
@@ -506,7 +508,7 @@ private fun SettingsDestination(
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
             onSetLevel = { language, level -> settings.mastery?.setLevel(language, level) },
-            onDownloadDifficulty = { settings.difficulty?.install() },
+            onDownloadDifficulty = { settings.difficulty?.install { settings.mastery?.invalidate() } },
             onDismissDifficultyError = { settings.difficulty?.dismissError() },
             onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
             onModelChange = { model -> settings.provider?.setModel(model) },

@@ -58,9 +58,6 @@ fun interface MasteryLookup {
     }
 }
 
-/** The number of the top mastery level, "known" — the ceiling the derived rule starts from. */
-private const val KNOWN_LEVEL = 4
-
 /**
  * The default-mastery composition (ADR-0023, ADR-0030): a saved entry's level
  * always wins; otherwise the level derives from the word's **Word difficulty**
@@ -94,5 +91,5 @@ fun defaultMasteryLookup(
 fun derivedMastery(difficultyBand: CefrLevel?, readerBand: CefrLevel?): MasteryLevel {
     if (difficultyBand == null || readerBand == null) return MasteryLevel.UNKNOWN
     val bandsAbove = (difficultyBand.band - readerBand.band).coerceAtLeast(0)
-    return MasteryLevel.forLevel(KNOWN_LEVEL - bandsAbove)
+    return MasteryLevel.forLevel(MasteryLevel.KNOWN.level - bandsAbove)
 }

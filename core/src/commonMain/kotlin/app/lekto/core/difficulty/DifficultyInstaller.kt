@@ -59,23 +59,15 @@ class DifficultyInstaller(
      * download can replace it.
      */
     fun install(): DifficultyState {
-        val target = destination()
-        downloader.download(url, target)
-        val inspected = inspect(target)
-        if (inspected !is DifficultyState.Ready) {
-            table?.close()
-            table = null
-            derived.remove(pathOf(language))
-        }
+        downloader.download(url, destination())
+        val inspected = inspect(destination())
         state = inspected
         return inspected
     }
 
     /** Removes the installed table, if any. */
     fun remove(): DifficultyState {
-        table?.close()
-        table = null
-        derived.remove(pathOf(language))
+        discard()
         state = DifficultyState.NotInstalled
         return DifficultyState.NotInstalled
     }
@@ -93,19 +85,30 @@ class DifficultyInstaller(
     } catch (ignored: DictionaryPackMissing) {
         DifficultyState.NotInstalled
     } catch (failure: Exception) {
+        // A file that cannot be read is refused and removed, so it cannot be
+        // handed to the reader and a later download starts from a clean store.
+        discard()
         DifficultyState.Corrupt(failure.message ?: UNREADABLE)
     }
 
-    /** Accepts a readable table, or names why this build refuses it. */
+    /** Accepts a readable table, or names why this build refuses it and drops the refused file. */
     private fun validate(opened: WordDifficulty): DifficultyState {
         val version = opened.metadata.formatVersion
         if (version != WordDifficulty.FORMAT_VERSION) {
             opened.close()
+            discard()
             return DifficultyState.Incompatible(version, WordDifficulty.FORMAT_VERSION)
         }
         table?.close()
         table = opened
         return DifficultyState.Ready(opened.metadata)
+    }
+
+    /** Closes and removes the installed table, so a refused or stale file cannot linger. */
+    private fun discard() {
+        table?.close()
+        table = null
+        derived.remove(pathOf(language))
     }
 
     companion object {

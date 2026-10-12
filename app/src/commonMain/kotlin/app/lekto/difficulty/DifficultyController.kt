@@ -36,13 +36,16 @@ class DifficultyController(
 
     /** Downloads and installs the table, reporting progress and catching failure. */
     @Suppress("TooGenericExceptionCaught") // A failed download becomes a message; the app stays usable.
-    fun install() {
+    fun install(onInstalled: () -> Unit = {}) {
         if (_state.value.installing) return
         _state.update { current -> current.copy(installing = true, error = null) }
         scope.launch {
             try {
                 val status = withContext(dispatcher) { services.installer.install() }
                 _state.update { current -> current.copy(status = status, installing = false) }
+                // The table changed what the reader would paint, so the mastery
+                // composition recolours the open book the way a save does (ADR-0030).
+                if (status is DifficultyState.Ready) onInstalled()
             } catch (failure: Exception) {
                 _state.update { current ->
                     current.copy(installing = false, error = failure.message ?: "The download failed.")

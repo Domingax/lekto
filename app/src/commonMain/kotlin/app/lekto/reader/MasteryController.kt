@@ -47,7 +47,7 @@ class MasteryController(
         private set
 
     init {
-        levels.levels().forEach { (language, level) -> declared[language] = level }
+        reloadLevels()
     }
 
     /** The level to paint each word: saved first, then derived, then unknown. */
@@ -97,8 +97,7 @@ class MasteryController(
      */
     fun refresh() {
         vocabulary.refresh()
-        declared.clear()
-        levels.levels().forEach { (language, level) -> declared[language] = level }
+        reloadLevels()
         revision++
     }
 
@@ -112,5 +111,15 @@ class MasteryController(
         declared[baseLanguage(language)] = level
         revision++
         changes.contentChanged()
+    }
+
+    /** Bumps [revision] without a write, so a change to the difficulty table recolours the reader. */
+    fun invalidate() {
+        revision++
+    }
+
+    private fun reloadLevels() {
+        declared.clear()
+        levels.levels().forEach { (language, level) -> declared[language] = level }
     }
 }

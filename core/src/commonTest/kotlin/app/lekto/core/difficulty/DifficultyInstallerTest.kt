@@ -78,6 +78,31 @@ class DifficultyInstallerTest :
             installer(derived).first.status() shouldBe DifficultyState.NotInstalled
         }
 
+        test("a pre-existing incompatible table is refused and removed on inspection") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (installed, files) = installer(derived)
+            derived.put(DifficultyInstaller.pathOf(language), byteArrayOf(1))
+            files.version = WordDifficulty.FORMAT_VERSION + 1
+
+            installed.status() shouldBe
+                DifficultyState.Incompatible(WordDifficulty.FORMAT_VERSION + 1, WordDifficulty.FORMAT_VERSION)
+
+            derived.paths() shouldBe emptyList()
+            installed.open() shouldBe null
+        }
+
+        test("a pre-existing unreadable table is refused and removed on inspection") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (installed, files) = installer(derived)
+            derived.put(DifficultyInstaller.pathOf(language), byteArrayOf(1))
+            files.openFailure = IllegalStateException("file is not a database")
+
+            installed.status() shouldBe DifficultyState.Corrupt("file is not a database")
+
+            derived.paths() shouldBe emptyList()
+            installed.open() shouldBe null
+        }
+
         test("a failed download propagates and leaves nothing installed") {
             val (installed, files) = installer()
             files.failure = java.io.IOException("offline")

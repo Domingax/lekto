@@ -314,7 +314,8 @@ class AppSemanticsTest {
 
         onNodeWithText("Attribution").performClick()
 
-        onNodeWithText("CC BY-SA 4.0", substring = true).assertIsDisplayed()
+        onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
+            .assertIsDisplayed()
     }
 
     @Test

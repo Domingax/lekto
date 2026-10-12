@@ -120,11 +120,11 @@ class SettingsScreenSemanticsTest {
     fun theReadingSectionOffersALevelPerLanguage() {
         var chosen: Pair<String, CefrLevel>? = null
         render(
-            reading = ReadingUiState(languages = listOf("en", "fr")),
+            readerLevel = ReaderLevelUiState(languages = listOf("en", "fr")),
             actions = SettingsActions(onSetLevel = { language, level -> chosen = language to level }),
         )
 
-        compose.onNodeWithTag(readingLevelPickerTag("en")).performScrollTo().performClick()
+        compose.onNodeWithTag(readerLevelPickerTag("en")).performScrollTo().performClick()
         compose.onNodeWithText("B1").performClick()
 
         assertEquals("en" to CefrLevel.B1, chosen)
@@ -132,15 +132,15 @@ class SettingsScreenSemanticsTest {
 
     @Test
     fun theReadingSectionShowsTheLevelAlreadySet() {
-        render(reading = ReadingUiState(languages = listOf("en"), levels = mapOf("en" to CefrLevel.B2)))
+        render(readerLevel = ReaderLevelUiState(languages = listOf("en"), levels = mapOf("en" to CefrLevel.B2)))
 
-        compose.onNodeWithTag(readingLevelPickerTag("en")).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(readerLevelPickerTag("en")).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("B2").assertIsDisplayed()
     }
 
     @Test
     fun noBookMeansNoLevelPicker() {
-        render(reading = ReadingUiState(languages = emptyList()))
+        render(readerLevel = ReaderLevelUiState(languages = emptyList()))
 
         compose.onNodeWithText("Import a book to set your reading level.").performScrollTo().assertIsDisplayed()
     }
@@ -159,7 +159,7 @@ class SettingsScreenSemanticsTest {
 
     @Test
     fun anIncompatibleDifficultyTableTellsTheUserToDownloadAgain() {
-        render(reading = ReadingUiState(difficulty = DifficultyState.Incompatible(found = 9, expected = 1)))
+        render(readerLevel = ReaderLevelUiState(difficulty = DifficultyState.Incompatible(found = 9, expected = 1)))
 
         compose.onNodeWithText("format 9", substring = true).performScrollTo().assertIsDisplayed()
     }
@@ -168,7 +168,7 @@ class SettingsScreenSemanticsTest {
     fun aDifficultyDownloadFailureShowsAndDismisses() {
         var dismissed = false
         render(
-            reading = ReadingUiState(error = "The download failed."),
+            readerLevel = ReaderLevelUiState(error = "The download failed."),
             actions = SettingsActions(onDismissDifficultyError = { dismissed = true }),
         )
 
@@ -535,13 +535,13 @@ class SettingsScreenSemanticsTest {
         vault: VaultUiState = VaultUiState(),
         provider: ProviderUiState = ProviderUiState(),
         sync: SyncUiState = SyncUiState(),
-        reading: ReadingUiState = ReadingUiState(),
+        readerLevel: ReaderLevelUiState = ReaderLevelUiState(),
         actions: SettingsActions = SettingsActions(),
     ) {
         compose.setContent {
             MaterialTheme {
                 SettingsScreen(
-                    state = SettingsUiState(dictionary, vault, provider, sync, reading),
+                    state = SettingsUiState(dictionary, vault, provider, sync, readerLevel),
                     actions = actions,
                     modifier = Modifier.size(width = 360.dp, height = 720.dp),
                 )

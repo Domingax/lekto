@@ -338,7 +338,8 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("Attribution").performScrollTo().performClick()
 
-        compose.onNodeWithText("CC BY-SA 4.0", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
+            .assertIsDisplayed()
     }
 
     @Test

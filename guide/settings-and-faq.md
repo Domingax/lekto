@@ -9,7 +9,7 @@ answers the common questions.
   status and last result; see [Vault and sync](/vault-and-sync).
 - **Vault export and import** — write your whole Vault to a bundle, or restore one.
 - **Dictionary pack** — the status of the offline dictionary pack and its download.
-- **Reading level** — declare the CEFR level you read at in each language, and
+- **Reader level** — declare the CEFR level you read at in each language, and
   download the word-difficulty data that colours harder words. See
   [Reading](/reading).
 - **LLM provider** — choose a provider, enter an API key, pick a model, and test the
@@ -39,7 +39,7 @@ available to it. See [LLM provider and privacy](/llm-provider).
 ### Every word is still highlighted
 
 Lekto colours a word as known only when it can compare the word's difficulty with
-your reading level, so both are needed: download the word-difficulty data in
+your reader level, so both are needed: download the word-difficulty data in
 **Settings** and set your level for the language you are reading in. A language
 with no level set, or a word the difficulty data does not cover, stays
 highlighted. See [Reading](/reading).
