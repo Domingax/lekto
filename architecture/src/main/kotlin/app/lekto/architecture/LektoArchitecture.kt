@@ -26,6 +26,7 @@ object Rules {
     const val SOURCE_PLACEMENT = "source-placement"
     const val TEST_PLACEMENT = "test-placement"
     const val UI_TEST_PARITY = "ui-test-parity"
+    const val DEPENDABOT_WATCH = "dependabot-watch"
 }
 
 /**

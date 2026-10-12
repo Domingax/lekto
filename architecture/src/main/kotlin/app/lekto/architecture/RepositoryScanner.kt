@@ -6,9 +6,10 @@ import java.io.File
  * Reads a working tree into the pure [Repository] the rules inspect.
  *
  * The scanner is the only part that touches disk: it finds the repository root,
- * reads the two Gradle files that declare the module graph, and reduces every
- * Kotlin file to its package and imports. Everything a rule needs is then a
- * value, so a rule is testable without a working tree (ticket #9).
+ * reads the two Gradle files that declare the module graph, reduces every Kotlin
+ * file to its package and imports, and lists the dependency manifests the
+ * repository ships. Everything a rule needs is then a value, so a rule is
+ * testable without a working tree (ticket #9).
  */
 object RepositoryScanner {
 
@@ -48,6 +49,34 @@ object RepositoryScanner {
             .toList()
     }
 
+    /**
+     * The dependency manifests the repository ships, each paired with the
+     * ecosystem Dependabot reads it as and the directory an entry must name
+     * ([PackageManifest]). Only the ecosystems this repository uses are
+     * discovered — a Gradle build at the root, every npm project outside
+     * `node_modules`, and the Actions workflows — so [DependabotWatch] fails when
+     * one of them has no entry in `.github/dependabot.yml` (issue #153).
+     */
+    fun findManifests(root: File): List<PackageManifest> = buildList {
+        if (File(root, SETTINGS_FILE).isFile) {
+            add(PackageManifest(GRADLE_ECOSYSTEM, ROOT_DIRECTORY, SETTINGS_FILE))
+        }
+        addAll(npmManifests(root))
+        if (File(root, WORKFLOWS_DIRECTORY).isDirectory) {
+            add(PackageManifest(ACTIONS_ECOSYSTEM, ROOT_DIRECTORY, WORKFLOWS_DIRECTORY))
+        }
+    }
+
+    private fun npmManifests(root: File): List<PackageManifest> = root.walkTopDown()
+        .onEnter { directory -> directory.name !in SKIPPED_DIRECTORIES }
+        .filter { file -> file.isFile && file.name == NPM_MANIFEST }
+        .map { file ->
+            val directory = file.parentFile.relativeTo(root).invariantSeparatorsPath
+            PackageManifest(NPM_ECOSYSTEM, "/$directory", file.relativeTo(root).invariantSeparatorsPath)
+        }
+        .sortedBy { manifest -> manifest.path }
+        .toList()
+
     private fun source(root: File, module: String, file: File): KotlinSource {
         val path = file.relativeTo(root).invariantSeparatorsPath
         val text = file.readText()
@@ -65,6 +94,15 @@ object RepositoryScanner {
 
     private const val SETTINGS_FILE = "settings.gradle.kts"
     private const val KOTLIN_EXTENSION = "kt"
+    private const val NPM_MANIFEST = "package.json"
+    private const val WORKFLOWS_DIRECTORY = ".github/workflows"
+    private const val GRADLE_ECOSYSTEM = "gradle"
+    private const val NPM_ECOSYSTEM = "npm"
+    private const val ACTIONS_ECOSYSTEM = "github-actions"
+    private const val ROOT_DIRECTORY = "/"
+
+    /** Directories no manifest is discovered under: dependency and build output. */
+    private val SKIPPED_DIRECTORIES = setOf("node_modules", ".git", ".gradle", ".kotlin", ".idea", "build")
     private val PACKAGE_PATTERN = Regex("""(?m)^\s*package\s+([\w.]+)""")
     private val IMPORT_PATTERN = Regex("""(?m)^\s*import\s+([\w.]+)""")
 }
