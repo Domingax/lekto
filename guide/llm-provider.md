@@ -30,7 +30,8 @@ device-local and is not stored in your Vault.
 
 OpenCode Zen and OpenCode Go publish their list, so it loads without a key. A
 provider that has no model list — or answers in a way Lekto cannot read — is
-reported inline, and the **Model** field stays for you to type the name instead.
+reported inline, and the **Model** field stays for you to type the name instead. If
+your provider needs a key, a discreet note under the field reminds you to enter it.
 
 ## Testing the connection
 

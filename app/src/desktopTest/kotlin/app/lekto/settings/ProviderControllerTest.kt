@@ -260,6 +260,32 @@ class ProviderControllerTest {
     }
 
     @Test
+    fun `a missing key is a discreet hint, not an inline failure`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Failed(LlmModelsResult.MISSING_KEY))
+        val controller = controller(client = client)
+
+        controller.loadModels("")
+        advanceUntilIdle()
+
+        assertNull(controller.state.value.result)
+        assertEquals(LlmModelsResult.MISSING_KEY, controller.state.value.modelsHint)
+        assertTrue(controller.state.value.models.isEmpty())
+    }
+
+    @Test
+    fun `choosing a provider stays quiet when the model list cannot load`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED))
+        val controller = controller(client = client)
+
+        controller.selectProvider(LlmProvider.OPENAI)
+        advanceUntilIdle()
+
+        assertNull(controller.state.value.result)
+        assertNull(controller.state.value.modelsHint)
+        assertTrue(controller.state.value.models.isEmpty())
+    }
+
+    @Test
     fun `switching provider clears the previous provider's model list`() = runTest {
         val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("gpt-4o-mini")))
         val controller = controller(client = client)

@@ -221,6 +221,7 @@ private fun ModelField(state: ProviderUiState, apiKey: String, actions: Settings
             }
         }
         if (state.loadingModels) LinearProgressIndicator(Modifier.fillMaxWidth())
+        state.modelsHint?.let { hint -> Text(hint, style = MaterialTheme.typography.bodyMedium) }
     }
 }
 

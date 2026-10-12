@@ -62,6 +62,12 @@ data class ProviderUiState(
     /** Whether a model list is being fetched, so the control can say so and not double-fire. */
     val loadingModels: Boolean = false,
     /**
+     * A neutral prompt about the model list (issue #93) — a missing key, say — shown
+     * discreetly beside the model field rather than as a red failure, because it
+     * asks the reader for something rather than reporting a fault.
+     */
+    val modelsHint: String? = null,
+    /**
      * Whether the reader has chosen a provider yet (issue #93). A fresh install
      * starts unchosen, so the picker reads "Choose a provider" rather than a preset
      * the reader never picked; choosing one reveals the model and key controls and
@@ -115,7 +121,7 @@ class ProviderController(
                 providerChosen = true,
             )
         }
-        loadModels(apiKey = "")
+        loadModels(apiKey = "", silent = true)
     }
 
     /** Sets the model the active provider is called with. */
@@ -172,16 +178,19 @@ class ProviderController(
      * Loads the active provider's model list from `GET /models` (issue #93),
      * using [apiKey] when the field is not blank and the stored key otherwise, so
      * a saved key can load the list without retyping. The call blocks, so it runs
-     * off the UI thread; a failure or an unsupported list is reported inline and
-     * clears any previous list, leaving the manual model field in place, never
-     * blocking the reader. A list that arrives after the provider (or a custom base
-     * URL) changed is dropped — it belongs to the provider that was asked.
+     * off the UI thread. A missing key is a discreet [ProviderUiState.modelsHint],
+     * never a red failure, because it asks the reader for something; an unsupported
+     * or failed list clears any previous list and is reported inline. When [silent]
+     * — an automatic load on choosing a provider — any other failure stays quiet,
+     * so switching provider cannot raise an error before the reader has acted. A
+     * list that arrives after the provider (or a custom base URL) changed is dropped
+     * — it belongs to the provider that was asked.
      */
-    fun loadModels(apiKey: String) {
+    fun loadModels(apiKey: String, silent: Boolean = false) {
         if (_state.value.loadingModels) return
         val config = _state.value.config
         val requested = config.provider to config.baseUrl
-        _state.update { current -> current.copy(loadingModels = true, result = null) }
+        _state.update { current -> current.copy(loadingModels = true, result = null, modelsHint = null) }
         scope.launch {
             val outcome = withContext(dispatcher) { client.listModels(config, keyFor(apiKey, config.provider)) }
             _state.update { current ->
@@ -190,7 +199,12 @@ class ProviderController(
                     stale -> current.copy(loadingModels = false)
 
                     outcome is LlmModelsResult.Loaded ->
-                        current.copy(loadingModels = false, models = outcome.models, result = null)
+                        current.copy(loadingModels = false, models = outcome.models, result = null, modelsHint = null)
+
+                    outcome is LlmModelsResult.Failed && outcome.message == LlmModelsResult.MISSING_KEY ->
+                        current.copy(loadingModels = false, models = emptyList(), modelsHint = outcome.message)
+
+                    silent -> current.copy(loadingModels = false, models = emptyList())
 
                     else -> current.copy(
                         loadingModels = false,

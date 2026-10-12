@@ -432,6 +432,19 @@ class SettingsScreenSemanticsTest {
     }
 
     @Test
+    fun aMissingKeyForTheModelListIsShownDiscreetlyBesideTheField() = runComposeUiTest {
+        settings(
+            provider = ProviderUiState(
+                available = true,
+                providerChosen = true,
+                modelsHint = LlmModelsResult.MISSING_KEY,
+            ),
+        )
+
+        onNodeWithText("Enter your API key", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun syncAlwaysWarnsAgainstFolderSyncTools() = runComposeUiTest {
         settings()
 

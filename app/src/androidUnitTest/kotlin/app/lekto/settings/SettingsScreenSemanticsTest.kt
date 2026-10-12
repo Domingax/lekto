@@ -446,6 +446,19 @@ class SettingsScreenSemanticsTest {
     }
 
     @Test
+    fun aMissingKeyForTheModelListIsShownDiscreetlyBesideTheField() {
+        render(
+            provider = ProviderUiState(
+                available = true,
+                providerChosen = true,
+                modelsHint = LlmModelsResult.MISSING_KEY,
+            ),
+        )
+
+        compose.onNodeWithText("Enter your API key", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun syncAlwaysWarnsAgainstFolderSyncTools() {
         render()
 
