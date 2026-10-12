@@ -12,9 +12,9 @@ import app.lekto.core.MasteryLevel
  * colour is how the reader paints it.
  */
 private val Unknown = Color(0xFF2563EB) // Blue, strong highlight.
-private val Familiar = Color(0xFFFACC15) // Yellow.
-private val Recognized = Color(0xFFFB923C) // Light orange.
-private val Mastered = Color(0xFF22C55E) // Green.
+private val Recognized = Color(0xFFFACC15) // Yellow.
+private val Familiar = Color(0xFFFB923C) // Light orange.
+private val Learned = Color(0xFF22C55E) // Green.
 
 /**
  * The wash the tapped word carries while its lookup panel is open — the
@@ -27,9 +27,9 @@ val SelectionHighlight: Color = Color(0x332563EB)
 /** The colour a word at [level] is painted with; `Unspecified` means normal text. */
 fun MasteryLevel.readerColor(): Color = when (this) {
     MasteryLevel.UNKNOWN -> Unknown
-    MasteryLevel.FAMILIAR -> Familiar
     MasteryLevel.RECOGNIZED -> Recognized
-    MasteryLevel.MASTERED -> Mastered
+    MasteryLevel.FAMILIAR -> Familiar
+    MasteryLevel.LEARNED -> Learned
     MasteryLevel.KNOWN -> Color.Unspecified
 }
 

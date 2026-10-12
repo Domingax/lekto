@@ -241,9 +241,9 @@ private fun Mastery(level: MasteryLevel, key: WordKey) {
 /** A mastery level's readable name, so the list shows the level and not just its colour. */
 private fun MasteryLevel.fullLabel(): String = when (this) {
     MasteryLevel.UNKNOWN -> "Unknown"
-    MasteryLevel.FAMILIAR -> "Familiar"
     MasteryLevel.RECOGNIZED -> "Recognized"
-    MasteryLevel.MASTERED -> "Mastered"
+    MasteryLevel.FAMILIAR -> "Familiar"
+    MasteryLevel.LEARNED -> "Learned"
     MasteryLevel.KNOWN -> "Known"
 }
 

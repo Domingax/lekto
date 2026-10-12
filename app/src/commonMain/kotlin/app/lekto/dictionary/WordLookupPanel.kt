@@ -52,7 +52,7 @@ data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = nu
 data class VocabularyPanel(
     val entry: VocabularyEntry?,
     val onSave: (MasteryLevel) -> Unit,
-    val defaultLevel: MasteryLevel = MasteryLevel.FAMILIAR,
+    val defaultLevel: MasteryLevel = MasteryLevel.RECOGNIZED,
 ) {
     /** The level the selector marks: the saved one, or the fresh default. */
     val level: MasteryLevel get() = entry?.mastery ?: defaultLevel
@@ -157,9 +157,9 @@ private fun MasterySelector(vocabulary: VocabularyPanel) {
 /** A selector chip's compact label: its number, and a check for the known level. */
 private fun MasteryLevel.shortLabel(): String = when (this) {
     MasteryLevel.UNKNOWN -> "0"
-    MasteryLevel.FAMILIAR -> "1"
-    MasteryLevel.RECOGNIZED -> "2"
-    MasteryLevel.MASTERED -> "3"
+    MasteryLevel.RECOGNIZED -> "1"
+    MasteryLevel.FAMILIAR -> "2"
+    MasteryLevel.LEARNED -> "3"
     MasteryLevel.KNOWN -> "4"
 }
 

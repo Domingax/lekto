@@ -19,14 +19,14 @@ class VocabularySearchTest {
         surface = "lantern",
         translation = "lanterne",
         contextSentence = "The lantern burned all night.",
-        mastery = MasteryLevel.MASTERED,
+        mastery = MasteryLevel.LEARNED,
     )
     private val manger = VocabularyEntry(
         key = WordKey("fr", "manger"),
         surface = "mangeais",
         translation = "to eat",
         contextSentence = "Je mangeais du pain.",
-        mastery = MasteryLevel.FAMILIAR,
+        mastery = MasteryLevel.RECOGNIZED,
     )
     private val entries = listOf(lantern, manger)
 

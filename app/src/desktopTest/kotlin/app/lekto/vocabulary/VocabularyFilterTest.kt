@@ -13,9 +13,9 @@ import kotlin.test.assertEquals
 class VocabularyFilterTest {
 
     private val unknown = entry("on", MasteryLevel.UNKNOWN)
-    private val familiar = entry("harbour", MasteryLevel.FAMILIAR)
-    private val mastered = entry("lantern", MasteryLevel.MASTERED)
-    private val entries = listOf(unknown, familiar, mastered)
+    private val recognized = entry("harbour", MasteryLevel.RECOGNIZED)
+    private val learned = entry("lantern", MasteryLevel.LEARNED)
+    private val entries = listOf(unknown, recognized, learned)
 
     @Test
     fun `a null level keeps every entry`() {
@@ -24,7 +24,7 @@ class VocabularyFilterTest {
 
     @Test
     fun `a level keeps only the entries at that level`() {
-        assertEquals(listOf(familiar), filterByMastery(entries, MasteryLevel.FAMILIAR))
+        assertEquals(listOf(recognized), filterByMastery(entries, MasteryLevel.RECOGNIZED))
     }
 
     @Test
@@ -34,8 +34,8 @@ class VocabularyFilterTest {
 
     @Test
     fun `the mastery filter and the search compose`() {
-        assertEquals(listOf(mastered), filterByMastery(searchVocabulary(entries, "lant"), MasteryLevel.MASTERED))
-        assertEquals(emptyList(), filterByMastery(searchVocabulary(entries, "lant"), MasteryLevel.FAMILIAR))
+        assertEquals(listOf(learned), filterByMastery(searchVocabulary(entries, "lant"), MasteryLevel.LEARNED))
+        assertEquals(emptyList(), filterByMastery(searchVocabulary(entries, "lant"), MasteryLevel.RECOGNIZED))
     }
 
     private fun entry(surface: String, mastery: MasteryLevel): VocabularyEntry =

@@ -40,7 +40,7 @@ class MasteryPaletteTest {
     fun aFilledChipGetsAForegroundThatReadsOnItsColour() {
         // The dark blue needs white; the light yellow, orange and green need ink.
         assertEquals(Color.White, contentColorOn(MasteryLevel.UNKNOWN.readerColor()))
-        listOf(MasteryLevel.FAMILIAR, MasteryLevel.RECOGNIZED, MasteryLevel.MASTERED).forEach { level ->
+        listOf(MasteryLevel.RECOGNIZED, MasteryLevel.FAMILIAR, MasteryLevel.LEARNED).forEach { level ->
             assertEquals(MasteryInk, contentColorOn(level.readerColor()))
         }
     }

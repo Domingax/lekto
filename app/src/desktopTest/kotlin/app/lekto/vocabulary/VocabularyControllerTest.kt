@@ -46,9 +46,9 @@ class VocabularyControllerTest {
     fun aSavedWordDrivesTheMastery() {
         val controller = controller()
 
-        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.MASTERED))
+        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.LEARNED))
 
-        assertEquals(MasteryLevel.MASTERED, controller.mastery.levelOf(key))
+        assertEquals(MasteryLevel.LEARNED, controller.mastery.levelOf(key))
         assertEquals("lantern", controller.entryFor(key)?.surface)
     }
 
@@ -66,11 +66,11 @@ class VocabularyControllerTest {
     fun aWordSavedBeforeStartupIsLoaded() {
         val vault = InMemoryVaultStore()
         VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-            .save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.FAMILIAR))
+            .save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.RECOGNIZED))
 
         val controller = controller(vault)
 
-        assertEquals(MasteryLevel.FAMILIAR, controller.mastery.levelOf(key))
+        assertEquals(MasteryLevel.RECOGNIZED, controller.mastery.levelOf(key))
         assertEquals("lantern", controller.entryFor(key)?.surface)
     }
 
@@ -89,7 +89,7 @@ class VocabularyControllerTest {
     @Test
     fun deletingAWordClearsItsMasteryAndBumpsTheRevision() {
         val controller = controller()
-        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.MASTERED))
+        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.LEARNED))
         val before = controller.revision
 
         controller.delete(key)
@@ -103,7 +103,7 @@ class VocabularyControllerTest {
     fun aDeletedWordStaysDeletedOverTheVault() {
         val vault = InMemoryVaultStore()
         val controller = controller(vault)
-        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.MASTERED))
+        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.LEARNED))
 
         controller.delete(key)
 
@@ -143,13 +143,13 @@ class VocabularyControllerTest {
         val vault = InMemoryVaultStore()
         val controller = controller(vault)
         VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-            .save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.MASTERED))
+            .save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.LEARNED))
 
         assertEquals(null, controller.entryFor(key), "the controller is stale until it refreshes")
 
         controller.refresh()
 
-        assertEquals(MasteryLevel.MASTERED, controller.mastery.levelOf(key))
+        assertEquals(MasteryLevel.LEARNED, controller.mastery.levelOf(key))
         assertEquals("lantern", controller.entryFor(key)?.surface)
     }
 
@@ -157,7 +157,7 @@ class VocabularyControllerTest {
     fun refreshingDropsAWordTheSyncRemoved() {
         val vault = InMemoryVaultStore()
         val writer = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-        writer.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.FAMILIAR))
+        writer.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.RECOGNIZED))
         val controller = controller(vault)
 
         writer.delete(key)

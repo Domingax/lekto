@@ -28,7 +28,7 @@ class DesktopVocabularySyncTest {
             val sync = desktopSync(root)
             val target = InMemorySyncTarget(changeCursor = false)
             val key = WordKey("en", "lantern")
-            vocabulary.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.FAMILIAR))
+            vocabulary.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.RECOGNIZED))
             runBlocking { sync.engine(target).sync() }
 
             vocabulary.delete(key)

@@ -32,10 +32,10 @@ class VaultVocabularyTest :
         test("a saved word is read back by its key") {
             val vocabulary = newVocabulary()
 
-            vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR))
+            vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED))
 
             vocabulary.entryFor(WordKey("en", "lantern")) shouldBe
-                VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+                VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED)
         }
 
         test("an unsaved word has no entry") {
@@ -47,10 +47,10 @@ class VaultVocabularyTest :
             val vocabulary = newVocabulary(vault)
 
             vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern"))
-            vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "Lantern", mastery = MasteryLevel.MASTERED))
+            vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "Lantern", mastery = MasteryLevel.LEARNED))
 
             vocabulary.all() shouldContainExactly
-                listOf(VocabularyEntry(WordKey("en", "lantern"), "Lantern", mastery = MasteryLevel.MASTERED))
+                listOf(VocabularyEntry(WordKey("en", "lantern"), "Lantern", mastery = MasteryLevel.LEARNED))
             vault.all().count { it.kind == VocabularyRecord.KIND } shouldBe 1
         }
 

@@ -581,18 +581,18 @@ class SyncControllerTest {
         sync.start()
         runCurrent()
 
-        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED)
         words.save(entry)
         advanceTimeBy(5.seconds)
         runCurrent()
         val id = VocabularyRecord.idOf(entry.key)
-        assertEquals(MasteryLevel.FAMILIAR, storedMastery(target, id), "the first save pushes the word")
+        assertEquals(MasteryLevel.RECOGNIZED, storedMastery(target, id), "the first save pushes the word")
 
-        words.save(entry.copy(mastery = MasteryLevel.MASTERED))
+        words.save(entry.copy(mastery = MasteryLevel.LEARNED))
         advanceTimeBy(5.seconds)
         runCurrent()
 
-        assertEquals(MasteryLevel.MASTERED, storedMastery(target, id), "the mastery change pushes the update")
+        assertEquals(MasteryLevel.LEARNED, storedMastery(target, id), "the mastery change pushes the update")
         sync.disable()
     }
 
