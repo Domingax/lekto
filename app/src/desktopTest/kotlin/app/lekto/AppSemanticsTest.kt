@@ -314,7 +314,8 @@ class AppSemanticsTest {
 
         onNodeWithText("Attribution").performClick()
 
-        onNodeWithText("CC BY-SA 4.0", substring = true).assertIsDisplayed()
+        onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
+            .assertIsDisplayed()
     }
 
     @Test
@@ -434,7 +435,9 @@ class AppSemanticsTest {
             entry.contextSentence.orEmpty().contains("On"),
             "the context sentence is kept: ${entry.contextSentence}",
         )
-        assertEquals(MasteryLevel.RECOGNIZED, entry.mastery)
+        // The word has no signal (no reader level, no difficulty), so the fresh
+        // save defaults to the familiar level (ADR-0030).
+        assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
         waitUntil { onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Saved").assertIsDisplayed()

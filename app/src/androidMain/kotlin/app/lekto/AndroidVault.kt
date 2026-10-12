@@ -2,6 +2,10 @@ package app.lekto
 
 import android.content.Context
 import android.net.Uri
+import app.lekto.core.Seams
+import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.readinglevel.VaultReaderLevels
+import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.core.vault.VaultStore
@@ -22,6 +26,17 @@ const val VAULT_MIME_TYPE: String = "application/json"
 fun androidVaultRoot(context: Context): File = File(context.filesDir, "vault")
 
 fun androidVaultStore(context: Context): VaultStore = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context)))
+
+/**
+ * The Android **Reader levels** (issue #64; ADR-0030) over `Context.filesDir`. A
+ * level is a vault record, so this store is the same vault [androidBookLibrary]
+ * writes to; its device id is the one the library stamps its records with.
+ */
+fun androidReaderLevels(context: Context): ReaderLevels = VaultReaderLevels(
+    vault = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context))),
+    seams = Seams.system(),
+    deviceId = DeviceIdFile(File(context.filesDir, "device-id")).get(),
+)
 
 /**
  * The vault's whole-file transfer (issue #20) over `Context.filesDir`, with the

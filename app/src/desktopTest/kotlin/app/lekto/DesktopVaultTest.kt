@@ -1,5 +1,6 @@
 package app.lekto
 
+import app.lekto.core.CefrLevel
 import app.lekto.core.book.BookRecord
 import app.lekto.core.vault.VaultCodec
 import app.lekto.testkit.testVaultRecord
@@ -38,6 +39,19 @@ class DesktopVaultTest {
             store.put(record)
 
             assertEquals(record, store.get("a"))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theReaderLevelsRoundTripToDisk() {
+        val root = Files.createTempDirectory("lekto-desktop-levels").toFile()
+        try {
+            desktopReaderLevels(root).setLevel("en-US", CefrLevel.B1)
+
+            // A fresh store over the same vault reads the level back.
+            assertEquals(CefrLevel.B1, desktopReaderLevels(root).levelFor("en-GB"))
         } finally {
             root.deleteRecursively()
         }

@@ -9,11 +9,18 @@ internal data class GateOptions(val previousLemmaCount: Int?, val collapseThresh
 internal data class OutputPaths(val notice: Path, val manifest: Path)
 
 /**
+ * The difficulty build's inputs and outputs (ADR-0029). It is optional: a run
+ * without a frequency source builds the dictionary pack alone.
+ */
+internal data class DifficultyOptions(val input: Path, val output: Path, val outputs: OutputPaths)
+
+/**
  * The parsed command line.
  *
  * The input is the raw Wiktextract `.jsonl[.gz]`; the output is the SQLite pack.
- * The provenance values are recorded in the pack, never in a timestamp. The
- * workflow supplies every path; defaults are only conveniences for a local run.
+ * An optional frequency source adds the per-language **Difficulty table**. The
+ * provenance values are recorded, never a timestamp. The workflow supplies every
+ * path; defaults are only conveniences for a local run.
  */
 internal data class CliOptions(
     val input: Path,
@@ -21,6 +28,7 @@ internal data class CliOptions(
     val provenance: PackProvenance,
     val gate: GateOptions,
     val outputs: OutputPaths,
+    val difficulty: DifficultyOptions?,
 ) {
     companion object {
         fun parse(args: Array<String>): CliOptions {
@@ -44,6 +52,20 @@ internal data class CliOptions(
                     notice = optionalPath(values, "--notice") ?: output.resolveSibling("NOTICE"),
                     manifest = optionalPath(values, "--manifest") ?: output.resolveSibling("manifest.json"),
                 ),
+                difficulty = difficultyOptions(values),
+            )
+        }
+
+        private fun difficultyOptions(values: Map<String, String>): DifficultyOptions? {
+            val input = optionalPath(values, "--frequency-input") ?: return null
+            val output = path(values, "--difficulty-output")
+            return DifficultyOptions(
+                input = input,
+                output = output,
+                outputs = OutputPaths(
+                    notice = optionalPath(values, "--difficulty-notice") ?: output.resolveSibling("NOTICE"),
+                    manifest = optionalPath(values, "--difficulty-manifest") ?: output.resolveSibling("manifest.json"),
+                ),
             )
         }
     }
@@ -59,6 +81,10 @@ private val KNOWN_FLAGS = setOf(
     "--collapse-threshold",
     "--notice",
     "--manifest",
+    "--frequency-input",
+    "--difficulty-output",
+    "--difficulty-notice",
+    "--difficulty-manifest",
 )
 
 private fun parseFlags(args: Array<String>): Map<String, String> {

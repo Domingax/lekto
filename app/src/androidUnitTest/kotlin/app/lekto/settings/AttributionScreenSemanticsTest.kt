@@ -10,6 +10,8 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.PackMetadata
+import app.lekto.core.difficulty.DifficultyMetadata
+import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testPackMetadata
 import org.junit.Rule
 import org.junit.Test
@@ -18,14 +20,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The attribution screen on a **simulated Android runtime** (issue #78): the
- * same-named twin of `app/desktopTest`'s `AttributionScreenSemanticsTest`, so the
- * parity rule (issue #73) sees the two lanes together. With a pack installed the
- * screen names the source, the data, the licence and the modifications; without
- * one it still states the licence the pack carries, so ADR-0011's obligation is
- * never hidden behind a download. Rendering it here runs the same composable on
- * the runtime Android uses, so an Android-only constraint fails here rather than
- * on a device.
+ * The attribution screen on a **simulated Android runtime** (issues #78 and #64):
+ * the same-named twin of `app/desktopTest`'s `AttributionScreenSemanticsTest`, so
+ * the parity rule (issue #73) sees the two lanes together. With a pack or a
+ * difficulty table installed the screen names the source, the data, the licence
+ * and the modifications; without one it still states the licence it carries, so
+ * ADR-0011's and ADR-0029's obligations are never hidden behind a download.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
@@ -44,18 +44,29 @@ class AttributionScreenSemanticsTest {
     }
 
     @Test
+    fun `an installed difficulty table shows its wordfreq attribution on Android`() {
+        compose.setContent { Attribution(null, testDifficultyMetadata()) }
+
+        compose.onNodeWithText("wordfreq by Robyn Speer").assertIsDisplayed()
+    }
+
+    @Test
     fun `without a pack it still states the licence on Android`() {
         compose.setContent { Attribution(null) }
 
-        compose.onNodeWithText("CC BY-SA 4.0", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithText("Word-difficulty data is derived from wordfreq", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("The offline dictionary isn't installed yet", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("The word-difficulty data isn't installed yet", substring = true).assertIsDisplayed()
     }
 
     @Composable
-    private fun Attribution(metadata: PackMetadata?) {
+    private fun Attribution(metadata: PackMetadata?, difficulty: DifficultyMetadata? = null) {
         MaterialTheme {
             AttributionScreen(
                 metadata = metadata,
+                difficulty = difficulty,
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )
         }

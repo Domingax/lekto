@@ -25,6 +25,13 @@ no lemma. A **Derived asset**, versioned so a reader can refuse a pack it does
 not understand; never authored by the user and never synced.
 _Avoid_: Dictionary, lexicon, word list
 
+**Difficulty table**:
+The per-language **Derived asset** that maps each **Word key** to its **Word
+difficulty** band: one per language, built from an open frequency list, and
+versioned so a reader can refuse one it does not understand. It is what the
+default-mastery rule reads; never authored by the user and never synced.
+_Avoid_: Frequency list, word list, difficulty pack
+
 **Tombstone**:
 The mark a deleted item leaves behind so the deletion itself can sync: the item's
 identity and update metadata without its content. A tombstone with a later update
@@ -109,6 +116,20 @@ Levels 0–3 are highlighted; level 4 is invisible
 (normal text). Held per **Word key**, so inflected forms share one level, and stored on
 the **Vocabulary entry** that key names.
 _Avoid_: Confidence level, difficulty, proficiency
+
+**Word difficulty**:
+How hard a word is for a learner of its language: the frequency band it falls in,
+on the same six-point CEFR scale as the **Reader level**, so the two compare
+directly. A property of the word, derived from the **Difficulty table**, not of the
+user; distinct from **Mastery level**, which is how well this user knows it.
+_Avoid_: Frequency, rarity, difficulty score
+
+**Reader level**:
+The level a reader declares in a language they read, on the six-point CEFR scale
+A1–C2, held per language in the **Vault** so it exports and syncs with it. The
+reader's own level, on the same scale as a word's **Word difficulty**, and
+user-authored data rather than app configuration.
+_Avoid_: Proficiency, language level, user level
 
 **Lemma**:
 The dictionary form of a word — "manger" for "mangeais". Used as the canonical key for

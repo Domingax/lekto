@@ -13,7 +13,9 @@ import java.awt.event.WindowFocusListener
 fun main() = application {
     val library = remember { desktopBookLibrary() }
     val vocabulary = remember { desktopVocabulary() }
+    val readerLevels = remember { desktopReaderLevels() }
     val dictionary = remember { desktopDictionary() }
+    val difficulty = remember { desktopDifficulty() }
     val pronouncer = remember { JvmPronouncer() }
     val vaultTransfer = remember { desktopVaultTransfer(save = ::saveVaultToFile, open = ::pickVaultFileToImport) }
     val secrets = remember { desktopSecretStore() }
@@ -41,8 +43,10 @@ fun main() = application {
                 library = library,
                 lemmas = dictionary.lemmas,
                 vocabulary = vocabulary,
+                readerLevels = readerLevels,
                 pickFile = ::pickFileToImport,
                 dictionary = dictionary,
+                difficulty = difficulty,
                 pronouncer = pronouncer,
                 openUrl = ::openInBrowser,
                 vaultTransfer = vaultTransfer,

@@ -4,10 +4,13 @@ import android.content.Context
 import app.lekto.core.dictionary.AndroidPackDatabaseFactory
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.dictionary.JvmPackDownloader
+import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
+import app.lekto.difficulty.DifficultyRelease
+import app.lekto.difficulty.DifficultyServices
 import java.io.File
 
 /**
@@ -24,6 +27,26 @@ fun androidDictionary(context: Context): DictionaryServices {
             downloader = JvmPackDownloader(),
             databases = AndroidPackDatabaseFactory,
             url = DictionaryRelease.URL,
+        ),
+    )
+}
+
+/**
+ * The Android wiring of the difficulty table (issue #64; ADR-0029): the table
+ * lives under the same app-private derived root as the pack, is opened with the
+ * framework's SQLite, and is downloaded from the published release. It is a
+ * derived asset, so it sits beside the vault rather than inside it and never
+ * reaches an export (ADR-0005).
+ */
+fun androidDifficulty(context: Context): DifficultyServices {
+    val derived = DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived")))
+    return DifficultyServices(
+        DifficultyInstaller(
+            derived = derived,
+            downloader = JvmPackDownloader(),
+            databases = AndroidPackDatabaseFactory,
+            language = DifficultyRelease.LANGUAGE,
+            url = DifficultyRelease.url(DifficultyRelease.LANGUAGE),
         ),
     )
 }

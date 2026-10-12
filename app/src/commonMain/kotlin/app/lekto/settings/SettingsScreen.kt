@@ -60,6 +60,7 @@ fun SettingsScreen(
     ) {
         Header(actions.onBack)
         Section("Dictionary") { DictionarySection(state.dictionary, actions) }
+        Section("Reader level") { ReaderLevelSection(state.readerLevel, actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
         Section("Sync") { SyncSection(state.sync, actions) }
         Section("LLM provider") { ProviderSection(state.provider, actions) }

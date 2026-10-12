@@ -27,6 +27,12 @@ enum class MasteryLevel(val level: Int, val highlighted: Boolean) {
     FAMILIAR(2, true),
     LEARNED(3, true),
     KNOWN(4, false),
+    ;
+
+    companion object {
+        /** The level numbered [number], clamped into the scale's range (0–4). */
+        fun forLevel(number: Int): MasteryLevel = entries[number.coerceIn(0, entries.lastIndex)]
+    }
 }
 
 /**
@@ -50,4 +56,40 @@ fun interface MasteryLookup {
          */
         val AllKnown: MasteryLookup = MasteryLookup { MasteryLevel.KNOWN }
     }
+}
+
+/**
+ * The default-mastery composition (ADR-0023, ADR-0030): a saved entry's level
+ * always wins; otherwise the level derives from the word's **Word difficulty**
+ * and the reader's **Reader level**; otherwise it is unknown.
+ *
+ * It is a composition of pure functions, not a store: [saved] returns the
+ * user's explicit level for a key or `null` when the word is unsaved (which is
+ * *not* the same as saving it at [MasteryLevel.UNKNOWN]), [readerLevel] returns
+ * the reader's declared band for a language, and [difficulty] returns a word's
+ * difficulty band. An unsaved word in a language with no level, or with no
+ * difficulty band, is unknown — so a reader who has set nothing sees exactly
+ * what they saw before (ADR-0030).
+ */
+fun defaultMasteryLookup(
+    saved: (WordKey) -> MasteryLevel?,
+    readerLevel: (String?) -> CefrLevel?,
+    difficulty: (WordKey) -> CefrLevel?,
+): MasteryLookup = MasteryLookup { key ->
+    saved(key) ?: derivedMastery(difficulty(key), readerLevel(key.language))
+}
+
+/**
+ * [difficultyBand] as a [MasteryLevel] against the [readerBand] on the shared
+ * CEFR axis (ADR-0030): at or below the reader's band is known (level 4), each
+ * band above drops one mastery level, flooring at unknown (level 0):
+ *
+ *     mastery = max(0, 4 − max(0, difficulty_band − reader_band))
+ *
+ * Either band absent means the signal is incomplete, so the word is unknown.
+ */
+fun derivedMastery(difficultyBand: CefrLevel?, readerBand: CefrLevel?): MasteryLevel {
+    if (difficultyBand == null || readerBand == null) return MasteryLevel.UNKNOWN
+    val bandsAbove = (difficultyBand.band - readerBand.band).coerceAtLeast(0)
+    return MasteryLevel.forLevel(MasteryLevel.KNOWN.level - bandsAbove)
 }
