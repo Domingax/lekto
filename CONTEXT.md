@@ -124,9 +124,20 @@ directly. A property of the word, derived from the **Difficulty table**, not of 
 user; distinct from **Mastery level**, which is how well this user knows it.
 _Avoid_: Frequency, rarity, difficulty score
 
+**Reading language**:
+The language a **Book** is read in, reduced to its base language tag (`en-US` → `en`).
+A **Reader level** is declared per Reading language, and a **Difficulty table** is
+held per Reading language.
+_Avoid_: Source language, book language
+
+**Translation language**:
+The language a **Dictionary pack** translates a **Reading language** into. A pack is
+keyed by the (Reading language × Translation language) pair.
+_Avoid_: Target language, output language
+
 **Reader level**:
 The level a reader declares in a language they read, on the six-point CEFR scale
-A1–C2, held per language in the **Vault** so it exports and syncs with it. The
+A1–C2, held per **Reading language** in the **Vault** so it exports and syncs with it. The
 reader's own level, on the same scale as a word's **Word difficulty**, and
 user-authored data rather than app configuration.
 _Avoid_: Proficiency, language level, user level
