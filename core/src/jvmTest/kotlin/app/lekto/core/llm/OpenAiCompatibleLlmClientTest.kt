@@ -33,16 +33,23 @@ class OpenAiCompatibleLlmClientTest :
         /** What the local server saw, so a test can pin the request shape. */
         class Recorded {
             var path: String? = null
+            var method: String? = null
             var authorization: String? = null
             var userAgent: String? = null
             var session: String? = null
             var body: String? = null
         }
 
-        fun serve(status: Int, recorded: Recorded, responseBody: String = ""): HttpServer {
+        fun serve(
+            status: Int,
+            recorded: Recorded,
+            responseBody: String = "",
+            path: String = "/v1/chat/completions",
+        ): HttpServer {
             val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-            server.createContext("/v1/chat/completions") { exchange ->
+            server.createContext(path) { exchange ->
                 recorded.path = exchange.requestURI.path
+                recorded.method = exchange.requestMethod
                 recorded.authorization = exchange.requestHeaders.getFirst("Authorization")
                 recorded.userAgent = exchange.requestHeaders.getFirst("User-Agent")
                 recorded.session = exchange.requestHeaders.getFirst("x-opencode-session")
@@ -60,9 +67,15 @@ class OpenAiCompatibleLlmClientTest :
             return server
         }
 
-        /** Points any request at the local server, whatever base URL the provider config carries. */
+        /** Points any request at the local server's `chat/completions`, whatever base URL the config carries. */
         fun routedTo(server: HttpServer): (String) -> HttpURLConnection = {
             URI("http://127.0.0.1:${server.address.port}/v1/chat/completions").toURL().openConnection()
+                as HttpURLConnection
+        }
+
+        /** Points any request at the local server's `models`, whatever base URL the config carries. */
+        fun routedToModels(server: HttpServer): (String) -> HttpURLConnection = {
+            URI("http://127.0.0.1:${server.address.port}/v1/models").toURL().openConnection()
                 as HttpURLConnection
         }
 
@@ -243,6 +256,137 @@ class OpenAiCompatibleLlmClientTest :
             zen.shouldContainKey("x-opencode-session")
             openai.shouldNotContainKey("x-opencode-session")
             openai["User-Agent"] shouldBe USER_AGENT
+        }
+
+        // --- Choosing the model from the provider's list (issue #93) ----------
+
+        test("a model list is loaded from GET /models with the bearer key") {
+            val recorded = Recorded()
+            val body = """{"object":"list","data":[{"id":"gpt-4o-mini"},{"id":"gpt-4o"}]}"""
+            val server = serve(200, recorded, body, path = "/v1/models")
+            try {
+                val result = OpenAiCompatibleLlmClient()
+                    .listModels(custom(base(server), "m"), "sk-secret")
+
+                result shouldBe LlmModelsResult.Loaded(listOf("gpt-4o-mini", "gpt-4o"))
+                recorded.path shouldBe "/v1/models"
+                recorded.method shouldBe "GET"
+                recorded.authorization shouldBe "Bearer sk-secret"
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("the OpenAI list request names the client, like the connection test") {
+            val recorded = Recorded()
+            val server = serve(200, recorded, """{"data":[{"id":"m"}]}""", path = "/v1/models")
+            try {
+                OpenAiCompatibleLlmClient(connect = routedToModels(server))
+                    .listModels(LlmProviderConfig(LlmProvider.OPENAI, "m"), "sk-test")
+
+                recorded.userAgent shouldBe USER_AGENT
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("an OpenCode Go list carries the required session and needs no key") {
+            val recorded = Recorded()
+            val server = serve(200, recorded, """{"data":[{"id":"deepseek-v4.1-flash"}]}""", path = "/v1/models")
+            try {
+                val client = OpenAiCompatibleLlmClient(connect = routedToModels(server))
+                val config = LlmProviderConfig(LlmProvider.OPENCODE_GO, "m")
+
+                client.listModels(config, "") shouldBe LlmModelsResult.Loaded(listOf("deepseek-v4.1-flash"))
+
+                recorded.session.shouldNotBeNull()
+                recorded.authorization shouldBe null
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a provider that needs a key reports the missing key rather than sending a keyless request") {
+            var connected = false
+            val client = OpenAiCompatibleLlmClient(
+                connect = {
+                    connected = true
+                    throw IOException("must not connect")
+                },
+            )
+
+            client.listModels(LlmProviderConfig(LlmProvider.OPENAI, "m"), "") shouldBe
+                LlmModelsResult.Failed(LlmModelsResult.MISSING_KEY)
+            connected shouldBe false
+        }
+
+        test("a 404 model list means the provider does not implement /models") {
+            val server = serve(404, Recorded(), path = "/v1/models")
+            try {
+                OpenAiCompatibleLlmClient().listModels(custom(base(server), "m"), "sk-test") shouldBe
+                    LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("an unparseable model body falls back to manual entry") {
+            val server = serve(200, Recorded(), "<html>not json</html>", path = "/v1/models")
+            try {
+                OpenAiCompatibleLlmClient().listModels(custom(base(server), "m"), "sk-test") shouldBe
+                    LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a provider that lists no models says so rather than showing an empty list") {
+            val server = serve(200, Recorded(), """{"object":"list","data":[]}""", path = "/v1/models")
+            try {
+                OpenAiCompatibleLlmClient().listModels(custom(base(server), "m"), "sk-test") shouldBe
+                    LlmModelsResult.Failed(LlmModelsResult.EMPTY)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a rejected key on the model list is classified, and a body echoing it is never rendered") {
+            val echoed = "sk-very-secret"
+            val body = """{"error":{"type":"invalid_api_key","message":"your key $echoed is rejected"}}"""
+            val server = serve(401, Recorded(), body, path = "/v1/models")
+            try {
+                val result = OpenAiCompatibleLlmClient().listModels(custom(base(server), "m"), echoed)
+
+                result shouldBe LlmModelsResult.Failed(LlmConnectionResult.REJECTED_KEY)
+                (result as LlmModelsResult.Failed).message shouldNotContain echoed
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        test("a dead transport on the model list is an inline failure, never a thrown exception") {
+            val client = OpenAiCompatibleLlmClient(connect = { throw IOException("connection refused") })
+
+            client.listModels(LlmProviderConfig(LlmProvider.OPENAI, "m"), "sk-test") shouldBe
+                LlmModelsResult.Failed(LlmConnectionResult.UNREACHABLE)
+        }
+
+        test("a configuration with no base URL refuses to list before any request is sent") {
+            var connected = false
+            val client = OpenAiCompatibleLlmClient(
+                connect = {
+                    connected = true
+                    throw IOException("must not connect")
+                },
+            )
+
+            client.listModels(LlmProviderConfig(LlmProvider.CUSTOM, "m"), "sk-test") shouldBe
+                LlmModelsResult.Failed(LlmModelsResult.INCOMPLETE)
+            connected shouldBe false
+        }
+
+        test("the models URL tolerates a trailing slash in the base URL") {
+            modelsUrl(custom("https://example.test/v1/", "m")) shouldBe "https://example.test/v1/models"
         }
 
         // --- Streaming phrase translation (issue #89) ------------------------

@@ -45,7 +45,8 @@ APK with `./gradlew :app:assembleDebug`.
 
 Phrase translation is bring-your-own-key: Lekto calls the provider directly from the
 device with your own API key, and there is no Lekto server in between (ADR-0002,
-ADR-0022). Connect one provider in settings and choose a model. Any service that speaks
+ADR-0022). Connect one provider in settings, load the models it offers and choose one
+(or type a name where a provider has no list). Any service that speaks
 the OpenAI chat-completions API works through the **Custom** preset.
 
 | Provider          | Notes                                          |

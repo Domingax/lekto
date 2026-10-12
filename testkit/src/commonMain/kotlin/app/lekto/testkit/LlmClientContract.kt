@@ -2,6 +2,7 @@ package app.lekto.testkit
 
 import app.lekto.core.llm.LlmConnectionResult
 import app.lekto.core.llm.LlmMessage
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.llm.LlmTranslationEvent
@@ -10,16 +11,18 @@ import kotlinx.coroutines.flow.toList
 
 /**
  * The specification of the [app.lekto.core.llm.LlmClient] seam, as executable
- * cases (issues #88, #89; ADR-0022). Its only in-memory implementation is
+ * cases (issues #88, #89, #93; ADR-0022). Its only in-memory implementation is
  * [FakeLlmClient], so both halves of the contract are run against the fake in
  * `core/commonTest`; the OpenAI-compatible transport is proved against a local
  * HTTP server in `core/jvmTest` (`OpenAiCompatibleLlmClientTest`), where its
  * request shape, status mapping and server-sent-event parsing are pinned.
  *
  * The contract records the seam's promise: a connection test reports the
- * provider's outcome as a first-class result, a translation streams its deltas,
- * and every failure is an event — never a thrown exception.
+ * provider's outcome as a first-class result, a model list is a first-class
+ * result too, a translation streams its deltas, and every failure is an event —
+ * never a thrown exception.
  */
+@Suppress("TooManyFunctions") // One seam, one small case per promise; splitting the class hides the contract.
 class LlmClientContract(private val newClient: () -> FakeLlmClient) {
 
     /** Every blocking behaviour the seam promises, as `(name, run)` pairs. */
@@ -27,6 +30,13 @@ class LlmClientContract(private val newClient: () -> FakeLlmClient) {
         ContractCase("a connected provider is reported as connected") { reportsConnected() },
         ContractCase("a failed provider is reported as a failure, not thrown") { reportsFailure() },
         ContractCase("the configuration and key reach the adapter unchanged") { passesTheCallThrough() },
+    )
+
+    /** Every model-listing behaviour the seam promises (issue #93), as `(name, run)` pairs. */
+    fun modelCases(): List<ContractCase> = listOf(
+        ContractCase("the listed models are returned as a first-class result") { listsModels() },
+        ContractCase("a failed model list is a failure, not thrown") { reportsModelFailure() },
+        ContractCase("the configuration and key reach the model listing unchanged") { passesTheModelQueryThrough() },
     )
 
     /** Every streaming behaviour the seam promises; the bodies suspend on the flow. */
@@ -53,6 +63,26 @@ class LlmClientContract(private val newClient: () -> FakeLlmClient) {
         val client = newClient()
         client.testConnection(CONFIG, A_KEY)
         expectEquals(CONFIG to A_KEY, client.tested.single(), "the recorded call")
+    }
+
+    private fun listsModels() {
+        val client = newClient()
+        val models = listOf("gpt-4o-mini", "gpt-4o")
+        client.models = LlmModelsResult.Loaded(models)
+        expectEquals(LlmModelsResult.Loaded(models), client.listModels(CONFIG, A_KEY), "the listed models")
+    }
+
+    private fun reportsModelFailure() {
+        val client = newClient()
+        val failure = LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
+        client.models = failure
+        expectEquals(failure, client.listModels(CONFIG, A_KEY), "an unsupported list")
+    }
+
+    private fun passesTheModelQueryThrough() {
+        val client = newClient()
+        client.listModels(CONFIG, A_KEY)
+        expectEquals(CONFIG to A_KEY, client.listed.single(), "the recorded model query")
     }
 
     private suspend fun streamsDeltas() {

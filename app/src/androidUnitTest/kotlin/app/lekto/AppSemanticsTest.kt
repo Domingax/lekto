@@ -30,6 +30,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
@@ -52,7 +53,9 @@ import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
+import app.lekto.settings.LOAD_MODELS_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
+import app.lekto.settings.MODEL_PICKER_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
 import app.lekto.settings.SYNC_HOST_FIELD_TAG
@@ -111,7 +114,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("TooManyFunctions") // One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
 class AppSemanticsTest {
 
     @get:Rule
@@ -379,6 +382,34 @@ class AppSemanticsTest {
         compose.waitUntil { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
         compose.onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingAModelFromTheProvidersListFillsTheModel() {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("claude-3", "claude-3-5")))
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    secrets = InMemorySecretStore(),
+                    llm = LlmServices(InMemoryLlmSettingsStore(), client),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("Anthropic").performClick()
+        compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        compose.onNodeWithTag(LOAD_MODELS_TAG).performScrollTo().performClick()
+
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag(MODEL_PICKER_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("claude-3-5").performClick()
+
+        compose.onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().assertTextEquals("claude-3-5")
     }
 
     @Test

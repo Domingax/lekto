@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
@@ -363,6 +364,58 @@ class SettingsScreenSemanticsTest {
 
         compose.onNodeWithText("Save").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun loadingTheModelsPassesTheTypedKeyToTheController() {
+        var loaded: String? = null
+        render(
+            provider = ProviderUiState(available = true),
+            actions = SettingsActions(onLoadModels = { key -> loaded = key }),
+        )
+
+        compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        compose.onNodeWithTag(LOAD_MODELS_TAG).performScrollTo().performClick()
+
+        assertEquals("sk-live-123", loaded)
+    }
+
+    @Test
+    fun aLoadedModelListIsOfferedAsAChoice() {
+        var chosen: String? = null
+        render(
+            provider = ProviderUiState(
+                available = true,
+                config = LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini"),
+                models = listOf("gpt-4o-mini", "gpt-4o"),
+            ),
+            actions = SettingsActions(onModelChange = { model -> chosen = model }),
+        )
+
+        compose.onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("gpt-4o").performClick()
+
+        assertEquals("gpt-4o", chosen)
+    }
+
+    @Test
+    fun noModelPickerIsShownBeforeTheListIsLoaded() {
+        render(provider = ProviderUiState(available = true, models = emptyList()))
+
+        compose.onNodeWithTag(MODEL_PICKER_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun anUnsupportedModelListIsReportedInlineAndLeavesManualEntry() {
+        render(
+            provider = ProviderUiState(
+                available = true,
+                result = ProviderResult.Failure(LlmModelsResult.UNSUPPORTED),
+            ),
+        )
+
+        compose.onNodeWithText("doesn't list its models", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().assertIsDisplayed()
     }
 
     @Test

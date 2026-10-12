@@ -513,6 +513,7 @@ private fun SettingsDestination(
             onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
             onModelChange = { model -> settings.provider?.setModel(model) },
             onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
+            onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
             onSaveProvider = { apiKey -> settings.provider?.save(apiKey) },
             onTestProvider = { apiKey -> settings.provider?.test(apiKey) },
             onRemoveProviderKey = { settings.provider?.removeKey() },

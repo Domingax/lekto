@@ -27,6 +27,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
@@ -51,7 +52,9 @@ import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
+import app.lekto.settings.LOAD_MODELS_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
+import app.lekto.settings.MODEL_PICKER_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
 import app.lekto.settings.SYNC_HOST_FIELD_TAG
@@ -95,7 +98,7 @@ import kotlin.test.assertTrue
  * resumes at the page the reader left.
  */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("TooManyFunctions") // One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
 class AppSemanticsTest {
 
     @Test
@@ -355,6 +358,34 @@ class AppSemanticsTest {
         waitUntil { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
         onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingAModelFromTheProvidersListFillsTheModel() = runComposeUiTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("claude-3", "claude-3-5")))
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    secrets = InMemorySecretStore(),
+                    llm = LlmServices(InMemoryLlmSettingsStore(), client),
+                ),
+            )
+        }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithText("Anthropic").performClick()
+        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        onNodeWithTag(LOAD_MODELS_TAG).performScrollTo().performClick()
+
+        waitUntil(timeoutMillis = 10_000) {
+            onAllNodesWithTag(MODEL_PICKER_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithText("claude-3-5").performClick()
+
+        onNodeWithTag(MODEL_PICKER_TAG).performScrollTo().assertTextEquals("claude-3-5")
     }
 
     @Test

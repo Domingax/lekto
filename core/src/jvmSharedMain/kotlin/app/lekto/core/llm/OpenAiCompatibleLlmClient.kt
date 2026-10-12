@@ -68,6 +68,52 @@ class OpenAiCompatibleLlmClient(
         }
     }
 
+    /**
+     * Lists the provider's models from `GET {baseUrl}/models` (issue #93), with
+     * the same headers the connection test sends: the bearer key when one is set
+     * and the OpenCode session for the two gateways. A provider that authenticates
+     * its list and has no key is reported as missing a key rather than asked, so
+     * the OpenCode gateways — which publish their catalogue — still load. A 404 or
+     * an unparseable body means the provider does not implement `/models` and the
+     * reader falls back to manual entry; the body itself is dropped, never logged.
+     */
+    @Suppress("TooGenericExceptionCaught", "ReturnCount") // A dead transport is an inline outcome.
+    override fun listModels(config: LlmProviderConfig, apiKey: String): LlmModelsResult {
+        if (config.baseUrl.isBlank()) return LlmModelsResult.Failed(LlmModelsResult.INCOMPLETE)
+        if (!config.provider.listsModelsWithoutKey && apiKey.isBlank()) {
+            return LlmModelsResult.Failed(LlmModelsResult.MISSING_KEY)
+        }
+        return try {
+            val connection = openModels(config, apiKey)
+            try {
+                val status = connection.responseCode
+                when {
+                    status in HTTP_OK until HTTP_REDIRECT ->
+                        modelsResult(modelIds(readBounded(connection.inputStream, MAX_MODELS_BYTES)))
+
+                    status == HTTP_NOT_FOUND -> LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
+
+                    else -> LlmModelsResult.Failed(
+                        failureMessage(status, errorIdentifier(readBounded(connection.errorStream))),
+                    )
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (_: Exception) {
+            LlmModelsResult.Failed(LlmModelsResult.UNREACHABLE)
+        }
+    }
+
+    /** Opens the `GET /models` connection with the headers the active provider needs. */
+    private fun openModels(config: LlmProviderConfig, apiKey: String): HttpURLConnection =
+        connect(modelsUrl(config)).apply {
+            requestMethod = "GET"
+            connectTimeout = TIMEOUT_MILLIS
+            readTimeout = TIMEOUT_MILLIS
+            llmRequestHeaders(config, apiKey, sessionId).forEach { (name, value) -> setRequestProperty(name, value) }
+        }
+
     /** Opens the streaming request, mapping every failure to an inline [LlmTranslationEvent.Failed]. */
     @Suppress("TooGenericExceptionCaught", "ReturnCount") // A dead transport is an inline event.
     private fun openStream(request: LlmTranslationRequest): StreamOpen {
@@ -184,14 +230,15 @@ class OpenAiCompatibleLlmClient(
     }
 
     /**
-     * At most [MAX_ERROR_BYTES] of [stream], so a hostile or broken provider
-     * cannot make the app buffer a whole body to classify one error. The bytes
-     * are parsed for an identifier and then dropped; none of them is displayed.
+     * At most [limit] bytes of [stream], so a hostile or broken provider cannot
+     * make the app buffer a whole body to classify one error or list its models.
+     * The bytes are parsed for what is wanted and then dropped; none of them is
+     * displayed.
      */
-    private fun readBounded(stream: InputStream?): String {
+    private fun readBounded(stream: InputStream?, limit: Int = MAX_ERROR_BYTES): String {
         if (stream == null) return ""
         return stream.use { input ->
-            val buffer = ByteArray(MAX_ERROR_BYTES)
+            val buffer = ByteArray(limit)
             var read = 0
             while (read < buffer.size) {
                 val count = input.read(buffer, read, buffer.size - read)
@@ -212,8 +259,16 @@ class OpenAiCompatibleLlmClient(
         /** Enough for any provider's error envelope, and a hard cap on what we buffer. */
         const val MAX_ERROR_BYTES = 8 * 1024
 
+        /**
+         * A catalogue is far larger than an error envelope; a gateway lists a few
+         * hundred models. The cap bounds the read while still fitting the list,
+         * and the parse bounds the count again (issue #93).
+         */
+        const val MAX_MODELS_BYTES = 512 * 1024
+
         const val HTTP_OK = 200
         const val HTTP_REDIRECT = 300
+        const val HTTP_NOT_FOUND = 404
     }
 }
 
@@ -279,7 +334,7 @@ internal fun llmRequestHeaders(
     add("Content-Type" to "application/json")
     add("User-Agent" to USER_AGENT)
     if (apiKey.isNotBlank()) add("Authorization" to "Bearer $apiKey")
-    if (config.provider == LlmProvider.OPENCODE_ZEN || config.provider == LlmProvider.OPENCODE_GO) {
+    if (config.provider.usesOpenCodeSession) {
         add("x-opencode-session" to sessionId)
     }
 }
@@ -289,6 +344,20 @@ internal const val USER_AGENT: String = "lekto/0.1.0"
 
 /** The `{baseUrl}/chat/completions` endpoint, with the base URL's trailing slash tolerated. */
 internal fun chatCompletionsUrl(config: LlmProviderConfig): String = "${config.baseUrl.trimEnd('/')}/chat/completions"
+
+/** The `{baseUrl}/models` endpoint (issue #93), with the base URL's trailing slash tolerated. */
+internal fun modelsUrl(config: LlmProviderConfig): String = "${config.baseUrl.trimEnd('/')}/models"
+
+/**
+ * Maps a parsed `/models` body to its result (issue #93): a body that is not the
+ * list envelope falls back to manual entry, and an empty catalogue says so rather
+ * than showing an empty picker.
+ */
+internal fun modelsResult(ids: List<String>?): LlmModelsResult = when {
+    ids == null -> LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
+    ids.isEmpty() -> LlmModelsResult.Failed(LlmModelsResult.EMPTY)
+    else -> LlmModelsResult.Loaded(ids)
+}
 
 /** The minimal chat-completions request the connection test sends: one short user turn. */
 @Serializable

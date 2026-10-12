@@ -34,6 +34,16 @@ class LlmProviderTest :
             }
         }
 
+        test("the OpenCode gateways and Ollama list models without a key; every other provider does not") {
+            // Issue #93: the OpenCode gateways publish their catalogue, and a local
+            // Ollama never asks for a key. Everything else authenticates its list.
+            LlmProvider.OPENCODE_ZEN.listsModelsWithoutKey shouldBe true
+            LlmProvider.OPENCODE_GO.listsModelsWithoutKey shouldBe true
+            LlmProvider.OLLAMA.listsModelsWithoutKey shouldBe true
+            listOf(LlmProvider.OPENAI, LlmProvider.ANTHROPIC, LlmProvider.GEMINI, LlmProvider.CUSTOM)
+                .forEach { provider -> provider.listsModelsWithoutKey shouldBe false }
+        }
+
         test("a preset configuration resolves to the preset's base URL") {
             LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini").baseUrl shouldBe LlmProvider.OPENAI.baseUrl
         }

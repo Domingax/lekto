@@ -39,6 +39,8 @@ internal const val BASE_URL_FIELD_TAG: String = "settings-provider-base-url"
 internal const val API_KEY_FIELD_TAG: String = "settings-provider-api-key"
 internal const val TEST_CONNECTION_TAG: String = "settings-provider-test"
 internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
+internal const val LOAD_MODELS_TAG: String = "settings-provider-load-models"
+internal const val MODEL_PICKER_TAG: String = "settings-provider-model-picker"
 
 /**
  * The settings screen: the dictionary pack (issue #18), the vault's
@@ -170,7 +172,51 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
         )
     }
 
+    ProviderModels(state, apiKey, actions)
     ProviderFooter(state, apiKey, actions)
+}
+
+/**
+ * Load the provider's model list (issue #93) and, once loaded, choose a model
+ * from it. Manual entry in the model field stays for a provider that does not
+ * implement `/models`; the load never blocks the reader, reporting an unsupported
+ * or failed list inline through the section's shared status.
+ */
+@Composable
+private fun ProviderModels(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
+    if (state.loadingModels) LinearProgressIndicator(Modifier.fillMaxWidth())
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton(
+            onClick = { actions.onLoadModels(apiKey) },
+            enabled = !state.loadingModels,
+            modifier = Modifier.testTag(LOAD_MODELS_TAG),
+        ) { Text("Load models") }
+        if (state.models.isNotEmpty()) {
+            ModelPicker(state.models, state.config.model, actions.onModelChange)
+        }
+    }
+}
+
+/** The models the provider listed: the current choice, and the list to pick another from. */
+@Composable
+private fun ModelPicker(models: List<String>, model: String, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(MODEL_PICKER_TAG)) {
+            Text(model.ifBlank { "Choose a model" })
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            models.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                )
+            }
+        }
+    }
 }
 
 /** The stored-key control, the inline result and the section's two actions. */

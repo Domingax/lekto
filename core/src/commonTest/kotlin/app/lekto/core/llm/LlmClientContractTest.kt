@@ -21,6 +21,10 @@ class LlmClientContractTest :
             test(case.name) { case.body() }
         }
 
+        contract.modelCases().forEach { case ->
+            test(case.name) { case.body() }
+        }
+
         contract.translationCases().forEach { case ->
             test(case.name) { case.body() }
         }

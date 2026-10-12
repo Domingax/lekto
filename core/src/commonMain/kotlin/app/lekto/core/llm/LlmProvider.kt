@@ -27,6 +27,22 @@ enum class LlmProvider(val label: String, val baseUrl: String) {
 
     /** Whether this provider needs an API key; a local Ollama does not (ADR-0022). */
     val requiresKey: Boolean get() = this != OLLAMA
+
+    /**
+     * Whether this provider wants the client to identify its session with
+     * `x-opencode-session`: the two OpenCode gateways route and cache prompts by
+     * it, and without it Go answers `MissingSessionID`. Every other provider never
+     * sees the header.
+     */
+    val usesOpenCodeSession: Boolean get() = this == OPENCODE_ZEN || this == OPENCODE_GO
+
+    /**
+     * Whether this provider's `GET /models` answers without an API key (issue
+     * #93): the OpenCode gateways publish their catalogue, and a local Ollama
+     * never asks for a key. Every other provider authenticates the model list, so
+     * a missing key is reported rather than shown as an empty list.
+     */
+    val listsModelsWithoutKey: Boolean get() = usesOpenCodeSession || this == OLLAMA
 }
 
 /**
