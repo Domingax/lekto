@@ -1,0 +1,56 @@
+# Dependabot: the update pull requests for every ecosystem this repository ships
+# (issue #153). The architecture suite fails when a manifest has no entry here
+# (DependabotWatchRulesTest), so a second npm project cannot go unwatched.
+#
+# Security alerts come from the repository's vulnerability-alerts setting, not
+# from this file; this file is what turns a dependency bump into a pull request.
+# `docs/build.md`, "Alert triage", says what happens to the alerts themselves.
+version: 2
+
+updates:
+  # The version catalog is the whole Gradle surface: `gradle/libs.versions.toml`
+  # names AGP, Kotlin, Compose, Robolectric, Testcontainers and the lint gates.
+  # Dependabot reads the catalog without running Gradle. One grouped pull request
+  # per week keeps a review of the pinned toolchain a single decision.
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      gradle-toolchain:
+        patterns:
+          - "*"
+
+  # The end-user guide's toolchain (ADR-0024). Development-only, but VitePress is
+  # what pins the Vite and esbuild that carry the dev-server advisories.
+  - package-ecosystem: "npm"
+    directory: "/guide"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      guide-toolchain:
+        patterns:
+          - "*"
+
+  # The workflows pin Actions by mutable major tag, so this entry is the only
+  # thing keeping them current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      actions:
+        patterns:
+          - "*"
