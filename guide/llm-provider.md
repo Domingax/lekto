@@ -20,6 +20,19 @@ The provider's name, model and base URL are app-private settings outside the Vau
 Because the key is device-local, you configure the provider again on each new
 device.
 
+## Choosing the model
+
+Pick your provider first: Lekto asks it for the models it offers and lists them, so
+you never type a name from memory. Then open the **Model** field — its list drops
+straight out of the field, and you can still type a name yourself. If you have just
+entered your API key, opening the field fetches the list with that key. The list is
+device-local and is not stored in your Vault.
+
+OpenCode Zen and OpenCode Go publish their list, so it loads without a key. A
+provider that has no model list — or answers in a way Lekto cannot read — is
+reported inline, and the **Model** field stays for you to type the name instead. If
+your provider needs a key, a discreet note under the field reminds you to enter it.
+
 ## Testing the connection
 
 Settings offers a connection test, so you can check that a provider works before you

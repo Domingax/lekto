@@ -1,6 +1,7 @@
 package app.lekto.settings
 
 import app.lekto.core.llm.LlmConnectionResult
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretResult
@@ -17,6 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -47,6 +49,7 @@ class ProviderControllerTest {
 
         assertEquals(LlmProviderConfig.DEFAULT, controller.state.value.config)
         assertFalse(controller.state.value.hasStoredKey)
+        assertFalse(controller.state.value.providerChosen)
     }
 
     @Test
@@ -203,6 +206,155 @@ class ProviderControllerTest {
 
         assertFalse(controller.state.value.toString().contains("sk-top-secret"))
         assertNotNull(controller.state.value.result)
+    }
+
+    @Test
+    fun `loading the models stores the list the provider offered`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("gpt-4o-mini", "gpt-4o")))
+        val controller = controller(client = client)
+
+        controller.loadModels("sk-typed")
+        advanceUntilIdle()
+
+        assertEquals(listOf("gpt-4o-mini", "gpt-4o"), controller.state.value.models)
+        assertFalse(controller.state.value.loadingModels)
+    }
+
+    @Test
+    fun `loading the models uses the stored key when the field is empty`() = runTest {
+        val secrets = InMemorySecretStore()
+        secrets.put(key(LlmProvider.OPENAI), "sk-stored")
+        val client = FakeLlmClient()
+        val controller = controller(secrets = secrets, client = client)
+
+        controller.loadModels("")
+        advanceUntilIdle()
+
+        assertEquals("sk-stored", client.listed.single().second)
+    }
+
+    @Test
+    fun `loading the models prefers a freshly typed key over the stored one`() = runTest {
+        val secrets = InMemorySecretStore()
+        secrets.put(key(LlmProvider.OPENAI), "sk-stored")
+        val client = FakeLlmClient()
+        val controller = controller(secrets = secrets, client = client)
+
+        controller.loadModels("sk-typed")
+        advanceUntilIdle()
+
+        assertEquals("sk-typed", client.listed.single().second)
+    }
+
+    @Test
+    fun `a failed model list is reported inline and stores no list`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED))
+        val controller = controller(client = client)
+
+        controller.loadModels("sk-typed")
+        advanceUntilIdle()
+
+        assertEquals(ProviderResult.Failure(LlmModelsResult.UNSUPPORTED), controller.state.value.result)
+        assertTrue(controller.state.value.models.isEmpty())
+        assertFalse(controller.state.value.loadingModels)
+    }
+
+    @Test
+    fun `a missing key is a discreet hint, not an inline failure`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Failed(LlmModelsResult.MISSING_KEY))
+        val controller = controller(client = client)
+
+        controller.loadModels("")
+        advanceUntilIdle()
+
+        assertNull(controller.state.value.result)
+        assertEquals(LlmModelsResult.MISSING_KEY, controller.state.value.modelsHint)
+        assertTrue(controller.state.value.models.isEmpty())
+    }
+
+    @Test
+    fun `choosing a provider stays quiet when the model list cannot load`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED))
+        val controller = controller(client = client)
+
+        controller.selectProvider(LlmProvider.OPENAI)
+        advanceUntilIdle()
+
+        assertNull(controller.state.value.result)
+        assertNull(controller.state.value.modelsHint)
+        assertTrue(controller.state.value.models.isEmpty())
+    }
+
+    @Test
+    fun `switching provider clears the previous provider's model list`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("gpt-4o-mini")))
+        val controller = controller(client = client)
+        controller.loadModels("sk-typed")
+        advanceUntilIdle()
+
+        controller.selectProvider(LlmProvider.ANTHROPIC)
+
+        // Cleared synchronously on the switch; the new list loads on its own.
+        assertTrue(controller.state.value.models.isEmpty())
+        assertTrue(controller.state.value.providerChosen)
+    }
+
+    @Test
+    fun `choosing a provider loads its models automatically`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("gpt-4o-mini")))
+        val controller = controller(client = client)
+
+        controller.selectProvider(LlmProvider.OPENAI)
+        advanceUntilIdle()
+
+        assertEquals(listOf("gpt-4o-mini"), controller.state.value.models)
+        assertEquals(LlmProvider.OPENAI, controller.state.value.selectedProvider)
+    }
+
+    @Test
+    fun `an unchosen provider has no selected provider`() = runTest {
+        val controller = controller()
+
+        assertNull(controller.state.value.selectedProvider)
+    }
+
+    @Test
+    fun `the controller state never carries the API key when listing`() = runTest {
+        val controller = controller(client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("m"))))
+
+        controller.loadModels("sk-top-secret")
+        advanceUntilIdle()
+
+        assertFalse(controller.state.value.toString().contains("sk-top-secret"))
+    }
+
+    @Test
+    fun `a model list that arrives after the provider changed is dropped`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("openai-model")))
+        val controller = controller(client = client)
+
+        controller.loadModels("sk-typed")
+        controller.selectProvider(LlmProvider.ANTHROPIC)
+        advanceUntilIdle()
+
+        assertTrue(controller.state.value.models.isEmpty())
+        assertFalse(controller.state.value.loadingModels)
+    }
+
+    @Test
+    fun `a failed model list clears any previous list`() = runTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("gpt-4o-mini")))
+        val controller = controller(client = client)
+        controller.loadModels("sk-typed")
+        advanceUntilIdle()
+        assertEquals(listOf("gpt-4o-mini"), controller.state.value.models)
+
+        client.models = LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
+        controller.loadModels("sk-typed")
+        advanceUntilIdle()
+
+        assertTrue(controller.state.value.models.isEmpty())
+        assertEquals(ProviderResult.Failure(LlmModelsResult.UNSUPPORTED), controller.state.value.result)
     }
 
     private fun TestScope.controller(

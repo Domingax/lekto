@@ -2,6 +2,7 @@ package app.lekto.settings
 
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmConnectionResult
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.llm.LlmSettingsStore
@@ -51,7 +52,34 @@ data class ProviderUiState(
     val hasStoredKey: Boolean = false,
     val testing: Boolean = false,
     val result: ProviderResult? = null,
-)
+    /**
+     * The models the active provider listed (issue #93), device-local UI state the
+     * reader chooses from. Empty until a list is loaded, and cleared when the
+     * provider changes — a model name is provider-specific. It never enters the
+     * vault or a log.
+     */
+    val models: List<String> = emptyList(),
+    /** Whether a model list is being fetched, so the control can say so and not double-fire. */
+    val loadingModels: Boolean = false,
+    /**
+     * A neutral prompt about the model list (issue #93) — a missing key, say — shown
+     * discreetly beside the model field rather than as a red failure, because it
+     * asks the reader for something rather than reporting a fault.
+     */
+    val modelsHint: String? = null,
+    /**
+     * Whether the reader has chosen a provider yet (issue #93). A fresh install
+     * starts unchosen, so the picker reads "Choose a provider" rather than a preset
+     * the reader never picked; choosing one reveals the model and key controls and
+     * loads the model list. A stored, non-default configuration, or a stored key,
+     * reads as already chosen.
+     */
+    val providerChosen: Boolean = false,
+) {
+    /** The provider in effect, or `null` while the reader has not chosen one. */
+    val selectedProvider: LlmProvider?
+        get() = config.provider.takeIf { providerChosen }
+}
 
 /**
  * The LLM provider's state holder (issue #88; ADR-0022): it chooses one active
@@ -77,10 +105,11 @@ class ProviderController(
     val state: StateFlow<ProviderUiState> = _state.asStateFlow()
 
     /**
-     * Makes [provider] the single active provider. Switching is a deliberate
-     * reset — the previous provider's model does not carry over, because a model
-     * name is provider-specific — while a custom base URL is kept for the next
-     * time Custom is chosen.
+     * Makes [provider] the single active provider and loads the models it offers
+     * (issue #93), so the list is ready without a separate action. Switching is a
+     * deliberate reset — the previous provider's model does not carry over, because
+     * a model name is provider-specific — while a custom base URL is kept for the
+     * next time Custom is chosen.
      */
     fun selectProvider(provider: LlmProvider) {
         _state.update { current ->
@@ -88,8 +117,11 @@ class ProviderController(
                 config = current.config.copy(provider = provider, model = ""),
                 hasStoredKey = storedKey(provider) != null,
                 result = null,
+                models = emptyList(),
+                providerChosen = true,
             )
         }
+        loadModels(apiKey = "", silent = true)
     }
 
     /** Sets the model the active provider is called with. */
@@ -97,9 +129,11 @@ class ProviderController(
         _state.update { current -> current.copy(config = current.config.copy(model = model)) }
     }
 
-    /** Sets the base URL a [LlmProvider.CUSTOM] provider is called with. */
+    /** Sets the base URL a [LlmProvider.CUSTOM] provider is called with; a new host invalidates its list. */
     fun setBaseUrl(baseUrl: String) {
-        _state.update { current -> current.copy(config = current.config.copy(customBaseUrl = baseUrl)) }
+        _state.update { current ->
+            current.copy(config = current.config.copy(customBaseUrl = baseUrl), models = emptyList())
+        }
     }
 
     /**
@@ -111,7 +145,12 @@ class ProviderController(
     fun save(apiKey: String) {
         val config = _state.value.config
         settings.save(config)
-        val keyFailure = apiKey.takeIf { it.isNotBlank() }?.let { value -> putKey(config.provider, value) }
+        val keyFailure = apiKey.takeIf { it.isNotBlank() }?.let { value ->
+            when (val outcome = secrets.put(providerSecretKey(config.provider), value)) {
+                is SecretResult.Unavailable -> outcome.message
+                else -> null
+            }
+        }
         _state.update { current ->
             current.copy(
                 hasStoredKey = storedKey(current.config.provider) != null,
@@ -128,12 +167,52 @@ class ProviderController(
     fun test(apiKey: String) {
         if (_state.value.testing) return
         val config = _state.value.config
-        val typed = apiKey.takeIf { it.isNotBlank() }
         _state.update { current -> current.copy(testing = true, result = null) }
         scope.launch {
-            val key = typed ?: storedKey(config.provider).orEmpty()
-            val outcome = withContext(dispatcher) { client.testConnection(config, key) }
+            val outcome = withContext(dispatcher) { client.testConnection(config, keyFor(apiKey, config.provider)) }
             _state.update { current -> current.copy(testing = false, result = outcome.toProviderResult()) }
+        }
+    }
+
+    /**
+     * Loads the active provider's model list from `GET /models` (issue #93),
+     * using [apiKey] when the field is not blank and the stored key otherwise, so
+     * a saved key can load the list without retyping. The call blocks, so it runs
+     * off the UI thread. A missing key is a discreet [ProviderUiState.modelsHint],
+     * never a red failure, because it asks the reader for something; an unsupported
+     * or failed list clears any previous list and is reported inline. When [silent]
+     * — an automatic load on choosing a provider — any other failure stays quiet,
+     * so switching provider cannot raise an error before the reader has acted. A
+     * list that arrives after the provider (or a custom base URL) changed is dropped
+     * — it belongs to the provider that was asked.
+     */
+    fun loadModels(apiKey: String, silent: Boolean = false) {
+        if (_state.value.loadingModels) return
+        val config = _state.value.config
+        val requested = config.provider to config.baseUrl
+        _state.update { current -> current.copy(loadingModels = true, result = null, modelsHint = null) }
+        scope.launch {
+            val outcome = withContext(dispatcher) { client.listModels(config, keyFor(apiKey, config.provider)) }
+            _state.update { current ->
+                val stale = (current.config.provider to current.config.baseUrl) != requested
+                when {
+                    stale -> current.copy(loadingModels = false)
+
+                    outcome is LlmModelsResult.Loaded ->
+                        current.copy(loadingModels = false, models = outcome.models, result = null, modelsHint = null)
+
+                    outcome is LlmModelsResult.Failed && outcome.message == LlmModelsResult.MISSING_KEY ->
+                        current.copy(loadingModels = false, models = emptyList(), modelsHint = outcome.message)
+
+                    silent -> current.copy(loadingModels = false, models = emptyList())
+
+                    else -> current.copy(
+                        loadingModels = false,
+                        models = emptyList(),
+                        result = ProviderResult.Failure((outcome as LlmModelsResult.Failed).message),
+                    )
+                }
+            }
         }
     }
 
@@ -161,20 +240,19 @@ class ProviderController(
 
     private fun initialState(): ProviderUiState {
         val config = settings.load()
+        val hasStoredKey = storedKey(config.provider) != null
         return ProviderUiState(
             available = true,
             providers = providers,
             config = config,
-            hasStoredKey = storedKey(config.provider) != null,
+            hasStoredKey = hasStoredKey,
+            providerChosen = config != LlmProviderConfig.DEFAULT || hasStoredKey,
         )
     }
 
-    /** Stores [value] under [provider]'s key slot, returning an honest message when the store is unavailable. */
-    private fun putKey(provider: LlmProvider, value: String): String? =
-        when (val outcome = secrets.put(providerSecretKey(provider), value)) {
-            is SecretResult.Unavailable -> outcome.message
-            else -> null
-        }
+    /** The key to call [provider] with: the one just typed, or the stored one, so a saved key need not be retyped. */
+    private fun keyFor(apiKey: String, provider: LlmProvider): String =
+        apiKey.takeIf { it.isNotBlank() } ?: storedKey(provider).orEmpty()
 
     private fun storedKey(provider: LlmProvider): String? =
         (secrets.get(providerSecretKey(provider)) as? SecretResult.Found)?.value

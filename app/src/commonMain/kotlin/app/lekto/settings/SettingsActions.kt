@@ -27,6 +27,7 @@ data class SettingsActions(
     val onSelectProvider: (LlmProvider) -> Unit = {},
     val onModelChange: (String) -> Unit = {},
     val onBaseUrlChange: (String) -> Unit = {},
+    val onLoadModels: (String) -> Unit = {},
     val onSaveProvider: (String) -> Unit = {},
     val onTestProvider: (String) -> Unit = {},
     val onRemoveProviderKey: () -> Unit = {},

@@ -82,6 +82,16 @@ interface LlmClient {
     fun testConnection(config: LlmProviderConfig, apiKey: String): LlmConnectionResult
 
     /**
+     * Lists the models [config]'s provider offers, from the OpenAI-compatible
+     * `GET {baseUrl}/models` (issue #93), with [apiKey] when the provider
+     * authenticates the list. The call blocks — it opens a socket — so the
+     * application runs it off the UI thread, as it does a connection test. An
+     * unsupported or failed list is a first-class [LlmModelsResult.Failed], never
+     * a thrown exception, so the reader is never blocked.
+     */
+    fun listModels(config: LlmProviderConfig, apiKey: String): LlmModelsResult
+
+    /**
      * Streams the translation [request] asks for as it arrives, emitting each
      * [LlmTranslationEvent]. The flow is cold: collecting it opens the request,
      * and cancelling the collection stops it and closes the connection.

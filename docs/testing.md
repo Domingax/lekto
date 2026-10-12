@@ -652,6 +652,35 @@ find the reader on the same page — runs through `AppSemanticsTest` on both
 lanes. Closing the panel cancels the collecting coroutine, and the transport
 closes the socket as the flow is cancelled, so the stream stops.
 
+Choosing the model from the provider's list (issue #93; ADR-0022) is proved at the
+same levels. The `data[].id` parse is a pure transform in `core`, so
+`LlmModelsResultTest` in `core/commonTest` pins it: the identifiers in order, blank,
+non-string and duplicate ids dropped, the count bounded at `MAX_MODELS` and each
+identifier at `MAX_MODEL_ID_LENGTH`, and a body that is not the list envelope
+reading as "unsupported" so manual entry stays. The listing joins the
+`LlmClient` seam's contract: `LlmClientContract.modelCases()` — the list as a
+first-class result, a failure rather than a throw, and the request reaching the
+adapter unchanged — runs against `FakeLlmClient` in `core/commonTest`. The
+transport is pinned in `OpenAiCompatibleLlmClientTest` (`core/jvmTest`): a `GET
+{baseUrl}/models` with the bearer key and the OpenCode session, the OpenAI `User-Agent`,
+the OpenCode gateways loading keyless, a missing key reported rather than sent, a
+`404` and an unparseable body falling back to manual entry, an empty catalogue
+reported, and a rejected key classified without rendering the provider's text.
+The state holder — read the active provider and its key, load off the UI thread,
+store the list or report a failure inline, treat a missing key as a discreet hint
+rather than a red failure, stay quiet when an automatic load cannot complete, clear
+the list when the provider changes, and drop a list that arrives after the provider
+moved — is `ProviderControllerTest` in `app/desktopTest`, driven by virtual time; it
+also pins that choosing a provider loads its models with no separate action. The
+section's controls — the provider picker reading "Choose a provider" until one is
+chosen, opening the model field raising the typed key, the model field offering the
+loaded list as an exposed dropdown that still accepts manual typing, the discreet
+missing-key note, and an unsupported list reported inline — are
+`SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach settings,
+choose a provider, watch its models load, pick one and see the field fill — runs
+through `AppSemanticsTest` on both lanes. The list is device-local UI state:
+it never enters the vault, an export or a log.
+
 The settings screen's vault export/import (issue #20) is proved at the same
 levels. The state holder that runs the transfer — the export's bytes handed to
 the save action, an import restoring the vault, a cancelled file dialog as a

@@ -27,6 +27,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
@@ -95,7 +96,7 @@ import kotlin.test.assertTrue
  * resumes at the page the reader left.
  */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("TooManyFunctions") // One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
 class AppSemanticsTest {
 
     @Test
@@ -355,6 +356,33 @@ class AppSemanticsTest {
         waitUntil { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
         onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingAModelFromTheProvidersListFillsTheModel() = runComposeUiTest {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("claude-3", "claude-3-5")))
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    secrets = InMemorySecretStore(),
+                    llm = LlmServices(InMemoryLlmSettingsStore(), client),
+                ),
+            )
+        }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithText("Anthropic").performClick()
+
+        // Choosing the provider loads its models with no separate action.
+        waitUntil(timeoutMillis = 10_000) { client.listed.isNotEmpty() }
+        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performClick()
+        onNodeWithText("claude-3-5").performClick()
+
+        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo()
+        onNodeWithText("claude-3-5").assertIsDisplayed()
     }
 
     @Test

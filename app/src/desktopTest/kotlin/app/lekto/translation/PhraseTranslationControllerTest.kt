@@ -2,6 +2,7 @@ package app.lekto.translation
 
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmConnectionResult
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.llm.LlmTranslationEvent
@@ -119,6 +120,9 @@ class PhraseTranslationControllerTest {
         val client = object : LlmClient {
             override fun testConnection(config: LlmProviderConfig, apiKey: String): LlmConnectionResult =
                 LlmConnectionResult.Connected
+
+            override fun listModels(config: LlmProviderConfig, apiKey: String): LlmModelsResult =
+                LlmModelsResult.Failed(LlmModelsResult.UNSUPPORTED)
 
             override fun translate(request: LlmTranslationRequest): Flow<LlmTranslationEvent> = flow {
                 try {

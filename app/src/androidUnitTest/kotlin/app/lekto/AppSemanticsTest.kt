@@ -30,6 +30,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.secret.SecretStore
@@ -111,7 +112,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("TooManyFunctions") // One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
 class AppSemanticsTest {
 
     @get:Rule
@@ -379,6 +380,33 @@ class AppSemanticsTest {
         compose.waitUntil { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
         compose.onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingAModelFromTheProvidersListFillsTheModel() {
+        val client = FakeLlmClient(models = LlmModelsResult.Loaded(listOf("claude-3", "claude-3-5")))
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    secrets = InMemorySecretStore(),
+                    llm = LlmServices(InMemoryLlmSettingsStore(), client),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("Anthropic").performClick()
+
+        // Choosing the provider loads its models with no separate action.
+        compose.waitUntil(timeoutMillis = 10_000) { client.listed.isNotEmpty() }
+        compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
+        compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("claude-3-5").performClick()
+
+        compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo()
+        compose.onNodeWithText("claude-3-5").assertIsDisplayed()
     }
 
     @Test

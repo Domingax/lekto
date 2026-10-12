@@ -12,8 +12,8 @@ answers the common questions.
 - **Reader level** — declare the CEFR level you read at in each language, and
   download the word-difficulty data that colours harder words. See
   [Reading](/reading).
-- **LLM provider** — choose a provider, enter an API key, pick a model, and test the
-  connection. See [LLM provider and privacy](/llm-provider).
+- **LLM provider** — choose a provider, enter an API key, load and pick a model, and
+  test the connection. See [LLM provider and privacy](/llm-provider).
 - **Attribution** — the licences and sources Lekto builds on.
 
 ## Frequently asked questions
@@ -34,7 +34,8 @@ See [Pronunciation](/pronunciation).
 
 Use the connection test in Settings to see the failure. Check that the key is
 correct, that the provider is the one the key belongs to, and that the model is
-available to it. See [LLM provider and privacy](/llm-provider).
+available to it — **Load models** lists what the provider offers, so you can pick a
+valid one. See [LLM provider and privacy](/llm-provider).
 
 ### Every word is still highlighted
 
