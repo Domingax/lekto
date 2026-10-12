@@ -280,9 +280,9 @@ The bottom sheet implementation (Spotify-inspired) is a refinement of the patter
 | Level | Meaning | Color |
 |-------|---------|-------|
 | 0 — Unknown | New word, never seen | Blue (strong highlight) |
-| 1 — Familiar | Seen once | Yellow |
-| 2 — Recognized | Partially acquired | Light orange |
-| 3 — Mastered | Nearly acquired | Light green |
+| 1 — Recognized | Seen once | Yellow |
+| 2 — Familiar | Partially acquired | Light orange |
+| 3 — Learned | Nearly acquired | Light green |
 | 4 — Known | Fully acquired | No highlight (normal text) |
 
 Level 4 carries no color — known words are invisible in the system, which reinforces the sense of progress: the fewer highlighted words, the more the user has learned.
@@ -524,7 +524,7 @@ Seven custom components are required for interactions unique to Lekto with no sh
 **Purpose:** Interactive word span in the reader — the most critical component in the product.
 **Content:** A single tokenized word with its mastery level state.
 **Actions:** Tap/click to open the translation panel.
-**States:** `unknown` · `familiar` · `recognized` · `mastered` · `known` · `selected`
+**States:** `unknown` · `recognized` · `familiar` · `learned` · `known` · `selected`
 **Accessibility:** `role="button"`, `aria-label="[word] — level [n]"`. Non-color indicator (underline style varies by level) for colorblind users.
 
 #### `TranslationPanel`

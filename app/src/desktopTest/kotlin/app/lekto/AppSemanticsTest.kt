@@ -393,7 +393,7 @@ class AppSemanticsTest {
         // sync; the reader must show it without relaunching the app (issue #132).
         val vault = InMemoryVaultStore()
         val target = InMemorySyncTarget(changeCursor = false)
-        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+        val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED)
         val record = VocabularyRecord.of(entry, deterministicSeams().clock.now(), DeviceId("device-b"))
         runBlocking { target.put(VersionedRecord.of(record), null) }
         val secrets = InMemorySecretStore().apply { put(SyncController.PASSWORD_KEY, "stored") }
@@ -434,7 +434,7 @@ class AppSemanticsTest {
             entry.contextSentence.orEmpty().contains("On"),
             "the context sentence is kept: ${entry.contextSentence}",
         )
-        assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
+        assertEquals(MasteryLevel.RECOGNIZED, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
         waitUntil { onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Saved").assertIsDisplayed()
@@ -451,9 +451,9 @@ class AppSemanticsTest {
         onNodeWithText("Save").performClick()
         waitUntil { vocabulary.all().isNotEmpty() }
 
-        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performClick()
+        onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
 
-        waitUntil { vocabulary.all().single().mastery == MasteryLevel.MASTERED }
+        waitUntil { vocabulary.all().single().mastery == MasteryLevel.LEARNED }
         assertEquals(1, vocabulary.all().size, "changing the level must not add a second entry")
     }
 
@@ -461,7 +461,7 @@ class AppSemanticsTest {
     fun aWordSavedInAnEarlierSessionIsShownAsSaved() = runComposeUiTest {
         val vault = InMemoryVaultStore()
         val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-        vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.MASTERED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.LEARNED))
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
@@ -470,7 +470,7 @@ class AppSemanticsTest {
 
         // The entry survived the restart: the panel opens already saved.
         onNodeWithText("Saved").assertIsDisplayed()
-        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsDisplayed()
     }
 
     @Test
@@ -505,7 +505,7 @@ class AppSemanticsTest {
                 surface = "lantern",
                 translation = "lanterne",
                 contextSentence = "The lantern burned all night.",
-                mastery = MasteryLevel.MASTERED,
+                mastery = MasteryLevel.LEARNED,
             ),
         )
         setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
@@ -515,14 +515,14 @@ class AppSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("lanterne").assertIsDisplayed()
         onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Mastered")
+        onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Learned")
     }
 
     @Test
     fun theVocabularyCanBeSearched() = runComposeUiTest {
         val vocabulary = inMemoryVocabulary()
-        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.MASTERED))
-        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.FAMILIAR))
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.LEARNED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.RECOGNIZED))
         setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
 
         onNodeWithText("Vocabulary").performClick()
@@ -538,15 +538,15 @@ class AppSemanticsTest {
     @Test
     fun theVocabularyCanBeFilteredByMastery() = runComposeUiTest {
         val vocabulary = inMemoryVocabulary()
-        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.MASTERED))
-        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.FAMILIAR))
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.LEARNED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.RECOGNIZED))
         setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
 
         onNodeWithText("Vocabulary").performClick()
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("harbour").assertIsDisplayed()
 
-        onNodeWithTag(vocabularyFilterTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("harbour").assertDoesNotExist()

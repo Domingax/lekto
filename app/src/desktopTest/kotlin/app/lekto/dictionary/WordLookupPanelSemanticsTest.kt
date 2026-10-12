@@ -161,7 +161,7 @@ class WordLookupPanelSemanticsTest {
 
         onNodeWithTag(SAVE_TAG).performScrollTo().performClick()
 
-        assertEquals(MasteryLevel.FAMILIAR, saved)
+        assertEquals(MasteryLevel.RECOGNIZED, saved)
     }
 
     @Test
@@ -169,18 +169,18 @@ class WordLookupPanelSemanticsTest {
         var saved: MasteryLevel? = null
         setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
 
-        onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+        onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
-        assertEquals(MasteryLevel.MASTERED, saved)
+        assertEquals(MasteryLevel.LEARNED, saved)
     }
 
     @Test
     fun aSavedWordLabelsTheSaveButtonAndMarksItsLevel() = runComposeUiTest {
-        val entry = VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = MasteryLevel.RECOGNIZED)
+        val entry = VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = MasteryLevel.FAMILIAR)
         setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = entry) }
 
         onNodeWithText("Saved").assertIsDisplayed()
-        onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsDisplayed()
     }
 
     @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.

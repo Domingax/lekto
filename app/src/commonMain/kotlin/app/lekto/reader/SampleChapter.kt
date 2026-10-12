@@ -62,9 +62,9 @@ object SampleChapter {
     val mastery: MasteryLookup = MasteryLookup { key ->
         when (key.key) {
             "lantern", "harbour", "keeper", "ledger" -> MasteryLevel.UNKNOWN
-            "quiet" -> MasteryLevel.FAMILIAR
-            "evening", "remarkable" -> MasteryLevel.RECOGNIZED
-            "light", "storm" -> MasteryLevel.MASTERED
+            "quiet" -> MasteryLevel.RECOGNIZED
+            "evening", "remarkable" -> MasteryLevel.FAMILIAR
+            "light", "storm" -> MasteryLevel.LEARNED
             else -> MasteryLevel.KNOWN
         }
     }

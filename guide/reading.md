@@ -27,9 +27,9 @@ Every **Word token** is coloured by its **Mastery level**, on a five-point scale
 | Level | Meaning | Shown as |
 | ----- | ------- | -------- |
 | 0 | Unknown | Highlighted |
-| 1 | Familiar | Highlighted |
-| 2 | Recognized | Highlighted |
-| 3 | Mastered | Highlighted |
+| 1 | Recognized | Highlighted |
+| 2 | Familiar | Highlighted |
+| 3 | Learned | Highlighted |
 | 4 | Known | Normal text, no highlight |
 
 Levels 0–3 are highlighted so unfamiliar words stand out. Level 4 is invisible:

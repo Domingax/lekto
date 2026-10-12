@@ -428,7 +428,7 @@ class AppSemanticsTest {
             "the context sentence is kept: ${entry.contextSentence}",
             entry.contextSentence.orEmpty().contains("On"),
         )
-        assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
+        assertEquals(MasteryLevel.RECOGNIZED, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
         compose.waitUntil { compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Saved").assertIsDisplayed()
@@ -445,9 +445,9 @@ class AppSemanticsTest {
         compose.onNodeWithText("Save").performClick()
         compose.waitUntil { vocabulary.all().isNotEmpty() }
 
-        compose.onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
-        compose.waitUntil { vocabulary.all().single().mastery == MasteryLevel.MASTERED }
+        compose.waitUntil { vocabulary.all().single().mastery == MasteryLevel.LEARNED }
         assertEquals("changing the level must not add a second entry", 1, vocabulary.all().size)
     }
 
@@ -455,7 +455,7 @@ class AppSemanticsTest {
     fun aWordSavedInAnEarlierSessionIsShownAsSaved() {
         val vault = InMemoryVaultStore()
         val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-        vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.MASTERED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "on"), "On", mastery = MasteryLevel.LEARNED))
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
@@ -464,7 +464,7 @@ class AppSemanticsTest {
 
         // The entry survived the restart: the panel opens already saved.
         compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -500,7 +500,7 @@ class AppSemanticsTest {
                 surface = "lantern",
                 translation = "lanterne",
                 contextSentence = "The lantern burned all night.",
-                mastery = MasteryLevel.MASTERED,
+                mastery = MasteryLevel.LEARNED,
             ),
         )
         compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
@@ -510,14 +510,14 @@ class AppSemanticsTest {
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("lanterne").assertIsDisplayed()
         compose.onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        compose.onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Mastered")
+        compose.onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Learned")
     }
 
     @Test
     fun theVocabularyCanBeSearched() {
         val vocabulary = inMemoryVocabulary()
-        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.MASTERED))
-        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.FAMILIAR))
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.LEARNED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.RECOGNIZED))
         compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
 
         compose.onNodeWithText("Vocabulary").performClick()
@@ -533,15 +533,15 @@ class AppSemanticsTest {
     @Test
     fun theVocabularyCanBeFilteredByMastery() {
         val vocabulary = inMemoryVocabulary()
-        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.MASTERED))
-        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.FAMILIAR))
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.LEARNED))
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", mastery = MasteryLevel.RECOGNIZED))
         compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
 
         compose.onNodeWithText("Vocabulary").performClick()
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("harbour").assertIsDisplayed()
 
-        compose.onNodeWithTag(vocabularyFilterTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+        compose.onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("harbour").assertDoesNotExist()

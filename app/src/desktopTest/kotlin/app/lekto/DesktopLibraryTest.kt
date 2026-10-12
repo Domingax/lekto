@@ -41,7 +41,7 @@ class DesktopLibraryTest {
     fun theVocabularySavesAWordOverTheDesktopVaultAndReloadsIt() {
         val root = Files.createTempDirectory("lekto-desktop-vocabulary").toFile().resolve("vault")
         try {
-            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED)
 
             desktopVocabulary(root).save(entry)
 
@@ -55,7 +55,7 @@ class DesktopLibraryTest {
     fun theVocabularyDeletesAWordOverTheDesktopVault() {
         val root = Files.createTempDirectory("lekto-desktop-vocabulary-delete").toFile().resolve("vault")
         try {
-            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED)
             val vocabulary = desktopVocabulary(root)
             vocabulary.save(entry)
 
@@ -71,7 +71,7 @@ class DesktopLibraryTest {
     fun theVaultExportCarriesSavedVocabulary() {
         val root = Files.createTempDirectory("lekto-desktop-vocab-export").toFile().resolve("vault")
         try {
-            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.FAMILIAR)
+            val entry = VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.RECOGNIZED)
             desktopVocabulary(root).save(entry)
 
             val bundle = VaultCodec.decodeBundle(desktopVaultStore(root).exportBundle().decodeToString())

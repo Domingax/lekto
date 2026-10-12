@@ -51,7 +51,7 @@ class VocabularyScreenSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("lanterne").assertIsDisplayed()
         onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        onNodeWithTag(vocabularyMasteryTag(lantern.key)).assertTextEquals("Mastered")
+        onNodeWithTag(vocabularyMasteryTag(lantern.key)).assertTextEquals("Learned")
     }
 
     @Test
@@ -107,17 +107,17 @@ class VocabularyScreenSemanticsTest {
         var filtered: MasteryLevel? = null
         setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), ""), onFilter = { filtered = it }) }
 
-        onNodeWithTag(vocabularyFilterTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
-        assertEquals(MasteryLevel.MASTERED, filtered)
+        assertEquals(MasteryLevel.LEARNED, filtered)
     }
 
     @Test
     fun theAllChipClearsTheMasteryFilter() = runComposeUiTest {
-        var filtered: MasteryLevel? = MasteryLevel.MASTERED
+        var filtered: MasteryLevel? = MasteryLevel.LEARNED
         setContent {
             Vocabulary(
-                VocabularyUiState.Results(listOf(lantern), "", MasteryLevel.MASTERED),
+                VocabularyUiState.Results(listOf(lantern), "", MasteryLevel.LEARNED),
                 onFilter = { filtered = it },
             )
         }

@@ -14,6 +14,16 @@ class MasteryLevelTest {
     }
 
     @Test
+    fun theLadderReadsUnknownRecognizedFamiliarLearnedKnown() {
+        // The names are the persisted value — a vault stores a level by name — so
+        // this is the guard the rename is about (issue #140).
+        assertEquals(
+            listOf("UNKNOWN", "RECOGNIZED", "FAMILIAR", "LEARNED", "KNOWN"),
+            MasteryLevel.entries.map { level -> level.name },
+        )
+    }
+
+    @Test
     fun everyLevelButKnownIsHighlighted() {
         val highlighted = MasteryLevel.entries.filter { level -> level.highlighted }.map { level -> level.level }
         assertEquals(listOf(0, 1, 2, 3), highlighted)

@@ -16,7 +16,7 @@ fun testVocabularyEntry(
     key: String = surface,
     translation: String? = "lanterne",
     contextSentence: String? = "The lantern burned all night.",
-    mastery: MasteryLevel = MasteryLevel.MASTERED,
+    mastery: MasteryLevel = MasteryLevel.LEARNED,
 ): VocabularyEntry = VocabularyEntry(
     key = WordKey(language, key),
     surface = surface,

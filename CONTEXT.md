@@ -102,8 +102,10 @@ _Avoid_: Word id, hash
 
 
 **Mastery level**:
-How well the user knows a word, on a five-point scale: 0 unknown, 1 familiar,
-2 recognized, 3 mastered, 4 known. Levels 0–3 are highlighted; level 4 is invisible
+How well the user knows a word, on a five-point scale: 0 unknown, 1 recognized,
+2 familiar, 3 learned, 4 known. The names read in the order a reader acquires a word:
+you recognize it before it becomes familiar, and it is learned before it is known.
+Levels 0–3 are highlighted; level 4 is invisible
 (normal text). Held per **Word key**, so inflected forms share one level, and stored on
 the **Vocabulary entry** that key names.
 _Avoid_: Confidence level, difficulty, proficiency

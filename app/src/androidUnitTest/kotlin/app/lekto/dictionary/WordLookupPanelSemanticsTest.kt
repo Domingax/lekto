@@ -176,7 +176,7 @@ class WordLookupPanelSemanticsTest {
 
         compose.onNodeWithTag(SAVE_TAG).performScrollTo().performClick()
 
-        assertEquals(MasteryLevel.FAMILIAR, saved)
+        assertEquals(MasteryLevel.RECOGNIZED, saved)
     }
 
     @Test
@@ -184,18 +184,18 @@ class WordLookupPanelSemanticsTest {
         var saved: MasteryLevel? = null
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
 
-        compose.onNodeWithTag(masteryTag(MasteryLevel.MASTERED)).performScrollTo().performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
-        assertEquals(MasteryLevel.MASTERED, saved)
+        assertEquals(MasteryLevel.LEARNED, saved)
     }
 
     @Test
     fun `a saved word labels the save button and marks its level`() {
-        val entry = VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = MasteryLevel.RECOGNIZED)
+        val entry = VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = MasteryLevel.FAMILIAR)
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = entry) }
 
         compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performScrollTo().assertIsDisplayed()
     }
 
     @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.

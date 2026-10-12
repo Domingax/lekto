@@ -36,7 +36,7 @@ class ReaderTextTest {
         mastery = MasteryLookup { key ->
             when (key.key) {
                 "lantern" -> MasteryLevel.UNKNOWN
-                "glows" -> MasteryLevel.FAMILIAR
+                "glows" -> MasteryLevel.RECOGNIZED
                 else -> MasteryLevel.KNOWN
             }
         },
@@ -70,12 +70,12 @@ class ReaderTextTest {
         val tokens = buildReaderTokens(chapter, renderer)
 
         val unknown = styleOf(tokens, "lantern").color
-        val familiar = styleOf(tokens, "glows").color
+        val recognized = styleOf(tokens, "glows").color
         val known = styleOf(tokens, "the").color
 
-        assertNotEquals(unknown, familiar, "two mastery levels must not share a colour")
+        assertNotEquals(unknown, recognized, "two mastery levels must not share a colour")
         assertNotEquals(unknown, known, "a highlighted word must stand out from normal text")
-        assertNotEquals(familiar, known, "a highlighted word must stand out from normal text")
+        assertNotEquals(recognized, known, "a highlighted word must stand out from normal text")
         assertEquals(ReaderStyles.Reading.body.color, known)
     }
 
