@@ -30,6 +30,8 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.language.LanguageCatalog
+import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
@@ -51,8 +53,10 @@ import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
+import app.lekto.language.LANGUAGES_RELOAD_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
+import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
@@ -65,6 +69,7 @@ import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
+import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
@@ -77,6 +82,7 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.testkit.testOfferedLanguage
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
@@ -91,6 +97,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 
 /**
  * The application's reading-loop flow on a **simulated Android runtime** (issue
@@ -615,13 +622,54 @@ class AppSemanticsTest {
         compose.onNodeWithText("Save").assertIsDisplayed()
         compose.onNodeWithText("Saved").assertDoesNotExist()
     }
+
+    @Test
+    fun reachesTheLanguagesSurfaceFromTheLibrary() {
+        compose.setContent { App(environment(InMemoryLibrary(), languages = languageCatalog())) }
+
+        compose.onNodeWithText("Languages").performClick()
+
+        compose.onNodeWithText("English").assertIsDisplayed()
+    }
+
+    @Test
+    fun reachesTheLanguagesSurfaceFromSettings() {
+        compose.setContent { App(environment(InMemoryLibrary(), languages = languageCatalog())) }
+
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithTag(LANGUAGES_LINK_TAG).performScrollTo().performClick()
+
+        compose.onNodeWithText("English").assertIsDisplayed()
+    }
+
+    @Test
+    fun reloadingTheLanguageListRefetchesItWhenNoneIsCached() {
+        // The first open finds no cache and the fetch fails: the honest empty state.
+        val catalog = InMemoryLanguageCatalog().apply { failure = IOException("offline") }
+        compose.setContent { App(environment(InMemoryLibrary(), languages = catalog)) }
+
+        compose.onNodeWithText("Languages").performClick()
+        compose.onNodeWithText("hasn't loaded the list of languages", substring = true).assertIsDisplayed()
+
+        catalog.failure = null
+        catalog.onReload = LanguageCatalogState.Available(listOf(testOfferedLanguage("en")))
+        compose.onNodeWithTag(LANGUAGES_RELOAD_TAG).performClick()
+
+        compose.waitUntil { compose.onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("English").assertIsDisplayed()
+    }
 }
+
+/** An **in-memory catalog** offering English, so the Languages surface lists something. */
+private fun languageCatalog(): LanguageCatalog =
+    InMemoryLanguageCatalog(LanguageCatalogState.Available(listOf(testOfferedLanguage("en"))))
 
 @Suppress("LongParameterList") // The environment's inputs are independent; a bundle would only hide that.
 internal fun environment(
     library: BookLibrary,
     pickFile: (suspend () -> PickedFile?)? = null,
     dictionary: DictionaryServices? = null,
+    languages: LanguageCatalog? = null,
     pronouncer: Pronouncer? = null,
     openUrl: (String) -> Unit = {},
     vaultTransfer: VaultTransfer? = null,
@@ -638,6 +686,7 @@ internal fun environment(
     vocabulary = vocabulary,
     pickFile = pickFile,
     dictionary = dictionary,
+    languages = languages,
     pronouncer = pronouncer,
     openUrl = openUrl,
     vaultTransfer = vaultTransfer,

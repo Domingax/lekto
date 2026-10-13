@@ -14,4 +14,5 @@ data class LibraryActions(
     val onDismissError: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
     val onOpenVocabulary: () -> Unit = {},
+    val onOpenLanguages: () -> Unit = {},
 )

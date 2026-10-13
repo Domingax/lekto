@@ -42,6 +42,7 @@ behaviour updates the page(s) named below in the same pull request, the way
 | The Library list, ordering or opening a book | `library.md` |
 | The reader, pagination or the Reading position | `reading.md` |
 | The Reader level, word difficulty or the difficulty download | `reading.md`, `settings-and-faq.md` |
+| The Languages surface and the offered languages | `settings-and-faq.md` |
 | The word lookup panel or Dictionary shortcuts | `word-lookup.md` |
 | Saving, searching, filtering or deleting vocabulary | `vocabulary.md` |
 | Pronunciation and its unavailable-language message | `pronunciation.md` |

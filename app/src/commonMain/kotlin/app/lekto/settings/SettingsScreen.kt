@@ -44,8 +44,12 @@ internal const val API_KEY_FIELD_TAG: String = "settings-provider-api-key"
 internal const val TEST_CONNECTION_TAG: String = "settings-provider-test"
 internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
 
+/** The test tag on the way to the **Languages** surface, so a UI test can click exactly it. */
+internal const val LANGUAGES_LINK_TAG: String = "settings-languages"
+
 /**
- * The settings screen: the dictionary pack (issue #18), the vault's
+ * The settings screen: the way to the **Languages** surface (issue #146), the
+ * dictionary pack (issue #18), the vault's
  * export/import (issue #20), sync (issue #28) and the LLM provider (issue #88).
  * Each is its own section so later settings land without disturbing the ones
  * already here, and nothing on the screen gates the reader — the vault actions
@@ -63,6 +67,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Header(actions.onBack)
+        Section("Languages") { LanguagesSection(actions) }
         Section("Dictionary") { DictionarySection(state.dictionary, actions) }
         Section("Reader level") { ReaderLevelSection(state.readerLevel, actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
@@ -77,6 +82,23 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(title, style = MaterialTheme.typography.titleLarge)
         content()
+    }
+}
+
+/**
+ * The **Languages** doorway (issue #146): a first-class destination, so it is
+ * reachable from Settings as well as from the library's own header until the
+ * navigation rework lands. The per-language controls the destination carries
+ * replace the sections below in later tickets (#147, #148, #149).
+ */
+@Composable
+private fun LanguagesSection(actions: SettingsActions) {
+    Text(
+        "See the languages Lekto offers for reading, ordered by the ones you have most books in.",
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    TextButton(onClick = actions.onOpenLanguages, modifier = Modifier.testTag(LANGUAGES_LINK_TAG)) {
+        Text("Languages")
     }
 }
 

@@ -50,6 +50,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
     val picker = remember { AndroidFilePicker() }
     val dictionary = remember { androidDictionary(context) }
     val difficulty = remember { androidDifficulty(context) }
+    val languages = remember { androidLanguage(context) }
     val readerLevels = remember { androidReaderLevels(context) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) {
@@ -78,6 +79,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
             },
             dictionary = dictionary,
             difficulty = difficulty,
+            languages = languages,
             pronouncer = speech,
             openUrl = { url -> openInBrowser(context, url) },
             vaultTransfer = vaultTransfer,
