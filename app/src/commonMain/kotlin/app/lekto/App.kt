@@ -28,6 +28,7 @@ import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -51,6 +52,8 @@ import app.lekto.dictionary.WordLookupPanel
 import app.lekto.difficulty.DifficultyController
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.difficulty.DifficultyUiState
+import app.lekto.language.LanguageController
+import app.lekto.language.LanguagesDestination
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
@@ -120,6 +123,13 @@ data class AppEnvironment(
     val pickFile: (suspend () -> PickedFile?)? = null,
     val dictionary: DictionaryServices? = null,
     val difficulty: DifficultyServices? = null,
+    /**
+     * The published **Language manifest** the **Languages** surface lists the
+     * offered **Reading language**s from, fetched and cached as a **Derived
+     * asset** (issue #146). `null` when the platform wires none, so the surface
+     * stays reachable and honest.
+     */
+    val languages: LanguageCatalog? = null,
     val pronouncer: Pronouncer? = null,
     val openUrl: (String) -> Unit = {},
     val vaultTransfer: VaultTransfer? = null,
@@ -159,6 +169,13 @@ private sealed interface Destination {
     data object Settings : Destination
     data object Attribution : Destination
     data object Vocabulary : Destination
+
+    /**
+     * The **Languages** surface (issue #146). It is reached from the library and
+     * from Settings, so it carries where to return to rather than hard-coding
+     * one — the navigation rework will replace this with a real shell.
+     */
+    data class Languages(val returnTo: Destination) : Destination
     data class Reading(val session: ReadingSession) : Destination
 }
 
@@ -233,6 +250,12 @@ fun App(
         environment.difficulty?.let { services -> DifficultyController(services, environment.dispatcher) }
     }
     val difficultyState = difficulty?.state?.collectAsState()?.value ?: DifficultyUiState()
+    // The **Languages** surface's catalogue (issue #146): the Language manifest
+    // cached as a derived asset, its offered languages ordered by the books the
+    // library currently holds.
+    val language = remember(environment.languages, environment.dispatcher) {
+        environment.languages?.let { catalog -> LanguageController(catalog, { state.books }, environment.dispatcher) }
+    }
     val provider = remember(environment.llm, environment.secrets, environment.dispatcher, scope) {
         val llm = environment.llm
         val secrets = environment.secrets
@@ -290,12 +313,12 @@ fun App(
     // edge to edge whether it asks to or not, so without this the chrome sits
     // under the status bar and the system, which owns that strip, eats its taps.
     Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-        AppScreens(environment, controller, state, scope, progress, settings, vocabulary, mastery)
+        AppScreens(environment, controller, state, scope, progress, settings, vocabulary, mastery, language)
     }
 }
 
 /** The app's destinations, so [App] stays a wiring function and each screen is small. */
-@Suppress("LongParameterList") // These are the composition's inputs; bundling them adds a type, not clarity.
+@Suppress("LongParameterList", "LongMethod") // The destinations' inputs, and the `when` that maps each to its screen.
 @Composable
 private fun AppScreens(
     environment: AppEnvironment,
@@ -306,6 +329,7 @@ private fun AppScreens(
     settings: Settings,
     vocabulary: VocabularyController?,
     mastery: MasteryController?,
+    language: LanguageController?,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -332,8 +356,11 @@ private fun AppScreens(
                 settings,
                 onVaultImported = controller::refresh,
                 onOpenAttribution = { destination = Destination.Attribution },
+                onOpenLanguages = { destination = Destination.Languages(Destination.Settings) },
                 onBack = { destination = Destination.Library },
             )
+
+            is Destination.Languages -> LanguagesDestination(language, onBack = { destination = current.returnTo })
 
             Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, scope) {
                 destination = Destination.Library
@@ -346,6 +373,7 @@ private fun AppScreens(
                 libraryState,
                 onOpenVocabulary = { destination = Destination.Vocabulary },
                 onOpenSettings = { destination = Destination.Settings },
+                onOpenLanguages = { destination = Destination.Languages(Destination.Library) },
                 onOpen = { session -> destination = Destination.Reading(session) },
             )
         }
@@ -490,11 +518,13 @@ private class Settings(
 )
 
 /** The settings destination wrapped so its action bundle stays out of [AppScreens]. */
+@Suppress("LongParameterList") // The settings controllers and the ways it navigates, each independent.
 @Composable
 private fun SettingsDestination(
     settings: Settings,
     onVaultImported: () -> Unit,
     onOpenAttribution: () -> Unit,
+    onOpenLanguages: () -> Unit,
     onBack: () -> Unit,
 ) {
     SettingsScreen(
@@ -504,6 +534,7 @@ private fun SettingsDestination(
             onOpenAttribution = onOpenAttribution,
             onDismissError = { settings.dictionary?.dismissError() },
             onBack = onBack,
+            onOpenLanguages = onOpenLanguages,
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
@@ -541,6 +572,7 @@ private fun LibraryDestination(
     state: LibraryUiState,
     onOpenVocabulary: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenLanguages: () -> Unit,
     onOpen: (ReadingSession) -> Unit,
 ) {
     LibraryScreen(
@@ -549,7 +581,7 @@ private fun LibraryDestination(
             environment,
             controller,
             scope,
-            LibraryNavigation(onOpenVocabulary, onOpenSettings, onOpen),
+            LibraryNavigation(onOpenVocabulary, onOpenSettings, onOpenLanguages, onOpen),
         ),
     )
 }
@@ -652,12 +684,14 @@ private fun libraryActions(
     onDismissError = controller::dismissError,
     onOpenSettings = navigation.onOpenSettings,
     onOpenVocabulary = navigation.onOpenVocabulary,
+    onOpenLanguages = navigation.onOpenLanguages,
 )
 
 /** Where the library's taps lead, bundled so [libraryActions] stays within the parameter bound. */
 private class LibraryNavigation(
     val onOpenVocabulary: () -> Unit,
     val onOpenSettings: () -> Unit,
+    val onOpenLanguages: () -> Unit,
     val onOpen: (ReadingSession) -> Unit,
 )
 

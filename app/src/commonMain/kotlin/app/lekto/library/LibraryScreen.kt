@@ -96,6 +96,7 @@ private fun LibraryHeader(actions: LibraryActions) {
     ) {
         Text("Library", style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = actions.onOpenLanguages) { Text("Languages") }
             TextButton(onClick = actions.onOpenVocabulary) { Text("Vocabulary") }
             TextButton(onClick = actions.onOpenSettings) { Text("Settings") }
         }

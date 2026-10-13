@@ -804,8 +804,31 @@ level and the difficulty, with the one revision the reader recolours on — is
 `MasteryControllerTest` in `app/desktopTest`, the download's state holder is
 `DifficultyControllerTest`, and the settings section's level pickers and the
 difficulty table's state and download are `SettingsScreenSemanticsTest` on both
-lanes. The level UI lands in Settings for now; a dedicated profile/languages
-surface is a companion issue.
+lanes. The level UI still lands in Settings; the **Languages** surface below is
+where it moves (issue #147).
+
+The **Languages** surface and its **Language manifest** (issue #146) are proved at
+their own levels. Reading a manifest is a pure function from bytes to a
+catalogue, so `LanguageManifestReadTest` in `core/commonTest` pins that the
+offered languages and their artefacts are read, that a manifest whose format this
+build does not read is refused rather than misread, that malformed bytes are not
+mistaken for an empty catalogue, and a write/read round-trip over generated
+languages. `LanguageCatalog`'s lifecycle is a `core/commonTest` behaviour over the
+fakes in `testkit` — `LanguageCatalogTest` proves the cache is read without a
+fetch, a reload fetches and caches, a refused manifest is removed, and a failed
+fetch leaves nothing installed — and `JvmManifestDownloaderTest` in `core/jvmTest`
+pins the platform fetch, its redirect and its failure. The ordering is a pure
+function over the catalogue and the library's books, so
+`LanguageOrderingPropertyTest` in `core/commonTest` proves by property that it
+counts books per base tag, sorts descending then alphabetically, and keeps a
+language with no books last. The state holder is `LanguageControllerTest` in
+`app/desktopTest`, driven by virtual time; the surface is
+`LanguagesScreenSemanticsTest` on both lanes; and the two ways in — the library's
+header and Settings — plus the reload after a failed first fetch run through
+`AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`
+and `FakeManifestDownloader` fakes, and the manifest's format handshake is the
+producer's constant against `core`'s, kept in step by
+`LanguageManifestFormatSynchronisationTest` in `architecture` (ADR-0013).
 
 ## Naming and placement
 

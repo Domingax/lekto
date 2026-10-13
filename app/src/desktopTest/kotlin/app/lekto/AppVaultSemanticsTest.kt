@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
@@ -50,12 +51,12 @@ class AppVaultSemanticsTest {
         setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
         onNodeWithText("Settings").performClick()
-        onNodeWithText("Export vault").performClick()
+        onNodeWithText("Export vault").performScrollTo().performClick()
 
         waitUntil { exported != null }
         val bundle = VaultCodec.decodeBundle(assertNotNull(exported).decodeToString())
         assertEquals(listOf("a"), bundle.records.map { it.id })
-        onNodeWithText("Vault exported", substring = true).assertIsDisplayed()
+        onNodeWithText("Vault exported", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -70,11 +71,13 @@ class AppVaultSemanticsTest {
         setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
         onNodeWithText("Settings").performClick()
-        onNodeWithText("Import vault").performClick()
+        onNodeWithText("Import vault").performScrollTo().performClick()
         waitUntil { vault.get("restored") != null }
 
-        onNodeWithText("Vault imported", substring = true).assertIsDisplayed()
-        onNodeWithText("Library").performClick()
+        onNodeWithText("Vault imported", substring = true).performScrollTo().assertIsDisplayed()
+        // The settings column is scrolled down to the vault actions, so the header's
+        // way back must be scrolled to before it can be clicked.
+        onNodeWithText("Library").performScrollTo().performClick()
 
         waitUntil { onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("The Restored Book").assertIsDisplayed()
@@ -86,9 +89,9 @@ class AppVaultSemanticsTest {
 
         onNodeWithText("Settings").performClick()
 
-        onNodeWithText("Vault").assertIsDisplayed()
-        onNodeWithText("aren't available", substring = true).assertIsDisplayed()
-        onNodeWithText("Export vault").assertIsNotEnabled()
+        onNodeWithText("Vault").performScrollTo().assertIsDisplayed()
+        onNodeWithText("aren't available", substring = true).performScrollTo().assertIsDisplayed()
+        onNodeWithText("Export vault").performScrollTo().assertIsNotEnabled()
     }
 }
 

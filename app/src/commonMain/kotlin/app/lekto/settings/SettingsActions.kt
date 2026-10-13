@@ -18,6 +18,7 @@ data class SettingsActions(
     val onOpenAttribution: () -> Unit = {},
     val onDismissError: () -> Unit = {},
     val onBack: () -> Unit = {},
+    val onOpenLanguages: () -> Unit = {},
     val onExportVault: () -> Unit = {},
     val onImportVault: () -> Unit = {},
     val onDismissVaultMessage: () -> Unit = {},

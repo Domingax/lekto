@@ -10,12 +10,14 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
 
+@Suppress("LongMethod") // The desktop composition root wires each independent seam once; splitting scatters it.
 fun main() = application {
     val library = remember { desktopBookLibrary() }
     val vocabulary = remember { desktopVocabulary() }
     val readerLevels = remember { desktopReaderLevels() }
     val dictionary = remember { desktopDictionary() }
     val difficulty = remember { desktopDifficulty() }
+    val languages = remember { desktopLanguage() }
     val pronouncer = remember { JvmPronouncer() }
     val vaultTransfer = remember { desktopVaultTransfer(save = ::saveVaultToFile, open = ::pickVaultFileToImport) }
     val secrets = remember { desktopSecretStore() }
@@ -47,6 +49,7 @@ fun main() = application {
                 pickFile = ::pickFileToImport,
                 dictionary = dictionary,
                 difficulty = difficulty,
+                languages = languages,
                 pronouncer = pronouncer,
                 openUrl = ::openInBrowser,
                 vaultTransfer = vaultTransfer,
