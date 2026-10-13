@@ -27,8 +27,9 @@ data class LanguagesActions(val onReload: () -> Unit = {}, val onBack: () -> Uni
 /**
  * The **Languages** surface (issue #146): it lists the offered **Reading
  * language**s the **Language manifest** publishes, in the reader's priority
- * order. With no manifest and no cache it says so honestly and offers **Reload
- * list**, which refetches.
+ * order. With no manifest and no cache it says so honestly. **Reload list** is
+ * always offered, so a reader can refetch at any time — after a failed fetch, or
+ * when the pipeline has published a language since the cached copy.
  *
  * The screen renders [state] and raises the [actions]; it owns no state, so the
  * whole surface is proved through semantics. The per-language controls — the
@@ -44,11 +45,12 @@ fun LanguagesScreen(
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
         Header(actions.onBack)
 
+        ReloadAction(onReload = actions.onReload, reloading = state.reloading)
         if (state.reloading) Reloading()
         state.error?.let { message -> Error(message) }
 
         if (state.languages.isEmpty()) {
-            EmptyState(available = state.available, onReload = actions.onReload, reloading = state.reloading)
+            EmptyState(available = state.available)
         } else {
             LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 items(state.languages, key = { offered -> offered.language }) { offered -> LanguageRow(offered) }
@@ -66,6 +68,19 @@ private fun Header(onBack: () -> Unit) {
     }
 }
 
+/**
+ * The **Reload list** action, always visible so the reader can refetch the
+ * manifest at any time (issue #146). It is disabled while a fetch is in flight.
+ */
+@Composable
+private fun ReloadAction(onReload: () -> Unit, reloading: Boolean) {
+    Button(
+        onClick = onReload,
+        enabled = !reloading,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag(LANGUAGES_RELOAD_TAG),
+    ) { Text("Reload list") }
+}
+
 /** One offered **Reading language**, by the name the manifest implies. */
 @Composable
 private fun LanguageRow(offered: OfferedLanguage) {
@@ -76,24 +91,18 @@ private fun LanguageRow(offered: OfferedLanguage) {
     )
 }
 
-/** The honest empty state: no offered languages are known, with a way to refetch them. */
+/** The honest empty state: no offered languages are known. */
 @Composable
-private fun EmptyState(available: Boolean, onReload: () -> Unit, reloading: Boolean) {
-    Column(Modifier.fillMaxWidth().padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = if (available) {
-                "Lekto doesn't offer any languages for reading yet."
-            } else {
-                "Lekto hasn't loaded the list of languages it offers yet. Reload the list, or check your connection."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Button(
-            onClick = onReload,
-            enabled = !reloading,
-            modifier = Modifier.fillMaxWidth().testTag(LANGUAGES_RELOAD_TAG),
-        ) { Text("Reload list") }
-    }
+private fun EmptyState(available: Boolean) {
+    Text(
+        text = if (available) {
+            "Lekto doesn't offer any languages for reading yet."
+        } else {
+            "Lekto hasn't loaded the list of languages it offers yet. Reload the list, or check your connection."
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+    )
 }
 
 /** The inline fetch progress, so the surface never blocks on the network. */

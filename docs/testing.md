@@ -824,8 +824,8 @@ counts books per base tag, sorts descending then alphabetically, and keeps a
 language with no books last. The state holder is `LanguageControllerTest` in
 `app/desktopTest`, driven by virtual time; the surface is
 `LanguagesScreenSemanticsTest` on both lanes; and the two ways in — the library's
-header and Settings — plus the reload after a failed first fetch run through
-`AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`
+header and Settings — plus the always-visible reload after a failed first fetch
+run through `AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`
 and `FakeManifestDownloader` fakes, and the manifest's format handshake is the
 producer's constant against `core`'s, kept in step by
 `LanguageManifestFormatSynchronisationTest` in `architecture` (ADR-0013).

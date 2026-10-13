@@ -44,6 +44,20 @@ class LanguagesScreenSemanticsTest {
         compose.onNodeWithText("Languages").assertIsDisplayed()
         compose.onNodeWithText("English").assertIsDisplayed()
         compose.onNodeWithText("French").assertIsDisplayed()
+        compose.onNodeWithTag(LANGUAGES_RELOAD_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun reloadingIsOfferedEvenWhenTheListIsShown() {
+        var reloaded = false
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            onReload = { reloaded = true },
+        )
+
+        compose.onNodeWithTag(LANGUAGES_RELOAD_TAG).performClick()
+
+        assertTrue(reloaded)
     }
 
     @Test
