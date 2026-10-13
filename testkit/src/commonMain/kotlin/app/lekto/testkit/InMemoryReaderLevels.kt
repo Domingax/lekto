@@ -23,4 +23,9 @@ class InMemoryReaderLevels(levels: Map<String, CefrLevel> = emptyMap()) : Reader
         if (language.isBlank()) return
         declared[baseLanguage(language)] = level
     }
+
+    override fun clearLevel(language: String) {
+        if (language.isBlank()) return
+        declared.remove(baseLanguage(language))
+    }
 }

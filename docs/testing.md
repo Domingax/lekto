@@ -786,7 +786,9 @@ arithmetic — a saved level wins, a word at or below the reader's band is known
 each band above drops one level, and either band absent is unknown. The **Reader
 level** is a vault record, so `ReaderLevelRecordPropertyTest` pins its round-trip
 and its deterministic base-tag id and `VaultReaderLevelsTest` proves it survives a
-restart and travels in an export. The **Difficulty table** is a seam: the shared
+restart and travels in an export, and that clearing it (issue #147) deletes the
+record **and** leaves a tombstone, so a sync does not resurrect it (ADR-0015).
+The **Difficulty table** is a seam: the shared
 `WordDifficultyContract` in `testkit` runs against the in-memory table in
 `core/commonTest`, against the real SQLite artifact the pipeline produces —
 committed as `difficulty/en-sample.sqlite` under `core/src/commonTest/resources` —
@@ -801,13 +803,13 @@ consumer agree on the format version through
 `DifficultyFormatSynchronisationTest` in `architecture` (ADR-0013). The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
 level and the difficulty, with the one revision the reader recolours on — is
-`MasteryControllerTest` in `app/desktopTest`, the download's state holder is
-`DifficultyControllerTest`, and the settings section's level pickers and the
-difficulty table's state and download are `SettingsScreenSemanticsTest` on both
-lanes. The level UI still lands in Settings; the **Languages** surface below is
-where it moves (issue #147).
+`MasteryControllerTest` in `app/desktopTest`, which pins that setting **and**
+clearing a level both bump that revision and notify the sync signal; the
+download's state holder is `DifficultyControllerTest`, and the difficulty table's
+state and download are `SettingsScreenSemanticsTest` on both lanes until they
+move to the **Languages** surface too (issue #148).
 
-The **Languages** surface and its **Language manifest** (issue #146) are proved at
+The **Languages** surface and its **Language manifest** (issues #146, #147) are proved at
 their own levels. Reading a manifest is a pure function from bytes to a
 catalogue, so `LanguageManifestReadTest` in `core/commonTest` pins that the
 offered languages and their artefacts are read, that a manifest whose format this
@@ -823,12 +825,15 @@ function over the catalogue and the library's books, so
 counts books per base tag, sorts descending then alphabetically, and keeps a
 language with no books last. The state holder is `LanguageControllerTest` in
 `app/desktopTest`, driven by virtual time; the surface is
-`LanguagesScreenSemanticsTest` on both lanes; and the two ways in — the library's
-header and Settings — plus the always-visible reload after a failed first fetch
+`LanguagesScreenSemanticsTest` on both lanes, which also pins each language's
+**Reader level** picker and that **Not set** raises the clear (issue #147); and
+the two ways in — the library's header and Settings — the always-visible reload
+after a failed first fetch, and setting and clearing a level through the surface
 run through `AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`
-and `FakeManifestDownloader` fakes, and the manifest's format handshake is the
-producer's constant against `core`'s, kept in step by
-`LanguageManifestFormatSynchronisationTest` in `architecture` (ADR-0013).
+and `FakeManifestDownloader` fakes and the level-aware `InMemoryReaderLevels`,
+and the manifest's format handshake is the producer's constant against `core`'s,
+kept in step by `LanguageManifestFormatSynchronisationTest` in `architecture`
+(ADR-0013).
 
 ## Naming and placement
 

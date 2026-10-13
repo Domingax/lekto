@@ -33,6 +33,7 @@ import app.lekto.vocabulary.VocabularyController
  * value, because it is installed at runtime; the levels are kept in snapshot
  * state so a change is observable, and loaded from the vault once at start.
  */
+@Suppress("TooManyFunctions") // Each method is one step of the composition: a save, a delete, a level edit, a refresh.
 class MasteryController(
     private val vocabulary: VocabularyController,
     private val levels: ReaderLevels,
@@ -109,6 +110,18 @@ class MasteryController(
     fun setLevel(language: String, level: CefrLevel) {
         levels.setLevel(language, level)
         declared[baseLanguage(language)] = level
+        revision++
+        changes.contentChanged()
+    }
+
+    /**
+     * Clears the reader's level for [language]: the vault record is **deleted**
+     * (issue #147; ADR-0030), and [revision] bumps so the open book recolours at
+     * once. It is a content change, so sync pushes it.
+     */
+    fun clearLevel(language: String) {
+        levels.clearLevel(language)
+        declared.remove(baseLanguage(language))
         revision++
         changes.contentChanged()
     }

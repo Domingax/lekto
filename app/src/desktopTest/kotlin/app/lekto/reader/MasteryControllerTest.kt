@@ -132,9 +132,36 @@ class MasteryControllerTest {
     }
 
     @Test
+    fun clearingALevelRecoloursAtOnce() {
+        val controller = controller(levels = InMemoryReaderLevels(mapOf("en" to CefrLevel.B2)))
+        assertEquals(MasteryLevel.KNOWN, controller.mastery.levelOf(blorple))
+        val before = controller.revision
+
+        controller.clearLevel("en")
+
+        assertEquals(MasteryLevel.UNKNOWN, controller.mastery.levelOf(blorple))
+        assertEquals(null, controller.levelFor("en"))
+        assertEquals(before + 1, controller.revision)
+    }
+
+    @Test
+    fun aClearedLevelIsGoneFromTheVault() {
+        val vault = InMemoryVaultStore()
+        val levels = VaultReaderLevels(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+        val controller = controller(vault = vault, levels = levels)
+        controller.setLevel("en", CefrLevel.B1)
+
+        controller.clearLevel("en")
+
+        val restarted = controller(vault = vault, levels = levels)
+        assertEquals(null, restarted.levelFor("en"))
+        assertEquals(MasteryLevel.UNKNOWN, restarted.mastery.levelOf(blorple))
+    }
+
+    @Test
     fun aLevelSurvivesARestartOverTheVault() {
         val vault = InMemoryVaultStore()
-        val levels = VaultReaderLevels(vault, deterministicSeams(), DeviceId("device-a"))
+        val levels = VaultReaderLevels(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
         controller(vault = vault, levels = levels).setLevel("en", CefrLevel.B1)
 
         // A fresh controller over the same vault sees the level.
@@ -153,6 +180,17 @@ class MasteryControllerTest {
         controller(changes = changes).setLevel("en", CefrLevel.B1)
 
         assertTrue(received.isNotEmpty(), "a level is vault data, so sync must push it")
+    }
+
+    @Test
+    fun clearingALevelNotifiesTheLocalChangeSignal() = runTest {
+        val changes = LocalChanges()
+        val received = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.content.collect { received += it } }
+
+        controller(levels = InMemoryReaderLevels(mapOf("en" to CefrLevel.B1)), changes = changes).clearLevel("en")
+
+        assertTrue(received.isNotEmpty(), "clearing a level is a vault change, so sync must push it")
     }
 
     @Test

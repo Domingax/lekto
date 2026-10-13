@@ -6,15 +6,15 @@ answers the common questions.
 ## Settings
 
 - **Languages** — the languages Lekto offers for reading, ordered by the ones you
-  have most books in. **Reload list** refetches the list at any time. See
-  [Reading](/reading).
+  have most books in. Declare the CEFR level you read at in each language here, and
+  choose **Not set** to clear it. **Reload list** refetches the list at any time.
+  See [Reading](/reading).
 - **Sync** — connect your own WebDAV server, test it, turn sync on and see its
   status and last result; see [Vault and sync](/vault-and-sync).
 - **Vault export and import** — write your whole Vault to a bundle, or restore one.
 - **Dictionary pack** — the status of the offline dictionary pack and its download.
-- **Reader level** — declare the CEFR level you read at in each language, and
-  download the word-difficulty data that colours harder words. See
-  [Reading](/reading).
+- **Difficulty table** — the word-difficulty data that colours harder words;
+  download it here. See [Reading](/reading).
 - **LLM provider** — choose a provider, enter an API key, load and pick a model, and
   test the connection. See [LLM provider and privacy](/llm-provider).
 - **Attribution** — the licences and sources Lekto builds on.
@@ -44,9 +44,9 @@ valid one. See [LLM provider and privacy](/llm-provider).
 
 Lekto colours a word as known only when it can compare the word's difficulty with
 your reader level, so both are needed: download the word-difficulty data in
-**Settings** and set your level for the language you are reading in. A language
-with no level set, or a word the difficulty data does not cover, stays
-highlighted. See [Reading](/reading).
+**Settings**, and set your level for the language you are reading in on the
+**Languages** surface. A language with no level set, or a word the difficulty data
+does not cover, stays highlighted. See [Reading](/reading).
 
 ### The Languages list is empty
 

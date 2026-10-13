@@ -5,6 +5,7 @@ import android.net.Uri
 import app.lekto.core.Seams
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
+import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
@@ -30,10 +31,13 @@ fun androidVaultStore(context: Context): VaultStore = JsonVaultStore(JvmVaultFil
 /**
  * The Android **Reader levels** (issue #64; ADR-0030) over `Context.filesDir`. A
  * level is a vault record, so this store is the same vault [androidBookLibrary]
- * writes to; its device id is the one the library stamps its records with.
+ * writes to; its device id is the one the library stamps its records with. Its
+ * tombstones live under the same `sync/` directory the engine uses (ADR-0015),
+ * so clearing a level (issue #147) is propagated rather than resurrected.
  */
 fun androidReaderLevels(context: Context): ReaderLevels = VaultReaderLevels(
     vault = JsonVaultStore(JvmVaultFileSystem(androidVaultRoot(context))),
+    tombstones = JsonTombstoneStore(JvmVaultFileSystem(File(context.filesDir, "sync"))),
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(context.filesDir, "device-id")).get(),
 )
