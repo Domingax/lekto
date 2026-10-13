@@ -30,9 +30,9 @@ jobs:
     # Streaming the ~3 GiB gz source dominates; the runner's disk holds it.
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
