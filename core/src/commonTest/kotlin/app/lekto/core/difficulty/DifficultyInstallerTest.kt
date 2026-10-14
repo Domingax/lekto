@@ -21,6 +21,7 @@ class DifficultyInstallerTest :
     FunSpec({
 
         val language = "en"
+        val url = "https://example.test/lekto-difficulty-en.sqlite.gz"
 
         fun installer(
             derived: DerivedAssetStore = DerivedAssetStore(InMemoryVaultFileSystem()),
@@ -31,14 +32,13 @@ class DifficultyInstallerTest :
                 downloader = files,
                 databases = files,
                 language = language,
-                url = "https://example.test/lekto-difficulty-en.sqlite.gz",
             ) to files
         }
 
         test("an install downloads the table, reports it ready and opens it") {
             val (installed, files) = installer()
 
-            val state = installed.install()
+            val state = installed.install(url)
 
             state.shouldBeInstanceOf<DifficultyState.Ready>()
             installed.status().shouldBeInstanceOf<DifficultyState.Ready>()
@@ -58,7 +58,7 @@ class DifficultyInstallerTest :
             val (installed, files) = installer(derived)
             files.version = WordDifficulty.FORMAT_VERSION + 1
 
-            installed.install() shouldBe
+            installed.install(url) shouldBe
                 DifficultyState.Incompatible(WordDifficulty.FORMAT_VERSION + 1, WordDifficulty.FORMAT_VERSION)
             installed.status() shouldBe
                 DifficultyState.Incompatible(WordDifficulty.FORMAT_VERSION + 1, WordDifficulty.FORMAT_VERSION)
@@ -71,7 +71,7 @@ class DifficultyInstallerTest :
             val (installed, files) = installer(derived)
             files.openFailure = IllegalStateException("file is not a database")
 
-            val state = installed.install()
+            val state = installed.install(url)
 
             state.shouldBeInstanceOf<DifficultyState.Corrupt>()
             state.reason shouldBe "file is not a database"
@@ -107,14 +107,14 @@ class DifficultyInstallerTest :
             val (installed, files) = installer()
             files.failure = java.io.IOException("offline")
 
-            assertFailsWith<java.io.IOException> { installed.install() }
+            assertFailsWith<java.io.IOException> { installed.install(url) }
 
             installed.status() shouldBe DifficultyState.NotInstalled
         }
 
         test("removing the table uninstalls it, and removing an absent one is harmless") {
             val (installed, _) = installer()
-            installed.install()
+            installed.install(url)
 
             installed.remove() shouldBe DifficultyState.NotInstalled
 
@@ -124,7 +124,7 @@ class DifficultyInstallerTest :
 
         test("closing the installer releases the open table") {
             val (installed, _) = installer()
-            installed.install()
+            installed.install(url)
 
             installed.close()
 
@@ -138,7 +138,7 @@ class DifficultyInstallerTest :
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (installed, _) = installer(derived)
 
-            installed.install()
+            installed.install(url)
 
             derived.paths() shouldBe listOf(DifficultyInstaller.pathOf(language))
             vault.exportBundle().decodeToString().contains("difficulty-table-bytes") shouldBe false

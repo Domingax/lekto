@@ -36,8 +36,8 @@ class DesktopDictionaryTest {
         try {
             val services = desktopDifficulty(root)
 
-            assertEquals(DifficultyState.NotInstalled, services.installer.status())
-            assertNull(services.table())
+            assertEquals(DifficultyState.NotInstalled, services.installer("en").status())
+            assertNull(services.table("en"))
         } finally {
             root.deleteRecursively()
         }

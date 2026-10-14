@@ -14,14 +14,11 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.DictionaryPackState
-import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
 import app.lekto.dictionary.DictionaryUiState
-import app.lekto.difficulty.DifficultyUiState
-import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testPackMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -116,55 +113,6 @@ class SettingsScreenSemanticsTest {
         compose.onNodeWithText("Attribution").performClick()
 
         assertTrue(opened)
-    }
-
-    @Test
-    fun aMissingDifficultyTableSaysSoAndOffersADownload() {
-        var downloaded = false
-        render(actions = SettingsActions(onDownloadDifficulty = { downloaded = true }))
-
-        compose.onNodeWithText("Reading-level data isn't installed yet", substring = true)
-            .performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag(DOWNLOAD_DIFFICULTY_TAG).performScrollTo().performClick()
-
-        assertTrue(downloaded)
-    }
-
-    @Test
-    fun anIncompatibleDifficultyTableTellsTheUserToDownloadAgain() {
-        render(difficulty = DifficultyUiState(status = DifficultyState.Incompatible(found = 9, expected = 1)))
-
-        compose.onNodeWithText("format 9", substring = true).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun anInstalledDifficultyTableOffersADownloadAgain() {
-        render(difficulty = DifficultyUiState(status = DifficultyState.Ready(testDifficultyMetadata())))
-
-        compose.onNodeWithText("is installed", substring = true).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Download again").performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun downloadingDifficultyDataDisablesTheActionAndReportsProgress() {
-        render(difficulty = DifficultyUiState(installing = true))
-
-        compose.onNodeWithText("Downloading reading-level data", substring = true).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag(DOWNLOAD_DIFFICULTY_TAG).performScrollTo().assertIsNotEnabled()
-    }
-
-    @Test
-    fun aDifficultyDownloadFailureShowsAndDismisses() {
-        var dismissed = false
-        render(
-            difficulty = DifficultyUiState(error = "The download failed."),
-            actions = SettingsActions(onDismissDifficultyError = { dismissed = true }),
-        )
-
-        compose.onNodeWithText("The download failed.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Dismiss").performScrollTo().performClick()
-
-        assertTrue(dismissed)
     }
 
     @Test
@@ -616,13 +564,12 @@ class SettingsScreenSemanticsTest {
         vault: VaultUiState = VaultUiState(),
         provider: ProviderUiState = ProviderUiState(),
         sync: SyncUiState = SyncUiState(),
-        difficulty: DifficultyUiState = DifficultyUiState(),
         actions: SettingsActions = SettingsActions(),
     ) {
         compose.setContent {
             MaterialTheme {
                 SettingsScreen(
-                    state = SettingsUiState(dictionary, vault, provider, sync, difficulty),
+                    state = SettingsUiState(dictionary, vault, provider, sync),
                     actions = actions,
                     modifier = Modifier.size(width = 360.dp, height = 720.dp),
                 )

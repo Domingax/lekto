@@ -13,6 +13,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
+import app.lekto.core.difficulty.DifficultyState
+import app.lekto.difficulty.DifficultyUiState
+import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testOfferedLanguage
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,6 +30,7 @@ import kotlin.test.assertTrue
  * `core`; this lane pins what the reader sees.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the surface's contract.
 class LanguagesScreenSemanticsTest {
 
     @Test
@@ -150,17 +154,82 @@ class LanguagesScreenSemanticsTest {
 
         assertEquals("en", cleared)
     }
+
+    @Test
+    fun eachLanguageShowsItsDifficultyTableState() = runComposeUiTest {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.Ready(testDifficultyMetadata()))),
+        )
+
+        onNodeWithText("is installed", substring = true).assertIsDisplayed()
+        onNodeWithText("Download again").assertIsDisplayed()
+    }
+
+    @Test
+    fun aDownloadIsOfferedWhereTheManifestPublishesATable() = runComposeUiTest {
+        var chosen: Pair<String, String>? = null
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            onDownloadDifficulty = { language, artifact -> chosen = language to artifact },
+        )
+
+        onNodeWithTag(languageDifficultyDownloadTag("en")).performClick()
+
+        // The download carries the asset name the manifest published, not one re-derived here.
+        assertEquals("en" to DIFFICULTY, chosen)
+    }
+
+    @Test
+    fun aLanguageWithNoPublishedTableSaysSoAndOffersNoDownload() = runComposeUiTest {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("fr"))))
+
+        onNodeWithText("doesn't publish word-difficulty data", substring = true).assertIsDisplayed()
+        onNodeWithTag(languageDifficultyDownloadTag("fr")).assertDoesNotExist()
+    }
+
+    @Test
+    fun downloadingDifficultyShowsProgressAndDisablesTheAction() = runComposeUiTest {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            difficulty = mapOf("en" to DifficultyUiState(installing = true)),
+        )
+
+        onNodeWithText("Downloading word-difficulty data", substring = true).assertIsDisplayed()
+        onNodeWithTag(languageDifficultyDownloadTag("en")).assertIsNotEnabled()
+    }
+
+    @Test
+    fun aDifficultyFailureShowsAndDismisses() = runComposeUiTest {
+        var dismissed: String? = null
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            difficulty = mapOf("en" to DifficultyUiState(error = "The download failed.")),
+            onDismissDifficultyError = { language -> dismissed = language },
+        )
+
+        onNodeWithText("The download failed.").assertIsDisplayed()
+        onNodeWithTag(languageDifficultyDismissTag("en")).performClick()
+
+        assertEquals("en", dismissed)
+    }
 }
+
+/** The manifest's published difficulty asset name for English. */
+private const val DIFFICULTY: String = "lekto-difficulty-en.sqlite.gz"
 
 /** Renders the Languages surface in the app theme, sized like a phone. */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("LongParameterList") // One helper mirroring the screen's state, levels and actions.
+@Suppress("LongParameterList") // One helper mirroring the screen's state, levels, difficulty and actions.
 private fun ComposeUiTest.render(
     state: LanguagesUiState,
     levels: Map<String, CefrLevel> = emptyMap(),
+    difficulty: Map<String, DifficultyUiState> = emptyMap(),
     onReload: () -> Unit = {},
     onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     onClearLevel: (String) -> Unit = {},
+    onDownloadDifficulty: (String, String) -> Unit = { _, _ -> },
+    onDismissDifficultyError: (String) -> Unit = {},
     onBack: () -> Unit = {},
 ) {
     setContent {
@@ -168,10 +237,13 @@ private fun ComposeUiTest.render(
             LanguagesScreen(
                 state = state,
                 levels = levels,
+                difficulty = difficulty,
                 actions = LanguagesActions(
                     onReload = onReload,
                     onSetLevel = onSetLevel,
                     onClearLevel = onClearLevel,
+                    onDownloadDifficulty = onDownloadDifficulty,
+                    onDismissDifficultyError = onDismissDifficultyError,
                     onBack = onBack,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),

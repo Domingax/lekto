@@ -28,6 +28,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
+import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.llm.LlmModelsResult
@@ -54,7 +55,10 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.core.vocabulary.VocabularyRecord
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
+import app.lekto.difficulty.DifficultyRelease
+import app.lekto.difficulty.DifficultyServices
 import app.lekto.language.LANGUAGES_RELOAD_TAG
+import app.lekto.language.languageDifficultyDownloadTag
 import app.lekto.language.languageLevelClearTag
 import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
@@ -72,6 +76,7 @@ import app.lekto.settings.SyncServices
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.FakeDictionaryPackFiles
+import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLanguageCatalog
@@ -713,11 +718,54 @@ class AppSemanticsTest {
 
         assertNull(levels.levelFor("en"))
     }
+
+    @Test
+    fun downloadingDifficultyOnTheLanguagesSurfaceMarksItInstalled() = runComposeUiTest {
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    languages = difficultyCatalog(),
+                    vocabulary = inMemoryVocabulary(),
+                    readerLevels = InMemoryReaderLevels(),
+                    difficulty = difficultyServices(),
+                ),
+            )
+        }
+
+        onNodeWithText("Languages").performClick()
+        // The manifest publishes a table for English, so the surface offers its download.
+        onNodeWithTag(languageDifficultyDownloadTag("en")).performClick()
+
+        waitUntil { onAllNodesWithText("Download again").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("is installed", substring = true).assertIsDisplayed()
+    }
 }
 
 /** An **in-memory catalog** offering English, so the Languages surface lists something. */
 private fun languageCatalog(): LanguageCatalog =
     InMemoryLanguageCatalog(LanguageCatalogState.Available(listOf(testOfferedLanguage("en"))))
+
+/** A catalog whose English entry publishes a **Difficulty table**, so its download is offered. */
+private fun difficultyCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
+    LanguageCatalogState.Available(
+        listOf(testOfferedLanguage("en", difficulty = DifficultyRelease.artifact("en"))),
+    ),
+)
+
+/** A **Difficulty table** bundle over the in-memory fakes, so a download needs no network. */
+private fun difficultyServices(): DifficultyServices {
+    val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+    val files = FakeDifficultyFiles(derived)
+    return DifficultyServices { language ->
+        DifficultyInstaller(
+            derived,
+            files,
+            files,
+            language,
+        )
+    }
+}
 
 @Suppress("LongParameterList") // The environment's inputs are independent; a bundle would only hide that.
 internal fun environment(
@@ -725,6 +773,7 @@ internal fun environment(
     pickFile: (suspend () -> PickedFile?)? = null,
     dictionary: DictionaryServices? = null,
     languages: LanguageCatalog? = null,
+    difficulty: DifficultyServices? = null,
     pronouncer: Pronouncer? = null,
     openUrl: (String) -> Unit = {},
     vaultTransfer: VaultTransfer? = null,
@@ -744,6 +793,7 @@ internal fun environment(
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,
+    difficulty = difficulty,
     pronouncer = pronouncer,
     openUrl = openUrl,
     vaultTransfer = vaultTransfer,

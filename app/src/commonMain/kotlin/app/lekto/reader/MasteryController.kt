@@ -29,15 +29,16 @@ import app.lekto.vocabulary.VocabularyController
  * search, the delete) stays on [VocabularyController]; this controller delegates
  * to it and layers the derived default on top.
  *
- * The difficulty table is read through [difficulty], a function rather than a
- * value, because it is installed at runtime; the levels are kept in snapshot
+ * The difficulty table is read through [difficulty], a function of the word's
+ * language rather than a value, because there is one per reading language and each
+ * is installed at runtime (issue #148); the levels are kept in snapshot
  * state so a change is observable, and loaded from the vault once at start.
  */
 @Suppress("TooManyFunctions") // Each method is one step of the composition: a save, a delete, a level edit, a refresh.
 class MasteryController(
     private val vocabulary: VocabularyController,
     private val levels: ReaderLevels,
-    private val difficulty: () -> WordDifficulty?,
+    private val difficulty: (String?) -> WordDifficulty?,
     private val changes: LocalChanges,
 ) {
 
@@ -55,7 +56,7 @@ class MasteryController(
     val mastery: MasteryLookup = defaultMasteryLookup(
         saved = { key -> vocabulary.entryFor(key)?.mastery },
         readerLevel = { language -> language?.let { code -> declared[baseLanguage(code)] } },
-        difficulty = { key -> difficulty()?.levelOf(key) },
+        difficulty = { key -> difficulty(key.language)?.levelOf(key) },
     )
 
     /** The saved entry for [key], or `null` when the word is unsaved. */
@@ -76,7 +77,7 @@ class MasteryController(
      * appears to demote a word and an unsignalled word is not saved as unknown.
      */
     fun freshSaveLevel(key: WordKey): MasteryLevel {
-        val hasSignal = difficulty()?.levelOf(key) != null && levelFor(key.language) != null
+        val hasSignal = difficulty(key.language)?.levelOf(key) != null && levelFor(key.language) != null
         return if (hasSignal) mastery.levelOf(key) else MasteryLevel.FAMILIAR
     }
 
