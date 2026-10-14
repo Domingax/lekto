@@ -805,9 +805,15 @@ single `MasteryController` — the composition of saved vocabulary, the reader
 level and the difficulty, with the one revision the reader recolours on — is
 `MasteryControllerTest` in `app/desktopTest`, which pins that setting **and**
 clearing a level both bump that revision and notify the sync signal; the
-download's state holder is `DifficultyControllerTest`, and the difficulty table's
-state and download are `SettingsScreenSemanticsTest` on both lanes until they
-move to the **Languages** surface too (issue #148).
+download's state holder is now per language, `DifficultyControllerTest`, which
+pins one language's state and download leaving another's alone, an install
+notifying so the reader recolours with no relaunch, and a failure becoming a
+message rather than a crash. The difficulty table's state and download live on
+the **Languages** surface (issue #148), so `LanguagesScreenSemanticsTest` on both
+lanes proves them per offered language — the installed state and the download
+where the manifest publishes a table, an honest sentence and no action where it
+does not — and the whole loop, download to shown as installed, runs through
+`AppSemanticsTest` on both lanes.
 
 The **Languages** surface and its **Language manifest** (issues #146, #147) are proved at
 their own levels. Reading a manifest is a pure function from bytes to a
@@ -826,7 +832,9 @@ counts books per base tag, sorts descending then alphabetically, and keeps a
 language with no books last. The state holder is `LanguageControllerTest` in
 `app/desktopTest`, driven by virtual time; the surface is
 `LanguagesScreenSemanticsTest` on both lanes, which also pins each language's
-**Reader level** picker and that **Not set** raises the clear (issue #147); and
+**Reader level** picker and that **Not set** raises the clear (issue #147), and
+the **Difficulty table**'s per-language state, download, honest no-table line,
+progress and failure (issue #148); and
 the two ways in — the library's header and Settings — the always-visible reload
 after a failed first fetch, and setting and clearing a level through the surface
 run through `AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`

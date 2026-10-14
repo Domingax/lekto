@@ -9,7 +9,6 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
-import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
 import java.io.File
 
@@ -32,21 +31,22 @@ fun androidDictionary(context: Context): DictionaryServices {
 }
 
 /**
- * The Android wiring of the difficulty table (issue #64; ADR-0029): the table
- * lives under the same app-private derived root as the pack, is opened with the
- * framework's SQLite, and is downloaded from the published release. It is a
- * derived asset, so it sits beside the vault rather than inside it and never
- * reaches an export (ADR-0005).
+ * The Android wiring of the difficulty table (issue #64; ADR-0029): one table per
+ * reading language, each living under the same app-private derived root as the
+ * pack, opened with the framework's SQLite, and downloaded from the published
+ * release. A language's installer is built on demand from the language the
+ * **Language manifest** offers a table for (issue #148). A derived asset, the
+ * table sits beside the vault rather than inside it and never reaches an export
+ * (ADR-0005).
  */
 fun androidDifficulty(context: Context): DifficultyServices {
     val derived = DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived")))
-    return DifficultyServices(
+    return DifficultyServices { language ->
         DifficultyInstaller(
             derived = derived,
             downloader = JvmPackDownloader(),
             databases = AndroidPackDatabaseFactory,
-            language = DifficultyRelease.LANGUAGE,
-            url = DifficultyRelease.url(DifficultyRelease.LANGUAGE),
-        ),
-    )
+            language = language,
+        )
+    }
 }

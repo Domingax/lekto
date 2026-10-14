@@ -47,10 +47,12 @@ Choose **Not set** to clear the level again.
 
 Your level is your own data: it is kept in your vault, so it survives a restart
 and travels with an export. The comparison also needs word-difficulty data for
-the language, which you download once from **Settings**; it is device-local and
-never part of your vault or an export. Until it is installed, or for a language
-you have not set a level for, nothing changes and every unsaved word stays
-highlighted.
+the language, which you download once on the **Languages** surface — beside the
+level, so you can see whether it is installed for each language, and download it
+afresh when it is out of date. A language Lekto publishes no word-difficulty data
+for says so and offers no download. The data is device-local and never part of
+your vault or an export. Until it is installed, or for a language you have not set
+a level for, nothing changes and every unsaved word stays highlighted.
 
 ## Look a word up
 

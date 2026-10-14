@@ -27,8 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
+import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.text.baseLanguage
+import app.lekto.difficulty.DifficultyUiState
+import app.lekto.difficulty.summary
 
 /** The test tag on the **Reload list** action, so a UI test can click exactly it. */
 const val LANGUAGES_RELOAD_TAG: String = "languages-reload"
@@ -43,34 +46,48 @@ internal fun languageLevelOptionTag(language: String, level: CefrLevel): String 
 /** The test tag on a language's **not set** option, which clears the level. */
 internal fun languageLevelClearTag(language: String): String = "languages-level-$language-none"
 
+/** The test tag on a language's **Difficulty table** download (issue #148). */
+internal fun languageDifficultyDownloadTag(language: String): String = "languages-difficulty-download-$language"
+
+/** The test tag on a language's difficulty failure dismiss (issue #148). */
+internal fun languageDifficultyDismissTag(language: String): String = "languages-difficulty-dismiss-$language"
+
 /**
  * The actions the **Languages** surface raises: refetch the manifest, set or
- * clear a language's **Reader level** (issue #147), or leave.
+ * clear a language's **Reader level** (issue #147), download or dismiss the
+ * failure of a language's **Difficulty table** (issue #148), or leave.
  */
 data class LanguagesActions(
     val onReload: () -> Unit = {},
     val onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     val onClearLevel: (String) -> Unit = {},
+    val onDownloadDifficulty: (String, String) -> Unit = { _, _ -> },
+    val onDismissDifficultyError: (String) -> Unit = {},
     val onBack: () -> Unit = {},
 )
 
 /**
- * The **Languages** surface (issues #146, #147): it lists the offered **Reading
- * language**s the **Language manifest** publishes, in the reader's priority
- * order, and carries the reader's **Reader level** picker per language. With no
- * manifest and no cache it says so honestly. **Reload list** is always offered,
- * so a reader can refetch at any time — after a failed fetch, or when the
- * pipeline has published a language since the cached copy.
+ * The **Languages** surface (issues #146, #147, #148): it lists the offered
+ * **Reading language**s the **Language manifest** publishes, in the reader's
+ * priority order, and carries two per-language controls: the reader's **Reader
+ * level** picker and the **Difficulty table**'s state and download. A language
+ * the manifest publishes no table for says so honestly and offers no download,
+ * because a button that could only fail is worse than none.
  *
- * The screen renders [state] and [levels] and raises the [actions]; it owns no
- * state, so the whole surface is proved through semantics. The other per-language
- * controls — the **Difficulty table**, the **Dictionary pack** — land here in
- * later tickets (#148, #149).
+ * **Reload list** is always offered, so a reader can refetch at any time — after
+ * a failed fetch, or when the pipeline has published a language since the cached
+ * copy. With no manifest and no cache it says so honestly.
+ *
+ * The screen renders [state], [levels] and [difficulty] and raises the [actions];
+ * it owns no state, so the whole surface is proved through semantics. The
+ * **Dictionary pack** control lands here in a later ticket (#149).
  */
 @Composable
+@Suppress("LongParameterList") // The surface's independent inputs: state, the two per-language maps, its actions.
 fun LanguagesScreen(
     state: LanguagesUiState,
     levels: Map<String, CefrLevel> = emptyMap(),
+    difficulty: Map<String, DifficultyUiState> = emptyMap(),
     actions: LanguagesActions = LanguagesActions(),
     modifier: Modifier = Modifier,
 ) {
@@ -86,10 +103,15 @@ fun LanguagesScreen(
         } else {
             LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 items(state.languages, key = { offered -> offered.language }) { offered ->
-                    // The level is keyed by the language's base tag, as the
-                    // ordering and naming already reduce the offered tag
+                    // Both the level and the table are keyed by the language's base
+                    // tag, as the ordering and naming already reduce the offered tag
                     // (CONTEXT.md, "Reading language").
-                    LanguageRow(offered, levels[baseLanguage(offered.language)], actions)
+                    LanguageRow(
+                        offered = offered,
+                        level = levels[baseLanguage(offered.language)],
+                        difficulty = difficulty[baseLanguage(offered.language)],
+                        actions = actions,
+                    )
                 }
             }
         }
@@ -119,19 +141,81 @@ private fun ReloadAction(onReload: () -> Unit, reloading: Boolean) {
 }
 
 /**
- * One offered **Reading language**: its name, and the **Reader level** the reader
- * declares in it (issue #147). The level is user-authored **Vault** data, so the
- * picker writes to the vault; **not set** clears it.
+ * One offered **Reading language**: its name, the **Reader level** the reader
+ * declares in it (issue #147), and its **Difficulty table** (issue #148). The
+ * level is user-authored **Vault** data, so the picker writes to the vault;
+ * **not set** clears it. The difficulty table is a **Derived asset**: its state
+ * and download show here, and a language with no published table says so.
  */
 @Composable
-private fun LanguageRow(offered: OfferedLanguage, level: CefrLevel?, actions: LanguagesActions) {
-    Row(
+private fun LanguageRow(
+    offered: OfferedLanguage,
+    level: CefrLevel?,
+    difficulty: DifficultyUiState?,
+    actions: LanguagesActions,
+) {
+    Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(text = offered.displayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        LevelPicker(offered.language, level, actions)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = offered.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            LevelPicker(offered.language, level, actions)
+        }
+        DifficultyControl(offered, difficulty, actions)
+    }
+}
+
+/**
+ * The **Difficulty table** control for one language (issue #148): its state and
+ * its download where the manifest publishes a table, an honest sentence and no
+ * action where it does not.
+ */
+@Composable
+private fun DifficultyControl(offered: OfferedLanguage, difficulty: DifficultyUiState?, actions: LanguagesActions) {
+    val artifact = offered.difficulty
+    if (artifact == null) {
+        Text(
+            text = "Lekto doesn't publish word-difficulty data for this language yet.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        return
+    }
+    val state = difficulty ?: DifficultyUiState()
+    Text(state.status.summary(), style = MaterialTheme.typography.bodyMedium)
+
+    if (state.installing) {
+        LinearProgressIndicator(Modifier.fillMaxWidth())
+        Text("Downloading word-difficulty data…", style = MaterialTheme.typography.bodyMedium)
+    }
+    state.error?.let { message -> DifficultyError(offered.language, message, actions.onDismissDifficultyError) }
+
+    Button(
+        onClick = { actions.onDownloadDifficulty(offered.language, artifact) },
+        enabled = !state.installing,
+        modifier = Modifier.fillMaxWidth().testTag(languageDifficultyDownloadTag(offered.language)),
+    ) {
+        Text(if (state.status is DifficultyState.Ready) "Download again" else "Download word-difficulty data")
+    }
+}
+
+/** One language's inline difficulty-download failure, with its own dismiss. */
+@Composable
+private fun DifficultyError(language: String, message: String, onDismiss: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+        TextButton(
+            onClick = { onDismiss(language) },
+            modifier = Modifier.testTag(languageDifficultyDismissTag(language)),
+        ) { Text("Dismiss") }
     }
 }
 

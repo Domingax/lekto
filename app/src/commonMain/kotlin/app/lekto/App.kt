@@ -29,6 +29,7 @@ import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.LanguageCatalog
+import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -240,7 +241,7 @@ fun App(
             MasteryController(
                 vocabulary = store,
                 levels = environment.readerLevels ?: ReaderLevels.None,
-                difficulty = { environment.difficulty?.table?.invoke() },
+                difficulty = { language -> environment.difficulty?.table(language) },
                 changes = changes,
             )
         }
@@ -248,7 +249,14 @@ fun App(
     val difficulty = remember(environment.difficulty, environment.dispatcher) {
         environment.difficulty?.let { services -> DifficultyController(services, environment.dispatcher) }
     }
-    val difficultyState = difficulty?.state?.collectAsState()?.value ?: DifficultyUiState()
+    val difficultyStates = difficulty?.states?.collectAsState()?.value.orEmpty()
+    // Inspect the cached manifest's languages at once — without fetching — so a
+    // table already installed on this device is reported without the reader having
+    // to open the Languages surface first (issue #148).
+    LaunchedEffect(difficulty, environment.languages) {
+        val cached = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
+        difficulty?.refresh(cached.orEmpty().map { offered -> offered.language })
+    }
     // The **Languages** surface's catalogue (issue #146): the Language manifest
     // cached as a derived asset, its offered languages ordered by the books the
     // library currently holds.
@@ -282,7 +290,6 @@ fun App(
     }
     val settings = Settings(
         dictionary = dictionary,
-        difficulty = difficulty,
         mastery = mastery,
         vaultTransfer = vaultTransfer,
         provider = provider,
@@ -292,7 +299,6 @@ fun App(
             vault = vaultState,
             provider = providerState,
             sync = syncState,
-            difficulty = difficultyState,
         ),
     )
 
@@ -301,7 +307,19 @@ fun App(
     // edge to edge whether it asks to or not, so without this the chrome sits
     // under the status bar and the system, which owns that strip, eats its taps.
     Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-        AppScreens(environment, controller, state, scope, progress, settings, vocabulary, mastery, language)
+        AppScreens(
+            environment,
+            controller,
+            state,
+            scope,
+            progress,
+            settings,
+            vocabulary,
+            mastery,
+            language,
+            difficulty,
+            difficultyStates,
+        )
     }
 }
 
@@ -318,6 +336,8 @@ private fun AppScreens(
     vocabulary: VocabularyController?,
     mastery: MasteryController?,
     language: LanguageController?,
+    difficulty: DifficultyController?,
+    difficultyStates: Map<String, DifficultyUiState>,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -336,7 +356,9 @@ private fun AppScreens(
 
             Destination.Attribution -> AttributionScreen(
                 metadata = (settings.state.dictionary.status as? DictionaryPackState.Ready)?.metadata,
-                difficulty = (settings.state.difficulty.status as? DifficultyState.Ready)?.metadata,
+                difficulty = difficultyStates.toSortedMap().values.firstNotNullOfOrNull { state ->
+                    (state.status as? DifficultyState.Ready)?.metadata
+                },
                 onBack = { destination = Destination.Settings },
             )
 
@@ -350,6 +372,7 @@ private fun AppScreens(
 
             is Destination.Languages -> LanguagesDestination(
                 language = language,
+                difficulty = difficulty,
                 mastery = mastery,
                 onBack = { destination = current.returnTo },
             )
@@ -501,7 +524,6 @@ private class Lookup(
 @Suppress("LongParameterList") // The settings controllers; bundling a bundle adds a type, not clarity.
 private class Settings(
     val dictionary: DictionaryController?,
-    val difficulty: DifficultyController?,
     val mastery: MasteryController?,
     val vaultTransfer: VaultTransferController?,
     val provider: ProviderController?,
@@ -530,8 +552,6 @@ private fun SettingsDestination(
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
-            onDownloadDifficulty = { settings.difficulty?.install { settings.mastery?.invalidate() } },
-            onDismissDifficultyError = { settings.difficulty?.dismissError() },
             onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
             onModelChange = { model -> settings.provider?.setModel(model) },
             onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },

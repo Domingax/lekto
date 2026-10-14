@@ -55,6 +55,10 @@ internal const val LANGUAGES_LINK_TAG: String = "settings-languages"
  * already here, and nothing on the screen gates the reader — the vault actions
  * exist only where a file picker is wired, sync only where a driver is, and the
  * model only where a provider is.
+ *
+ * The reader's own per-language data — the **Reader level** and the **Difficulty
+ * table**'s state and download — lives on the **Languages** surface, not here
+ * (issues #147, #148).
  */
 @Composable
 fun SettingsScreen(
@@ -69,7 +73,6 @@ fun SettingsScreen(
         Header(actions.onBack)
         Section("Languages") { LanguagesSection(actions) }
         Section("Dictionary") { DictionarySection(state.dictionary, actions) }
-        Section("Difficulty table") { DifficultySection(state.difficulty, actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
         Section("Sync") { SyncSection(state.sync, actions) }
         Section("LLM provider") { ProviderSection(state.provider, actions) }
@@ -88,13 +91,16 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 /**
  * The **Languages** doorway (issue #146): a first-class destination, so it is
  * reachable from Settings as well as from the library's own header until the
- * navigation rework lands. The per-language controls the destination carries
- * replace the sections below in later tickets (#147, #148, #149).
+ * navigation rework lands. It carries the reader's **Reader level** and each
+ * language's **Difficulty table** state and download (issues #147, #148), so
+ * Settings holds only the app's own configuration; the **Dictionary pack** control
+ * lands there in a later ticket (#149).
  */
 @Composable
 private fun LanguagesSection(actions: SettingsActions) {
     Text(
-        "See the languages Lekto offers for reading, ordered by the ones you have most books in.",
+        "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
+            "Set your level and download the word-difficulty data for each there.",
         style = MaterialTheme.typography.bodyMedium,
     )
     TextButton(onClick = actions.onOpenLanguages, modifier = Modifier.testTag(LANGUAGES_LINK_TAG)) {

@@ -8,7 +8,6 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
-import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
 import java.io.File
 
@@ -35,23 +34,24 @@ fun desktopDictionary(root: File = desktopVaultRoot()): DictionaryServices {
 }
 
 /**
- * The desktop wiring of the difficulty table (issue #64; ADR-0029): the table
- * lives under the same app-private derived root as the pack, is opened by
- * `sqlite-jdbc`, and is downloaded from the published release. Being a derived
- * asset, it is structurally outside the vault and any export (ADR-0005).
+ * The desktop wiring of the difficulty table (issue #64; ADR-0029): one table per
+ * reading language, each living under the same app-private derived root as the
+ * pack, opened by `sqlite-jdbc`, and downloaded from the published release. A
+ * language's installer is built on demand from the language the **Language
+ * manifest** offers a table for (issue #148). Being a derived asset, the table is
+ * structurally outside the vault and any export (ADR-0005).
  *
  * @param root the vault root, defaulting to [desktopVaultRoot]; the parameter is
  *   the test seam, so production never passes one.
  */
 fun desktopDifficulty(root: File = desktopVaultRoot()): DifficultyServices {
     val derived = DerivedAssetStore(JvmVaultFileSystem(File(root.parentFile, "derived")))
-    return DifficultyServices(
+    return DifficultyServices { language ->
         DifficultyInstaller(
             derived = derived,
             downloader = JvmPackDownloader(),
             databases = SqlitePackDatabaseFactory,
-            language = DifficultyRelease.LANGUAGE,
-            url = DifficultyRelease.url(DifficultyRelease.LANGUAGE),
-        ),
-    )
+            language = language,
+        )
+    }
 }

@@ -24,7 +24,7 @@ sealed interface DifficultyState {
 
 /**
  * The **Difficulty table**'s lifecycle, one per reading language (ADR-0029): it
- * reports what is installed, downloads the published table on demand into the
+ * reports what is installed, downloads a published table on demand into the
  * device-local derived store, validates the format handshake and refuses a table
  * it does not understand (removing the refused file so a later download can
  * replace it).
@@ -32,13 +32,17 @@ sealed interface DifficultyState {
  * The table is a **Derived asset**: it lives under a [DerivedAssetStore], a
  * different root from the vault, so it can never enter the vault or an export.
  * Downloading is blocking; the application runs [install] off the UI thread.
+ *
+ * The [install] address is a parameter rather than a field because the
+ * **Language manifest** names the asset it published for a language, and the app
+ * fetches exactly that name (issue #148): the installer owns the lifecycle, the
+ * catalogue owns the address.
  */
 class DifficultyInstaller(
     private val derived: DerivedAssetStore,
     private val downloader: PackDownloader,
     private val databases: PackDatabaseFactory,
     private val language: String,
-    private val url: String,
 ) : AutoCloseable {
 
     private var table: WordDifficulty? = null
@@ -58,7 +62,7 @@ class DifficultyInstaller(
      * version. A table this build refuses leaves the store clean, so a later
      * download can replace it.
      */
-    fun install(): DifficultyState {
+    fun install(url: String): DifficultyState {
         downloader.download(url, destination())
         val inspected = inspect(destination())
         state = inspected

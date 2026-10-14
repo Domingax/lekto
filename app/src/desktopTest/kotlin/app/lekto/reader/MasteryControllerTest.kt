@@ -38,14 +38,14 @@ class MasteryControllerTest {
     private fun controller(
         vault: InMemoryVaultStore = InMemoryVaultStore(),
         levels: ReaderLevels = InMemoryReaderLevels(),
-        difficulty: WordDifficulty? = InMemoryWordDifficulty(),
+        difficulty: (String?) -> WordDifficulty? = { InMemoryWordDifficulty() },
         changes: LocalChanges = LocalChanges(),
     ): MasteryController {
         val vocabulary = VocabularyController(
             VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a")),
             changes,
         )
-        return MasteryController(vocabulary, levels, { difficulty }, changes)
+        return MasteryController(vocabulary, levels, difficulty, changes)
     }
 
     @Test
@@ -72,7 +72,7 @@ class MasteryControllerTest {
         )
         val controller = controller(
             levels = InMemoryReaderLevels(mapOf("en" to CefrLevel.A1)),
-            difficulty = InMemoryWordDifficulty(bands = bands),
+            difficulty = { InMemoryWordDifficulty(bands = bands) },
         )
 
         assertEquals(MasteryLevel.UNKNOWN, controller.mastery.levelOf(blorple)) // C2 − A1 = 5 bands above
@@ -95,7 +95,7 @@ class MasteryControllerTest {
     fun aWordWithNoDifficultyBandIsUnknown() {
         val controller = controller(
             levels = InMemoryReaderLevels(mapOf("en" to CefrLevel.C2)),
-            difficulty = InMemoryWordDifficulty(bands = emptyMap()),
+            difficulty = { InMemoryWordDifficulty(bands = emptyMap()) },
         )
 
         assertEquals(MasteryLevel.UNKNOWN, controller.mastery.levelOf(blorple))
@@ -113,7 +113,7 @@ class MasteryControllerTest {
     fun aMissingDifficultyTableIsUnknown() {
         val controller = controller(
             levels = InMemoryReaderLevels(mapOf("en" to CefrLevel.C2)),
-            difficulty = null,
+            difficulty = { null },
         )
 
         assertEquals(MasteryLevel.UNKNOWN, controller.mastery.levelOf(blorple))
