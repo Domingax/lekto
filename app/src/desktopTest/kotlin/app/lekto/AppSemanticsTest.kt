@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.Book
@@ -32,6 +33,7 @@ import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
+import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
@@ -53,6 +55,9 @@ import app.lekto.core.vocabulary.VocabularyRecord
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.language.LANGUAGES_RELOAD_TAG
+import app.lekto.language.languageLevelClearTag
+import app.lekto.language.languageLevelOptionTag
+import app.lekto.language.languageLevelPickerTag
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
@@ -71,6 +76,7 @@ import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLlmSettingsStore
+import app.lekto.testkit.InMemoryReaderLevels
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
@@ -94,6 +100,7 @@ import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -663,6 +670,49 @@ class AppSemanticsTest {
         waitUntil { onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("English").assertIsDisplayed()
     }
+
+    @Test
+    fun settingAReaderLevelOnTheLanguagesSurfaceStoresIt() = runComposeUiTest {
+        val levels = InMemoryReaderLevels()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    languages = languageCatalog(),
+                    vocabulary = inMemoryVocabulary(),
+                    readerLevels = levels,
+                ),
+            )
+        }
+
+        onNodeWithText("Languages").performClick()
+        onNodeWithTag(languageLevelPickerTag("en")).performClick()
+        onNodeWithTag(languageLevelOptionTag("en", CefrLevel.B1)).performClick()
+
+        assertEquals(CefrLevel.B1, levels.levelFor("en"))
+    }
+
+    @Test
+    fun clearingAReaderLevelOnTheLanguagesSurfaceDeletesIt() = runComposeUiTest {
+        val levels = InMemoryReaderLevels(mapOf("en" to CefrLevel.B2))
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    languages = languageCatalog(),
+                    vocabulary = inMemoryVocabulary(),
+                    readerLevels = levels,
+                ),
+            )
+        }
+
+        onNodeWithText("Languages").performClick()
+        onNodeWithText("B2").assertIsDisplayed()
+        onNodeWithTag(languageLevelPickerTag("en")).performClick()
+        onNodeWithTag(languageLevelClearTag("en")).performClick()
+
+        assertNull(levels.levelFor("en"))
+    }
 }
 
 /** An **in-memory catalog** offering English, so the Languages surface lists something. */
@@ -679,6 +729,7 @@ internal fun environment(
     openUrl: (String) -> Unit = {},
     vaultTransfer: VaultTransfer? = null,
     vocabulary: Vocabulary? = null,
+    readerLevels: ReaderLevels? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
@@ -689,6 +740,7 @@ internal fun environment(
     mastery = MasteryLookup.AllKnown,
     lemmas = lemmas,
     vocabulary = vocabulary,
+    readerLevels = readerLevels,
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,

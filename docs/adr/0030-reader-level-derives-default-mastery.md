@@ -56,3 +56,18 @@ new dependency: the rule reads the `WordDifficulty` seam (ADR-0029) and the leve
 record, both already in `core`. The mastery scale's own level names are being
 renamed in a separate change; this rule works on the level **numbers**, which do
 not move.
+
+## Update — the level UI moves to the Languages surface, and clearing deletes the record (issue #147)
+
+The **Reader level** picker leaves Settings for the **Languages** surface, so it
+sits beside the **Difficulty table** and the **Dictionary pack** the rule depends
+on (issue #141). The record's shape, its `level-<baseTag>` id and the derivation
+are unchanged, exactly as the "companion issue" in the consequences intended, and
+the mastery composition keeps its single `revision`, so a level change still
+recolours without a toast. The picker gains a **not set** choice that **clears**
+the level: `ReaderLevels.clearLevel` removes the record — it does not write a
+default — and the vault-backed store leaves a **Tombstone** in the same engine
+store the vocabulary's delete already uses (ADR-0015), so a cleared level is
+synchronised rather than copied back from a device that has not seen the change.
+The composition root points the level store at that store; the record moves no
+other way.

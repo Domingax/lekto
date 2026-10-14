@@ -69,7 +69,6 @@ import app.lekto.reader.WordTap
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.ProviderController
 import app.lekto.settings.ProviderUiState
-import app.lekto.settings.ReaderLevelUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
 import app.lekto.settings.SettingsUiState
@@ -281,11 +280,6 @@ fun App(
         sync?.start()
         environment.onResume.collect { sync?.onResumed() }
     }
-    val readingLevels = mastery?.levels().orEmpty()
-    val readingLanguages = (state.books.mapNotNull { book -> book.language }.map(::baseLanguage) + readingLevels.keys)
-        .filter { language -> language.isNotBlank() }
-        .distinct()
-        .sorted()
     val settings = Settings(
         dictionary = dictionary,
         difficulty = difficulty,
@@ -298,13 +292,7 @@ fun App(
             vault = vaultState,
             provider = providerState,
             sync = syncState,
-            readerLevel = ReaderLevelUiState(
-                languages = readingLanguages,
-                levels = readingLevels,
-                difficulty = difficultyState.status,
-                installing = difficultyState.installing,
-                error = difficultyState.error,
-            ),
+            difficulty = difficultyState,
         ),
     )
 
@@ -348,7 +336,7 @@ private fun AppScreens(
 
             Destination.Attribution -> AttributionScreen(
                 metadata = (settings.state.dictionary.status as? DictionaryPackState.Ready)?.metadata,
-                difficulty = (settings.state.readerLevel.difficulty as? DifficultyState.Ready)?.metadata,
+                difficulty = (settings.state.difficulty.status as? DifficultyState.Ready)?.metadata,
                 onBack = { destination = Destination.Settings },
             )
 
@@ -360,7 +348,11 @@ private fun AppScreens(
                 onBack = { destination = Destination.Library },
             )
 
-            is Destination.Languages -> LanguagesDestination(language, onBack = { destination = current.returnTo })
+            is Destination.Languages -> LanguagesDestination(
+                language = language,
+                mastery = mastery,
+                onBack = { destination = current.returnTo },
+            )
 
             Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, scope) {
                 destination = Destination.Library
@@ -538,7 +530,6 @@ private fun SettingsDestination(
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
-            onSetLevel = { language, level -> settings.mastery?.setLevel(language, level) },
             onDownloadDifficulty = { settings.difficulty?.install { settings.mastery?.invalidate() } },
             onDismissDifficultyError = { settings.difficulty?.dismissError() },
             onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },

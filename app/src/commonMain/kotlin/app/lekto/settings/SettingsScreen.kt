@@ -69,7 +69,7 @@ fun SettingsScreen(
         Header(actions.onBack)
         Section("Languages") { LanguagesSection(actions) }
         Section("Dictionary") { DictionarySection(state.dictionary, actions) }
-        Section("Reader level") { ReaderLevelSection(state.readerLevel, actions) }
+        Section("Difficulty table") { DifficultySection(state.difficulty, actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
         Section("Sync") { SyncSection(state.sync, actions) }
         Section("LLM provider") { ProviderSection(state.provider, actions) }

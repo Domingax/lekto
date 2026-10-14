@@ -3,6 +3,7 @@ package app.lekto
 import app.lekto.core.Seams
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
+import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
@@ -32,10 +33,13 @@ fun desktopVaultStore(root: File = desktopVaultRoot()): VaultStore = JsonVaultSt
  * The desktop **Reader levels** (issue #64; ADR-0030) over [root], defaulting to
  * [desktopVaultRoot]. A level is a vault record, so this store is the same vault
  * [desktopBookLibrary] writes to; its stable device id is the one the library
- * stamps its records with.
+ * stamps its records with. Its tombstones live under the same `sync/` directory
+ * the engine uses (ADR-0015), so clearing a level (issue #147) is propagated
+ * rather than resurrected.
  */
 fun desktopReaderLevels(root: File = desktopVaultRoot()): ReaderLevels = VaultReaderLevels(
     vault = JsonVaultStore(JvmVaultFileSystem(root)),
+    tombstones = JsonTombstoneStore(JvmVaultFileSystem(File(root.parentFile, "sync"))),
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )

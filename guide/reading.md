@@ -39,15 +39,18 @@ levels, the page slowly clears.
 ## Your reader level
 
 You can tell Lekto the level you read at in a language — one of the CEFR bands
-A1 to C2 — in **Settings**. A word at or below that level then reads as normal
-text straight away, without you saving it, and a harder word stays highlighted by
-how far above your level it is. A word you have saved keeps the level you gave
-it, whatever your reader level is.
+A1 to C2 — on the **Languages** surface. Pick the band beside a language. A word
+at or below that level then reads as normal text straight away, without you
+saving it, and a harder word stays highlighted by how far above your level it is.
+A word you have saved keeps the level you gave it, whatever your reader level is.
+Choose **Not set** to clear the level again.
 
-The comparison needs word-difficulty data for the language, which you download
-once from **Settings**; it is device-local and never part of your vault or an
-export. Until it is installed, or for a language you have not set a level for,
-nothing changes and every unsaved word stays highlighted.
+Your level is your own data: it is kept in your vault, so it survives a restart
+and travels with an export. The comparison also needs word-difficulty data for
+the language, which you download once from **Settings**; it is device-local and
+never part of your vault or an export. Until it is installed, or for a language
+you have not set a level for, nothing changes and every unsaved word stays
+highlighted.
 
 ## Look a word up
 

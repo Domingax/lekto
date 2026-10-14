@@ -21,6 +21,13 @@ interface ReaderLevels {
     /** Sets the level for [language], replacing any previous one. A no-op language is ignored. */
     fun setLevel(language: String, level: CefrLevel)
 
+    /**
+     * Clears the level for [language] (issue #147): the record is **deleted**, not
+     * set to a default, so the reader has no level for the language again. A no-op
+     * language, or one with no level set, is ignored.
+     */
+    fun clearLevel(language: String)
+
     companion object {
         /**
          * A [ReaderLevels] that knows none and stores nothing, where no vault is
@@ -33,6 +40,8 @@ interface ReaderLevels {
             override fun levels(): Map<String, CefrLevel> = emptyMap()
 
             override fun setLevel(language: String, level: CefrLevel) = Unit
+
+            override fun clearLevel(language: String) = Unit
         }
     }
 }
