@@ -416,9 +416,9 @@ by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 (ADR-0013).
 
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
-the alias into the device-local **derived store**, validates the format handshake
-and opens the SQLite file in place — `sqlite-jdbc` on the JVM, the Android
-framework's SQLite on Android (ADR-0018). The CLI and the JVM reader use
+each pair's alias into the device-local **derived store**, validates the format
+handshake and opens the SQLite file in place — `sqlite-jdbc` on the JVM, the
+Android framework's SQLite on Android (ADR-0018). The CLI and the JVM reader use
 **xerial sqlite-jdbc** (Apache-2.0, AGPL-compatible); it is now a production
 dependency of `core`'s JVM target (desktop) as well as the standalone tool, so it
 is held to the licence gate like any other. See ADR-0017, ADR-0018 and

@@ -167,8 +167,14 @@ data class LlmServices(
 private sealed interface Destination {
     data object Library : Destination
     data object Settings : Destination
-    data object Attribution : Destination
     data object Vocabulary : Destination
+
+    /**
+     * The attribution screen, reachable from the **Languages** surface (issue
+     * #149). It carries where to return to, so leaving lands back on the surface
+     * that offered the data.
+     */
+    data class Attribution(val returnTo: Destination) : Destination
 
     /**
      * The **Languages** surface (issue #146). It is reached from the library and
@@ -224,7 +230,7 @@ fun App(
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
         environment.dictionary?.let { services -> DictionaryController(services, environment.dispatcher) }
     }
-    val dictionaryState = dictionary?.state?.collectAsState()?.value ?: DictionaryUiState()
+    val dictionaryStates = dictionary?.states?.collectAsState()?.value.orEmpty()
     val vaultTransfer = remember(environment.vaultTransfer, environment.dispatcher, scope) {
         environment.vaultTransfer?.let { transfer -> VaultTransferController(transfer, environment.dispatcher, scope) }
     }
@@ -251,11 +257,15 @@ fun App(
     }
     val difficultyStates = difficulty?.states?.collectAsState()?.value.orEmpty()
     // Inspect the cached manifest's languages at once — without fetching — so a
-    // table already installed on this device is reported without the reader having
-    // to open the Languages surface first (issue #148).
+    // table or a pack already installed on this device is reported without the
+    // reader having to open the Languages surface first (issues #148, #149).
     LaunchedEffect(difficulty, environment.languages) {
         val cached = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
         difficulty?.refresh(cached.orEmpty().map { offered -> offered.language })
+    }
+    LaunchedEffect(dictionary, environment.languages) {
+        val cached = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
+        dictionary?.refresh(cached.orEmpty())
     }
     // The **Languages** surface's catalogue (issue #146): the Language manifest
     // cached as a derived asset, its offered languages ordered by the books the
@@ -295,7 +305,6 @@ fun App(
         provider = provider,
         sync = sync,
         state = SettingsUiState(
-            dictionary = dictionaryState,
             vault = vaultState,
             provider = providerState,
             sync = syncState,
@@ -319,6 +328,7 @@ fun App(
             language,
             difficulty,
             difficultyStates,
+            dictionaryStates,
         )
     }
 }
@@ -338,6 +348,7 @@ private fun AppScreens(
     language: LanguageController?,
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
+    dictionaryStates: Map<String, DictionaryUiState>,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
 
@@ -354,18 +365,18 @@ private fun AppScreens(
                 onOpenSettings = { destination = Destination.Settings },
             )
 
-            Destination.Attribution -> AttributionScreen(
-                metadata = (settings.state.dictionary.status as? DictionaryPackState.Ready)?.metadata,
+            is Destination.Attribution -> AttributionScreen(
+                metadata = dictionaryStates.values
+                    .firstNotNullOfOrNull { state -> (state.status as? DictionaryPackState.Ready)?.metadata },
                 difficulty = difficultyStates.toSortedMap().values.firstNotNullOfOrNull { state ->
                     (state.status as? DifficultyState.Ready)?.metadata
                 },
-                onBack = { destination = Destination.Settings },
+                onBack = { destination = current.returnTo },
             )
 
             Destination.Settings -> SettingsDestination(
                 settings,
                 onVaultImported = controller::refresh,
-                onOpenAttribution = { destination = Destination.Attribution },
                 onOpenLanguages = { destination = Destination.Languages(Destination.Settings) },
                 onBack = { destination = Destination.Library },
             )
@@ -373,7 +384,9 @@ private fun AppScreens(
             is Destination.Languages -> LanguagesDestination(
                 language = language,
                 difficulty = difficulty,
+                dictionary = settings.dictionary,
                 mastery = mastery,
+                onOpenAttribution = { destination = Destination.Attribution(current) },
                 onBack = { destination = current.returnTo },
             )
 
@@ -537,16 +550,12 @@ private class Settings(
 private fun SettingsDestination(
     settings: Settings,
     onVaultImported: () -> Unit,
-    onOpenAttribution: () -> Unit,
     onOpenLanguages: () -> Unit,
     onBack: () -> Unit,
 ) {
     SettingsScreen(
         state = settings.state,
         actions = SettingsActions(
-            onDownload = { settings.dictionary?.install() },
-            onOpenAttribution = onOpenAttribution,
-            onDismissError = { settings.dictionary?.dismissError() },
             onBack = onBack,
             onOpenLanguages = onOpenLanguages,
             onExportVault = { settings.vaultTransfer?.export() },

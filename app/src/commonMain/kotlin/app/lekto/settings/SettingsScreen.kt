@@ -31,10 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.llm.LlmProvider
-import app.lekto.dictionary.DictionaryUiState
-import app.lekto.dictionary.summary
 
 /** The test tags the LLM provider section's controls carry, so a UI test can click exactly one. */
 internal const val PROVIDER_PICKER_TAG: String = "settings-provider-picker"
@@ -49,16 +46,15 @@ internal const val LANGUAGES_LINK_TAG: String = "settings-languages"
 
 /**
  * The settings screen: the way to the **Languages** surface (issue #146), the
- * dictionary pack (issue #18), the vault's
- * export/import (issue #20), sync (issue #28) and the LLM provider (issue #88).
- * Each is its own section so later settings land without disturbing the ones
- * already here, and nothing on the screen gates the reader — the vault actions
- * exist only where a file picker is wired, sync only where a driver is, and the
- * model only where a provider is.
+ * vault's export/import (issue #20), sync (issue #28) and the LLM provider
+ * (issue #88). Each is its own section so later settings land without disturbing
+ * the ones already here, and nothing on the screen gates the reader — the vault
+ * actions exist only where a file picker is wired, sync only where a driver is,
+ * and the model only where a provider is.
  *
- * The reader's own per-language data — the **Reader level** and the **Difficulty
- * table**'s state and download — lives on the **Languages** surface, not here
- * (issues #147, #148).
+ * The data the reader manages per language — the **Reader level**, the
+ * **Difficulty table** and the **Dictionary pack** — lives on the **Languages**
+ * surface, not here (issues #147, #148, #149).
  */
 @Composable
 fun SettingsScreen(
@@ -72,7 +68,6 @@ fun SettingsScreen(
     ) {
         Header(actions.onBack)
         Section("Languages") { LanguagesSection(actions) }
-        Section("Dictionary") { DictionarySection(state.dictionary, actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
         Section("Sync") { SyncSection(state.sync, actions) }
         Section("LLM provider") { ProviderSection(state.provider, actions) }
@@ -91,37 +86,21 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 /**
  * The **Languages** doorway (issue #146): a first-class destination, so it is
  * reachable from Settings as well as from the library's own header until the
- * navigation rework lands. It carries the reader's **Reader level** and each
- * language's **Difficulty table** state and download (issues #147, #148), so
- * Settings holds only the app's own configuration; the **Dictionary pack** control
- * lands there in a later ticket (#149).
+ * navigation rework lands. It carries the reader's **Reader level**, each
+ * language's **Difficulty table** and each published **Dictionary pack** state and
+ * download (issues #147, #148, #149), so Settings holds only the app's own
+ * configuration.
  */
 @Composable
 private fun LanguagesSection(actions: SettingsActions) {
     Text(
         "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
-            "Set your level and download the word-difficulty data for each there.",
+            "Set your level and download the word-difficulty data and the offline dictionary for each there.",
         style = MaterialTheme.typography.bodyMedium,
     )
     TextButton(onClick = actions.onOpenLanguages, modifier = Modifier.testTag(LANGUAGES_LINK_TAG)) {
         Text("Languages")
     }
-}
-
-@Composable
-private fun DictionarySection(state: DictionaryUiState, actions: SettingsActions) {
-    Text(state.status.summary(), style = MaterialTheme.typography.bodyMedium)
-
-    if (state.installing) {
-        LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text("Downloading the offline dictionary…", style = MaterialTheme.typography.bodyMedium)
-    }
-    state.error?.let { message -> Error(message, actions.onDismissError) }
-
-    Button(onClick = actions.onDownload, enabled = !state.installing, modifier = Modifier.fillMaxWidth()) {
-        Text(if (state.status is DictionaryPackState.Ready) "Download again" else "Download")
-    }
-    TextButton(onClick = actions.onOpenAttribution) { Text("Attribution") }
 }
 
 @Composable

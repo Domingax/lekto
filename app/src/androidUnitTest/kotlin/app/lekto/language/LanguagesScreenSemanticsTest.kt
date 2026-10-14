@@ -10,12 +10,17 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
+import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.language.OfferedDictionary
+import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testOfferedLanguage
+import app.lekto.testkit.testPackMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -224,22 +229,136 @@ class LanguagesScreenSemanticsTest {
 
         assertEquals("en", dismissed)
     }
+
+    @Test
+    fun eachPublishedDictionaryIsLabelledByItsPair() {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))))
+
+        compose.onNodeWithText("English → French").assertIsDisplayed()
+    }
+
+    @Test
+    fun eachDictionaryShowsItsState() {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            dictionaries = mapOf(
+                DICTIONARY to DictionaryUiState(status = DictionaryPackState.Ready(testPackMetadata())),
+            ),
+        )
+
+        compose.onNodeWithText("is installed", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Download again").assertIsDisplayed()
+    }
+
+    @Test
+    fun anIncompatibleDictionaryTellsTheUserToDownloadAgain() {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            dictionaries = mapOf(
+                DICTIONARY to DictionaryUiState(status = DictionaryPackState.Incompatible(found = 9, expected = 1)),
+            ),
+        )
+
+        compose.onNodeWithText("format 9", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aCorruptDictionaryTellsTheUserToDownloadAgain() {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            dictionaries = mapOf(
+                DICTIONARY to DictionaryUiState(status = DictionaryPackState.Corrupt("file is not a database")),
+            ),
+        )
+
+        compose.onNodeWithText("damaged", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aDownloadIsOfferedWhereTheManifestPublishesAPair() {
+        var chosen: Triple<String, String, String>? = null
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            onDownloadDictionary = { reading, translation, artifact ->
+                chosen = Triple(reading, translation, artifact)
+            },
+        )
+
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).performClick()
+
+        // The download carries the pair and the asset name the manifest published.
+        assertEquals(Triple("en", "fr", DICTIONARY), chosen)
+    }
+
+    @Test
+    fun aLanguageWithNoPublishedDictionarySaysSoAndOffersNoDownload() {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("fr"))))
+
+        compose.onNodeWithText("doesn't publish an offline dictionary", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertDoesNotExist()
+    }
+
+    @Test
+    fun downloadingADictionaryShowsProgressAndDisablesTheAction() {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            dictionaries = mapOf(DICTIONARY to DictionaryUiState(installing = true)),
+        )
+
+        compose.onNodeWithText("Downloading the offline dictionary", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun aDictionaryFailureShowsAndDismisses() {
+        var dismissed: String? = null
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            dictionaries = mapOf(DICTIONARY to DictionaryUiState(error = "The dictionary download failed.")),
+            onDismissDictionaryError = { artifact -> dismissed = artifact },
+        )
+
+        compose.onNodeWithText("The dictionary download failed.").assertIsDisplayed()
+        compose.onNodeWithTag(languageDictionaryDismissTag(DICTIONARY)).performScrollTo().performClick()
+
+        assertEquals(DICTIONARY, dismissed)
+    }
+
+    @Test
+    fun attributionIsReachable() {
+        var opened = false
+        render(LanguagesUiState(), onOpenAttribution = { opened = true })
+
+        compose.onNodeWithTag(LANGUAGES_ATTRIBUTION_TAG).performClick()
+
+        assertTrue(opened)
+    }
 }
 
 /** The manifest's published difficulty asset name for English. */
 private const val DIFFICULTY: String = "lekto-difficulty-en.sqlite.gz"
 
+/** The manifest's published English → French dictionary asset name. */
+private const val DICTIONARY: String = "lekto-dictionary-en-fr.sqlite.gz"
+
+/** The English → French dictionary pair the manifest publishes, as the surface reads it. */
+private val PAIR: OfferedDictionary = OfferedDictionary(translationLanguage = "fr", name = DICTIONARY)
+
 /** Renders the Languages surface in the app theme, sized like a phone. */
-@Suppress("LongParameterList") // One helper mirroring the screen's state, levels, difficulty and actions.
+@Suppress("LongParameterList") // One helper mirroring the screen's state, levels, difficulty, dictionaries and actions.
 private fun LanguagesScreenSemanticsTest.render(
     state: LanguagesUiState,
     levels: Map<String, CefrLevel> = emptyMap(),
     difficulty: Map<String, DifficultyUiState> = emptyMap(),
+    dictionaries: Map<String, DictionaryUiState> = emptyMap(),
     onReload: () -> Unit = {},
     onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     onClearLevel: (String) -> Unit = {},
     onDownloadDifficulty: (String, String) -> Unit = { _, _ -> },
     onDismissDifficultyError: (String) -> Unit = {},
+    onDownloadDictionary: (String, String, String) -> Unit = { _, _, _ -> },
+    onDismissDictionaryError: (String) -> Unit = {},
+    onOpenAttribution: () -> Unit = {},
     onBack: () -> Unit = {},
 ) {
     compose.setContent {
@@ -248,12 +367,16 @@ private fun LanguagesScreenSemanticsTest.render(
                 state = state,
                 levels = levels,
                 difficulty = difficulty,
+                dictionaries = dictionaries,
                 actions = LanguagesActions(
                     onReload = onReload,
                     onSetLevel = onSetLevel,
                     onClearLevel = onClearLevel,
                     onDownloadDifficulty = onDownloadDifficulty,
                     onDismissDifficultyError = onDismissDifficultyError,
+                    onDownloadDictionary = onDownloadDictionary,
+                    onDismissDictionaryError = onDismissDictionaryError,
+                    onOpenAttribution = onOpenAttribution,
                     onBack = onBack,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),

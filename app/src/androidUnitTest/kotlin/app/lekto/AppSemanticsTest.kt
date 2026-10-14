@@ -34,6 +34,7 @@ import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
+import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
@@ -54,10 +55,12 @@ import app.lekto.core.vault.DeviceId
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
+import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
 import app.lekto.language.languageDifficultyDownloadTag
 import app.lekto.language.languageLevelClearTag
@@ -303,7 +306,7 @@ class AppSemanticsTest {
         compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
 
         // The non-blocking prompt lands on settings, leaving the book behind.
-        compose.onNodeWithText("Dictionary").assertIsDisplayed()
+        compose.onNodeWithText("Settings").assertIsDisplayed()
     }
 
     @Test
@@ -350,27 +353,33 @@ class AppSemanticsTest {
     }
 
     @Test
-    fun reachesSettingsAndAttributionFromTheLibrary() {
-        compose.setContent { App(environment(InMemoryLibrary(), dictionary = dictionaryServices())) }
+    fun reachesTheLanguagesSurfaceAndItsAttributionFromTheLibrary() {
+        compose.setContent {
+            App(environment(InMemoryLibrary(), languages = dictionaryCatalog(), dictionary = dictionaryServices()))
+        }
 
-        compose.onNodeWithText("Settings").performClick()
-        compose.onNodeWithText("Dictionary").assertIsDisplayed()
+        compose.onNodeWithText("Languages").performClick()
+        compose.onNodeWithText("English → French").assertIsDisplayed()
 
-        compose.onNodeWithText("Attribution").performScrollTo().performClick()
+        compose.onNodeWithTag(LANGUAGES_ATTRIBUTION_TAG).performClick()
 
         compose.onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
             .assertIsDisplayed()
     }
 
     @Test
-    fun settingsShowAnInstalledDictionaryAndItsAttribution() {
-        val installed = dictionaryServices().also { services -> services.installer.install() }
-        compose.setContent { App(environment(InMemoryLibrary(), dictionary = installed)) }
+    fun theLanguagesSurfaceShowsAnInstalledDictionaryAndItsAttribution() {
+        val installed = dictionaryServices().also { services ->
+            services.installer("en", "fr").install(DictionaryRelease.url(DictionaryRelease.artifact("en", "fr")))
+        }
+        compose.setContent {
+            App(environment(InMemoryLibrary(), languages = dictionaryCatalog(), dictionary = installed))
+        }
 
-        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithText("Languages").performClick()
         compose.onNodeWithText("is installed", substring = true).assertIsDisplayed()
 
-        compose.onNodeWithText("Attribution").performScrollTo().performClick()
+        compose.onNodeWithTag(LANGUAGES_ATTRIBUTION_TAG).performClick()
         compose.onNodeWithText("Wiktionary contributors").assertIsDisplayed()
     }
 
@@ -748,6 +757,20 @@ private fun difficultyCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
     ),
 )
 
+/** A catalog whose English entry publishes an English → French **Dictionary pack**, so its download is offered. */
+private fun dictionaryCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
+    LanguageCatalogState.Available(
+        listOf(
+            testOfferedLanguage(
+                "en",
+                dictionaries = listOf(
+                    OfferedDictionary("fr", DictionaryRelease.artifact("en", "fr")),
+                ),
+            ),
+        ),
+    ),
+)
+
 /** A **Difficulty table** bundle over the in-memory fakes, so a download needs no network. */
 private fun difficultyServices(): DifficultyServices {
     val derived = DerivedAssetStore(InMemoryVaultFileSystem())
@@ -848,10 +871,10 @@ private fun ComposeTestRule.selectFirstPhrase() {
 
 private fun dictionaryServices(): DictionaryServices {
     val derived = DerivedAssetStore(InMemoryVaultFileSystem())
-    val files = FakeDictionaryPackFiles(derived)
-    return DictionaryServices(
-        DictionaryPackInstaller(derived, files, files, "https://example.test/pack.sqlite.gz"),
-    )
+    return DictionaryServices { reading, translation ->
+        val files = FakeDictionaryPackFiles(derived, reading, translation)
+        DictionaryPackInstaller(derived, files, files, reading, translation)
+    }
 }
 
 /** Enough one-line paragraphs to span several pages at any test viewport. */

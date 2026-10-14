@@ -40,10 +40,12 @@ class WordTapHandlerTest {
     @Test
     fun `with an installed dictionary it resolves the word off the UI thread`() {
         val derived = DerivedAssetStore(InMemoryVaultFileSystem())
-        val files = FakeDictionaryPackFiles(derived)
-        val installer = DictionaryPackInstaller(derived, files, files, "https://example.test/pack.sqlite.gz")
-        installer.install()
-        val controller = DictionaryController(DictionaryServices(installer), UnconfinedTestDispatcher())
+        val files = FakeDictionaryPackFiles(derived, "en", "fr")
+        val services = DictionaryServices { reading, translation ->
+            DictionaryPackInstaller(derived, files, files, reading, translation)
+        }
+        services.installer("en", "fr").install("https://example.test/pack.sqlite.gz")
+        val controller = DictionaryController(services, UnconfinedTestDispatcher())
         var result: WordLookup? = null
 
         wordTapHandler(controller, CoroutineScope(UnconfinedTestDispatcher()), { _, lookup -> result = lookup })(tap)

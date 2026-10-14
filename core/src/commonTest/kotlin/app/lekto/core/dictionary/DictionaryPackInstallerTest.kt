@@ -12,7 +12,8 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlin.test.assertFailsWith
 
 /**
- * The dictionary pack's lifecycle (issue #18): it downloads on demand into the
+ * The dictionary pack's lifecycle (issue #18), one per (Reading language ×
+ * **Translation language**) pair (issue #149): it downloads on demand into the
  * derived store, reports what is installed, refuses a pack whose format it does
  * not understand, and degrades honestly when the download or the pack fails.
  */
@@ -21,20 +22,23 @@ class DictionaryPackInstallerTest :
 
         fun installer(
             derived: DerivedAssetStore = DerivedAssetStore(InMemoryVaultFileSystem()),
+            reading: String = "en",
+            translation: String = "fr",
         ): Pair<DictionaryPackInstaller, FakeDictionaryPackFiles> {
-            val files = FakeDictionaryPackFiles(derived)
+            val files = FakeDictionaryPackFiles(derived, reading, translation)
             return DictionaryPackInstaller(
                 derived = derived,
                 downloader = files,
                 databases = files,
-                url = "https://example.test/pack.sqlite.gz",
+                readingLanguage = reading,
+                translationLanguage = translation,
             ) to files
         }
 
         test("an install downloads the pack, reports it ready and opens it") {
             val (packInstaller, files) = installer()
 
-            val state = packInstaller.install()
+            val state = packInstaller.install(URL)
 
             state.shouldBeInstanceOf<DictionaryPackState.Ready>()
             packInstaller.status().shouldBeInstanceOf<DictionaryPackState.Ready>()
@@ -54,7 +58,7 @@ class DictionaryPackInstallerTest :
             val (packInstaller, files) = installer(derived)
             files.version = DictionaryPack.FORMAT_VERSION + 1
 
-            packInstaller.install() shouldBe
+            packInstaller.install(URL) shouldBe
                 DictionaryPackState.Incompatible(DictionaryPack.FORMAT_VERSION + 1, DictionaryPack.FORMAT_VERSION)
             packInstaller.status() shouldBe
                 DictionaryPackState.Incompatible(DictionaryPack.FORMAT_VERSION + 1, DictionaryPack.FORMAT_VERSION)
@@ -67,7 +71,7 @@ class DictionaryPackInstallerTest :
             val (packInstaller, files) = installer(derived)
             files.openFailure = IllegalStateException("file is not a database")
 
-            val state = packInstaller.install()
+            val state = packInstaller.install(URL)
 
             state.shouldBeInstanceOf<DictionaryPackState.Corrupt>()
             state.reason shouldBe "file is not a database"
@@ -78,14 +82,14 @@ class DictionaryPackInstallerTest :
             val (packInstaller, files) = installer()
             files.failure = java.io.IOException("offline")
 
-            assertFailsWith<java.io.IOException> { packInstaller.install() }
+            assertFailsWith<java.io.IOException> { packInstaller.install(URL) }
 
             packInstaller.status() shouldBe DictionaryPackState.NotInstalled
         }
 
         test("removing the pack uninstalls it") {
             val (packInstaller, _) = installer()
-            packInstaller.install()
+            packInstaller.install(URL)
 
             packInstaller.remove()
 
@@ -103,11 +107,26 @@ class DictionaryPackInstallerTest :
         test("a pre-existing unreadable pack reads as corrupt without an install") {
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (packInstaller, files) = installer(derived)
-            derived.put(DictionaryPackInstaller.PACK_PATH, byteArrayOf(1))
+            derived.put(DictionaryPackInstaller.pathOf("en", "fr"), byteArrayOf(1))
             files.openFailure = IllegalStateException("file is not a database")
 
             packInstaller.status() shouldBe DictionaryPackState.Corrupt("file is not a database")
             packInstaller.open() shouldBe null
+        }
+
+        test("each pair owns its own pack, so installing one leaves the other alone") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (english, _) = installer(derived, reading = "en", translation = "fr")
+            val (french, _) = installer(derived, reading = "fr", translation = "en")
+
+            english.install(URL)
+
+            english.status().shouldBeInstanceOf<DictionaryPackState.Ready>()
+            french.status() shouldBe DictionaryPackState.NotInstalled
+        }
+
+        test("the pair's path collapses each half to its base tag") {
+            DictionaryPackInstaller.pathOf("en-US", "fr-CA") shouldBe "dictionary/en-fr/pack.sqlite"
         }
 
         test("the installed pack is a derived asset that never reaches the vault or its export") {
@@ -116,9 +135,12 @@ class DictionaryPackInstallerTest :
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (packInstaller, _) = installer(derived)
 
-            packInstaller.install()
+            packInstaller.install(URL)
 
-            derived.paths() shouldBe listOf(DictionaryPackInstaller.PACK_PATH)
+            derived.paths() shouldBe listOf(DictionaryPackInstaller.pathOf("en", "fr"))
             vault.exportBundle().decodeToString().contains("dictionary-pack-bytes") shouldBe false
         }
     })
+
+/** A stand-in download address; the installer only hands it to the downloader. */
+private const val URL: String = "https://example.test/pack.sqlite.gz"

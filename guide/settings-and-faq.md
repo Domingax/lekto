@@ -7,17 +7,17 @@ answers the common questions.
 
 - **Languages** — the languages Lekto offers for reading, ordered by the ones you
   have most books in. For each language, declare the CEFR level you read at (choose
-  **Not set** to clear it), and see and download its word-difficulty data where
-  Lekto publishes it. A language with no published word-difficulty data says so and
-  offers no download. **Reload list** refetches the list at any time.
-  See [Reading](/reading).
+  **Not set** to clear it), see and download its word-difficulty data where Lekto
+  publishes it, and download each offline dictionary it offers, labelled by the
+  pair it translates into ("English → French"). An artefact Lekto does not publish
+  says so and offers no download. **Reload list** refetches the list at any time,
+  and **Attribution** opens the licences and sources of the data you download.
+  See [Reading](/reading) and [Word lookup](/word-lookup).
 - **Sync** — connect your own WebDAV server, test it, turn sync on and see its
   status and last result; see [Vault and sync](/vault-and-sync).
 - **Vault export and import** — write your whole Vault to a bundle, or restore one.
-- **Dictionary pack** — the status of the offline dictionary pack and its download.
 - **LLM provider** — choose a provider, enter an API key, load and pick a model, and
   test the connection. See [LLM provider and privacy](/llm-provider).
-- **Attribution** — the licences and sources Lekto builds on.
 
 ## Frequently asked questions
 

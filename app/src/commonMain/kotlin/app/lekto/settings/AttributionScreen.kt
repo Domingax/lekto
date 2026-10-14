@@ -16,10 +16,12 @@ import app.lekto.core.dictionary.PackMetadata
 import app.lekto.core.difficulty.DifficultyMetadata
 
 /**
- * The mandatory attribution screen (issues #18 and #64; ADR-0011, ADR-0029): the
- * dictionary pack and the word-difficulty table are CC BY-SA 4.0 works — the pack
- * derived from Wiktionary, the table from wordfreq — so each source, licence,
- * modification and ShareAlike obligation must be visible in the app.
+ * The mandatory attribution screen (issues #18, #64 and #149; ADR-0011,
+ * ADR-0029): the dictionary pack and the word-difficulty table are CC BY-SA 4.0
+ * works — the pack derived from Wiktionary, the table from wordfreq — so each
+ * source, licence, modification and ShareAlike obligation must be visible in the
+ * app. It is reached from the **Languages** surface, which owns the data it
+ * describes.
  *
  * When an artifact is installed its metadata comes from inside it; when none is,
  * the screen still states the licence it will carry, so the obligation is never
@@ -36,7 +38,7 @@ fun AttributionScreen(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        TextButton(onClick = onBack) { Text("Settings") }
+        TextButton(onClick = onBack) { Text("Back") }
         Text("Attribution", style = MaterialTheme.typography.headlineMedium)
         DictionaryAttribution(metadata)
         DifficultyAttribution(difficulty)
