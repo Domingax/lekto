@@ -13,13 +13,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
-import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
-import app.lekto.dictionary.DictionaryUiState
-import app.lekto.testkit.testPackMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,11 +28,10 @@ import org.robolectric.annotation.Config
 /**
  * The settings screen on a **simulated Android runtime** (issue #77): the
  * same-named twin of `app/desktopTest`'s `SettingsScreenSemanticsTest`, so the
- * parity rule (issue #73) sees the two lanes together. The dictionary section's
- * status and download, the way to attribution, the vault section's
- * export/import controls, and the LLM provider section (issue #88) are the
- * same behaviours the desktop lane proves, run here on the runtime the app ships
- * on.
+ * parity rule (issue #73) sees the two lanes together. The way to the
+ * **Languages** surface (issue #149), the vault section's export/import controls,
+ * and the LLM provider section (issue #88) are the same behaviours the desktop
+ * lane proves, run here on the runtime the app ships on.
  *
  * It is a deliberate mirror, not a shared body: the desktop lane drives
  * `runComposeUiTest` and this one a Robolectric `createAndroidComposeRule`, and
@@ -51,68 +47,12 @@ class SettingsScreenSemanticsTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun aMissingPackSaysSoAndOffersADownload() {
-        var downloaded = false
-        render(actions = SettingsActions(onDownload = { downloaded = true }))
+    fun theDictionarySectionIsGone() {
+        render()
 
-        compose.onNodeWithText("The offline dictionary isn't installed yet", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Download").performClick()
-
-        assertTrue(downloaded)
-    }
-
-    @Test
-    fun anInstalledPackSaysSoAndOffersADownloadAgain() {
-        render(dictionary = DictionaryUiState(status = DictionaryPackState.Ready(testPackMetadata())))
-
-        compose.onNodeWithText("is installed", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Download again").assertIsDisplayed()
-    }
-
-    @Test
-    fun anIncompatiblePackTellsTheUserToDownloadAgain() {
-        render(dictionary = DictionaryUiState(status = DictionaryPackState.Incompatible(found = 9, expected = 1)))
-
-        compose.onNodeWithText("format 9", substring = true).assertIsDisplayed()
-    }
-
-    @Test
-    fun aCorruptPackTellsTheUserToDownloadAgain() {
-        render(dictionary = DictionaryUiState(status = DictionaryPackState.Corrupt("file is not a database")))
-
-        compose.onNodeWithText("damaged", substring = true).assertIsDisplayed()
-    }
-
-    @Test
-    fun downloadingDisablesTheActionAndReportsProgress() {
-        render(dictionary = DictionaryUiState(installing = true))
-
-        compose.onNodeWithText("Downloading", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Download").assertIsNotEnabled()
-    }
-
-    @Test
-    fun aDownloadFailureShowsAndDismisses() {
-        var dismissed = false
-        render(
-            dictionary = DictionaryUiState(error = "The dictionary download failed."),
-            actions = SettingsActions(onDismissError = { dismissed = true }),
-        )
-
-        compose.onNodeWithText("The dictionary download failed.").assertIsDisplayed()
-        compose.onNodeWithText("Dismiss").performClick()
-
-        assertTrue(dismissed)
-    }
-
-    @Test
-    fun attributionIsReachable() {
-        var opened = false
-        render(actions = SettingsActions(onOpenAttribution = { opened = true }))
-
-        compose.onNodeWithText("Attribution").performClick()
-
-        assertTrue(opened)
+        // The pack and its attribution left for the Languages surface (issue #149).
+        compose.onNodeWithText("Dictionary").assertDoesNotExist()
+        compose.onNodeWithText("Attribution").assertDoesNotExist()
     }
 
     @Test
@@ -560,7 +500,6 @@ class SettingsScreenSemanticsTest {
     /** Renders the settings screen in the app theme, sized like a phone. */
     @Suppress("LongParameterList") // One test helper mirroring the screen's state bundles.
     private fun render(
-        dictionary: DictionaryUiState = DictionaryUiState(),
         vault: VaultUiState = VaultUiState(),
         provider: ProviderUiState = ProviderUiState(),
         sync: SyncUiState = SyncUiState(),
@@ -569,7 +508,7 @@ class SettingsScreenSemanticsTest {
         compose.setContent {
             MaterialTheme {
                 SettingsScreen(
-                    state = SettingsUiState(dictionary, vault, provider, sync),
+                    state = SettingsUiState(vault, provider, sync),
                     actions = actions,
                     modifier = Modifier.size(width = 360.dp, height = 720.dp),
                 )

@@ -15,7 +15,6 @@ class DictionaryLookupTest :
     FunSpec({
 
         fun lookup(pack: DictionaryPack? = InMemoryDictionaryPack()): DictionaryLookup = DictionaryLookup { pack }
-
         test("an inflected surface returns its lemma's definition, translation and pronunciation") {
             val result = lookup().lookup("Blorpled", "en")
 
@@ -45,5 +44,14 @@ class DictionaryLookupTest :
         test("a word with no language cannot be keyed and says so honestly") {
             lookup().lookup("blorple", null) shouldBe
                 WordLookup.Unavailable(DictionaryLookup.UNKNOWN_LANGUAGE)
+        }
+
+        test("the pack is resolved by the book's reading language") {
+            // One pack per Reading language (issue #149): the pack that translates
+            // the book's own language is the one queried, not whichever was installed.
+            val lookup = DictionaryLookup { code -> if (code == "en") InMemoryDictionaryPack() else null }
+
+            lookup.lookup("blorple", "en-US").shouldBeInstanceOf<WordLookup.Found>()
+            lookup.lookup("bonjour", "fr") shouldBe WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED)
         }
     })

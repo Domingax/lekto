@@ -23,19 +23,22 @@ sealed interface WordLookup {
  * and pronunciation — all offline (issue #18; ADR-0006).
  *
  * The pack is keyed by a base language (`en`, `fr`), so a BCP-47 tag such as
- * `en-US` collapses to its primary subtag before the query. When no pack is
- * installed, or the book's language is unknown, it degrades to
- * [WordLookup.Unavailable] with an honest message rather than failing.
+ * `en-US` collapses to its primary subtag before the query; [pack] resolves the
+ * reader's **Reading language** to the pack that translates it (issue #149).
+ * When no pack is installed for that language, or the book's language is unknown,
+ * it degrades to [WordLookup.Unavailable] with an honest message rather than
+ * failing.
  */
-class DictionaryLookup(private val pack: () -> DictionaryPack?) {
+class DictionaryLookup(private val pack: (String) -> DictionaryPack?) {
 
     /** Looks [surface] up in [language], returning an honest outcome when it is unknown or offline. */
     fun lookup(surface: String, language: String?): WordLookup {
-        val dictionary = pack() ?: return WordLookup.Unavailable(NOT_INSTALLED)
         val code = language?.let(::baseLanguage)
+        val dictionary = code?.let(pack)
         val query = surface.trim()
         return when {
             code == null -> WordLookup.Unavailable(UNKNOWN_LANGUAGE)
+            dictionary == null -> WordLookup.Unavailable(NOT_INSTALLED)
             query.isEmpty() -> WordLookup.NotInDictionary(query, language)
             else -> resolve(dictionary, query, code, language)
         }

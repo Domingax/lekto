@@ -33,10 +33,13 @@ class FakePackDatabase(
  * The platform pack I/O as a fake: a download writes a marker through the
  * [derived] store and the factory opens whatever version was configured, so an
  * installer test can drive download, refusal and removal without a network or a
- * real SQLite file.
+ * real SQLite file. It is keyed by the (Reading language × **Translation
+ * language**) pair the installer serves (issue #149).
  */
 class FakeDictionaryPackFiles(
     private val derived: DerivedAssetStore,
+    val readingLanguage: String = "en",
+    val translationLanguage: String = "fr",
     var version: Int = DictionaryPack.FORMAT_VERSION,
 ) : PackDownloader,
     PackDatabaseFactory {
@@ -54,12 +57,14 @@ class FakeDictionaryPackFiles(
     override fun download(url: String, destination: String) {
         failure?.let { throw it }
         downloads++
-        derived.put(DictionaryPackInstaller.PACK_PATH, PACK_MARKER)
+        derived.put(DictionaryPackInstaller.pathOf(readingLanguage, translationLanguage), PACK_MARKER)
     }
 
     override fun open(path: String): PackDatabase {
         openFailure?.let { throw it }
-        if (derived.get(DictionaryPackInstaller.PACK_PATH) == null) throw DictionaryPackMissing()
+        if (derived.get(DictionaryPackInstaller.pathOf(readingLanguage, translationLanguage)) == null) {
+            throw DictionaryPackMissing()
+        }
         return FakePackDatabase(version)
     }
 

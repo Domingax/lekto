@@ -13,10 +13,10 @@ import app.lekto.core.text.normaliseSurface
  * form, so a BCP-47 tag such as `en-US` collapses and the form is normalised
  * before the query — the same normalisation the fallback key uses, so a known
  * lemma and an unknown surface cannot land on two keys. The pack is resolved
- * through [pack] on every call, so installing it later is seen without
- * re-creating the lookup.
+ * through [pack] on every call and per **Reading language** (issue #149), so
+ * installing it later is seen without re-creating the lookup.
  */
-fun dictionaryLemmas(pack: () -> DictionaryPack?): LemmaLookup = LemmaLookup { surface, language ->
+fun dictionaryLemmas(pack: (String) -> DictionaryPack?): LemmaLookup = LemmaLookup { surface, language ->
     val code = language?.let(::baseLanguage) ?: return@LemmaLookup null
-    pack()?.lemmaOf(normaliseSurface(surface), code)
+    pack(code)?.lemmaOf(normaliseSurface(surface), code)
 }

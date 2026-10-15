@@ -37,3 +37,17 @@ actual (ADR-0007) will. The dictionary-pack workflow publishes a **date-free
 asset alias** beside the dated one so the app can hold one constant download
 URL, and the mandatory attribution screen reads its text from the pack's own
 metadata.
+
+## Update — the pack's address comes from the language manifest (issue #149)
+
+The single constant asset URL described above assumed one EN→FR pack. The
+**Languages** surface now offers each (Reading language × **Translation
+language**) pair the **Language manifest** publishes, so a pack is one derived
+asset per pair and its address is the manifest's own asset name at the same
+date-free `releases/latest` alias — the rule the **Difficulty table** already
+follows (ADR-0029). The app builds
+`.../releases/latest/download/<name>` from the name the manifest published rather
+than holding it in a constant, keying the derived store by the pair. The
+date-free alias, the in-place read, the version handshake and the derived-store
+rules above are unchanged; a pair the manifest does not publish is stated
+honestly and offers no download.

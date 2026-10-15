@@ -14,92 +14,34 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
-import app.lekto.dictionary.DictionaryUiState
-import app.lekto.testkit.testPackMetadata
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The settings screen's behaviour through semantics: the dictionary's state and
- * an honest message for each, the download action, the inline download failure
- * with a way to dismiss it, the way to the attribution screen (issue #18), the
- * vault export/import section (issue #20), and the LLM provider section
- * (issue #88) — choosing a provider, the custom base URL field, the masked key
- * field, save, the inline connection result and key removal.
+ * The settings screen's behaviour through semantics: the way to the **Languages**
+ * surface (issues #146, #149), the vault export/import section (issue #20), and
+ * the LLM provider section (issue #88) — choosing a provider, the custom base URL
+ * field, the masked key field, save, the inline connection result and key
+ * removal. The dictionary pack and the way to attribution left for the
+ * **Languages** surface (issue #149), so Settings holds only the app's own
+ * configuration.
  */
 @OptIn(ExperimentalTestApi::class)
 @Suppress("TooManyFunctions", "LargeClass") // One screen, one test per control; splitting the class hides the section.
 class SettingsScreenSemanticsTest {
 
     @Test
-    fun aMissingPackSaysSoAndOffersADownload() = runComposeUiTest {
-        var downloaded = false
-        settings(actions = SettingsActions(onDownload = { downloaded = true }))
+    fun theDictionarySectionIsGone() = runComposeUiTest {
+        settings()
 
-        onNodeWithText("The offline dictionary isn't installed yet", substring = true).assertIsDisplayed()
-        onNodeWithText("Download").performClick()
-
-        assertTrue(downloaded)
-    }
-
-    @Test
-    fun anInstalledPackSaysSoAndOffersADownloadAgain() = runComposeUiTest {
-        settings(dictionary = DictionaryUiState(status = DictionaryPackState.Ready(testPackMetadata())))
-
-        onNodeWithText("is installed", substring = true).assertIsDisplayed()
-        onNodeWithText("Download again").assertIsDisplayed()
-    }
-
-    @Test
-    fun anIncompatiblePackTellsTheUserToDownloadAgain() = runComposeUiTest {
-        settings(dictionary = DictionaryUiState(status = DictionaryPackState.Incompatible(found = 9, expected = 1)))
-
-        onNodeWithText("format 9", substring = true).assertIsDisplayed()
-    }
-
-    @Test
-    fun aCorruptPackTellsTheUserToDownloadAgain() = runComposeUiTest {
-        settings(dictionary = DictionaryUiState(status = DictionaryPackState.Corrupt("file is not a database")))
-
-        onNodeWithText("damaged", substring = true).assertIsDisplayed()
-    }
-
-    @Test
-    fun downloadingDisablesTheActionAndReportsProgress() = runComposeUiTest {
-        settings(dictionary = DictionaryUiState(installing = true))
-
-        onNodeWithText("Downloading", substring = true).assertIsDisplayed()
-        onNodeWithText("Download").assertIsNotEnabled()
-    }
-
-    @Test
-    fun aDownloadFailureShowsAndDismisses() = runComposeUiTest {
-        var dismissed = false
-        settings(
-            dictionary = DictionaryUiState(error = "The dictionary download failed."),
-            actions = SettingsActions(onDismissError = { dismissed = true }),
-        )
-
-        onNodeWithText("The dictionary download failed.").assertIsDisplayed()
-        onNodeWithText("Dismiss").performClick()
-
-        assertTrue(dismissed)
-    }
-
-    @Test
-    fun attributionIsReachable() = runComposeUiTest {
-        var opened = false
-        settings(actions = SettingsActions(onOpenAttribution = { opened = true }))
-
-        onNodeWithText("Attribution").performClick()
-
-        assertTrue(opened)
+        // The pack and its attribution left for the Languages surface (issue #149).
+        onNodeWithText("Dictionary").assertDoesNotExist()
+        onNodeWithText("Attribution").assertDoesNotExist()
     }
 
     @Test
@@ -553,7 +495,6 @@ private fun configured(enabled: Boolean = false): SyncSettings =
 @Suppress("LongParameterList") // One test helper mirroring the screen's state bundles.
 @OptIn(ExperimentalTestApi::class)
 private fun ComposeUiTest.settings(
-    dictionary: DictionaryUiState = DictionaryUiState(),
     vault: VaultUiState = VaultUiState(),
     provider: ProviderUiState = ProviderUiState(),
     sync: SyncUiState = SyncUiState(),
@@ -562,7 +503,7 @@ private fun ComposeUiTest.settings(
     setContent {
         MaterialTheme {
             SettingsScreen(
-                state = SettingsUiState(dictionary, vault, provider, sync),
+                state = SettingsUiState(vault, provider, sync),
                 actions = actions,
                 modifier = Modifier.size(width = 360.dp, height = 720.dp),
             )

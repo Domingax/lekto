@@ -1,5 +1,6 @@
 package app.lekto.core.dictionary
 
+import app.lekto.core.text.baseLanguage
 import app.lekto.core.vault.DerivedAssetStore
 
 /** Where the device-local dictionary pack stands, for an honest message on screen. */
@@ -19,20 +20,27 @@ sealed interface DictionaryPackState {
 }
 
 /**
- * The dictionary pack's lifecycle: it reports what is installed, downloads the
- * published pack on demand into the device-local derived store, validates the
- * format handshake and refuses a pack it does not understand (issue #18;
- * ADR-0005, ADR-0017).
+ * The dictionary pack's lifecycle, one per (Reading language × **Translation
+ * language**) pair (issue #149): it reports what is installed for the pair,
+ * downloads the published pack on demand into the device-local derived store,
+ * validates the format handshake and refuses a pack it does not understand
+ * (issue #18; ADR-0005, ADR-0017).
  *
  * The pack is a **derived asset**: it lives under a [DerivedAssetStore], which is
  * a different root from the vault, so it can never enter the vault or an export.
  * Downloading is blocking; the application runs [install] off the UI thread.
+ *
+ * The [install] address is a parameter rather than a field because the
+ * **Language manifest** names the asset it published for a pair, and the app
+ * fetches exactly that name (issue #149): the installer owns the lifecycle, the
+ * catalogue owns the address.
  */
 class DictionaryPackInstaller(
     private val derived: DerivedAssetStore,
     private val downloader: PackDownloader,
     private val databases: PackDatabaseFactory,
-    private val url: String,
+    private val readingLanguage: String,
+    private val translationLanguage: String,
 ) : AutoCloseable {
 
     private var pack: DictionaryPack? = null
@@ -52,24 +60,17 @@ class DictionaryPackInstaller(
      * version. A pack this build refuses leaves the store clean, so a later
      * download can replace it.
      */
-    fun install(): DictionaryPackState {
-        val target = destination()
-        downloader.download(url, target)
-        val inspected = inspect(target)
-        if (inspected !is DictionaryPackState.Ready) {
-            pack?.close()
-            pack = null
-            derived.remove(PACK_PATH)
-        }
+    fun install(url: String): DictionaryPackState {
+        downloader.download(url, destination())
+        val inspected = inspect(destination())
+        if (inspected !is DictionaryPackState.Ready) discard()
         state = inspected
         return inspected
     }
 
     /** Removes the installed pack, if any. */
     fun remove(): DictionaryPackState {
-        pack?.close()
-        pack = null
-        derived.remove(PACK_PATH)
+        discard()
         state = DictionaryPackState.NotInstalled
         return DictionaryPackState.NotInstalled
     }
@@ -79,7 +80,7 @@ class DictionaryPackInstaller(
         pack = null
     }
 
-    private fun destination(): String = derived.storedPath(PACK_PATH)
+    private fun destination(): String = derived.storedPath(pathOf(readingLanguage, translationLanguage))
 
     @Suppress("TooGenericExceptionCaught") // Opening the pack may fail any way; report it, do not crash.
     private fun inspect(target: String): DictionaryPackState = try {
@@ -102,9 +103,21 @@ class DictionaryPackInstaller(
         return DictionaryPackState.Ready(opened.metadata)
     }
 
+    /** Closes and removes the installed pack, so a refused or stale file cannot linger. */
+    private fun discard() {
+        pack?.close()
+        pack = null
+        derived.remove(pathOf(readingLanguage, translationLanguage))
+    }
+
     companion object {
-        /** The derived-asset path the pack lives at; app-private and never exported (ADR-0005). */
-        const val PACK_PATH: String = "dictionary/en-fr/pack.sqlite"
+        /**
+         * The derived-asset path a pair's pack lives at; app-private and never
+         * exported (ADR-0005, ADR-0017). Keyed by the two base tags, like the
+         * difficulty table and the level record (ADR-0018).
+         */
+        fun pathOf(readingLanguage: String, translationLanguage: String): String =
+            "dictionary/${baseLanguage(readingLanguage)}-${baseLanguage(translationLanguage)}/pack.sqlite"
 
         private const val UNREADABLE = "The dictionary pack could not be read."
     }

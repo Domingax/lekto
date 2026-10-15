@@ -527,17 +527,21 @@ tests run in `check` like any other module's, but the module sits outside the
 application's coverage, licence and publication graph, so nothing it builds ships
 with the app.
 
-The pack's **consumption in the app** (issue #18) is proved at the same levels.
-The `DictionaryPack` contract in `testkit` runs against the in-memory fake in
-`core/commonTest`, against the **real SQLite pack** the pipeline built — committed
-as `dictionary/en-fr-sample.sqlite` under `core/src/commonTest/resources` — in
-`core/jvmTest`, and against the Android framework's SQLite in the Robolectric
-`androidHostTest` lane, so the two clients cannot answer a query differently. The
-installer's lifecycle — download, the format-handshake refusal, corruption, and
-the pack's exclusion from the vault's export — is a `core/commonTest` behaviour
-over the fakes in `testkit`, and the JVM downloader's stream-and-decompress path
-runs in `core/jvmTest` against a local HTTP server. The settings, attribution and
-lookup-panel UI are `app/desktopTest` semantics.
+The pack's **consumption in the app** (issues #18, #149) is proved at the same
+levels. The `DictionaryPack` contract in `testkit` runs against the in-memory fake
+in `core/commonTest`, against the **real SQLite pack** the pipeline built —
+committed as `dictionary/en-fr-sample.sqlite` under
+`core/src/commonTest/resources` — in `core/jvmTest`, and against the Android
+framework's SQLite in the Robolectric `androidHostTest` lane, so the two clients
+cannot answer a query differently. The installer's lifecycle — download, the
+format-handshake refusal, corruption, and the pack's exclusion from the vault's
+export — is a `core/commonTest` behaviour over the fakes in `testkit`, one
+installer per (Reading language × **Translation language**) pair (issue #149), and
+the JVM downloader's stream-and-decompress path runs in `core/jvmTest` against a
+local HTTP server. The per-pair state holder is `DictionaryControllerTest` in
+`app/desktopTest`; the **Languages** surface's pack control, the attribution
+screen and the lookup-panel UI are `app/desktopTest` semantics, each with its
+same-named `app/androidUnitTest` twin.
 
 The word lookup panel (issue #19) completes that interaction. The reference
 shortcuts are a pure transform in `core`: `DictionarySource.canonicalUrl` builds
@@ -705,8 +709,8 @@ crash — is a behaviour over the in-memory vault in
 export/import controls are UI semantics in `SettingsScreenSemanticsTest`, and the
 same screen is re-proved on a simulated Android runtime in
 `app/androidUnitTest/.../settings/SettingsScreenSemanticsTest` (issue #77) — the
-dictionary status and its download, the way to attribution, and the vault
-section's export/import controls — so the screen is proved on both lanes, as the
+way to the **Languages** surface, the vault section's export/import controls, and
+the LLM provider and sync sections — so the screen is proved on both lanes, as the
 parity rule requires (issue #73). The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
@@ -837,12 +841,15 @@ counts books per base tag, sorts descending then alphabetically, and keeps a
 language with no books last. The state holder is `LanguageControllerTest` in
 `app/desktopTest`, driven by virtual time; the surface is
 `LanguagesScreenSemanticsTest` on both lanes, which also pins each language's
-**Reader level** picker and that **Not set** raises the clear (issue #147), and
-the **Difficulty table**'s per-language state, download, honest no-table line,
-progress and failure (issue #148); and
+**Reader level** picker and that **Not set** raises the clear (issue #147), the
+**Difficulty table**'s per-language state, download, honest no-table line,
+progress and failure (issue #148), and the **Dictionary pack**'s per-pair state,
+download, pair label ("English → French"), honest no-pack line, progress and
+failure (issue #149); and
 the two ways in — the library's header and Settings — the always-visible reload
-after a failed first fetch, and setting and clearing a level through the surface
-run through `AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`
+after a failed first fetch, setting and clearing a level through the surface,
+downloading a difficulty table, and downloading a dictionary pack and reaching
+attribution run through `AppSemanticsTest` on both lanes. `testkit` holds the `InMemoryLanguageCatalog`
 and `FakeManifestDownloader` fakes and the level-aware `InMemoryReaderLevels`,
 and the manifest's format handshake is the producer's constant against `core`'s,
 kept in step by `LanguageManifestFormatSynchronisationTest` in `architecture`
