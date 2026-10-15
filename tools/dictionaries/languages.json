@@ -1,0 +1,7 @@
+{
+  "dictionaries": [
+    { "reading": "en", "translation": "fr" },
+    { "reading": "en", "translation": "es" }
+  ],
+  "difficulties": ["en", "es", "fr"]
+}

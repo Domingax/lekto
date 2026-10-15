@@ -1,19 +1,19 @@
 package app.lekto.tools.dictionaries
 
-import java.io.BufferedReader
-import java.io.StringReader
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The catalogue reflects exactly what a run published: no invention, no omission (issue #145). */
+/** The catalogue reflects exactly what a run published: no invention, no omission (issues #145, #161). */
 class LanguageManifestTest {
 
     @Test
     fun `a run that publishes nothing yields an empty manifest`() {
-        val manifest = buildLanguageManifest(pack = null, difficulty = null)
+        val manifest = buildLanguageManifest(dictionaries = emptyList(), difficulties = emptyList())
 
         assertEquals(LanguageManifestFormat.VERSION, manifest.formatVersion)
         assertTrue(manifest.languages.isEmpty(), "no artefact means no language, not an invented one")
@@ -21,7 +21,10 @@ class LanguageManifestTest {
 
     @Test
     fun `a run without a difficulty table lists the pack alone and omits the table`() {
-        val manifest = buildLanguageManifest(pack = fixturePack(), difficulty = null)
+        val manifest = buildLanguageManifest(
+            dictionaries = listOf(LanguagePair("en", "fr")),
+            difficulties = emptyList(),
+        )
 
         val language = manifest.languages.single()
         assertEquals("en", language.language)
@@ -35,7 +38,7 @@ class LanguageManifestTest {
 
     @Test
     fun `a run without a pack lists the table alone and omits the pack`() {
-        val manifest = buildLanguageManifest(pack = null, difficulty = fixtureDifficulty())
+        val manifest = buildLanguageManifest(dictionaries = emptyList(), difficulties = listOf("en"))
 
         val language = manifest.languages.single()
         assertEquals("en", language.language)
@@ -46,20 +49,47 @@ class LanguageManifestTest {
         assertTrue("lekto-difficulty-en.sqlite.gz" in json)
         assertFalse("dictionaries" in json, "an unpublished pair must be absent, not empty")
     }
+
+    @Test
+    fun `a reading language with several packs lists them all under one entry`() {
+        val manifest = buildLanguageManifest(
+            dictionaries = listOf(LanguagePair("en", "fr"), LanguagePair("en", "es")),
+            difficulties = listOf("en"),
+        )
+
+        val language = manifest.languages.single()
+        assertEquals("en", language.language)
+        assertEquals(
+            listOf(
+                ManifestDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz"),
+                ManifestDictionary("es", "lekto-dictionary-en-es.sqlite.gz"),
+            ),
+            language.dictionaries,
+        )
+        assertEquals(ManifestArtifact("lekto-difficulty-en.sqlite.gz"), language.difficulty)
+    }
+
+    @Test
+    fun `a pair and a difficulty for different languages yield two entries`() {
+        val manifest = buildLanguageManifest(
+            dictionaries = listOf(LanguagePair("fr", "es")),
+            difficulties = listOf("es"),
+        )
+
+        assertEquals(listOf("fr", "es"), manifest.languages.map(ManifestLanguage::language))
+    }
+
+    @Test
+    fun `the committed language set parses into the configured artefacts`() {
+        val config = readLanguagesConfig(Files.readAllBytes(Path.of("languages.json")))
+
+        assertEquals(
+            listOf(
+                LanguagePair("en", "fr"),
+                LanguagePair("en", "es"),
+            ),
+            config.dictionaries,
+        )
+        assertEquals(listOf("en", "es", "fr"), config.difficulties)
+    }
 }
-
-private fun fixturePack(): PackContent = PackBuilder(FIXTURE_PROVENANCE).build(
-    requireNotNull(LanguageManifestTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")).bufferedReader(),
-)
-
-private fun fixtureDifficulty(): DifficultyContent = DifficultyBuilder(
-    pack = fixturePack(),
-    calibration = DifficultyCalibration(listOf(1, 2, 3, 4, 5, 6), "test", "test"),
-).build(BufferedReader(StringReader(fixtureFrequency())))
-
-private fun fixtureFrequency(): String =
-    requireNotNull(LanguageManifestTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv")) {
-        "the committed fixture must be on the test classpath"
-    }.bufferedReader().use(BufferedReader::readText)
-
-private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")

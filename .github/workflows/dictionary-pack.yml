@@ -1,11 +1,13 @@
-# The dictionary-pack lane (ticket #17).
+# The dictionary-data lane (tickets #17, #161).
 #
-# It builds the trimmed EN→FR pack from the raw Wiktextract extract and publishes
-# it as a GitHub Release asset. It runs on demand and monthly, and never on a
-# push or pull request, so it cannot block application CI
-# (docs/build.md#dictionary-pipeline). The pack is a release artifact and is
-# never committed. See ADR-0017 for the access shape and
-# docs/research/open-dictionaries.md for the source rationale.
+# It reads the committed `tools/dictionaries/languages.json`, builds every
+# dictionary pack and difficulty table it lists from the raw Wiktextract extract,
+# and publishes them together in one GitHub Release. It runs on demand and
+# monthly, and never on a push or pull request, so it cannot block application CI
+# (docs/build.md#dictionary-pipeline). The assets are release artifacts and are
+# never committed. See ADR-0017 for the access shape, ADR-0031 for the
+# config-driven, single-release decision, and docs/research/open-dictionaries.md
+# for the source rationale.
 name: dictionary-pack
 
 on:
@@ -27,8 +29,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Streaming the ~3 GiB gz source dominates; the runner's disk holds it.
-    timeout-minutes: 180
+    # Streaming the ~3 GiB gz source once per configured dictionary pair dominates.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
 
@@ -66,124 +68,112 @@ jobs:
         run: |
           echo "sha256=$(sha256sum "$RUNNER_TEMP/raw-wiktextract-data.jsonl.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
-      # The sanity gate compares this build's lemma count with the previous
-      # release's manifest. A first run has no previous release and is not gated
-      # on coverage.
-      - name: Look up the previous pack's lemma count
+      # The sanity gate compares each reading language's lemma count with the
+      # previous release's. A first run has no previous release, and a language
+      # newly added to the set has no previous manifest, so neither is gated on
+      # coverage.
+      - name: Look up the previous packs' lemma counts
         id: previous
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "$RUNNER_TEMP/previous"
           tag="$(gh release list --limit 100 --json tagName \
-            --jq '[.[] | select(.tagName | startswith("dictionary-en-fr-"))][0].tagName')"
+            --jq '[.[] | select(.tagName | startswith("dictionary-"))][0].tagName')"
           if [ -n "$tag" ] && [ "$tag" != "null" ]; then
-            gh release download "$tag" --pattern manifest.json \
+            gh release download "$tag" --pattern 'manifest-lekto-dictionary-*.json' \
               --dir "$RUNNER_TEMP/previous" --clobber || true
           fi
-          if [ -f "$RUNNER_TEMP/previous/manifest.json" ]; then
-            echo "lemma_count=$(jq -r '.stats.lemmaCount' "$RUNNER_TEMP/previous/manifest.json")" >> "$GITHUB_OUTPUT"
-          fi
+          # One gate per reading language, from its first configured pair.
+          counts=""
+          for reading in $(jq -r '.dictionaries[].reading' tools/dictionaries/languages.json | awk '!seen[$0]++'); do
+            pair="$(jq -r --arg reading "$reading" \
+              '.dictionaries[] | select(.reading == $reading) | .reading + "-" + .translation' \
+              tools/dictionaries/languages.json | head -1)"
+            manifest="$RUNNER_TEMP/previous/manifest-lekto-dictionary-$pair.json"
+            if [ -f "$manifest" ]; then
+              counts="$counts --previous-lemma-count $reading=$(jq -r '.stats.lemmaCount' "$manifest")"
+            fi
+          done
+          echo "args=$counts" >> "$GITHUB_OUTPUT"
 
       - name: Build the CLI
         run: ./gradlew --no-daemon :tools:dictionaries:installDist
 
       # The difficulty build reads wordfreq's per-surface frequencies, which the
-      # pipeline aggregates onto the pack's lemmas (ADR-0029). `10 ** zipf` is the
-      # per-billion occurrence count the Zipf score is the logarithm of.
-      - name: Build the wordfreq frequency list
+      # pipeline aggregates onto the reading language's lemmas (ADR-0029).
+      # `10 ** zipf` is the per-billion occurrence count the Zipf score is the
+      # logarithm of. One list per configured difficulty language. The Python
+      # heredoc body sits at the block's base indentation, so YAML strips every
+      # leading space and the code is unindented.
+      - name: Build the wordfreq frequency lists
         run: |
           python3 -m pip install --quiet "wordfreq==3.0.2"
-          python3 - "$RUNNER_TEMP/wordfreq-en.tsv" <<'PY'
-          import sys
+          python3 - <<'PY'
+          import json
+          import os
           from wordfreq import iter_wordlist, zipf_frequency
-          with open(sys.argv[1], "w", encoding="utf-8") as handle:
-              for word in iter_wordlist("en"):
-                  handle.write(f"{word}\t{10 ** zipf_frequency(word, 'en')}\n")
+          difficulties = json.load(open("tools/dictionaries/languages.json"))["difficulties"]
+          for language in difficulties:
+              path = f"{os.environ['RUNNER_TEMP']}/wordfreq-{language}.tsv"
+              with open(path, "w", encoding="utf-8") as handle:
+                  for word in iter_wordlist(language):
+                      handle.write(f"{word}\t{10 ** zipf_frequency(word, language)}\n")
           PY
-          gzip -9 -n "$RUNNER_TEMP/wordfreq-en.tsv"
+          for lang in $(jq -r '.difficulties[]' tools/dictionaries/languages.json); do
+            gzip -9 -n "$RUNNER_TEMP/wordfreq-$lang.tsv"
+          done
 
-      - name: Build the pack and the difficulty table
+      - name: Build every configured pack and difficulty table
         env:
-          PREVIOUS_LEMMA_COUNT: ${{ steps.previous.outputs.lemma_count }}
+          PREVIOUS_ARGS: ${{ steps.previous.outputs.args }}
         run: |
           cli=tools/dictionaries/build/install/dictionaries/bin/dictionaries
-          sqlite="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
-          difficulty="$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite"
+          out="$RUNNER_TEMP/out"
           args=(
             --input "$RUNNER_TEMP/raw-wiktextract-data.jsonl.gz"
-            --output "$sqlite"
-            --frequency-input "$RUNNER_TEMP/wordfreq-en.tsv.gz"
-            --difficulty-output "$difficulty"
-            --difficulty-notice "$RUNNER_TEMP/DIFFICULTY-NOTICE"
-            --difficulty-manifest "$RUNNER_TEMP/difficulty-manifest.json"
+            --languages-config tools/dictionaries/languages.json
+            --output-dir "$out"
             --source-url "https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz"
             --source-sha256 "${{ steps.source.outputs.sha256 }}"
             --extraction-date "${{ steps.download.outputs.extraction_date }}"
-            --notice "$RUNNER_TEMP/NOTICE"
-            --manifest "$RUNNER_TEMP/manifest.json"
-            --language-manifest "$RUNNER_TEMP/language-manifest.json"
+            --language-manifest "$out/language-manifest.json"
           )
-          if [ -n "$PREVIOUS_LEMMA_COUNT" ] && [ "$PREVIOUS_LEMMA_COUNT" != "null" ]; then
-            args+=(--previous-lemma-count "$PREVIOUS_LEMMA_COUNT")
-          fi
+          for lang in $(jq -r '.difficulties[]' tools/dictionaries/languages.json); do
+            args+=(--frequency "$lang=$RUNNER_TEMP/wordfreq-$lang.tsv.gz")
+          done
+          # Word-split the "<language>=<count>" pairs the lookup step produced.
+          # shellcheck disable=SC2206
+          args+=($PREVIOUS_ARGS)
           "$cli" "${args[@]}"
 
       # `-n` omits the gzip timestamp and filename, so compression adds no
-      # non-determinism of its own. A date-free alias is published alongside each
-      # dated asset so the app can fetch the latest pack and difficulty table from
-      # stable `releases/latest/download/<name>` URLs (issues #18, #64).
-      - name: Compress the pack and the difficulty table deterministically
+      # non-determinism of its own. The pack and table names are already date-free,
+      # so the app fetches them from stable
+      # `releases/latest/download/<name>` URLs (issues #18, #161).
+      - name: Compress the assets deterministically
         run: |
-          pack_dated="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
-          gzip -9 -n "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite"
-          cp "$pack_dated" "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
-          diff_dated="$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz"
-          gzip -9 -n "$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite"
-          cp "$diff_dated" "$RUNNER_TEMP/lekto-difficulty-en.sqlite.gz"
+          for sqlite in "$RUNNER_TEMP/out"/*.sqlite; do
+            gzip -9 -n "$sqlite"
+          done
 
       - name: Write the checksums
         run: |
-          cd "$RUNNER_TEMP"
-          sha256sum \
-            "lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz" \
-            "lekto-dictionary-en-fr.sqlite.gz" \
-            "lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz" \
-            "lekto-difficulty-en.sqlite.gz" \
-            "language-manifest.json" > SHA256SUMS
+          cd "$RUNNER_TEMP/out"
+          sha256sum *.sqlite.gz language-manifest.json > SHA256SUMS
 
-      # A short, generated release body (provenance + counts + verification),
-      # not the full NOTICE: the legal text stays in the NOTICE asset and inside
-      # the pack's metadata (`license_text`). The template is committed so the
+      # A short, generated release body (provenance + the catalogue pointer + the
+      # licence), not the full NOTICE: the legal text stays in the NOTICE assets and
+      # inside each pack's and table's metadata. The template is committed so the
       # wording is reviewed like code.
       - name: Write the release notes
         run: |
-          manifest="$RUNNER_TEMP/manifest.json"
-          difficulty="$RUNNER_TEMP/difficulty-manifest.json"
-          gz="$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
-          diff_gz="$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz"
-          bytes="$(numfmt --grouping "$(stat -c%s "$gz")") bytes"
-          diff_bytes="$(numfmt --grouping "$(stat -c%s "$diff_gz")") bytes"
+          manifest="$RUNNER_TEMP/out/manifest-lekto-dictionary-en-fr.json"
           sed \
             -e "s|{{REPOSITORY}}|${{ github.repository }}|g" \
-            -e "s|{{ASSET}}|$(basename "$gz")|g" \
-            -e "s|{{STABLE_URL}}|https://github.com/${{ github.repository }}/releases/latest/download/lekto-dictionary-en-fr.sqlite.gz|g" \
-            -e "s|{{SIZE}}|$bytes|g" \
-            -e "s|{{FORMAT_VERSION}}|$(jq -r '.formatVersion' "$manifest")|g" \
-            -e "s|{{LEMMAS}}|$(jq -r '.stats.lemmaCount' "$manifest" | numfmt --grouping)|g" \
-            -e "s|{{ENTRIES}}|$(jq -r '.stats.entryCount' "$manifest" | numfmt --grouping)|g" \
-            -e "s|{{FORMS}}|$(jq -r '.stats.formCount' "$manifest" | numfmt --grouping)|g" \
-            -e "s|{{TRANSLATIONS}}|$(jq -r '.stats.translationCount' "$manifest" | numfmt --grouping)|g" \
             -e "s|{{SOURCE_URL}}|$(jq -r '.provenance.sourceUrl' "$manifest")|g" \
             -e "s|{{SOURCE_SHA256}}|$(jq -r '.provenance.sourceSha256' "$manifest")|g" \
             -e "s|{{EXTRACTION_DATE}}|$(jq -r '.provenance.extractionDate' "$manifest")|g" \
-            -e "s|{{ASSET_SHA256}}|$(grep 'lekto-dictionary-en-fr-[0-9]*\.sqlite\.gz' "$RUNNER_TEMP/SHA256SUMS" | cut -d' ' -f1)|g" \
-            -e "s|{{DIFFICULTY_ASSET}}|$(basename "$diff_gz")|g" \
-            -e "s|{{DIFFICULTY_STABLE_URL}}|https://github.com/${{ github.repository }}/releases/latest/download/lekto-difficulty-en.sqlite.gz|g" \
-            -e "s|{{DIFFICULTY_SIZE}}|$diff_bytes|g" \
-            -e "s|{{DIFFICULTY_FORMAT_VERSION}}|$(jq -r '.formatVersion' "$difficulty")|g" \
-            -e "s|{{DIFFICULTY_WORDS}}|$(jq -r '.stats.bandedWords' "$difficulty" | numfmt --grouping)|g" \
-            -e "s|{{DIFFICULTY_SHA256}}|$(grep 'lekto-difficulty-en-[0-9]*\.sqlite\.gz' "$RUNNER_TEMP/SHA256SUMS" | cut -d' ' -f1)|g" \
             .github/release-notes/dictionary-pack.md > "$RUNNER_TEMP/RELEASE_NOTES.md"
           cat "$RUNNER_TEMP/RELEASE_NOTES.md"
 
@@ -191,25 +181,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="dictionary-en-fr-${{ steps.release.outputs.date }}"
+          out="$RUNNER_TEMP/out"
+          tag="dictionary-${{ steps.release.outputs.date }}"
           notes="$RUNNER_TEMP/RELEASE_NOTES.md"
           assets=(
-            "$RUNNER_TEMP/lekto-dictionary-en-fr-${{ steps.release.outputs.date }}.sqlite.gz"
-            "$RUNNER_TEMP/lekto-dictionary-en-fr.sqlite.gz"
-            "$RUNNER_TEMP/lekto-difficulty-en-${{ steps.release.outputs.date }}.sqlite.gz"
-            "$RUNNER_TEMP/lekto-difficulty-en.sqlite.gz"
-            "$RUNNER_TEMP/SHA256SUMS"
-            "$RUNNER_TEMP/NOTICE"
-            "$RUNNER_TEMP/DIFFICULTY-NOTICE"
-            "$RUNNER_TEMP/manifest.json"
-            "$RUNNER_TEMP/difficulty-manifest.json"
-            "$RUNNER_TEMP/language-manifest.json"
+            "$out"/*.sqlite.gz
+            "$out"/language-manifest.json
+            "$out"/SHA256SUMS
+            "$out"/NOTICE-*
+            "$out"/manifest-*.json
           )
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release edit "$tag" --notes-file "$notes"
             gh release upload "$tag" "${assets[@]}" --clobber
           else
             gh release create "$tag" "${assets[@]}" \
-              --title "Dictionary pack EN→FR ${{ steps.release.outputs.date }}" \
+              --title "Dictionary data ${{ steps.release.outputs.date }}" \
               --notes-file "$notes"
           fi

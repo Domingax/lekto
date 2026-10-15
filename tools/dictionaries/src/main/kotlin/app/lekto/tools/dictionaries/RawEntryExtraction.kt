@@ -1,10 +1,10 @@
 package app.lekto.tools.dictionaries
 
-/** The French translations an entry carries, in source order, blank words dropped. */
-internal fun frenchTranslations(raw: RawEntry): List<FrenchTranslation> = raw.translations
-    .filter { it.langCode == PackFormat.FRENCH }
+/** The [language] translations an entry carries, in source order, blank words dropped. */
+internal fun translationsInto(raw: RawEntry, language: String): List<Translation> = raw.translations
+    .filter { it.langCode == language }
     .mapNotNull { translation ->
-        translation.word?.takeIf(String::isNotBlank)?.let { FrenchTranslation(it, translation.sense) }
+        translation.word?.takeIf(String::isNotBlank)?.let { Translation(it, translation.sense) }
     }
 
 /** The first non-blank IPA on the entry's sounds, or null. Accent tags are not IPA tags. */

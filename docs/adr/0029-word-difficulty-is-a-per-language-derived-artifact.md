@@ -65,3 +65,14 @@ they are anchored to the published CEFR vocabulary sizes (Milton & Alexiou *XLex
 and validated against the Wolfer & Lew (2025) frequency medians. The artifact is a
 derived asset, so it is structurally outside the vault and can never reach an
 export.
+
+## Update — generalised to a configured language set (issue #161)
+
+The "not yet generalised" consequence above no longer holds: the pipeline now
+builds **a committed catalogue** of packs and difficulty tables
+(`tools/dictionaries/languages.json`) in one run (ADR-0031). A difficulty table is
+still keyed by the word identity the tokeniser computes — the reading language's
+pack form index where a pack was built, the normalised surface form otherwise —
+so a reading language with no dictionary pack (Spanish, in the starting set) is
+keyed by surface form, exactly the fallback the reader uses when no lemma is
+known.

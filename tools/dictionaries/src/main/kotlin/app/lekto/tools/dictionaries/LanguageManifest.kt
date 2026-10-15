@@ -49,36 +49,43 @@ internal val languageManifestJson: Json = Json { prettyPrint = true }
 internal fun LanguageManifest.canonicalJson(): String = languageManifestJson.encodeToString(this)
 
 /**
- * Builds the manifest from the outputs of one pipeline run: the pack it built and
- * the **Difficulty table** it built, if any. The languages come from the
- * artefacts themselves, so a run that published nothing yields an empty manifest
- * and never an invented entry.
+ * Builds the manifest from the outputs of one pipeline run: the packs (by
+ * [LanguagePair]) and the **Difficulty table**s (by reading language) it built.
+ * The languages come from the artefacts themselves, so a run that published
+ * nothing yields an empty manifest and never an invented entry; a reading
+ * language with several packs carries them all (issue #161).
  */
-internal fun buildLanguageManifest(pack: PackContent?, difficulty: DifficultyContent?): LanguageManifest {
+internal fun buildLanguageManifest(dictionaries: List<LanguagePair>, difficulties: List<String>): LanguageManifest {
     val languages = LinkedHashMap<String, ManifestLanguage>()
-    if (pack != null) {
-        languages[PackFormat.ENGLISH] = ManifestLanguage(
-            language = PackFormat.ENGLISH,
-            dictionaries = listOf(
+    dictionaries.forEach { pair ->
+        val existing = languages[pair.reading]
+        languages[pair.reading] = (existing ?: ManifestLanguage(pair.reading)).copy(
+            dictionaries = existing?.dictionaries.orEmpty() +
                 ManifestDictionary(
-                    translationLanguage = PackFormat.FRENCH,
-                    name = dictionaryAssetName(PackFormat.ENGLISH, PackFormat.FRENCH),
+                    translationLanguage = pair.translation,
+                    name = dictionaryAssetName(pair.reading, pair.translation),
                 ),
-            ),
         )
     }
-    if (difficulty != null) {
-        val existing = languages[DifficultyFormat.ENGLISH]
-        languages[DifficultyFormat.ENGLISH] = (existing ?: ManifestLanguage(DifficultyFormat.ENGLISH)).copy(
-            difficulty = ManifestArtifact(difficultyAssetName(DifficultyFormat.ENGLISH)),
+    difficulties.forEach { language ->
+        val existing = languages[language]
+        languages[language] = (existing ?: ManifestLanguage(language)).copy(
+            difficulty = ManifestArtifact(difficultyAssetName(language)),
         )
     }
     return LanguageManifest(LanguageManifestFormat.VERSION, languages.values.toList())
 }
 
-/** The date-free asset the release publishes a difficulty table under (matching the workflow alias). */
-internal fun difficultyAssetName(language: String): String = "lekto-difficulty-$language.sqlite.gz"
+/** The date-free asset stem the release publishes a difficulty table under (matching the workflow alias). */
+internal fun difficultyStem(language: String): String = "lekto-difficulty-$language"
 
-/** The date-free asset the release publishes a dictionary pack under (matching the workflow alias). */
+/** The date-free asset stem the release publishes a dictionary pack under (matching the workflow alias). */
+internal fun dictionaryStem(readingLanguage: String, translationLanguage: String): String =
+    "lekto-dictionary-$readingLanguage-$translationLanguage"
+
+/** The date-free gzipped asset the release publishes a difficulty table under. */
+internal fun difficultyAssetName(language: String): String = "${difficultyStem(language)}.sqlite.gz"
+
+/** The date-free gzipped asset the release publishes a dictionary pack under. */
 internal fun dictionaryAssetName(readingLanguage: String, translationLanguage: String): String =
-    "lekto-dictionary-$readingLanguage-$translationLanguage.sqlite.gz"
+    "${dictionaryStem(readingLanguage, translationLanguage)}.sqlite.gz"

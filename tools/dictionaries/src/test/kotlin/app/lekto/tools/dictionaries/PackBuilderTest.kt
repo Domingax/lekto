@@ -22,7 +22,28 @@ class PackBuilderTest {
         assertNull(pack.entries.firstOrNull { it.lemma == "quib" }, "no French translation")
         assertNull(pack.entries.firstOrNull { it.lemma == "zork" }, "not an English entry")
         assertNull(pack.entries.firstOrNull { it.lemma == "glim glom" }, "multi-word headword")
-        assertEquals(9, pack.stats.englishEntriesWithFrench)
+        assertEquals(9, pack.stats.entriesWithTranslation)
+    }
+
+    @Test
+    fun `builds a non-default pair from the same source`() {
+        // The pair is a parameter (issue #161): the French entry carrying a Spanish
+        // translation becomes a fr→es pack, and the English one is ignored.
+        val pack = buildPack(
+            """
+            |{"word":"blorple","lang_code":"en","pos":"verb","translations":[{"lang_code":"es","word":"ignored"}]}
+            |{"word":"truc","lang_code":"fr","pos":"noun","senses":[{"glosses":["Une chose."]}],"translations":[{"lang_code":"es","word":"cosa"}]}
+            """.trimMargin(),
+            readingLanguage = "fr",
+            translationLanguage = "es",
+        )
+
+        val entry = pack.entries.single()
+        assertEquals("fr", entry.language)
+        assertEquals("truc", entry.lemma)
+        assertEquals(listOf("cosa"), entry.senses.single().translations)
+        assertEquals(1, pack.stats.readingEntries)
+        assertEquals(1, pack.stats.entriesWithTranslation)
     }
 
     @Test
@@ -92,8 +113,12 @@ private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64)
 
 private fun fixturePack(): PackContent = buildPack(fixtureText())
 
-private fun buildPack(jsonl: String): PackContent =
-    PackBuilder(FIXTURE_PROVENANCE).build(BufferedReader(StringReader(jsonl)))
+private fun buildPack(
+    jsonl: String,
+    readingLanguage: String = PackFormat.ENGLISH,
+    translationLanguage: String = PackFormat.FRENCH,
+): PackContent = PackBuilder(FIXTURE_PROVENANCE, readingLanguage, translationLanguage)
+    .build(BufferedReader(StringReader(jsonl)))
 
 private fun fixtureText(): String =
     requireNotNull(PackBuilderTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {

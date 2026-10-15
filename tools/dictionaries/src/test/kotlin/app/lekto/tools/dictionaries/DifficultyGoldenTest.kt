@@ -28,20 +28,24 @@ class DifficultyGoldenTest {
     }
 }
 
-private fun fixtureDifficulty(): DifficultyContent = DifficultyBuilder(
-    pack = PackBuilder(FIXTURE_PROVENANCE).build(
+private fun fixtureDifficulty(): DifficultyContent {
+    val pack = PackBuilder(FIXTURE_PROVENANCE).build(
         requireNotNull(DifficultyGoldenTest::class.java.getResourceAsStream("/en-fr-sample.jsonl"))
             .bufferedReader(),
-    ),
-    calibration = DifficultyCalibration(listOf(1, 2, 3, 4, 5, 6), "test", "test"),
-).build(
-    BufferedReader(
-        StringReader(
-            requireNotNull(DifficultyGoldenTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv"))
-                .bufferedReader().use(BufferedReader::readText),
+    )
+    return DifficultyBuilder(
+        forms = pack.forms,
+        provenance = pack.provenance,
+        calibration = DifficultyCalibration(listOf(1, 2, 3, 4, 5, 6), "test", "test"),
+    ).build(
+        BufferedReader(
+            StringReader(
+                requireNotNull(DifficultyGoldenTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv"))
+                    .bufferedReader().use(BufferedReader::readText),
+            ),
         ),
-    ),
-)
+    )
+}
 
 private fun golden(): String =
     requireNotNull(DifficultyGoldenTest::class.java.getResourceAsStream("/golden/difficulty-en-sample.json")) {

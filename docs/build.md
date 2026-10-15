@@ -339,68 +339,77 @@ Native packaging for Windows, macOS and Linux is ticket #29.
 ## Dictionary pipeline
 
 `tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
-extract (≈3 GiB gz, all languages) into a **trimmed EN→FR SQLite pack**: English
-entries that carry a French translation, their senses and French translations,
-their IPA/audio, and their inflections reversed into a surface→lemma index. It is
-published by its own workflow (ticket #17); that pack build never blocks
+extract (≈3 GiB gz, all languages) into a set of **trimmed SQLite dictionary
+packs** and per-language **Difficulty tables**, driven by a committed language set
+(`tools/dictionaries/languages.json`, issue #161): the (Reading language ×
+Translation language) pairs to build and the reading languages that get a table.
+It is published by its own workflow (ticket #17); that build never blocks
 application CI.
 
 ```sh
 ./gradlew :tools:dictionaries:check          # the unit tests, the golden, ktlint and detekt
-./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz --output pack.sqlite \
+./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz \
+  --languages-config languages.json --output-dir out \
+  --frequency en=wordfreq-en.tsv.gz --frequency es=wordfreq-es.tsv.gz \
   --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
 
-The CLI streams the raw `.jsonl[.gz]`, filters `lang_code == "en"` entries that
-carry a French translation, drops multi-word surfaces, normalises every key with
-the same rule as `core`'s `normaliseSurface` (NFC + lower case), and writes a
-read-only SQLite file whose `user_version` is the pack format version. It also
-writes a `NOTICE` (attribution) and a `manifest.json` (provenance and counts).
+The CLI streams the raw `.jsonl[.gz]` once per configured pair, keeps the
+`lang_code == "<reading>"` entries that carry a `<translation>` translation, drops
+multi-word surfaces, normalises every key with the same rule as `core`'s
+`normaliseSurface` (NFC + lower case), and writes a read-only SQLite file whose
+`user_version` is the pack format version, beside a `NOTICE` (attribution) and a
+`manifest.json` (provenance and counts).
 
-The same run optionally produces the per-language **Difficulty table** (issue
-#64; ADR-0029) from a wordfreq frequency list, keyed by the pack's own word
-identity:
+A **single-artefact run** (`--reading-language`/`--translation-language`/
+`--difficulty-language`) builds one pack and, optionally, one reading language's
+**Difficulty table** (issue #64; ADR-0029) from a wordfreq frequency list, keyed by
+the reading language's word identity. `--difficulty-language` defaults to the
+reading language, so the table is keyed by that pack's form index:
 
 ```sh
 ./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz --output pack.sqlite \
+  --reading-language en --translation-language es \
   --frequency-input wordfreq-en.tsv.gz --difficulty-output difficulty-en.sqlite \
   --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
 
 `--frequency-input` is one `form<TAB>weight` line per surface form (for wordfreq,
 `10 ** zipf_frequency(form)`); the builder aggregates each form's weight onto the
-lemma the pack's form index knows — or the normalised surface form — ranks the
-keys and cuts them into CEFR bands A1–C2 at the calibrated sizes, writing
-`difficulty-en.sqlite` behind its own `user_version` handshake and its own
-wordfreq `NOTICE`. `DifficultyGoldenTest` and `SqliteDifficultyWriterTest` pin
-the transform and its byte-for-byte reproducibility.
+lemma the reading language's pack form index knows — or the normalised surface
+form — ranks the keys and cuts them into CEFR bands A1–C2 at the calibrated sizes,
+writing a table behind its own `user_version` handshake and its own wordfreq
+`NOTICE`. `DifficultyGoldenTest` and `SqliteDifficultyWriterTest` pin the
+transform and its byte-for-byte reproducibility.
 
-The pack is a **Derived asset**: it is never committed.
-`.github/workflows/dictionary-pack.yml` downloads the source, runs the CLI and
-publishes a GitHub Release tagged `dictionary-en-fr-<YYYYMMDD>` with the pack, a
-`SHA256SUMS`, the `NOTICE` and a `manifest.json`. It also uploads a **date-free
-alias** (`lekto-dictionary-en-fr.sqlite.gz`) beside the dated asset, so the app
-can fetch the latest pack from one stable URL,
-`releases/latest/download/lekto-dictionary-en-fr.sqlite.gz` (issue #18). The
-release body is rendered from the committed template
-`.github/release-notes/dictionary-pack.md` and the manifest — provenance, counts,
-hashes and a verification line — while the full CC BY-SA 4.0 text stays in the
-`NOTICE` asset and in the pack's `license_text` metadata. The workflow runs on
+Each pack and table is a **Derived asset**: never committed.
+`.github/workflows/dictionary-pack.yml` downloads the source, builds the wordfreq
+list for each configured difficulty language, runs the CLI over the configured
+set and publishes a GitHub Release tagged `dictionary-<YYYYMMDD>` with every
+asset, a `SHA256SUMS` and the per-artefact `NOTICE`/manifest sidecars. The asset
+names are date-free (`lekto-dictionary-en-fr.sqlite.gz`,
+`lekto-difficulty-es.sqlite.gz`), so
+the app fetches each from a stable URL built from the name the **language
+manifest** published, `releases/latest/download/<name>` (issues #18, #149, #161).
+Because `latest` is one release, the whole configured set is published together
+(ADR-0031). The release body is rendered from the committed template
+`.github/release-notes/dictionary-pack.md`; the full CC BY-SA 4.0 text stays in the
+`NOTICE` sidecars and in each pack's `license_text` metadata. The workflow runs on
 `workflow_dispatch` and a monthly `schedule`, so it can never block application
 CI. The build is deterministic — fixed row ordering, no timestamps, gzip `-n` —
 and `DictionaryPackGoldenTest` proves the transform on a committed fixture; a
 sanity gate fails a run only on a changed source schema or a coverage collapse
-below 80% of the previous build's lemma count.
+below 80% of the previous build's lemma count, per reading language.
 
 The same run also writes a **language manifest**
-(`--language-manifest`, default `language-manifest.json` beside the pack): the
-catalogue of what the release offers for reading — each **Reading language** with
-the **Difficulty table** published for it and the **Dictionary pack**s published
-for its pairs, each pair naming its **Translation language** (issue #145). It is
-built from the run's own output, so a run that published nothing yields an empty
-manifest and the catalogue can never advertise an artefact that was not built.
-The workflow uploads it under its own date-free name beside the aliases, so the
-app can fetch one constant address,
+(`--language-manifest`, default `language-manifest.json` in the output directory):
+the catalogue of what the release offers for reading — each **Reading language**
+with the **Difficulty table** published for it and the **Dictionary pack**s
+published for its pairs, each pair naming its **Translation language** (issues
+#145, #161). It is built from the run's own output, so a run that published
+nothing yields an empty manifest and the catalogue can never advertise an artefact
+that was not built. The workflow uploads it under its own date-free name beside
+the assets, so the app can fetch one constant address,
 `releases/latest/download/language-manifest.json`. Its format version is declared
 by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 `LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test

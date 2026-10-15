@@ -78,21 +78,25 @@ class SqliteDifficultyWriterTest {
 
 private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")
 
-private fun fixtureDifficulty(): DifficultyContent = DifficultyBuilder(
-    pack = PackBuilder(FIXTURE_PROVENANCE).build(
+private fun fixtureDifficulty(): DifficultyContent {
+    val pack = PackBuilder(FIXTURE_PROVENANCE).build(
         requireNotNull(SqliteDifficultyWriterTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {
             "the committed pack fixture must be on the test classpath"
         }.bufferedReader(),
-    ),
-    calibration = DifficultyCalibration(listOf(1, 2, 3, 4, 5, 6), "test", "test"),
-).build(
-    BufferedReader(
-        StringReader(
-            requireNotNull(
-                SqliteDifficultyWriterTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv"),
-            ) {
-                "the committed frequency fixture must be on the test classpath"
-            }.bufferedReader().use(BufferedReader::readText),
+    )
+    return DifficultyBuilder(
+        forms = pack.forms,
+        provenance = pack.provenance,
+        calibration = DifficultyCalibration(listOf(1, 2, 3, 4, 5, 6), "test", "test"),
+    ).build(
+        BufferedReader(
+            StringReader(
+                requireNotNull(
+                    SqliteDifficultyWriterTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv"),
+                ) {
+                    "the committed frequency fixture must be on the test classpath"
+                }.bufferedReader().use(BufferedReader::readText),
+            ),
         ),
-    ),
-)
+    )
+}
