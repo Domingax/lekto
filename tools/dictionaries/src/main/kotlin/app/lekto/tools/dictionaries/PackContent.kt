@@ -22,8 +22,8 @@ internal data class PackEntry(
 @Serializable
 internal data class PackForm(val surface: String, val language: String, val lemma: String)
 
-/** A French translation word and the Wiktextract sense label it was attached to. */
-internal data class FrenchTranslation(val word: String, val sense: String?)
+/** A translation word in the pack's target language and the Wiktextract sense label it was attached to. */
+internal data class Translation(val word: String, val sense: String?)
 
 /** Where the pack's input came from, recorded for provenance (never a timestamp). */
 @Serializable
@@ -34,8 +34,8 @@ internal data class PackProvenance(val sourceUrl: String, val sourceSha256: Stri
 internal data class PackStats(
     val totalLines: Long,
     val malformedLines: Long,
-    val englishEntries: Long,
-    val englishEntriesWithFrench: Long,
+    val readingEntries: Long,
+    val entriesWithTranslation: Long,
     val lemmaCount: Int,
     val entryCount: Int,
     val formCount: Int,

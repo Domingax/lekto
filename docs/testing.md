@@ -504,21 +504,26 @@ Android's platform scheduling (WorkManager) is deliberately not here: the
 in-process triggers are shared and the OS-level one is a follow-up.
 
 The dictionary-pack transform lives in the standalone `tools/dictionaries` module,
-so its level is its own: `PackBuilderTest` pins the transform's rules,
-`SqlitePackWriterTest` reads the written pack back and proves two builds are
-byte-for-byte identical, and `DictionaryPackGoldenTest` pins the canonical output
-of a committed JSONL fixture — the reproducibility evidence for ticket #17. The
-**language manifest** (issue #145) is built from that same fixture's pack and
-difficulty table by `LanguageManifestGoldenTest`, pinned in
-`golden/language-manifest.json`, so the catalogue and the artefacts cannot drift,
-and `LanguageManifestTest` pins that a run which published nothing yields an
-empty manifest; its format handshake is the producer's
-`LanguageManifestFormat.VERSION` against `core`'s
+so its level is its own: `PackBuilderTest` pins the transform's rules — including
+that the reading and translation languages are parameters and a non-default pair
+builds from the same source (issue #161) — `SqlitePackWriterTest` reads the written
+pack back and proves two builds are byte-for-byte identical, and
+`DictionaryPackGoldenTest` pins the canonical output of a committed JSONL fixture
+— the reproducibility evidence for ticket #17. The config-driven **build** is `CatalogueTest`: it builds every configured pack and
+difficulty table into one directory and writes one **Language manifest** unioning
+them, so a release carries the whole offered set. The **language manifest** (issues #145, #161) is built from
+that same fixture's pack and difficulty table by `LanguageManifestGoldenTest`,
+pinned in `golden/language-manifest.json`, so the catalogue and the artefacts
+cannot drift, and `LanguageManifestTest` pins that a run which published nothing
+yields an empty manifest, that a reading language with several packs lists them
+all, and that the committed `languages.json` parses; its format handshake is the
+producer's `LanguageManifestFormat.VERSION` against `core`'s
 `LanguageManifest.FORMAT_VERSION`, which
 `LanguageManifestFormatSynchronisationTest` in `architecture` keeps in step
 (ADR-0013). The
-sanity gate and the command line are unit-tested the same way. The module's tests
-run in `check` like any other module's, but the module sits outside the
+sanity gate and the command line (both modes, repeated `--frequency` and
+`--previous-lemma-count` assignments) are unit-tested the same way. The module's
+tests run in `check` like any other module's, but the module sits outside the
 application's coverage, licence and publication graph, so nothing it builds ships
 with the app.
 

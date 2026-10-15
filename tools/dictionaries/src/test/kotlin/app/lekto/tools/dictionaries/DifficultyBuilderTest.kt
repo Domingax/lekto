@@ -89,6 +89,18 @@ class DifficultyBuilderTest {
 
         assertEquals(1, content.stats.frequencyForms)
     }
+
+    @Test
+    fun `an empty form index keys every word by its normalised surface`() {
+        // A reading language with no dictionary pack (issue #161) has no lemmas to
+        // key by, so the normalised surface form is the key — the same fallback the
+        // tokeniser uses when the dictionary knows no lemma.
+        val content = DifficultyBuilder(forms = emptyList(), provenance = FIXTURE_PROVENANCE, language = "es")
+            .build(BufferedReader(StringReader("Zebra\t100\n")))
+
+        assertEquals(listOf("zebra"), content.rows.map(DifficultyRow::word))
+        assertEquals(listOf("es"), content.rows.map(DifficultyRow::language))
+    }
 }
 
 /** The small calibration the fixture is built against, so six words span all six bands. */
@@ -101,10 +113,14 @@ private fun fixtureDifficulty(): DifficultyContent = buildDifficulty()
 private fun buildDifficulty(
     frequencies: String = fixtureFrequencyText(),
     cutSizes: List<Int> = CALIBRATION.cutSizes,
-): DifficultyContent = DifficultyBuilder(
-    pack = fixturePack(),
-    calibration = CALIBRATION.copy(cutSizes = cutSizes),
-).build(BufferedReader(StringReader(frequencies)))
+): DifficultyContent {
+    val pack = fixturePack()
+    return DifficultyBuilder(
+        forms = pack.forms,
+        provenance = pack.provenance,
+        calibration = CALIBRATION.copy(cutSizes = cutSizes),
+    ).build(BufferedReader(StringReader(frequencies)))
+}
 
 private fun fixtureFrequencyText(): String =
     requireNotNull(DifficultyBuilderTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv")) {

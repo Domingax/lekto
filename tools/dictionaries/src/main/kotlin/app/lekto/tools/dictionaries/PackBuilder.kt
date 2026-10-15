@@ -6,21 +6,28 @@ import java.io.BufferedReader
 /**
  * The deterministic transform: raw Wiktextract JSONL in, the in-memory pack out.
  *
- * Records are filtered to English entries that carry a French translation, forms
- * are reversed into a surface→lemma index, and every key is normalised with
- * [normaliseSurface] so the app's lookups match. Ordering is fixed — entries by
- * `(language, lemma, pos)`, forms by `(surface, language)` — and no wall clock
- * or timestamp enters, so the same input yields the same pack (ticket #17).
+ * Records are filtered to [readingLanguage] entries that carry a
+ * [translationLanguage] translation, forms are reversed into a surface→lemma
+ * index, and every key is normalised with [normaliseSurface] so the app's lookups
+ * match. Ordering is fixed — entries by `(language, lemma, pos)`, forms by
+ * `(surface, language)` — and no wall clock or timestamp enters, so the same input
+ * yields the same pack (ticket #17). The pair is a parameter (issue #161), so one
+ * build produces any (Reading language × Translation language) pack; the defaults
+ * are the en→fr pack the app shipped with.
  */
-internal class PackBuilder(private val provenance: PackProvenance) {
+internal class PackBuilder(
+    private val provenance: PackProvenance,
+    private val readingLanguage: String = PackFormat.ENGLISH,
+    private val translationLanguage: String = PackFormat.FRENCH,
+) {
 
     private var totalLines = 0L
     private var malformedLines = 0L
-    private var englishEntries = 0L
-    private var englishEntriesWithFrench = 0L
+    private var readingEntries = 0L
+    private var entriesWithTranslation = 0L
 
     private val entries = HashMap<EntryKey, EntryAccumulator>()
-    private val forms = FormIndex(PackFormat.ENGLISH)
+    private val forms = FormIndex(readingLanguage)
 
     fun build(reader: BufferedReader): PackContent {
         reader.forEachLine(::processLine)
@@ -29,25 +36,26 @@ internal class PackBuilder(private val provenance: PackProvenance) {
 
     private fun processLine(line: String) {
         totalLines++
-        if (couldBeEnglish(line)) consumeEnglish(line)
+        if (couldBe(line, readingLanguage)) consumeReading(line)
     }
 
-    private fun consumeEnglish(line: String) {
+    private fun consumeReading(line: String) {
         val raw = parse(line) ?: return
-        if (raw.langCode == PackFormat.ENGLISH) consumeEntry(raw)
+        if (raw.langCode == readingLanguage) consumeEntry(raw)
     }
 
     private fun consumeEntry(raw: RawEntry) {
-        englishEntries++
+        readingEntries++
         val lemma = raw.word?.let(::normaliseSurface)?.takeIf(::isSingleToken)
-        val french = frenchTranslations(raw)
-        if (lemma == null || french.isEmpty()) return
-        englishEntriesWithFrench++
-        accumulateEntry(raw, lemma, french)
+        val translations = translationsInto(raw, translationLanguage)
+        if (lemma == null || translations.isEmpty()) return
+        entriesWithTranslation++
+        accumulateEntry(raw, lemma, translations)
         accumulateForms(raw, lemma)
     }
 
-    private fun couldBeEnglish(line: String): Boolean = line.contains(ENGLISH_COMPACT) || line.contains(ENGLISH_SPACED)
+    private fun couldBe(line: String, language: String): Boolean =
+        line.contains(langCodeCompact(language)) || line.contains(langCodeSpaced(language))
 
     private fun parse(line: String): RawEntry? = try {
         wiktextractJson.decodeFromString<RawEntry>(line)
@@ -59,18 +67,18 @@ internal class PackBuilder(private val provenance: PackProvenance) {
         null
     }
 
-    private fun accumulateEntry(raw: RawEntry, lemma: String, french: List<FrenchTranslation>) {
-        val key = EntryKey(PackFormat.ENGLISH, lemma, raw.pos)
-        val accumulator = entries.getOrPut(key) { EntryAccumulator(lemma, PackFormat.ENGLISH, raw.pos) }
+    private fun accumulateEntry(raw: RawEntry, lemma: String, translations: List<Translation>) {
+        val key = EntryKey(readingLanguage, lemma, raw.pos)
+        val accumulator = entries.getOrPut(key) { EntryAccumulator(lemma, readingLanguage, raw.pos) }
         accumulator.pronunciation = accumulator.pronunciation ?: firstPronunciation(raw)
         accumulator.audioUrl = accumulator.audioUrl ?: firstAudioUrl(raw)
-        mergeSenses(accumulator, raw, french)
+        mergeSenses(accumulator, raw, translations)
     }
 
-    private fun mergeSenses(accumulator: EntryAccumulator, raw: RawEntry, french: List<FrenchTranslation>) {
+    private fun mergeSenses(accumulator: EntryAccumulator, raw: RawEntry, translations: List<Translation>) {
         val definitions = definitionsOf(raw).ifEmpty { listOf(SENSE_WITHOUT_DEFINITION) }
         definitions.forEach(accumulator::addDefinition)
-        french.forEach { translation ->
+        translations.forEach { translation ->
             val definition = definitions[senseIndex(translation.sense, definitions)]
             accumulator.addTranslation(definition, translation.word)
         }
@@ -97,8 +105,8 @@ internal class PackBuilder(private val provenance: PackProvenance) {
         val stats = PackStats(
             totalLines = totalLines,
             malformedLines = malformedLines,
-            englishEntries = englishEntries,
-            englishEntriesWithFrench = englishEntriesWithFrench,
+            readingEntries = readingEntries,
+            entriesWithTranslation = entriesWithTranslation,
             lemmaCount = packEntries.map(PackEntry::lemma).distinct().size,
             entryCount = packEntries.size,
             formCount = packForms.size,
@@ -109,13 +117,17 @@ internal class PackBuilder(private val provenance: PackProvenance) {
     }
 
     private companion object {
-        const val ENGLISH_COMPACT = "\"lang_code\":\"en\""
-        const val ENGLISH_SPACED = "\"lang_code\": \"en\""
         val ENTRY_ORDER = compareBy<PackEntry>({ it.language }, { it.lemma }, { it.partOfSpeech.orEmpty() })
     }
 }
 
-/** A sense with no English definition: a translation-only entry still needs one. */
+/** The JSON line fragment a compact-serialised entry's language carries. */
+internal fun langCodeCompact(language: String): String = "\"lang_code\":\"$language\""
+
+/** The JSON line fragment a pretty-serialised entry's language carries. */
+internal fun langCodeSpaced(language: String): String = "\"lang_code\": \"$language\""
+
+/** A sense with no reading-language definition: a translation-only entry still needs one. */
 internal const val SENSE_WITHOUT_DEFINITION: String = ""
 
 private data class EntryKey(val language: String, val lemma: String, val partOfSpeech: String?)
