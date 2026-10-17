@@ -16,11 +16,10 @@ import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.language.OfferedLanguage
-import app.lekto.core.language.readingLanguageName
 import app.lekto.dictionary.DictionaryUiState
-import app.lekto.dictionary.summary
 import app.lekto.difficulty.DifficultyUiState
-import app.lekto.difficulty.summary
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 // The per-language **Derived asset** controls of the **Languages** surface: the
 // **Difficulty table** (issue #148) and the **Dictionary pack** (issue #149).
@@ -46,23 +45,24 @@ internal fun languageDictionaryDismissTag(artifact: String): String = "languages
  */
 @Composable
 internal fun DifficultyControl(offered: OfferedLanguage, difficulty: DifficultyUiState?, actions: LanguagesActions) {
+    val texts = LocalAppTexts.current
     val artifact = offered.difficulty
     if (artifact == null) {
         Text(
-            text = "Lekto doesn't publish word-difficulty data for this language yet.",
+            text = texts[TextKey.DIFFICULTY_NOT_PUBLISHED],
             style = MaterialTheme.typography.bodyMedium,
         )
         return
     }
     val state = difficulty ?: DifficultyUiState()
-    Text(state.status.summary(), style = MaterialTheme.typography.bodyMedium)
+    Text(texts.difficultyStatus(state.status), style = MaterialTheme.typography.bodyMedium)
 
     if (state.installing) {
         LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text("Downloading word-difficulty data…", style = MaterialTheme.typography.bodyMedium)
+        Text(texts[TextKey.DOWNLOADING_DIFFICULTY], style = MaterialTheme.typography.bodyMedium)
     }
     state.error?.let { message ->
-        ArtifactError(message, languageDifficultyDismissTag(offered.language)) {
+        ArtifactError(texts.message(message), languageDifficultyDismissTag(offered.language)) {
             actions.onDismissDifficultyError(offered.language)
         }
     }
@@ -72,7 +72,13 @@ internal fun DifficultyControl(offered: OfferedLanguage, difficulty: DifficultyU
         enabled = !state.installing,
         modifier = Modifier.fillMaxWidth().testTag(languageDifficultyDownloadTag(offered.language)),
     ) {
-        Text(if (state.status is DifficultyState.Ready) "Download again" else "Download word-difficulty data")
+        Text(
+            if (state.status is DifficultyState.Ready) {
+                texts[TextKey.DOWNLOAD_AGAIN]
+            } else {
+                texts[TextKey.DOWNLOAD_DIFFICULTY]
+            },
+        )
     }
 }
 
@@ -89,7 +95,7 @@ internal fun DictionaryControls(
 ) {
     if (offered.dictionaries.isEmpty()) {
         Text(
-            text = "Lekto doesn't publish an offline dictionary for this language yet.",
+            text = LocalAppTexts.current[TextKey.DICTIONARY_NOT_PUBLISHED],
             style = MaterialTheme.typography.bodyMedium,
         )
         return
@@ -112,19 +118,20 @@ private fun DictionaryControl(
     state: DictionaryUiState?,
     actions: LanguagesActions,
 ) {
+    val texts = LocalAppTexts.current
     val current = state ?: DictionaryUiState()
     Text(
-        text = "${readingLanguageName(readingLanguage)} → ${readingLanguageName(dictionary.translationLanguage)}",
+        text = "${texts.languageName(readingLanguage)} → ${texts.languageName(dictionary.translationLanguage)}",
         style = MaterialTheme.typography.titleSmall,
     )
-    Text(current.status.summary(), style = MaterialTheme.typography.bodyMedium)
+    Text(texts.dictionaryStatus(current.status), style = MaterialTheme.typography.bodyMedium)
 
     if (current.installing) {
         LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text("Downloading the offline dictionary…", style = MaterialTheme.typography.bodyMedium)
+        Text(texts[TextKey.DOWNLOADING_DICTIONARY], style = MaterialTheme.typography.bodyMedium)
     }
     current.error?.let { message ->
-        ArtifactError(message, languageDictionaryDismissTag(dictionary.name)) {
+        ArtifactError(texts.message(message), languageDictionaryDismissTag(dictionary.name)) {
             actions.onDismissDictionaryError(dictionary.name)
         }
     }
@@ -136,7 +143,13 @@ private fun DictionaryControl(
         enabled = !current.installing,
         modifier = Modifier.fillMaxWidth().testTag(languageDictionaryDownloadTag(dictionary.name)),
     ) {
-        Text(if (current.status is DictionaryPackState.Ready) "Download again" else "Download offline dictionary")
+        Text(
+            if (current.status is DictionaryPackState.Ready) {
+                texts[TextKey.DOWNLOAD_AGAIN]
+            } else {
+                texts[TextKey.DOWNLOAD_DICTIONARY]
+            },
+        )
     }
 }
 
@@ -145,6 +158,8 @@ private fun DictionaryControl(
 private fun ArtifactError(message: String, tag: String, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss, modifier = Modifier.testTag(tag)) { Text("Dismiss") }
+        TextButton(onClick = onDismiss, modifier = Modifier.testTag(tag)) {
+            Text(LocalAppTexts.current[TextKey.DISMISS])
+        }
     }
 }

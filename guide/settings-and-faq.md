@@ -7,8 +7,9 @@ answers the common questions.
 
 - **App language** — the language you want Lekto's own texts in. Only the languages
   Lekto ships are offered (English and French). Your choice is kept on this device,
-  so it does not travel with your Vault between devices. The interface follows it in
-  a later release; until then the app stays in English.
+  so it does not travel with your Vault between devices, and the whole interface
+  follows it at once — no relaunch. The language your translations appear in is a
+  separate choice, the **Translation language**.
 - **Languages** — the languages Lekto offers for reading, ordered by the ones you
   have most books in. Choose the **Translation language** you want translations in —
   only the languages Lekto publishes an offline dictionary for are offered, and your

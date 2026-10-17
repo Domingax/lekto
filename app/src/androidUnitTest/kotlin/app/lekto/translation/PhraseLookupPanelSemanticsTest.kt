@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.core.dictionary.translationShortcut
+import app.lekto.text.AppMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -112,7 +113,7 @@ class PhraseLookupPanelSemanticsTest {
             Panel(
                 translation = PhraseTranslationUiState(
                     provider = "OpenAI",
-                    state = PhraseTranslationState.Failed("The provider rejected the API key."),
+                    state = PhraseTranslationState.Failed(AppMessage.core("The provider rejected the API key.")),
                 ),
             )
         }

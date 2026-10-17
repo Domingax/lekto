@@ -3,6 +3,8 @@ package app.lekto.dictionary
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.language.OfferedLanguage
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +20,7 @@ import kotlinx.coroutines.withContext
 data class DictionaryUiState(
     val status: DictionaryPackState = DictionaryPackState.NotInstalled,
     val installing: Boolean = false,
-    val error: String? = null,
+    val error: AppMessage? = null,
 )
 
 /**
@@ -79,7 +81,10 @@ class DictionaryController(
                 update(artifact) { current -> current.copy(status = status, installing = false) }
             } catch (failure: Exception) {
                 update(artifact) { current ->
-                    current.copy(installing = false, error = failure.message ?: "The dictionary download failed.")
+                    current.copy(
+                        installing = false,
+                        error = AppMessage.failure(failure, TextKey.MESSAGE_DICTIONARY_DOWNLOAD_FAILED),
+                    )
                 }
             }
         }
@@ -107,19 +112,4 @@ class DictionaryController(
     private fun update(artifact: String, transform: (DictionaryUiState) -> DictionaryUiState) {
         _states.update { current -> current + (artifact to transform(current[artifact] ?: DictionaryUiState())) }
     }
-}
-
-/** An honest one-line summary of a pack's state, for the **Languages** surface. */
-fun DictionaryPackState.summary(): String = when (this) {
-    DictionaryPackState.NotInstalled ->
-        "The offline dictionary isn't installed yet. Download it to look words up with no network."
-
-    is DictionaryPackState.Ready ->
-        "The offline dictionary is installed. Words are looked up with no network."
-
-    is DictionaryPackState.Incompatible ->
-        "The installed dictionary is format $found, but this app reads format $expected. Download it again."
-
-    is DictionaryPackState.Corrupt ->
-        "The installed dictionary is damaged and couldn't be read. Download it again."
 }

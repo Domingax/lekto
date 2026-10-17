@@ -35,6 +35,9 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 import kotlinx.coroutines.yield
 
 private val HorizontalMargin = 24.dp
@@ -266,11 +269,12 @@ private suspend fun fillPages(text: AnnotatedString, layout: ReaderLayout, pages
 
 @Composable
 private fun ReaderTitle(title: String, onBack: (() -> Unit)?) {
+    val texts = LocalAppTexts.current
     Row(
         modifier = Modifier.fillMaxWidth().height(ChromeHeight).padding(horizontal = HorizontalMargin),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        onBack?.let { back -> TextButton(onClick = back) { Text("Library") } }
+        onBack?.let { back -> TextButton(onClick = back) { Text(texts[TextKey.LIBRARY]) } }
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -282,13 +286,14 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?) {
 /** The chrome: page position and the two navigation affordances. */
 @Composable
 private fun ReaderPageBar(page: Int, total: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
+    val texts = LocalAppTexts.current
     Row(
         modifier = Modifier.fillMaxWidth().height(PageBarHeight).padding(horizontal = HorizontalMargin),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onPrevious, enabled = page > 0) { Text("Previous page") }
-        Text("Page ${page + 1} of $total")
-        TextButton(onClick = onNext, enabled = page < total - 1) { Text("Next page") }
+        TextButton(onClick = onPrevious, enabled = page > 0) { Text(texts[TextKey.PREVIOUS_PAGE]) }
+        Text(texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)))
+        TextButton(onClick = onNext, enabled = page < total - 1) { Text(texts[TextKey.NEXT_PAGE]) }
     }
 }

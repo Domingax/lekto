@@ -14,7 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import app.lekto.core.language.AppLanguages
-import app.lekto.core.language.readingLanguageName
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 // The app's own language section of the settings screen (ADR-0034), split from
 // the screen itself so each stays within the rules.
@@ -33,19 +34,20 @@ internal fun appLanguageOptionTag(language: String): String = "settings-app-lang
  */
 @Composable
 internal fun AppLanguageSection(language: String, onSelect: (String) -> Unit) {
+    val texts = LocalAppTexts.current
     Text(
-        "The language Lekto uses for its own texts, and the language it translates into.",
+        texts[TextKey.APP_LANGUAGE_DESCRIPTION],
         style = MaterialTheme.typography.bodyMedium,
     )
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(APP_LANGUAGE_PICKER_TAG)) {
-            Text(readingLanguageName(language))
+            Text(texts.languageName(language))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             AppLanguages.SUPPORTED.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(readingLanguageName(option)) },
+                    text = { Text(texts.languageName(option)) },
                     onClick = {
                         expanded = false
                         onSelect(option)

@@ -8,6 +8,8 @@ import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.llm.LlmSettingsStore
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,13 +27,13 @@ import kotlinx.coroutines.withContext
  * colour and nothing has to read a boolean flag.
  */
 sealed interface ProviderResult {
-    val message: String
+    val message: AppMessage
 
     /** The action completed; [message] is a short confirmation. */
-    data class Success(override val message: String) : ProviderResult
+    data class Success(override val message: AppMessage) : ProviderResult
 
     /** The action did not complete; [message] is an honest reason, never carrying a key. */
-    data class Failure(override val message: String) : ProviderResult
+    data class Failure(override val message: AppMessage) : ProviderResult
 }
 
 /**
@@ -66,7 +68,7 @@ data class ProviderUiState(
      * discreetly beside the model field rather than as a red failure, because it
      * asks the reader for something rather than reporting a fault.
      */
-    val modelsHint: String? = null,
+    val modelsHint: AppMessage? = null,
     /**
      * Whether the reader has chosen a provider yet (issue #93). A fresh install
      * starts unchosen, so the picker reads "Choose a provider" rather than a preset
@@ -147,7 +149,7 @@ class ProviderController(
         settings.save(config)
         val keyFailure = apiKey.takeIf { it.isNotBlank() }?.let { value ->
             when (val outcome = secrets.put(providerSecretKey(config.provider), value)) {
-                is SecretResult.Unavailable -> outcome.message
+                is SecretResult.Unavailable -> AppMessage.core(outcome.message)
                 else -> null
             }
         }
@@ -202,14 +204,18 @@ class ProviderController(
                         current.copy(loadingModels = false, models = outcome.models, result = null, modelsHint = null)
 
                     outcome is LlmModelsResult.Failed && outcome.message == LlmModelsResult.MISSING_KEY ->
-                        current.copy(loadingModels = false, models = emptyList(), modelsHint = outcome.message)
+                        current.copy(
+                            loadingModels = false,
+                            models = emptyList(),
+                            modelsHint = AppMessage.core(outcome.message),
+                        )
 
                     silent -> current.copy(loadingModels = false, models = emptyList())
 
                     else -> current.copy(
                         loadingModels = false,
                         models = emptyList(),
-                        result = ProviderResult.Failure((outcome as LlmModelsResult.Failed).message),
+                        result = ProviderResult.Failure(AppMessage.core((outcome as LlmModelsResult.Failed).message)),
                     )
                 }
             }
@@ -224,7 +230,9 @@ class ProviderController(
         val provider = _state.value.config.provider
         when (val outcome = secrets.delete(providerSecretKey(provider))) {
             is SecretResult.Unavailable ->
-                _state.update { current -> current.copy(result = ProviderResult.Failure(outcome.message)) }
+                _state.update { current ->
+                    current.copy(result = ProviderResult.Failure(AppMessage.core(outcome.message)))
+                }
 
             else ->
                 _state.update { current ->
@@ -261,14 +269,14 @@ class ProviderController(
         /** The key slot is per provider, so switching back finds a key already stored. */
         internal fun providerSecretKey(provider: LlmProvider): String = "llm-api-key-${provider.name.lowercase()}"
 
-        const val SAVED: String = "Saved."
-        const val KEY_REMOVED: String = "Key removed from secure storage."
-        const val CONNECTED: String = "The provider answered. Your model is ready."
+        val SAVED: AppMessage = AppMessage.Text(TextKey.MESSAGE_SAVED)
+        val KEY_REMOVED: AppMessage = AppMessage.Text(TextKey.MESSAGE_KEY_REMOVED)
+        val CONNECTED: AppMessage = AppMessage.Text(TextKey.MESSAGE_PROVIDER_CONNECTED)
     }
 }
 
 /** The reader-facing result of a connection test. */
 private fun LlmConnectionResult.toProviderResult(): ProviderResult = when (this) {
     LlmConnectionResult.Connected -> ProviderResult.Success(ProviderController.CONNECTED)
-    is LlmConnectionResult.Failed -> ProviderResult.Failure(message)
+    is LlmConnectionResult.Failed -> ProviderResult.Failure(AppMessage.core(message))
 }

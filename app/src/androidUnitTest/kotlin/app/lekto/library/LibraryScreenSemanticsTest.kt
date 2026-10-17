@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
+import app.lekto.text.AppMessage
 import app.lekto.ui.CONFIRM_DIALOG_CANCEL_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import org.junit.Assert.assertEquals
@@ -79,7 +80,7 @@ class LibraryScreenSemanticsTest {
         var dismissed = false
         compose.setContent {
             Library(
-                LibraryUiState(error = "Could not read 'broken.epub'."),
+                LibraryUiState(error = AppMessage.core("Could not read 'broken.epub'.")),
                 onDismissError = { dismissed = true },
             )
         }

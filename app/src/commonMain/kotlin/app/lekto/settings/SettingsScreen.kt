@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.llm.LlmProvider
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /** The test tags the LLM provider section's controls carry, so a UI test can click exactly one. */
 internal const val PROVIDER_PICKER_TAG: String = "settings-provider-picker"
@@ -62,16 +64,19 @@ fun SettingsScreen(
     actions: SettingsActions = SettingsActions(),
     modifier: Modifier = Modifier,
 ) {
+    val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Header(actions.onBack)
-        Section("App language") { AppLanguageSection(state.appLanguage, actions.onSelectAppLanguage) }
-        Section("Languages") { LanguagesSection(actions) }
-        Section("Vault") { VaultSection(state.vault, actions) }
-        Section("Sync") { SyncSection(state.sync, actions) }
-        Section("LLM provider") { ProviderSection(state.provider, actions) }
+        Section(texts[TextKey.SECTION_APP_LANGUAGE]) {
+            AppLanguageSection(state.appLanguage, actions.onSelectAppLanguage)
+        }
+        Section(texts[TextKey.SECTION_LANGUAGES]) { LanguagesSection(actions) }
+        Section(texts[TextKey.SECTION_VAULT]) { VaultSection(state.vault, actions) }
+        Section(texts[TextKey.SECTION_SYNC]) { SyncSection(state.sync, actions) }
+        Section(texts[TextKey.SECTION_LLM_PROVIDER]) { ProviderSection(state.provider, actions) }
     }
 }
 
@@ -94,30 +99,29 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
  */
 @Composable
 private fun LanguagesSection(actions: SettingsActions) {
+    val texts = LocalAppTexts.current
     Text(
-        "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
-            "Set your level and download the word-difficulty data and the offline dictionary for each there.",
+        texts[TextKey.LANGUAGES_SECTION_DESCRIPTION],
         style = MaterialTheme.typography.bodyMedium,
     )
     TextButton(onClick = actions.onOpenLanguages, modifier = Modifier.testTag(LANGUAGES_LINK_TAG)) {
-        Text("Languages")
+        Text(texts[TextKey.LANGUAGES])
     }
 }
 
 @Composable
 private fun VaultSection(state: VaultUiState, actions: SettingsActions) {
+    val texts = LocalAppTexts.current
     Text(
-        "Your vault holds everything you've imported and saved. Export it to a file you keep, " +
-            "or import one to restore your books and vocabulary on this device. Importing replaces " +
-            "the vault already on this device.",
+        texts[TextKey.VAULT_SECTION_DESCRIPTION],
         style = MaterialTheme.typography.bodyMedium,
     )
 
     if (!state.available) {
-        Text("Vault export and import aren't available in this build.", style = MaterialTheme.typography.bodyMedium)
+        Text(texts[TextKey.VAULT_UNAVAILABLE], style = MaterialTheme.typography.bodyMedium)
     } else {
-        state.message?.let { message -> Notice(message, actions.onDismissVaultMessage) }
-        state.error?.let { message -> Error(message, actions.onDismissVaultMessage) }
+        state.message?.let { message -> Notice(texts.message(message), actions.onDismissVaultMessage) }
+        state.error?.let { message -> Error(texts.message(message), actions.onDismissVaultMessage) }
         if (state.transferring) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
 
@@ -125,12 +129,12 @@ private fun VaultSection(state: VaultUiState, actions: SettingsActions) {
         onClick = actions.onExportVault,
         enabled = state.available && !state.transferring,
         modifier = Modifier.fillMaxWidth(),
-    ) { Text("Export vault") }
+    ) { Text(texts[TextKey.EXPORT_VAULT]) }
     Button(
         onClick = actions.onImportVault,
         enabled = state.available && !state.transferring,
         modifier = Modifier.fillMaxWidth(),
-    ) { Text("Import vault") }
+    ) { Text(texts[TextKey.IMPORT_VAULT]) }
 }
 
 /**
@@ -145,14 +149,14 @@ private fun VaultSection(state: VaultUiState, actions: SettingsActions) {
  */
 @Composable
 private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
+    val texts = LocalAppTexts.current
     Text(
-        "Translate a selected phrase with your own LLM provider. Your key is kept in this device's " +
-            "secure storage — never in your vault, an export or a log.",
+        texts[TextKey.PROVIDER_SECTION_DESCRIPTION],
         style = MaterialTheme.typography.bodyMedium,
     )
     if (!state.available) {
         Text(
-            "Connecting an LLM provider isn't available in this build.",
+            texts[TextKey.PROVIDER_UNAVAILABLE],
             style = MaterialTheme.typography.bodyMedium,
         )
         return
@@ -165,7 +169,7 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
         ProviderField(
             value = state.config.customBaseUrl,
             onValueChange = actions.onBaseUrlChange,
-            label = "Base URL",
+            label = texts[TextKey.BASE_URL],
             tag = BASE_URL_FIELD_TAG,
         )
     }
@@ -176,7 +180,7 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
         SecretField(
             value = apiKey,
             onValueChange = { typed -> apiKey = typed },
-            label = "API key",
+            label = texts[TextKey.API_KEY],
             modifier = Modifier.fillMaxWidth().testTag(API_KEY_FIELD_TAG),
         )
     }
@@ -196,6 +200,7 @@ private fun ProviderSection(state: ProviderUiState, actions: SettingsActions) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ModelField(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
+    val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ExposedDropdownMenuBox(
@@ -208,7 +213,7 @@ private fun ModelField(state: ProviderUiState, apiKey: String, actions: Settings
             OutlinedTextField(
                 value = state.config.model,
                 onValueChange = actions.onModelChange,
-                label = { Text("Model") },
+                label = { Text(texts[TextKey.MODEL]) },
                 singleLine = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
@@ -229,7 +234,7 @@ private fun ModelField(state: ProviderUiState, apiKey: String, actions: Settings
             }
         }
         if (state.loadingModels) LinearProgressIndicator(Modifier.fillMaxWidth())
-        state.modelsHint?.let { hint -> Text(hint, style = MaterialTheme.typography.bodyMedium) }
+        state.modelsHint?.let { hint -> Text(texts.message(hint), style = MaterialTheme.typography.bodyMedium) }
     }
 }
 
@@ -244,10 +249,11 @@ private fun ProviderFooter(state: ProviderUiState, apiKey: String, actions: Sett
 /** The active provider's preset picker: the current choice, and the presets this platform can reach. */
 @Composable
 private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider?, onSelect: (LlmProvider) -> Unit) {
+    val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(PROVIDER_PICKER_TAG)) {
-            Text(provider?.label ?: "Choose a provider")
+            Text(provider?.label ?: texts[TextKey.CHOOSE_A_PROVIDER])
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             providers.forEach { option ->
@@ -279,8 +285,9 @@ private fun ProviderField(value: String, onValueChange: (String) -> Unit, label:
 @Composable
 private fun StoredKey(state: ProviderUiState, actions: SettingsActions) {
     if (!state.hasStoredKey) return
-    Text("A key is stored.", style = MaterialTheme.typography.bodyMedium)
-    TextButton(onClick = actions.onRemoveProviderKey) { Text("Remove key") }
+    val texts = LocalAppTexts.current
+    Text(texts[TextKey.KEY_STORED], style = MaterialTheme.typography.bodyMedium)
+    TextButton(onClick = actions.onRemoveProviderKey) { Text(texts[TextKey.REMOVE_KEY]) }
 }
 
 /** The in-progress indicator and the last inline result, success or failure. */
@@ -288,9 +295,10 @@ private fun StoredKey(state: ProviderUiState, actions: SettingsActions) {
 private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
     if (state.testing) LinearProgressIndicator(Modifier.fillMaxWidth())
     val result = state.result ?: return
+    val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            result.message,
+            texts.message(result.message),
             color = when (result) {
                 is ProviderResult.Success -> MaterialTheme.colorScheme.primary
                 is ProviderResult.Failure -> MaterialTheme.colorScheme.error
@@ -298,7 +306,7 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
             style = MaterialTheme.typography.bodyMedium,
         )
         TextButton(onClick = actions.onDismissProviderResult, modifier = Modifier.testTag(PROVIDER_DISMISS_TAG)) {
-            Text("Dismiss")
+            Text(texts[TextKey.DISMISS])
         }
     }
 }
@@ -306,21 +314,23 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
 /** The section's two actions: persist the configuration and key, or test the connection. */
 @Composable
 private fun ProviderActions(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
+    val texts = LocalAppTexts.current
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(onClick = { actions.onSaveProvider(apiKey) }, enabled = !state.testing) { Text("Save") }
+        Button(onClick = { actions.onSaveProvider(apiKey) }, enabled = !state.testing) { Text(texts[TextKey.SAVE]) }
         Button(
             onClick = { actions.onTestProvider(apiKey) },
             enabled = !state.testing,
             modifier = Modifier.testTag(TEST_CONNECTION_TAG),
-        ) { Text("Test connection") }
+        ) { Text(texts[TextKey.TEST_CONNECTION]) }
     }
 }
 
 @Composable
 private fun Header(onBack: () -> Unit) {
+    val texts = LocalAppTexts.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text("Library") }
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        TextButton(onClick = onBack) { Text(texts[TextKey.LIBRARY]) }
+        Text(texts[TextKey.SETTINGS], style = MaterialTheme.typography.headlineMedium)
     }
 }
 
@@ -328,7 +338,7 @@ private fun Header(onBack: () -> Unit) {
 private fun Error(message: String, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss) { Text("Dismiss") }
+        TextButton(onClick = onDismiss) { Text(LocalAppTexts.current[TextKey.DISMISS]) }
     }
 }
 
@@ -336,6 +346,6 @@ private fun Error(message: String, onDismiss: () -> Unit) {
 private fun Notice(message: String, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(message, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss) { Text("Dismiss") }
+        TextButton(onClick = onDismiss) { Text(LocalAppTexts.current[TextKey.DISMISS]) }
     }
 }

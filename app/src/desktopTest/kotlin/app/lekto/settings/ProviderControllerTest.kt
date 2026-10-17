@@ -9,6 +9,7 @@ import app.lekto.core.secret.SecretStore
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -94,7 +95,7 @@ class ProviderControllerTest {
 
         controller.save("sk-live-123")
 
-        assertEquals(ProviderResult.Failure(SecretStore.UNAVAILABLE), controller.state.value.result)
+        assertEquals(ProviderResult.Failure(AppMessage.core(SecretStore.UNAVAILABLE)), controller.state.value.result)
         assertFalse(controller.state.value.hasStoredKey)
     }
 
@@ -134,7 +135,7 @@ class ProviderControllerTest {
         advanceUntilIdle()
 
         assertEquals(
-            ProviderResult.Failure(LlmConnectionResult.REJECTED_KEY),
+            ProviderResult.Failure(AppMessage.core(LlmConnectionResult.REJECTED_KEY)),
             controller.state.value.result,
         )
         assertFalse(controller.state.value.testing)
@@ -195,7 +196,7 @@ class ProviderControllerTest {
 
         controller.removeKey()
 
-        assertEquals(ProviderResult.Failure(SecretStore.UNAVAILABLE), controller.state.value.result)
+        assertEquals(ProviderResult.Failure(AppMessage.core(SecretStore.UNAVAILABLE)), controller.state.value.result)
     }
 
     @Test
@@ -254,7 +255,10 @@ class ProviderControllerTest {
         controller.loadModels("sk-typed")
         advanceUntilIdle()
 
-        assertEquals(ProviderResult.Failure(LlmModelsResult.UNSUPPORTED), controller.state.value.result)
+        assertEquals(
+            ProviderResult.Failure(AppMessage.core(LlmModelsResult.UNSUPPORTED)),
+            controller.state.value.result,
+        )
         assertTrue(controller.state.value.models.isEmpty())
         assertFalse(controller.state.value.loadingModels)
     }
@@ -268,7 +272,7 @@ class ProviderControllerTest {
         advanceUntilIdle()
 
         assertNull(controller.state.value.result)
-        assertEquals(LlmModelsResult.MISSING_KEY, controller.state.value.modelsHint)
+        assertEquals(AppMessage.core(LlmModelsResult.MISSING_KEY), controller.state.value.modelsHint)
         assertTrue(controller.state.value.models.isEmpty())
     }
 
@@ -354,7 +358,10 @@ class ProviderControllerTest {
         advanceUntilIdle()
 
         assertTrue(controller.state.value.models.isEmpty())
-        assertEquals(ProviderResult.Failure(LlmModelsResult.UNSUPPORTED), controller.state.value.result)
+        assertEquals(
+            ProviderResult.Failure(AppMessage.core(LlmModelsResult.UNSUPPORTED)),
+            controller.state.value.result,
+        )
     }
 
     private fun TestScope.controller(

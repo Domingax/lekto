@@ -2,6 +2,8 @@ package app.lekto.settings
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -18,6 +20,10 @@ import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
+import app.lekto.text.AppMessage
+import app.lekto.text.AppTexts
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.appTextsFor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -77,7 +83,7 @@ class SettingsScreenSemanticsTest {
         var exported = false
         var imported = false
         settings(
-            vault = VaultUiState(available = true, message = "Vault exported."),
+            vault = VaultUiState(available = true, message = AppMessage.core("Vault exported.")),
             actions = SettingsActions(onExportVault = { exported = true }, onImportVault = { imported = true }),
         )
 
@@ -104,7 +110,7 @@ class SettingsScreenSemanticsTest {
     fun aVaultErrorRendersAndDismisses() = runComposeUiTest {
         var dismissed = false
         settings(
-            vault = VaultUiState(available = true, error = "That file isn't a Lekto vault."),
+            vault = VaultUiState(available = true, error = AppMessage.core("That file isn't a Lekto vault.")),
             actions = SettingsActions(onDismissVaultMessage = { dismissed = true }),
         )
 
@@ -198,7 +204,7 @@ class SettingsScreenSemanticsTest {
             provider = ProviderUiState(
                 available = true,
                 providerChosen = true,
-                result = ProviderResult.Success("The provider answered."),
+                result = ProviderResult.Success(AppMessage.core("The provider answered.")),
             ),
             actions = SettingsActions(onDismissProviderResult = { dismissed = true }),
         )
@@ -215,7 +221,7 @@ class SettingsScreenSemanticsTest {
             provider = ProviderUiState(
                 available = true,
                 providerChosen = true,
-                result = ProviderResult.Failure("The provider rejected the API key."),
+                result = ProviderResult.Failure(AppMessage.core("The provider rejected the API key.")),
             ),
         )
 
@@ -313,7 +319,7 @@ class SettingsScreenSemanticsTest {
             provider = ProviderUiState(
                 available = true,
                 providerChosen = true,
-                result = ProviderResult.Failure(LlmModelsResult.UNSUPPORTED),
+                result = ProviderResult.Failure(AppMessage.core(LlmModelsResult.UNSUPPORTED)),
             ),
         )
 
@@ -327,7 +333,7 @@ class SettingsScreenSemanticsTest {
             provider = ProviderUiState(
                 available = true,
                 providerChosen = true,
-                modelsHint = LlmModelsResult.MISSING_KEY,
+                modelsHint = AppMessage.core(LlmModelsResult.MISSING_KEY),
             ),
         )
 
@@ -457,7 +463,7 @@ class SettingsScreenSemanticsTest {
             sync = SyncUiState(
                 available = true,
                 config = configured(enabled = true),
-                lastSync = SyncResult.Success("Synced: uploaded 1."),
+                lastSync = SyncResult.Success(AppMessage.core("Synced: uploaded 1.")),
             ),
         )
 
@@ -470,7 +476,9 @@ class SettingsScreenSemanticsTest {
             sync = SyncUiState(
                 available = true,
                 config = configured(enabled = true),
-                lastSync = SyncResult.Failure("The last sync didn't finish: the server is unreachable"),
+                lastSync = SyncResult.Failure(
+                    AppMessage.core("The last sync didn't finish: the server is unreachable"),
+                ),
             ),
         )
 
@@ -481,7 +489,7 @@ class SettingsScreenSemanticsTest {
     fun aSyncResultRendersAndDismisses() = runComposeUiTest {
         var dismissed = false
         settings(
-            sync = SyncUiState(available = true, result = SyncResult.Success("Saved.")),
+            sync = SyncUiState(available = true, result = SyncResult.Success(AppMessage.core("Saved."))),
             actions = SettingsActions(onDismissSyncResult = { dismissed = true }),
         )
 
@@ -513,6 +521,18 @@ class SettingsScreenSemanticsTest {
         onNodeWithTag(SYNC_NOW_TAG).performScrollTo().assertIsNotEnabled()
         onNodeWithTag(SYNC_DISCONNECT_TAG).performScrollTo().assertIsNotEnabled()
     }
+
+    @Test
+    fun theWholeScreenRendersInTheAppLanguage() = runComposeUiTest {
+        // The reader's **app language** drives every text on the screen (ADR-0034):
+        // with French provided, the sections and their controls read in French.
+        settings(texts = appTextsFor("fr"))
+
+        onNodeWithText("Réglages").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Coffre").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Exporter le coffre").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Importer un coffre").performScrollTo().assertIsDisplayed()
+    }
 }
 
 /** A usable endpoint with the password stored, for the sync section's tests. */
@@ -528,14 +548,18 @@ private fun ComposeUiTest.settings(
     provider: ProviderUiState = ProviderUiState(),
     sync: SyncUiState = SyncUiState(),
     actions: SettingsActions = SettingsActions(),
+    texts: AppTexts? = null,
 ) {
+    val screen: @Composable () -> Unit = {
+        SettingsScreen(
+            state = SettingsUiState(appLanguage = appLanguage, vault = vault, provider = provider, sync = sync),
+            actions = actions,
+            modifier = Modifier.size(width = 360.dp, height = 720.dp),
+        )
+    }
     setContent {
         MaterialTheme {
-            SettingsScreen(
-                state = SettingsUiState(appLanguage = appLanguage, vault = vault, provider = provider, sync = sync),
-                actions = actions,
-                modifier = Modifier.size(width = 360.dp, height = 720.dp),
-            )
+            if (texts == null) screen() else CompositionLocalProvider(LocalAppTexts provides texts) { screen() }
         }
     }
 }

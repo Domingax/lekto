@@ -4,6 +4,8 @@ import app.lekto.LocalChanges
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportProgress
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +24,7 @@ data class LibraryUiState(
     val books: List<Book> = emptyList(),
     val importing: Boolean = false,
     val progress: Float = 0f,
-    val error: String? = null,
+    val error: AppMessage? = null,
 )
 
 /**
@@ -60,7 +62,7 @@ class LibraryController(
                 }
             } catch (failure: Exception) { // Any import failure must surface as a message, not a crash.
                 _state.update { current ->
-                    current.copy(importing = false, error = failure.message ?: "The import failed.")
+                    current.copy(importing = false, error = AppMessage.failure(failure, TextKey.MESSAGE_IMPORT_FAILED))
                 }
             }
         }
@@ -87,7 +89,7 @@ class LibraryController(
                 _state.update { current -> current.copy(books = library.books(), error = null) }
             } catch (failure: Exception) { // Any delete failure must surface as a message, not a crash.
                 _state.update { current ->
-                    current.copy(error = failure.message ?: "The book could not be deleted.")
+                    current.copy(error = AppMessage.failure(failure, TextKey.MESSAGE_BOOK_DELETE_FAILED))
                 }
             }
         }

@@ -8,6 +8,7 @@ import app.lekto.core.llm.translationPrompt
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.settings.ProviderController
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,7 @@ sealed interface PhraseTranslationState {
     data class Done(val text: String) : PhraseTranslationState
 
     /** The provider or the network failed; [message] is honest and safe to show inline. */
-    data class Failed(val message: String) : PhraseTranslationState
+    data class Failed(val message: AppMessage) : PhraseTranslationState
 }
 
 /**
@@ -127,7 +128,7 @@ class PhraseTranslationController(
             }
 
             is LlmTranslationEvent.Failed -> _state.update { current ->
-                current.copy(state = PhraseTranslationState.Failed(event.message))
+                current.copy(state = PhraseTranslationState.Failed(AppMessage.core(event.message)))
             }
         }
     }

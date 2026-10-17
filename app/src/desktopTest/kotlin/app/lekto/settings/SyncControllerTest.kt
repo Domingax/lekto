@@ -28,6 +28,8 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.deterministicSeams
 import app.lekto.testkit.testVaultRecord
+import app.lekto.text.AppMessage
+import app.lekto.text.appTextsFor
 import app.lekto.vocabulary.VocabularyController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -141,7 +143,7 @@ class SyncControllerTest {
 
         controller.save("app-password")
 
-        assertEquals(SyncResult.Failure(SecretStore.UNAVAILABLE), controller.state.value.result)
+        assertEquals(SyncResult.Failure(AppMessage.core(SecretStore.UNAVAILABLE)), controller.state.value.result)
         assertFalse(controller.state.value.hasStoredPassword)
     }
 
@@ -194,7 +196,10 @@ class SyncControllerTest {
 
         val result = controller.state.value.result
         assertIs<SyncResult.Failure>(result)
-        assertTrue(result.message.contains("unreachable"), "the reason must be shown: ${result.message}")
+        assertTrue(
+            appTextsFor(null).message(result.message).contains("unreachable"),
+            "the reason must be shown: ${result.message}",
+        )
         assertFalse(controller.state.value.testing)
     }
 
@@ -295,7 +300,10 @@ class SyncControllerTest {
 
         val lastSync = controller.state.value.lastSync
         assertIs<SyncResult.Success>(lastSync)
-        assertTrue(lastSync.message.contains("uploaded 1"), "the outcome names the upload: ${lastSync.message}")
+        assertTrue(
+            appTextsFor(null).message(lastSync.message).contains("uploaded 1"),
+            "the outcome names the upload: ${lastSync.message}",
+        )
         assertFalse(controller.state.value.syncing)
     }
 
@@ -314,7 +322,10 @@ class SyncControllerTest {
 
         val lastSync = controller.state.value.lastSync
         assertIs<SyncResult.Failure>(lastSync)
-        assertTrue(lastSync.message.contains("unreachable"), "the reason is shown: ${lastSync.message}")
+        assertTrue(
+            appTextsFor(null).message(lastSync.message).contains("unreachable"),
+            "the reason is shown: ${lastSync.message}",
+        )
         assertTrue(vault.all().isNotEmpty(), "the local vault is untouched by a failed sync")
     }
 
@@ -342,7 +353,7 @@ class SyncControllerTest {
 
         controller.disconnect()
 
-        assertEquals(SyncResult.Failure(SecretStore.UNAVAILABLE), controller.state.value.result)
+        assertEquals(SyncResult.Failure(AppMessage.core(SecretStore.UNAVAILABLE)), controller.state.value.result)
     }
 
     @Test
@@ -408,11 +419,21 @@ class SyncControllerTest {
     fun `the last outcome is shown at startup from the device-local store`() = runTest {
         // The outcome must survive a restart, so a fresh controller shows what the
         // previous session ended with (issue #121).
-        val outcomes = InMemorySyncOutcomeStore(SyncOutcome(succeeded = true, message = "Synced: uploaded 3."))
+        val stored = AppMessage.SyncReportText(
+            uploaded = 3,
+            downloaded = 0,
+            deletions = 0,
+            attachments = 0,
+            unresolved = 0,
+            resynced = false,
+        )
+        val outcomes = InMemorySyncOutcomeStore(
+            SyncOutcome(succeeded = true, message = AppMessage.encode(stored)),
+        )
 
         val controller = controller(outcomes = outcomes)
 
-        assertEquals(SyncResult.Success("Synced: uploaded 3."), controller.state.value.lastSync)
+        assertEquals(SyncResult.Success(stored), controller.state.value.lastSync)
     }
 
     @Test

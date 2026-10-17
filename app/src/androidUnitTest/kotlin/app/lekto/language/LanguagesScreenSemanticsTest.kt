@@ -21,6 +21,7 @@ import app.lekto.difficulty.DifficultyUiState
 import app.lekto.testkit.testDifficultyMetadata
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.testkit.testPackMetadata
+import app.lekto.text.AppMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -101,7 +102,7 @@ class LanguagesScreenSemanticsTest {
 
     @Test
     fun aFetchFailureIsShownHonestly() {
-        render(LanguagesUiState(error = "The language list couldn't be loaded."))
+        render(LanguagesUiState(error = AppMessage.core("The language list couldn't be loaded.")))
 
         compose.onNodeWithText("The language list couldn't be loaded.").assertIsDisplayed()
     }
@@ -220,7 +221,7 @@ class LanguagesScreenSemanticsTest {
         var dismissed: String? = null
         render(
             LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
-            difficulty = mapOf("en" to DifficultyUiState(error = "The download failed.")),
+            difficulty = mapOf("en" to DifficultyUiState(error = AppMessage.core("The download failed."))),
             onDismissDifficultyError = { language -> dismissed = language },
         )
 
@@ -314,7 +315,9 @@ class LanguagesScreenSemanticsTest {
         var dismissed: String? = null
         render(
             LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
-            dictionaries = mapOf(DICTIONARY to DictionaryUiState(error = "The dictionary download failed.")),
+            dictionaries = mapOf(
+                DICTIONARY to DictionaryUiState(error = AppMessage.core("The dictionary download failed.")),
+            ),
             onDismissDictionaryError = { artifact -> dismissed = artifact },
         )
 
