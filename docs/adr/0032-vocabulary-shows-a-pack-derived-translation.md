@@ -41,3 +41,11 @@ The display path needs the pack, so the list resolves through the same
 LLM-provided translation must outrank the pack and so needs a provenance marker
 the record does not carry today; that change is deliberately deferred, and this
 ADR is the reason it is not a surprise.
+
+## Update — the language is the translation language, and the app has its own (ADR-0034)
+
+The "**Translation language** the reader chose (ADR-0033)" above is superseded:
+the list resolves against the reader's **Translation language**, a device-local
+setting rather than a **Vault** record (ADR-0034, which supersedes ADR-0033). The
+language of the app's own texts is a separate **App language**. Nothing else here
+moves.

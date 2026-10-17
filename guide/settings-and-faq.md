@@ -5,14 +5,20 @@ answers the common questions.
 
 ## Settings
 
+- **App language** — the language you want Lekto's own texts in. Only the languages
+  Lekto ships are offered (English and French). Your choice is kept on this device,
+  so it does not travel with your Vault between devices. The interface follows it in
+  a later release; until then the app stays in English.
 - **Languages** — the languages Lekto offers for reading, ordered by the ones you
-  have most books in. For each language, declare the CEFR level you read at (choose
-  **Not set** to clear it), see and download its word-difficulty data where Lekto
-  publishes it, and download each offline dictionary it offers, labelled by the
-  pair it translates into ("English → French"). An artefact Lekto does not publish
-  says so and offers no download. **Reload list** refetches the list at any time,
-  and **Attribution** opens the licences and sources of the data you download.
-  See [Reading](/reading) and [Word lookup](/word-lookup).
+  have most books in. Choose the **Translation language** you want translations in —
+  only the languages Lekto publishes an offline dictionary for are offered, and your
+  choice is kept on this device. For each reading language, declare the CEFR level
+  you read at (choose **Not set** to clear it), see and download its word-difficulty
+  data where Lekto publishes it, and download each offline dictionary it offers,
+  labelled by the pair it translates into ("English → French"). An artefact Lekto
+  does not publish says so and offers no download. **Reload list** refetches the
+  list at any time, and **Attribution** opens the licences and sources of the data
+  you download. See [Reading](/reading) and [Word lookup](/word-lookup).
 - **Sync** — connect your own WebDAV server, test it, turn sync on and see its
   status and last result; see [Vault and sync](/vault-and-sync).
 - **Vault export and import** — write your whole Vault to a bundle, or restore one.

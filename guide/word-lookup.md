@@ -6,7 +6,8 @@ Tap a **Word token** while reading to open the lookup panel for that word.
 
 - The word's **Lemma** — the dictionary form that mastery and vocabulary hang off,
   so every inflected form of a word shares one entry.
-- A translation, when an offline dictionary pack is installed.
+- A translation, when an offline dictionary pack is installed for your
+  **Translation language**.
 - Controls to hear the word's **Pronunciation**, to set its **Mastery level**, and
   to save it as a **Vocabulary entry**.
 
@@ -14,7 +15,9 @@ Tap a **Word token** while reading to open the lookup panel for that word.
 
 When you want a fuller answer than the offline pack gives, the panel offers a
 **Dictionary shortcut**: a link to the word's page on an external **Dictionary
-source** such as WordReference, Reverso, Linguee or Google Translate.
+source** such as WordReference, Reverso, Linguee or Google Translate. The
+shortcuts follow the pair the reader chose: the book's language into your
+**Translation language**.
 
 A dictionary shortcut is an ordinary outbound link. Lekto never embeds or scrapes
 the source; opening the shortcut hands the page to your device's own browser.

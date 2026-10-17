@@ -48,3 +48,10 @@ value when no pack answers (ADR-0032). The record shape and the keying above are
 unchanged; the stored value is now the entry's seed and its offline fallback. The
 **Translation language** it resolves against is the reader's own, held in the
 **Vault** (ADR-0033), no longer the constant `fr`.
+
+## Update — the language is the translation language, and the app has its own (ADR-0034)
+
+The "held in the **Vault** (ADR-0033)" line above is superseded: the language the
+list derives its gloss against is the **Translation language**, a device-local
+setting, not a **Vault** record (ADR-0034, which supersedes ADR-0033). The keying
+and the fallback are unchanged.

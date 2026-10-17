@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0034
+---
+
 # The reader owns their translation language, and it lives in the vault
 
 The app shipped one hard-coded translation target — the constant `fr` in
