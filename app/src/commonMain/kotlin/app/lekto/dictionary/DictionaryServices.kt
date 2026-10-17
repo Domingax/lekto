@@ -16,13 +16,6 @@ import app.lekto.core.text.baseLanguage
  */
 object DictionaryRelease {
 
-    /**
-     * The language the published packs translate into. The source half is the
-     * book's own language, so the lookup panel's reference shortcuts follow the
-     * book — English word, French translation — just as the offline lookup does.
-     */
-    const val TARGET_LANGUAGE: String = "fr"
-
     /** The date-free asset the release publishes a pair's pack under. */
     fun artifact(readingLanguage: String, translationLanguage: String): String =
         "lekto-dictionary-$readingLanguage-$translationLanguage.sqlite.gz"
@@ -38,9 +31,11 @@ object DictionaryRelease {
  * filesystem and SQLite factory — so the app only sees this bundle, and a pair
  * the manifest publishes a pack for is the only one that ever gets one.
  *
- * The lookup and word identity resolve their pack by the book's **Reading
- * language**, against the fixed [DictionaryRelease.TARGET_LANGUAGE], so a pack
- * installed for one language powers lookups in that language alone.
+ * Every query resolves its pack by the book's **Reading language** **and** the
+ * reader's **app language** (ADR-0034) — the language a pack translates into —
+ * both taken as arguments: the choice can move at runtime, and a reader whose
+ * language has no pack reports it honestly rather than falling back to a fixed
+ * `fr`.
  */
 class DictionaryServices(
     installerFor: (readingLanguage: String, translationLanguage: String) -> DictionaryPackInstaller,
@@ -61,22 +56,30 @@ class DictionaryServices(
     }
 
     /**
-     * The word query for [language], reading the installed pack for the pair it
-     * translates. The pair is resolved here, on the caller's thread, so the
-     * per-pair installer cache is only ever written from that thread; the query
-     * itself is blocking, so the caller runs it off the UI thread.
+     * The word query for the [readingLanguage] × [translationLanguage] pair. The
+     * pair is resolved here, on the caller's thread, so the per-pair installer
+     * cache is only ever written from that thread; the query itself is blocking,
+     * so the caller runs it off the UI thread. An unknown reading language or an
+     * unchosen translation language yields a lookup that answers nothing, so the
+     * panel reports the offline dictionary unavailable.
      */
-    fun lookup(language: String?): DictionaryLookup {
-        val code = language?.let(::baseLanguage) ?: return DictionaryLookup { null }
-        val installer = installer(code, DictionaryRelease.TARGET_LANGUAGE)
-        return DictionaryLookup { installer.open() }
+    fun lookup(readingLanguage: String?, translationLanguage: String?): DictionaryLookup {
+        val code = readingLanguage?.let(::baseLanguage)
+        val translation = translationLanguage?.let(::baseLanguage)
+        val pack = if (code == null || translation == null) null else installer(code, translation)
+        return DictionaryLookup { pack?.open() }
     }
 
     /**
-     * The pack's lemma index as the word-identity seam (ADR-0006): the tokeniser
-     * asks it so an inflection carries its lemma's key, which is what makes a
-     * saved inflection update its lemma's entry (issue #22). It is read on the
-     * reader's own thread, like the surface's own installer lookups.
+     * The pack's lemma index as the word-identity seam (ADR-0006) for the
+     * [translationLanguage] pair: the tokeniser asks it so an inflection carries
+     * its lemma's key, which is what makes a saved inflection update its lemma's
+     * entry (issue #22). It is read on the reader's own thread, like the
+     * surface's own installer lookups; a reader who has chosen no translation
+     * language has no pack, so every word keys on its normalised surface form.
      */
-    val lemmas: LemmaLookup = dictionaryLemmas { code -> installer(code, DictionaryRelease.TARGET_LANGUAGE).open() }
+    fun lemmas(translationLanguage: String?): LemmaLookup {
+        val translation = translationLanguage?.let(::baseLanguage) ?: return LemmaLookup.None
+        return dictionaryLemmas { code -> installer(code, translation).open() }
+    }
 }

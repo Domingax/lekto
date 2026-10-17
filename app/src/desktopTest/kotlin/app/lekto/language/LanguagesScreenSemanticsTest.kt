@@ -313,6 +313,50 @@ class LanguagesScreenSemanticsTest {
     }
 
     @Test
+    fun theSurfaceOffersOnlyThePublishedTranslationLanguages() = runComposeUiTest {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            translationLanguages = listOf("fr", "es"),
+        )
+
+        onNodeWithText("Translation language").assertIsDisplayed()
+        onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingATranslationLanguageRaisesTheAction() = runComposeUiTest {
+        var chosen: String? = null
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            translationLanguages = listOf("fr", "es"),
+            onSetTranslationLanguage = { language -> chosen = language },
+        )
+
+        onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).performClick()
+        onNodeWithTag(translationLanguageOptionTag("es")).performClick()
+
+        assertEquals("es", chosen)
+    }
+
+    @Test
+    fun theChosenTranslationLanguageIsShownByName() = runComposeUiTest {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            translationLanguage = "fr",
+            translationLanguages = listOf("fr", "es"),
+        )
+
+        onNodeWithText("French").assertIsDisplayed()
+    }
+
+    @Test
+    fun withNoPublishedTranslationLanguageNoPickerIsOffered() = runComposeUiTest {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("en"))))
+
+        onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun attributionIsReachable() = runComposeUiTest {
         var opened = false
         render(LanguagesUiState(), onOpenAttribution = { opened = true })
@@ -340,6 +384,8 @@ private fun ComposeUiTest.render(
     levels: Map<String, CefrLevel> = emptyMap(),
     difficulty: Map<String, DifficultyUiState> = emptyMap(),
     dictionaries: Map<String, DictionaryUiState> = emptyMap(),
+    translationLanguage: String? = null,
+    translationLanguages: List<String> = emptyList(),
     onReload: () -> Unit = {},
     onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     onClearLevel: (String) -> Unit = {},
@@ -347,6 +393,7 @@ private fun ComposeUiTest.render(
     onDismissDifficultyError: (String) -> Unit = {},
     onDownloadDictionary: (String, String, String) -> Unit = { _, _, _ -> },
     onDismissDictionaryError: (String) -> Unit = {},
+    onSetTranslationLanguage: (String) -> Unit = {},
     onOpenAttribution: () -> Unit = {},
     onBack: () -> Unit = {},
 ) {
@@ -357,6 +404,8 @@ private fun ComposeUiTest.render(
                 levels = levels,
                 difficulty = difficulty,
                 dictionaries = dictionaries,
+                translationLanguage = translationLanguage,
+                translationLanguages = translationLanguages,
                 actions = LanguagesActions(
                     onReload = onReload,
                     onSetLevel = onSetLevel,
@@ -365,6 +414,7 @@ private fun ComposeUiTest.render(
                     onDismissDifficultyError = onDismissDifficultyError,
                     onDownloadDictionary = onDownloadDictionary,
                     onDismissDictionaryError = onDismissDictionaryError,
+                    onSetTranslationLanguage = onSetTranslationLanguage,
                     onOpenAttribution = onOpenAttribution,
                     onBack = onBack,
                 ),

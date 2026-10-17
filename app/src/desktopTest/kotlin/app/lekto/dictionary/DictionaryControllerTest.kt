@@ -133,7 +133,35 @@ class DictionaryControllerTest {
     fun `a lookup with no pack degrades to unavailable`() = runTest {
         val controller = controller()
 
-        assertTrue(controller.lookUp("blorple", "en") is WordLookup.Unavailable)
+        assertTrue(controller.lookUp("blorple", "en", "fr") is WordLookup.Unavailable)
+    }
+
+    @Test
+    fun `a lookup with no chosen translation language has no pack and stays unavailable`() = runTest {
+        val controller = controller()
+        controller.install("en", "fr", artifact("en", "fr"))
+        advanceUntilIdle()
+
+        assertTrue(
+            controller.lookUp("blorple", "en", null) is WordLookup.Unavailable,
+            "the pair is (reading × translation); with no translation there is no pack",
+        )
+    }
+
+    @Test
+    fun `a lookup resolves the pack for the chosen translation language`() = runTest {
+        val controller = controller()
+        controller.install("en", "es", artifact("en", "es"))
+        advanceUntilIdle()
+
+        assertTrue(
+            controller.lookUp("blorple", "en", "es") is WordLookup.NotInDictionary,
+            "an installed en-es pack answers the es lookup even though en-fr is not installed",
+        )
+        assertTrue(
+            controller.lookUp("blorple", "en", "fr") is WordLookup.Unavailable,
+            "the uninstalled en-fr pair has no pack",
+        )
     }
 
     @Test
@@ -142,7 +170,7 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        assertTrue(controller.lookUp("blorple", "en") is WordLookup.NotInDictionary)
+        assertTrue(controller.lookUp("blorple", "en", "fr") is WordLookup.NotInDictionary)
     }
 
     /** The asset name the manifest publishes a pair's pack under. */

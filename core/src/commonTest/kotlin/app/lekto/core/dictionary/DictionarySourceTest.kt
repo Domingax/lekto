@@ -38,6 +38,15 @@ class DictionarySourceTest :
                 "https://www.wordreference.com/enfr/caf%C3%A9"
         }
 
+        test("a Spanish translation reaches every source, named pairs included") {
+            DictionarySource.REVERSO.canonicalUrl("linterna", "en", "es") shouldBe
+                "https://context.reverso.net/translation/english-spanish/linterna"
+            DictionarySource.LINGUEE.canonicalUrl("linterna", "en", "es") shouldBe
+                "https://www.linguee.com/english-spanish/search?source=auto&query=linterna"
+            dictionaryShortcuts("linterna", "en", "es").map { shortcut -> shortcut.source } shouldContainExactly
+                DictionarySource.entries.toList()
+        }
+
         test("a source that cannot address the language pair is omitted, not guessed") {
             // This build knows the English and French names Reverso and Linguee
             // need, but no German one; Google takes plain codes and still answers.

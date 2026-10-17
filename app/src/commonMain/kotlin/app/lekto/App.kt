@@ -28,8 +28,10 @@ import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.language.AppLanguages
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
+import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -43,7 +45,6 @@ import app.lekto.core.text.baseLanguage
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryController
-import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.dictionary.Pronunciation
@@ -54,6 +55,7 @@ import app.lekto.difficulty.DifficultyController
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.language.LanguageController
+import app.lekto.language.LanguageSettingsController
 import app.lekto.language.LanguagesDestination
 import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
@@ -120,6 +122,19 @@ data class AppEnvironment(
     val lemmas: LemmaLookup = LemmaLookup.None,
     val vocabulary: Vocabulary? = null,
     val readerLevels: ReaderLevels? = null,
+    /**
+     * The app-private language settings store (ADR-0034): the device-local
+     * **app language** and **Translation language**, neither a **Vault** record.
+     * `null` when the platform wires none, so the app behaves as "no pack" and
+     * stays honest.
+     */
+    val languageSettings: LanguageSettingsStore? = null,
+    /**
+     * The language the platform reports for this device (ADR-0034): the first-launch
+     * suggestion for the **app language**. `null` when the platform reports none —
+     * a case that defaults to English, like any language the app does not ship.
+     */
+    val systemLanguage: String? = null,
     val pickFile: (suspend () -> PickedFile?)? = null,
     val dictionary: DictionaryServices? = null,
     val difficulty: DifficultyServices? = null,
@@ -273,6 +288,29 @@ fun App(
     val language = remember(environment.languages, environment.dispatcher) {
         environment.languages?.let { catalog -> LanguageController(catalog, { state.books }, environment.dispatcher) }
     }
+    // The reader's language settings (ADR-0034): the app language, the language of
+    // the app's texts, and the translation language every lookup, lemma index and
+    // phrase prompt resolves into. Both are device-local; the first launch defaults
+    // them, with no question.
+    val languageSettings = remember(environment.languageSettings) {
+        environment.languageSettings?.let { store -> LanguageSettingsController(store) }
+    }
+    LaunchedEffect(languageSettings) { languageSettings?.applyAppLanguageDefault(environment.systemLanguage) }
+    // The translation-language default needs the manifest, so it is filled from the
+    // cached catalogue at launch and again when the Languages surface reads it; a
+    // device whose language a pack serves needs no choice.
+    LaunchedEffect(languageSettings, environment.languages) {
+        val cached = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
+        languageSettings?.applyTranslationLanguageDefault(environment.systemLanguage, cached.orEmpty())
+    }
+    // The lemma index resolves against the chosen **Translation language** — the
+    // language a pack translates into — so a word's identity follows the pack that
+    // translates it (ADR-0006); memoised on the choice so the reader's word layer is
+    // rebuilt only when it moves. The unwired `environment.lemmas` is the fallback
+    // for a build or a test that wires no dictionary.
+    val lemmas = remember(environment.dictionary, environment.lemmas, languageSettings?.translationLanguage) {
+        environment.dictionary?.lemmas(languageSettings?.translationLanguage) ?: environment.lemmas
+    }
     val provider = remember(environment.llm, environment.secrets, environment.dispatcher, scope) {
         val llm = environment.llm
         val secrets = environment.secrets
@@ -288,7 +326,11 @@ fun App(
         // change from another device shows without relaunching the app
         // (issues #116, #132).
         controller.refresh()
-        scope.launch { withContext(environment.dispatcher) { mastery?.refresh() ?: vocabulary?.refresh() } }
+        scope.launch {
+            withContext(environment.dispatcher) {
+                mastery?.refresh() ?: vocabulary?.refresh()
+            }
+        }
     })
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
     // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
@@ -304,10 +346,12 @@ fun App(
         vaultTransfer = vaultTransfer,
         provider = provider,
         sync = sync,
+        languageSettings = languageSettings,
         state = SettingsUiState(
             vault = vaultState,
             provider = providerState,
             sync = syncState,
+            appLanguage = languageSettings?.appLanguage ?: AppLanguages.ENGLISH,
         ),
     )
 
@@ -326,6 +370,8 @@ fun App(
             vocabulary,
             mastery,
             language,
+            languageSettings,
+            lemmas,
             difficulty,
             difficultyStates,
             dictionaryStates,
@@ -346,6 +392,8 @@ private fun AppScreens(
     vocabulary: VocabularyController?,
     mastery: MasteryController?,
     language: LanguageController?,
+    languageSettings: LanguageSettingsController?,
+    lemmas: LemmaLookup,
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
     dictionaryStates: Map<String, DictionaryUiState>,
@@ -361,6 +409,8 @@ private fun AppScreens(
                 scope,
                 progress,
                 mastery,
+                languageSettings,
+                lemmas,
                 onBack = { destination = Destination.Library },
                 onOpenSettings = { destination = Destination.Settings },
             )
@@ -386,6 +436,8 @@ private fun AppScreens(
                 difficulty = difficulty,
                 dictionary = settings.dictionary,
                 mastery = mastery,
+                languageSettings = languageSettings,
+                systemLanguage = environment.systemLanguage,
                 onOpenAttribution = { destination = Destination.Attribution(current) },
                 onBack = { destination = current.returnTo },
             )
@@ -421,6 +473,8 @@ private fun ReaderDestination(
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
     mastery: MasteryController?,
+    languageSettings: LanguageSettingsController?,
+    lemmas: LemmaLookup,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -429,7 +483,8 @@ private fun ReaderDestination(
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
     val wordMastery = mastery?.mastery ?: environment.mastery
-    val translation = rememberTranslation(environment, scope)
+    val translation = rememberTranslation(environment, scope, languageSettings)
+    val chosenLanguage = languageSettings?.translationLanguage
     val lookup = Lookup(
         selection = selection,
         phrase = phrase,
@@ -441,8 +496,9 @@ private fun ReaderDestination(
                 ?: MasteryLevel.RECOGNIZED,
         ),
         translation = translation.state,
+        translationLanguage = chosenLanguage,
         onOpenSettings = onOpenSettings,
-        onWordTap = wordTapHandler(dictionary, scope) { tap, result ->
+        onWordTap = wordTapHandler(dictionary, scope, chosenLanguage) { tap, result ->
             phrase = null
             translation.dismiss()
             selection = WordSelection(tap, result)
@@ -464,6 +520,7 @@ private fun ReaderDestination(
         environment = environment,
         mastery = wordMastery,
         masteryRevision = mastery?.revision ?: 0,
+        lemmas = lemmas,
         lookup = lookup,
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
@@ -524,6 +581,7 @@ private class Lookup(
     val pronunciation: Pronunciation,
     val vocabulary: VocabularyPanel,
     val translation: PhraseTranslationUiState,
+    val translationLanguage: String?,
     val onOpenSettings: () -> Unit,
     val onWordTap: (WordTap) -> Unit,
     val onPhraseSelected: (PhraseSelection) -> Unit,
@@ -541,6 +599,7 @@ private class Settings(
     val vaultTransfer: VaultTransferController?,
     val provider: ProviderController?,
     val sync: SyncController?,
+    val languageSettings: LanguageSettingsController?,
     val state: SettingsUiState,
 )
 
@@ -558,6 +617,7 @@ private fun SettingsDestination(
         actions = SettingsActions(
             onBack = onBack,
             onOpenLanguages = onOpenLanguages,
+            onSelectAppLanguage = { language -> settings.languageSettings?.chooseAppLanguage(language) },
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
             onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
@@ -652,12 +712,15 @@ private fun VocabularyDestination(
 internal fun wordTapHandler(
     dictionary: DictionaryController?,
     scope: CoroutineScope,
+    translationLanguage: String?,
     onLookup: (WordTap, WordLookup) -> Unit,
 ): (WordTap) -> Unit = { tap ->
     if (dictionary == null) {
         onLookup(tap, WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED))
     } else {
-        scope.launch { onLookup(tap, dictionary.lookUp(tap.token.surface, tap.token.key.language)) }
+        scope.launch {
+            onLookup(tap, dictionary.lookUp(tap.token.surface, tap.token.key.language, translationLanguage))
+        }
     }
 }
 
@@ -723,6 +786,7 @@ private fun ReaderSession(
     environment: AppEnvironment,
     mastery: MasteryLookup,
     masteryRevision: Int,
+    lemmas: LemmaLookup,
     lookup: Lookup,
     onBack: () -> Unit,
     onPositionChange: (Int) -> Unit,
@@ -742,7 +806,7 @@ private fun ReaderSession(
                 renderer = ReaderRenderer(
                     segmenter = environment.segmenter,
                     mastery = mastery,
-                    lemmas = environment.lemmas,
+                    lemmas = lemmas,
                 ),
                 initialOffset = session.position?.offset ?: 0,
                 selectedRange = lookup.selection?.let { selected ->
@@ -769,6 +833,7 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
             selected = selected,
             pronunciation = lookup.pronunciation,
             vocabulary = lookup.vocabulary,
+            translationLanguage = lookup.translationLanguage,
             openUrl = openUrl,
             onDismiss = lookup.onDismiss,
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -778,6 +843,7 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
         PhrasePanel(
             phrase = phrase,
             language = language,
+            translationLanguage = lookup.translationLanguage,
             openUrl = openUrl,
             translation = lookup.translation,
             onOpenSettings = lookup.onOpenSettings,
@@ -794,14 +860,15 @@ private fun LookupPanel(
     selected: WordSelection,
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel,
+    translationLanguage: String?,
     openUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val token = selected.tap.token
     val language = token.key.language?.let { code -> baseLanguage(code) }
-    val shortcuts = remember(token, language) {
-        dictionaryShortcuts(token.surface, language, DictionaryRelease.TARGET_LANGUAGE)
+    val shortcuts = remember(token, language, translationLanguage) {
+        dictionaryShortcuts(token.surface, language, translationLanguage)
     }
     WordLookupPanel(
         result = selected.result,
@@ -827,17 +894,18 @@ private fun LookupPanel(
 private fun PhrasePanel(
     phrase: PhraseSelection,
     language: String?,
+    translationLanguage: String?,
     openUrl: (String) -> Unit,
     translation: PhraseTranslationUiState,
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shortcut = remember(phrase, language) {
+    val shortcut = remember(phrase, language, translationLanguage) {
         translationShortcut(
             phrase.text,
             language?.let { code -> baseLanguage(code) },
-            DictionaryRelease.TARGET_LANGUAGE,
+            translationLanguage,
         )
     }
     PhraseLookupPanel(

@@ -3,10 +3,11 @@ package app.lekto.core.language
 import app.lekto.core.text.baseLanguage
 
 /**
- * The English name this build shows for a **Reading language** (issue #146),
- * falling back to the tag itself when the language is unknown. It is
- * deliberately a fixed, locale-independent table rather than the JVM locale, so
- * the surface and its tests read the same on every machine.
+ * The English name this build shows for a language — a **Reading language** or a
+ * **Translation language** (issue #146; ADR-0034) — falling back to the tag
+ * itself when the language is unknown. It is deliberately a fixed,
+ * locale-independent table rather than the JVM locale, so the surface and its
+ * tests read the same on every machine.
  *
  * The app's UI is English today, so the names are English; a localised name would
  * be the platform's, not the domain's, to supply.

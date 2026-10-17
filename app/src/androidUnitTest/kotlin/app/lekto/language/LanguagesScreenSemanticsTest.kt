@@ -325,6 +325,50 @@ class LanguagesScreenSemanticsTest {
     }
 
     @Test
+    fun theSurfaceOffersOnlyThePublishedTranslationLanguages() {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            translationLanguages = listOf("fr", "es"),
+        )
+
+        compose.onNodeWithText("Translation language").assertIsDisplayed()
+        compose.onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingATranslationLanguageRaisesTheAction() {
+        var chosen: String? = null
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            translationLanguages = listOf("fr", "es"),
+            onSetTranslationLanguage = { language -> chosen = language },
+        )
+
+        compose.onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).performClick()
+        compose.onNodeWithTag(translationLanguageOptionTag("es")).performClick()
+
+        assertEquals("es", chosen)
+    }
+
+    @Test
+    fun theChosenTranslationLanguageIsShownByName() {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"))),
+            translationLanguage = "fr",
+            translationLanguages = listOf("fr", "es"),
+        )
+
+        compose.onNodeWithText("French").assertIsDisplayed()
+    }
+
+    @Test
+    fun withNoPublishedTranslationLanguageNoPickerIsOffered() {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("en"))))
+
+        compose.onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun attributionIsReachable() {
         var opened = false
         render(LanguagesUiState(), onOpenAttribution = { opened = true })
@@ -351,6 +395,8 @@ private fun LanguagesScreenSemanticsTest.render(
     levels: Map<String, CefrLevel> = emptyMap(),
     difficulty: Map<String, DifficultyUiState> = emptyMap(),
     dictionaries: Map<String, DictionaryUiState> = emptyMap(),
+    translationLanguage: String? = null,
+    translationLanguages: List<String> = emptyList(),
     onReload: () -> Unit = {},
     onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     onClearLevel: (String) -> Unit = {},
@@ -358,6 +404,7 @@ private fun LanguagesScreenSemanticsTest.render(
     onDismissDifficultyError: (String) -> Unit = {},
     onDownloadDictionary: (String, String, String) -> Unit = { _, _, _ -> },
     onDismissDictionaryError: (String) -> Unit = {},
+    onSetTranslationLanguage: (String) -> Unit = {},
     onOpenAttribution: () -> Unit = {},
     onBack: () -> Unit = {},
 ) {
@@ -368,6 +415,8 @@ private fun LanguagesScreenSemanticsTest.render(
                 levels = levels,
                 difficulty = difficulty,
                 dictionaries = dictionaries,
+                translationLanguage = translationLanguage,
+                translationLanguages = translationLanguages,
                 actions = LanguagesActions(
                     onReload = onReload,
                     onSetLevel = onSetLevel,
@@ -376,6 +425,7 @@ private fun LanguagesScreenSemanticsTest.render(
                     onDismissDifficultyError = onDismissDifficultyError,
                     onDownloadDictionary = onDownloadDictionary,
                     onDismissDictionaryError = onDismissDictionaryError,
+                    onSetTranslationLanguage = onSetTranslationLanguage,
                     onOpenAttribution = onOpenAttribution,
                     onBack = onBack,
                 ),

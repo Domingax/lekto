@@ -31,6 +31,8 @@ import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
+import app.lekto.core.language.LanguageSettings
+import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
@@ -61,12 +63,15 @@ import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
+import app.lekto.language.TRANSLATION_LANGUAGE_PICKER_TAG
 import app.lekto.language.languageDifficultyDownloadTag
 import app.lekto.language.languageLevelClearTag
 import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
+import app.lekto.language.translationLanguageOptionTag
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
+import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
@@ -78,11 +83,13 @@ import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
+import app.lekto.settings.appLanguageOptionTag
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.InMemoryLanguageCatalog
+import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryReaderLevels
 import app.lekto.testkit.InMemoryRemoteIndexStore
@@ -163,7 +170,7 @@ class AppSemanticsTest {
     @Test
     fun tappingAWordOpensTheLookupPanelWithTheShortcuts() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
-        setContent { App(environment(library)) }
+        setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         onNodeWithText("The Lantern Keeper").performClick()
         tapFirstWord()
@@ -179,7 +186,15 @@ class AppSemanticsTest {
     fun aReferenceShortcutOpensTheCanonicalPageInTheBrowser() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         var opened: String? = null
-        setContent { App(environment(library, openUrl = { url -> opened = url })) }
+        setContent {
+            App(
+                environment(
+                    library,
+                    languageSettings = frenchTranslations(),
+                    openUrl = { url -> opened = url },
+                ),
+            )
+        }
 
         onNodeWithText("The Lantern Keeper").performClick()
         tapFirstWord()
@@ -194,7 +209,7 @@ class AppSemanticsTest {
     @Test
     fun closingTheLookupPanelReturnsToTheSameReadingPosition() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
-        setContent { App(environment(library)) }
+        setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         onNodeWithText("The Lantern Keeper").performClick()
         onNodeWithText("Next page").performClick()
@@ -215,7 +230,15 @@ class AppSemanticsTest {
     fun selectingAPhraseOffersTheTranslationShortcutWithNoProviderConfigured() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         var opened: String? = null
-        setContent { App(environment(library, openUrl = { url -> opened = url })) }
+        setContent {
+            App(
+                environment(
+                    library,
+                    languageSettings = frenchTranslations(),
+                    openUrl = { url -> opened = url },
+                ),
+            )
+        }
 
         onNodeWithText("The Lantern Keeper").performClick()
         onNodeWithText("Next page").performClick()
@@ -248,7 +271,14 @@ class AppSemanticsTest {
         }
         val client = FakeLlmClient(translation = listOf("La lanterne", " brille"))
         setContent {
-            App(environment(library, secrets = secrets, llm = LlmServices(settings, client)))
+            App(
+                environment(
+                    library,
+                    languageSettings = frenchTranslations(),
+                    secrets = secrets,
+                    llm = LlmServices(settings, client),
+                ),
+            )
         }
 
         onNodeWithText("The Lantern Keeper").performClick()
@@ -667,6 +697,136 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun theAppLanguageOffersTheLanguagesTheAppShips() = runComposeUiTest {
+        setContent { App(environment(InMemoryLibrary(), languageSettings = InMemoryLanguageSettingsStore())) }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+
+        onNodeWithTag(appLanguageOptionTag("en")).assertIsDisplayed()
+        onNodeWithTag(appLanguageOptionTag("fr")).assertIsDisplayed()
+        // A language the app does not ship is never offered.
+        onNodeWithTag(appLanguageOptionTag("es")).assertDoesNotExist()
+    }
+
+    @Test
+    fun choosingAnAppLanguageInSettingsStoresIt() = runComposeUiTest {
+        val settings = InMemoryLanguageSettingsStore()
+        setContent { App(environment(InMemoryLibrary(), languageSettings = settings)) }
+
+        onNodeWithText("Settings").performClick()
+        onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithTag(appLanguageOptionTag("fr")).performClick()
+
+        assertEquals("fr", settings.load().appLanguage)
+        // Settings shows the choice without a relaunch.
+        onNodeWithText("French").assertIsDisplayed()
+    }
+
+    @Test
+    fun theFirstLaunchDefaultsTheAppLanguageToTheDeviceLanguage() = runComposeUiTest {
+        val settings = InMemoryLanguageSettingsStore()
+        setContent {
+            App(environment(InMemoryLibrary(), languageSettings = settings, systemLanguage = "fr"))
+        }
+
+        // The default lands with no question and no surface opened.
+        waitUntil { settings.load().appLanguage != null }
+        assertEquals("fr", settings.load().appLanguage)
+    }
+
+    @Test
+    fun theFirstLaunchDefaultsTheAppLanguageToEnglishWhenTheAppDoesNotShipTheDeviceLanguage() = runComposeUiTest {
+        val settings = InMemoryLanguageSettingsStore()
+        setContent {
+            App(environment(InMemoryLibrary(), languageSettings = settings, systemLanguage = "de"))
+        }
+
+        waitForIdle()
+
+        assertEquals("en", settings.load().appLanguage)
+    }
+
+    @Test
+    fun theLanguagesSurfaceOffersOnlyThePublishedTranslationLanguages() = runComposeUiTest {
+        setContent { App(environment(InMemoryLibrary(), languages = translationCatalog())) }
+
+        onNodeWithText("Languages").performClick()
+        onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).performClick()
+
+        onNodeWithTag(translationLanguageOptionTag("fr")).assertIsDisplayed()
+        onNodeWithTag(translationLanguageOptionTag("es")).assertIsDisplayed()
+        // English is a Reading language, not one the packs translate into.
+        onNodeWithTag(translationLanguageOptionTag("en")).assertDoesNotExist()
+    }
+
+    @Test
+    fun choosingATranslationLanguageOnTheLanguagesSurfaceStoresIt() = runComposeUiTest {
+        val settings = InMemoryLanguageSettingsStore()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    languages = translationCatalog(),
+                    languageSettings = settings,
+                ),
+            )
+        }
+
+        onNodeWithText("Languages").performClick()
+        onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).performClick()
+        onNodeWithTag(translationLanguageOptionTag("es")).performClick()
+
+        assertEquals("es", settings.load().translationLanguage)
+        // The surface shows the choice without a relaunch.
+        onNodeWithText("Spanish").assertIsDisplayed()
+    }
+
+    @Test
+    fun theFirstLaunchDefaultsTheTranslationLanguageToTheDeviceLanguage() = runComposeUiTest {
+        val settings = InMemoryLanguageSettingsStore()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    languages = translationCatalog(),
+                    languageSettings = settings,
+                    systemLanguage = "fr",
+                ),
+            )
+        }
+
+        onNodeWithText("Languages").performClick()
+
+        // The default lands once the manifest is read; no question is asked.
+        waitUntil { settings.load().translationLanguage != null }
+        assertEquals("fr", settings.load().translationLanguage)
+    }
+
+    @Test
+    fun anEnglishDeviceKeepsEnglishForTheInterfaceButTheReaderChoosesTheTranslationLanguage() = runComposeUiTest {
+        // The bug this fixes: an English interface must not force English translations.
+        val settings = InMemoryLanguageSettingsStore()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    languages = translationCatalog(),
+                    languageSettings = settings,
+                    systemLanguage = "en",
+                ),
+            )
+        }
+
+        onNodeWithText("Languages").performClick()
+        onNodeWithTag(TRANSLATION_LANGUAGE_PICKER_TAG).performClick()
+        onNodeWithTag(translationLanguageOptionTag("fr")).performClick()
+
+        assertEquals("en", settings.load().appLanguage)
+        assertEquals("fr", settings.load().translationLanguage)
+    }
+
+    @Test
     fun reloadingTheLanguageListRefetchesItWhenNoneIsCached() = runComposeUiTest {
         // The first open finds no cache and the fetch fails: the honest empty state.
         val catalog = InMemoryLanguageCatalog().apply { failure = IOException("offline") }
@@ -774,6 +934,25 @@ private fun dictionaryCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
     ),
 )
 
+/** A catalog whose English entry publishes French and Spanish packs, so both are offered as translation languages. */
+private fun translationCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
+    LanguageCatalogState.Available(
+        listOf(
+            testOfferedLanguage(
+                "en",
+                dictionaries = listOf(
+                    OfferedDictionary("fr", DictionaryRelease.artifact("en", "fr")),
+                    OfferedDictionary("es", DictionaryRelease.artifact("en", "es")),
+                ),
+            ),
+        ),
+    ),
+)
+
+/** Language settings with French translations, as a reader who reads English books and wants French. */
+private fun frenchTranslations(): LanguageSettingsStore =
+    InMemoryLanguageSettingsStore(LanguageSettings(translationLanguage = "fr"))
+
 /** A **Difficulty table** bundle over the in-memory fakes, so a download needs no network. */
 private fun difficultyServices(): DifficultyServices {
     val derived = DerivedAssetStore(InMemoryVaultFileSystem())
@@ -800,6 +979,8 @@ internal fun environment(
     vaultTransfer: VaultTransfer? = null,
     vocabulary: Vocabulary? = null,
     readerLevels: ReaderLevels? = null,
+    languageSettings: LanguageSettingsStore? = null,
+    systemLanguage: String? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
@@ -811,6 +992,8 @@ internal fun environment(
     lemmas = lemmas,
     vocabulary = vocabulary,
     readerLevels = readerLevels,
+    languageSettings = languageSettings,
+    systemLanguage = systemLanguage,
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,

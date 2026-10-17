@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
 import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.readingLanguageName
 import app.lekto.core.text.baseLanguage
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
@@ -48,12 +49,18 @@ internal fun languageLevelClearTag(language: String): String = "languages-level-
 /** The test tag on the way to the attribution screen, so a UI test can click exactly it. */
 internal const val LANGUAGES_ATTRIBUTION_TAG: String = "languages-attribution"
 
+/** The test tag on the **Translation language** picker, so a UI test can open exactly it. */
+internal const val TRANSLATION_LANGUAGE_PICKER_TAG: String = "languages-translation-language"
+
+/** The test tag on a **Translation language** option in the picker. */
+internal fun translationLanguageOptionTag(language: String): String = "languages-translation-language-$language"
+
 /**
  * The actions the **Languages** surface raises: refetch the manifest, set or
  * clear a language's **Reader level** (issue #147), download or dismiss the
  * failure of a language's **Difficulty table** (issue #148), download or dismiss
- * the failure of a pair's **Dictionary pack** (issue #149), open the attribution
- * screen, or leave.
+ * the failure of a pair's **Dictionary pack** (issue #149), choose the
+ * **Translation language** (ADR-0034), open the attribution screen, or leave.
  */
 data class LanguagesActions(
     val onReload: () -> Unit = {},
@@ -63,19 +70,21 @@ data class LanguagesActions(
     val onDismissDifficultyError: (String) -> Unit = {},
     val onDownloadDictionary: (String, String, String) -> Unit = { _, _, _ -> },
     val onDismissDictionaryError: (String) -> Unit = {},
+    val onSetTranslationLanguage: (String) -> Unit = {},
     val onOpenAttribution: () -> Unit = {},
     val onBack: () -> Unit = {},
 )
 
 /**
- * The **Languages** surface (issues #146, #147, #148, #149): it lists the offered
- * **Reading language**s the **Language manifest** publishes, in the reader's
- * priority order, and carries three per-language controls: the reader's **Reader
- * level** picker, the **Difficulty table**'s state and download, and each
- * published **Dictionary pack**'s state and download, labelled by its pair. A
- * language the manifest publishes no table — or no dictionary — says so honestly
- * and offers no download, because a button that could only fail is worse than
- * none.
+ * The **Languages** surface (issues #146, #147, #148, #149; ADR-0034): it offers
+ * the reader the **Translation language**s the **Language manifest** publishes a
+ * pack into, then lists the offered **Reading language**s the manifest publishes,
+ * in the reader's priority order, and carries three per-language controls: the
+ * reader's **Reader level** picker, the **Difficulty table**'s state and download,
+ * and each published **Dictionary pack**'s state and download, labelled by its
+ * pair. A language the manifest publishes no table — or no dictionary — says so
+ * honestly and offers no download, because a button that could only fail is worse
+ * than none.
  *
  * **Reload list** is always offered, so a reader can refetch at any time — after
  * a failed fetch, or when the pipeline has published a language since the cached
@@ -92,6 +101,8 @@ fun LanguagesScreen(
     levels: Map<String, CefrLevel> = emptyMap(),
     difficulty: Map<String, DifficultyUiState> = emptyMap(),
     dictionaries: Map<String, DictionaryUiState> = emptyMap(),
+    translationLanguage: String? = null,
+    translationLanguages: List<String> = emptyList(),
     actions: LanguagesActions = LanguagesActions(),
     modifier: Modifier = Modifier,
 ) {
@@ -105,6 +116,9 @@ fun LanguagesScreen(
         if (state.languages.isEmpty()) {
             EmptyState(available = state.available)
         } else {
+            if (translationLanguages.isNotEmpty()) {
+                TranslationLanguagePicker(translationLanguage, translationLanguages, actions)
+            }
             LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 items(state.languages, key = { offered -> offered.language }) { offered ->
                     // The level and the table are keyed by the language's base tag,
@@ -184,6 +198,40 @@ private fun LanguageRow(
         }
         DifficultyControl(offered, difficulty, actions)
         DictionaryControls(offered, dictionaries, actions)
+    }
+}
+
+/**
+ * The **Translation language** picker (ADR-0034): the reader chooses, from the
+ * languages the **Language manifest** publishes a pack into, the language every
+ * translation resolves into. It offers only those, so a choice always has a pack
+ * to serve it, and a reader who has not chosen one shows **Not set**.
+ */
+@Composable
+private fun TranslationLanguagePicker(selected: String?, languages: List<String>, actions: LanguagesActions) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text("Translation language", style = MaterialTheme.typography.titleMedium)
+        Box {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.testTag(TRANSLATION_LANGUAGE_PICKER_TAG),
+            ) {
+                Text(selected?.let(::readingLanguageName) ?: NOT_SET)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                languages.forEach { language ->
+                    DropdownMenuItem(
+                        text = { Text(readingLanguageName(language)) },
+                        onClick = {
+                            expanded = false
+                            actions.onSetTranslationLanguage(language)
+                        },
+                        modifier = Modifier.testTag(translationLanguageOptionTag(language)),
+                    )
+                }
+            }
+        }
     }
 }
 

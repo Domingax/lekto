@@ -32,7 +32,7 @@ class WordTapHandlerTest {
     fun `without a dictionary it reports the lookup unavailable`() {
         var result: WordLookup? = null
 
-        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), { _, lookup -> result = lookup })(tap)
+        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), null, { _, lookup -> result = lookup })(tap)
 
         assertEquals(WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED), result)
     }
@@ -48,16 +48,36 @@ class WordTapHandlerTest {
         val controller = DictionaryController(services, UnconfinedTestDispatcher())
         var result: WordLookup? = null
 
-        wordTapHandler(controller, CoroutineScope(UnconfinedTestDispatcher()), { _, lookup -> result = lookup })(tap)
+        wordTapHandler(controller, CoroutineScope(UnconfinedTestDispatcher()), "fr") { _, lookup ->
+            result = lookup
+        }(tap)
 
         assertTrue(result is WordLookup.NotInDictionary, "the empty fake pack does not know the word: $result")
+    }
+
+    @Test
+    fun `with no chosen translation language the lookup is unavailable`() {
+        val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+        val files = FakeDictionaryPackFiles(derived, "en", "fr")
+        val services = DictionaryServices { reading, translation ->
+            DictionaryPackInstaller(derived, files, files, reading, translation)
+        }
+        services.installer("en", "fr").install("https://example.test/pack.sqlite.gz")
+        val controller = DictionaryController(services, UnconfinedTestDispatcher())
+        var result: WordLookup? = null
+
+        wordTapHandler(controller, CoroutineScope(UnconfinedTestDispatcher()), null) { _, lookup ->
+            result = lookup
+        }(tap)
+
+        assertTrue(result is WordLookup.Unavailable, "no pack for a pair with no translation language: $result")
     }
 
     @Test
     fun `the handler carries the tapped word back with the result`() {
         var tapped: WordTap? = null
 
-        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), { word, _ -> tapped = word })(tap)
+        wordTapHandler(null, CoroutineScope(UnconfinedTestDispatcher()), null, { word, _ -> tapped = word })(tap)
 
         assertEquals(tap, tapped)
     }
