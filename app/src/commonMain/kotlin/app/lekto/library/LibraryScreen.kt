@@ -3,6 +3,8 @@ package app.lekto.library
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,13 +93,18 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
 }
 
 /** The library's chrome: its title and the way to the vocabulary list and settings. */
+@OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps the navigation below a title too wide to share the line.
 @Composable
 private fun LibraryHeader(actions: LibraryActions) {
     val texts = LocalAppTexts.current
-    Row(
+    // A **FlowRow**, not a **Row**: the French title ("Bibliothèque") is wider than
+    // the English one, so on a phone the navigation cannot share its line. It wraps
+    // to its own line rather than being squeezed into a one-character column.
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         Text(texts[TextKey.LIBRARY], style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

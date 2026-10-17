@@ -3,10 +3,12 @@ package app.lekto.library
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -15,9 +17,12 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.appTextsFor
 import app.lekto.ui.CONFIRM_DIALOG_CANCEL_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import kotlin.test.Test
+import kotlin.test.assertTrue
 /**
  * The library screen's behaviour through semantics (issue #15): the empty state,
  * the book list and its open tap, the inline import progress, the inline failure
@@ -116,6 +121,25 @@ class LibraryScreenSemanticsTest {
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
         kotlin.test.assertNull(deleted)
+    }
+
+    @Test
+    fun theHeaderKeepsItsNavigationReadableInFrench() = runComposeUiTest {
+        // The French title is wider than the English one, so on a phone the
+        // navigation cannot share its line: it must wrap below, not be squeezed
+        // into a one-character column (ADR-0034).
+        setContent {
+            CompositionLocalProvider(LocalAppTexts provides appTextsFor("fr")) {
+                Library(LibraryUiState())
+            }
+        }
+
+        onNodeWithText("Bibliothèque").assertIsDisplayed()
+        onNodeWithText("Langues").assertIsDisplayed()
+        onNodeWithText("Vocabulaire").assertIsDisplayed()
+        val settings = onNodeWithText("Réglages").assertIsDisplayed().getBoundsInRoot()
+        val height = settings.bottom - settings.top
+        assertTrue(height < 80.dp, "the nav label must stay on one line: $height")
     }
 
     @Composable
