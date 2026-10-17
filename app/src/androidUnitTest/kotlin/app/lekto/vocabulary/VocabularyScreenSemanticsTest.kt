@@ -41,4 +41,18 @@ class VocabularyScreenSemanticsTest {
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("lanterne").assertIsDisplayed()
     }
+
+    @Test
+    fun `an entry with no translation shows no translation line on Android`() {
+        val entry = testVocabularyEntry().copy(translation = null)
+
+        compose.setContent {
+            MaterialTheme {
+                VocabularyScreen(state = VocabularyUiState.Results(listOf(entry), ""))
+            }
+        }
+
+        compose.onNodeWithText("lantern").assertIsDisplayed()
+        compose.onNodeWithText("lanterne").assertDoesNotExist()
+    }
 }

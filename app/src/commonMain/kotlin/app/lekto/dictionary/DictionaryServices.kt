@@ -32,10 +32,10 @@ object DictionaryRelease {
  * the manifest publishes a pack for is the only one that ever gets one.
  *
  * Every query resolves its pack by the book's **Reading language** **and** the
- * reader's **app language** (ADR-0034) — the language a pack translates into —
- * both taken as arguments: the choice can move at runtime, and a reader whose
- * language has no pack reports it honestly rather than falling back to a fixed
- * `fr`.
+ * reader's **Translation language** (ADR-0034) — the language a pack translates
+ * into — both taken as arguments: the choice can move at runtime, and a reader
+ * whose language has no pack reports it honestly rather than falling back to a
+ * fixed `fr`.
  */
 class DictionaryServices(
     installerFor: (readingLanguage: String, translationLanguage: String) -> DictionaryPackInstaller,

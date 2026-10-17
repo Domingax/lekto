@@ -168,7 +168,9 @@ _Avoid_: Root, stem, base form
 **Vocabulary entry**:
 A word or phrase the user saved, with its translation, a context sentence, and a
 mastery level. Keyed by the word's **Word key**, so inflected forms share one entry;
-stored per record in the **Vault**, so a save survives a restart.
+stored per record in the **Vault**, so a save survives a restart. The stored
+translation is the offline fallback the word was saved with; the translation the
+list shows is derived from the installed **Dictionary pack** (ADR-0032).
 _Avoid_: Card, item, saved word
 
 **Context sentence**:

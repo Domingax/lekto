@@ -55,6 +55,14 @@ class VocabularyScreenSemanticsTest {
     }
 
     @Test
+    fun anEntryWithNoTranslationShowsNoTranslationLine() = runComposeUiTest {
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern.copy(translation = null)), "")) }
+
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("lanterne").assertDoesNotExist()
+    }
+
+    @Test
     fun typingInTheSearchFieldRaisesTheQuery() = runComposeUiTest {
         var query: String? = null
         setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), ""), onSearch = { query = it }) }

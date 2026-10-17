@@ -65,3 +65,16 @@ class DictionaryLookup(private val pack: (String) -> DictionaryPack?) {
             "This book's language isn't known, so the offline dictionary can't be searched."
     }
 }
+
+/**
+ * The first gloss an offline lookup found, or `null` when it found none
+ * (ADR-0020): the first translation of the first entry that carries one, so a
+ * polysemous word yields one coherent translation rather than a spliced list. A
+ * blank gloss counts as none, so no surface ever shows an empty line. Both the
+ * translation a save keeps and the gloss the **Vocabulary** list derives from the
+ * pack (ADR-0032) are this rule.
+ */
+fun WordLookup.firstGloss(): String? = (this as? WordLookup.Found)
+    ?.entries
+    ?.firstNotNullOfOrNull { entry -> entry.translations.firstOrNull() }
+    ?.takeIf { gloss -> gloss.isNotBlank() }
