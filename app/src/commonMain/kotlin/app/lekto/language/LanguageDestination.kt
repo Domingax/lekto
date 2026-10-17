@@ -3,25 +3,28 @@ package app.lekto.language
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import app.lekto.core.language.publishedTranslationLanguages
 import app.lekto.dictionary.DictionaryController
 import app.lekto.difficulty.DifficultyController
 import app.lekto.reader.MasteryController
 
 /**
- * The **Languages** destination (issues #146, #147, #148, #149): it starts the
- * controller once, so a first launch fetches the manifest while a later one reads
- * the cached copy, renders the catalogue it reports together with the reader's
- * declared **Reader level** per language — read and written through the mastery
- * composition, the single source of the level (ADR-0030) — and carries each
- * language's **Difficulty table** and each published **Dictionary pack** state and
- * download. It is reached from the library and from Settings until the navigation
- * rework lands, and carries the way to the attribution screen for the data it
- * offers.
+ * The **Languages** destination (issues #146, #147, #148, #149; ADR-0034): it
+ * starts the controller once, so a first launch fetches the manifest while a
+ * later one reads the cached copy, renders the catalogue it reports together with
+ * the reader's declared **Reader level** per language — read and written through
+ * the mastery composition, the single source of the level (ADR-0030) — carries
+ * each language's **Difficulty table** and each published **Dictionary pack**
+ * state and download, and offers the reader the **Translation language**s the
+ * manifest publishes. It is reached from the library and from Settings until the
+ * navigation rework lands, and carries the way to the attribution screen for the
+ * data it offers.
  *
  * When the offered languages change it re-reads each one's table and dictionary
  * state, so an asset already installed on this device shows as installed, and a
  * download recolours the open book through the mastery composition with no
- * relaunch (ADR-0030).
+ * relaunch (ADR-0030). It also fills the translation-language default from the
+ * now-known catalogue, so a device whose language a pack serves needs no choice.
  */
 @Suppress("LongParameterList") // The surface's controllers, the way to attribution and the way back, each independent.
 @Composable
@@ -30,6 +33,8 @@ internal fun LanguagesDestination(
     difficulty: DifficultyController?,
     dictionary: DictionaryController?,
     mastery: MasteryController?,
+    languageSettings: LanguageSettingsController?,
+    systemLanguage: String?,
     onOpenAttribution: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -41,11 +46,16 @@ internal fun LanguagesDestination(
         difficulty?.refresh(state.languages.map { offered -> offered.language })
     }
     LaunchedEffect(dictionary, state.languages) { dictionary?.refresh(state.languages) }
+    LaunchedEffect(languageSettings, state.languages, systemLanguage) {
+        languageSettings?.applyTranslationLanguageDefault(systemLanguage, state.languages)
+    }
     LanguagesScreen(
         state = state,
         levels = mastery?.levels().orEmpty(),
         difficulty = difficultyStates,
         dictionaries = dictionaryStates,
+        translationLanguage = languageSettings?.translationLanguage,
+        translationLanguages = publishedTranslationLanguages(state.languages),
         actions = LanguagesActions(
             onReload = { language?.reload() },
             onSetLevel = { code, level -> mastery?.setLevel(code, level) },
@@ -56,6 +66,7 @@ internal fun LanguagesDestination(
                 dictionary?.install(reading, translation, artifact)
             },
             onDismissDictionaryError = { artifact -> dictionary?.dismissError(artifact) },
+            onSetTranslationLanguage = { code -> languageSettings?.chooseTranslationLanguage(code) },
             onOpenAttribution = onOpenAttribution,
             onBack = onBack,
         ),

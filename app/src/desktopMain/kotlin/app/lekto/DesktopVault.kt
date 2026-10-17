@@ -1,6 +1,8 @@
 package app.lekto
 
 import app.lekto.core.Seams
+import app.lekto.core.language.JsonLanguageSettingsStore
+import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
 import app.lekto.core.sync.JsonTombstoneStore
@@ -43,6 +45,18 @@ fun desktopReaderLevels(root: File = desktopVaultRoot()): ReaderLevels = VaultRe
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )
+
+/**
+ * The desktop language settings (ADR-0034) over [root], defaulting to an
+ * app-private folder beside the vault: the device's **app language** and
+ * **Translation language**. They are device-local app configuration (ADR-0023's
+ * pattern), not vault records, so they never enter an export.
+ *
+ * @param root the settings root, defaulting to the app-data directory; the
+ *   parameter is the test seam, so production never passes one.
+ */
+fun desktopLanguageSettings(root: File = File(appDataDirectory("lekto"), "settings")): LanguageSettingsStore =
+    JsonLanguageSettingsStore(JvmVaultFileSystem(root))
 
 /**
  * The vault's whole-file transfer (issue #20) over [root], with the platform's

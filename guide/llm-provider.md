@@ -1,7 +1,8 @@
 # LLM provider and privacy
 
 You can connect your own **LLM provider** to translate a selected phrase or
-sentence in context, directly from the device.
+sentence in context, directly from the device. Lekto asks it for your
+**Translation language** (chosen on the **Languages** surface).
 
 ## Bring your own key
 
@@ -45,3 +46,6 @@ offers a **Translation shortcut**: an outbound link that opens an external
 translation service with your selected phrase already filled in. Like a
 **Dictionary shortcut**, Lekto never embeds or scrapes the service. See
 [Settings and FAQ](/settings-and-faq) for where to connect a provider.
+
+The shortcut translates into your **Translation language**, so it appears once you
+have chosen one on the **Languages** surface.

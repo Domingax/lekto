@@ -140,10 +140,17 @@ _Avoid_: Source language, book language
 
 **Translation language**:
 The language the reader wants translations in — the language a **Dictionary pack**
-translates a **Reading language** into. Chosen once for the whole app and held in the
-**Vault**, so it follows the reader; a pack is keyed by the (Reading language ×
-Translation language) pair.
+translates a **Reading language** into. Chosen once per device, app-private and
+never synced, and separate from the **App language**; a pack is keyed by the
+(Reading language × Translation language) pair.
 _Avoid_: Target language, output language, user language, native language
+
+**App language**:
+The language the reader wants the app in: the language of its own texts. One
+choice per device, app-private and never synced, so it does not travel with the
+**Vault** (ADR-0034). Distinct from the **Translation language**, the language the
+app translates into.
+_Avoid_: Locale, UI language, device language
 
 **Reader level**:
 The level a reader declares in a language they read, on the six-point CEFR scale

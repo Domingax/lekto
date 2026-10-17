@@ -3,6 +3,8 @@ package app.lekto
 import android.content.Context
 import android.net.Uri
 import app.lekto.core.Seams
+import app.lekto.core.language.JsonLanguageSettingsStore
+import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
 import app.lekto.core.sync.JsonTombstoneStore
@@ -41,6 +43,15 @@ fun androidReaderLevels(context: Context): ReaderLevels = VaultReaderLevels(
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(context.filesDir, "device-id")).get(),
 )
+
+/**
+ * The Android language settings (ADR-0034) under `Context.filesDir`: the device's
+ * **app language** and **Translation language**. They are device-local app
+ * configuration (ADR-0023's pattern), not vault records, so they never enter an
+ * export and do not move between devices.
+ */
+fun androidLanguageSettings(context: Context): LanguageSettingsStore =
+    JsonLanguageSettingsStore(JvmVaultFileSystem(File(context.filesDir, "settings")))
 
 /**
  * The vault's whole-file transfer (issue #20) over `Context.filesDir`, with the

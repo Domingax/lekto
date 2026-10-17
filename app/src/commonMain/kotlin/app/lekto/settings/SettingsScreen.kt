@@ -45,12 +45,12 @@ internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
 internal const val LANGUAGES_LINK_TAG: String = "settings-languages"
 
 /**
- * The settings screen: the way to the **Languages** surface (issue #146), the
- * vault's export/import (issue #20), sync (issue #28) and the LLM provider
- * (issue #88). Each is its own section so later settings land without disturbing
- * the ones already here, and nothing on the screen gates the reader — the vault
- * actions exist only where a file picker is wired, sync only where a driver is,
- * and the model only where a provider is.
+ * The settings screen: the app's own language (ADR-0034), the way to the
+ * **Languages** surface (issue #146), the vault's export/import (issue #20), sync
+ * (issue #28) and the LLM provider (issue #88). Each is its own section so later
+ * settings land without disturbing the ones already here, and nothing on the
+ * screen gates the reader — the vault actions exist only where a file picker is
+ * wired, sync only where a driver is, and the model only where a provider is.
  *
  * The data the reader manages per language — the **Reader level**, the
  * **Difficulty table** and the **Dictionary pack** — lives on the **Languages**
@@ -67,6 +67,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Header(actions.onBack)
+        Section("App language") { AppLanguageSection(state.appLanguage, actions.onSelectAppLanguage) }
         Section("Languages") { LanguagesSection(actions) }
         Section("Vault") { VaultSection(state.vault, actions) }
         Section("Sync") { SyncSection(state.sync, actions) }

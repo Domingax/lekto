@@ -855,6 +855,29 @@ and the manifest's format handshake is the producer's constant against `core`'s,
 kept in step by `LanguageManifestFormatSynchronisationTest` in `architecture`
 (ADR-0013).
 
+The reader's **language settings** (ADR-0034) are proved at their own levels: two
+independent device-local choices, the **app language** and the **Translation
+language**. The `LanguageSettingsStore` seam runs the shared
+`LanguageSettingsStoreContract` against the in-memory fake and the JSON document
+store over an in-memory filesystem in `core/commonTest`, and against the same
+document over a real directory in `core/jvmTest`; `JsonLanguageSettingsStoreTest`
+adds the cases the contract does not — a corrupt document reads as "not chosen" —
+and pins that the choices live under the settings root and never land in the vault
+or its export. `AppLanguagesTest` pins the languages the app ships and the
+app-language default; `TranslationLanguageChoicesTest` pins the translation
+languages a manifest publishes and the translation-language default;
+`LanguageSettingsControllerTest` pins that the two are chosen independently,
+written through and never overwritten by a default. The **Settings** surface's
+app-language picker is `SettingsScreenSemanticsTest` on both lanes, and the
+**Languages** surface's translation-language picker is
+`LanguagesScreenSemanticsTest` on both lanes; choosing each and the first-launch
+defaults are `AppSemanticsTest` on both lanes, including the case this fixes — an
+English interface whose translations are French. The resolution is proved where it
+lands: `DictionaryServicesTest` pins that both the reader's lookup and the
+tokeniser's lemma index resolve the pack for the chosen pair and none when it is
+unset, and `WordTapHandlerTest` pins the same through a tap. The reference
+shortcuts' Spanish pair is `DictionarySourceTest` in `core/commonTest`.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

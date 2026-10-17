@@ -3,12 +3,13 @@ package app.lekto.settings
 import app.lekto.core.llm.LlmProvider
 
 /**
- * The actions the settings screen raises: export or import the vault, dismiss the
- * vault's last outcome, go back, the two sections that carry a secret — the LLM
- * provider (issue #88) and sync (issue #28) — and the way to the **Languages**
- * surface. The provider and sync actions carry the secret the field owns, so a key
- * or a password never enters the screen's state; the rest come from the screen's
- * own controls. Bundled so the screen's signature stays small as more settings land.
+ * The actions the settings screen raises: choose the app's own language (ADR-0034),
+ * export or import the vault, dismiss the vault's last outcome, go back, the two
+ * sections that carry a secret — the LLM provider (issue #88) and sync (issue #28)
+ * — and the way to the **Languages** surface. The provider and sync actions carry
+ * the secret the field owns, so a key or a password never enters the screen's
+ * state; the rest come from the screen's own controls. Bundled so the screen's
+ * signature stays small as more settings land.
  *
  * The **Reader level** picker, the **Difficulty table**'s download and the
  * **Dictionary pack** control are no longer here: all moved to the **Languages**
@@ -17,6 +18,7 @@ import app.lekto.core.llm.LlmProvider
 data class SettingsActions(
     val onBack: () -> Unit = {},
     val onOpenLanguages: () -> Unit = {},
+    val onSelectAppLanguage: (String) -> Unit = {},
     val onExportVault: () -> Unit = {},
     val onImportVault: () -> Unit = {},
     val onDismissVaultMessage: () -> Unit = {},

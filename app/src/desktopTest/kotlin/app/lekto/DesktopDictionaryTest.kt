@@ -24,7 +24,11 @@ class DesktopDictionaryTest {
             val services = desktopDictionary(root)
 
             assertEquals(DictionaryPackState.NotInstalled, services.installer("en", "fr").status())
-            assertTrue(services.lookup("en").lookup("blorple", "en") is WordLookup.Unavailable)
+            assertTrue(services.lookup("en", "fr").lookup("blorple", "en") is WordLookup.Unavailable)
+            assertTrue(
+                services.lookup("en", null).lookup("blorple", "en") is WordLookup.Unavailable,
+                "an unchosen translation language has no pack, so the lookup stays honest",
+            )
         } finally {
             root.deleteRecursively()
         }

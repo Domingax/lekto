@@ -45,6 +45,34 @@ class SettingsScreenSemanticsTest {
     }
 
     @Test
+    fun theAppLanguagePickerOffersTheLanguagesTheAppShips() = runComposeUiTest {
+        settings(appLanguage = "en")
+
+        onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+
+        onNodeWithTag(appLanguageOptionTag("en")).assertIsDisplayed()
+        onNodeWithTag(appLanguageOptionTag("fr")).assertIsDisplayed()
+    }
+
+    @Test
+    fun theCurrentAppLanguageIsShownByName() = runComposeUiTest {
+        settings(appLanguage = "fr")
+
+        onNodeWithText("French").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingAnAppLanguageRaisesTheAction() = runComposeUiTest {
+        var chosen: String? = null
+        settings(appLanguage = "en", actions = SettingsActions(onSelectAppLanguage = { code -> chosen = code }))
+
+        onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        onNodeWithTag(appLanguageOptionTag("fr")).performClick()
+
+        assertEquals("fr", chosen)
+    }
+
+    @Test
     fun theVaultSectionOffersExportAndImport() = runComposeUiTest {
         var exported = false
         var imported = false
@@ -495,6 +523,7 @@ private fun configured(enabled: Boolean = false): SyncSettings =
 @Suppress("LongParameterList") // One test helper mirroring the screen's state bundles.
 @OptIn(ExperimentalTestApi::class)
 private fun ComposeUiTest.settings(
+    appLanguage: String = "en",
     vault: VaultUiState = VaultUiState(),
     provider: ProviderUiState = ProviderUiState(),
     sync: SyncUiState = SyncUiState(),
@@ -503,7 +532,7 @@ private fun ComposeUiTest.settings(
     setContent {
         MaterialTheme {
             SettingsScreen(
-                state = SettingsUiState(vault, provider, sync),
+                state = SettingsUiState(appLanguage = appLanguage, vault = vault, provider = provider, sync = sync),
                 actions = actions,
                 modifier = Modifier.size(width = 360.dp, height = 720.dp),
             )

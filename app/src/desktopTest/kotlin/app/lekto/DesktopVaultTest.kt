@@ -58,6 +58,24 @@ class DesktopVaultTest {
     }
 
     @Test
+    fun theLanguageSettingsRoundTripToDisk() {
+        val root = Files.createTempDirectory("lekto-desktop-language").toFile()
+        try {
+            desktopLanguageSettings(root).save(
+                app.lekto.core.language.LanguageSettings(appLanguage = "fr-CA", translationLanguage = "es-419"),
+            )
+
+            // A fresh store over the same root reads the base tags back.
+            assertEquals(
+                app.lekto.core.language.LanguageSettings(appLanguage = "fr", translationLanguage = "es"),
+                desktopLanguageSettings(root).load(),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun theVaultTransferCarriesWhatTheLibraryWrote() {
         val root = Files.createTempDirectory("lekto-desktop-transfer").toFile().resolve("vault")
         try {

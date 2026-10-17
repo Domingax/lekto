@@ -91,12 +91,14 @@ class DictionaryController(
     }
 
     /**
-     * Answers [surface] from the installed pack for [language], off the UI thread.
-     * The pair is resolved on the caller's thread, so the services' per-pair cache
-     * is only ever written from one thread; the blocking query runs on [dispatcher].
+     * Answers [surface] from the installed pack for the [language] ×
+     * [translationLanguage] pair, off the UI thread. The pair is resolved on the
+     * caller's thread, so the services' per-pair cache is only ever written from
+     * one thread; the blocking query runs on [dispatcher]. An unchosen translation
+     * language has no pack, so the lookup reports it honestly.
      */
-    suspend fun lookUp(surface: String, language: String?): WordLookup {
-        val lookup = services.lookup(language)
+    suspend fun lookUp(surface: String, language: String?, translationLanguage: String?): WordLookup {
+        val lookup = services.lookup(language, translationLanguage)
         return withContext(dispatcher) { lookup.lookup(surface, language) }
     }
 

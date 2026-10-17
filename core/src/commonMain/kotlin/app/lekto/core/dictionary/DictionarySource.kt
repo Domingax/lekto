@@ -80,8 +80,16 @@ private fun languagePair(from: String?, to: String?): String? {
     return if (fromName == null || toName == null) null else "$fromName-$toName"
 }
 
+/**
+ * The full `english-french` pair name Reverso and Linguee use, or null when this
+ * build does not know a code. It covers the languages the **Language manifest**
+ * publishes a pair for — English, Spanish and French — so a Spanish reader
+ * reaches all four shortcuts, not the two an English/French-only table would
+ * give.
+ */
 private fun languageName(code: String?): String? = when (code?.lowercase()) {
     "en" -> "english"
+    "es" -> "spanish"
     "fr" -> "french"
     else -> null
 }

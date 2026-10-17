@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -28,7 +29,10 @@ class MainActivity : ComponentActivity() {
         val library = androidBookLibrary(this)
         val vocabulary = androidVocabulary(this)
         pronouncer = AndroidPronouncer(this)
-        setContent { LektoApp(library, vocabulary, pronouncer) }
+        // The device's language is read before composition and handed in, so the
+        // first-launch default is a value rather than a locale read in a composable.
+        val systemLanguage = Locale.getDefault().language
+        setContent { LektoApp(library, vocabulary, pronouncer, systemLanguage) }
     }
 
     override fun onDestroy() {
@@ -43,7 +47,12 @@ class MainActivity : ComponentActivity() {
  */
 @Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
 @Composable
-private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: AndroidPronouncer?) {
+private fun LektoApp(
+    library: BookLibrary,
+    vocabulary: Vocabulary,
+    speech: AndroidPronouncer?,
+    systemLanguage: String,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val segmenter = remember { IcuTextSegmenter() }
@@ -52,6 +61,7 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
     val difficulty = remember { androidDifficulty(context) }
     val languages = remember { androidLanguage(context) }
     val readerLevels = remember { androidReaderLevels(context) }
+    val languageSettings = remember { androidLanguageSettings(context) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) {
             picker.resolve(null)
@@ -67,9 +77,10 @@ private fun LektoApp(library: BookLibrary, vocabulary: Vocabulary, speech: Andro
         AppEnvironment(
             segmenter = segmenter,
             library = library,
-            lemmas = dictionary.lemmas,
             vocabulary = vocabulary,
             readerLevels = readerLevels,
+            languageSettings = languageSettings,
+            systemLanguage = systemLanguage,
             pickFile = {
                 // Arm the picker before launching, then park the import until
                 // it answers — the order closes the resolve-before-await race.

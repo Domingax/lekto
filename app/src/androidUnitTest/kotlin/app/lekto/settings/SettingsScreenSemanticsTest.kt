@@ -56,6 +56,34 @@ class SettingsScreenSemanticsTest {
     }
 
     @Test
+    fun theAppLanguagePickerOffersTheLanguagesTheAppShips() {
+        render(appLanguage = "en")
+
+        compose.onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+
+        compose.onNodeWithTag(appLanguageOptionTag("en")).assertIsDisplayed()
+        compose.onNodeWithTag(appLanguageOptionTag("fr")).assertIsDisplayed()
+    }
+
+    @Test
+    fun theCurrentAppLanguageIsShownByName() {
+        render(appLanguage = "fr")
+
+        compose.onNodeWithText("French").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingAnAppLanguageRaisesTheAction() {
+        var chosen: String? = null
+        render(appLanguage = "en", actions = SettingsActions(onSelectAppLanguage = { code -> chosen = code }))
+
+        compose.onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(appLanguageOptionTag("fr")).performClick()
+
+        assertEquals("fr", chosen)
+    }
+
+    @Test
     fun theVaultSectionOffersExportAndImport() {
         var exported = false
         var imported = false
@@ -500,6 +528,7 @@ class SettingsScreenSemanticsTest {
     /** Renders the settings screen in the app theme, sized like a phone. */
     @Suppress("LongParameterList") // One test helper mirroring the screen's state bundles.
     private fun render(
+        appLanguage: String = "en",
         vault: VaultUiState = VaultUiState(),
         provider: ProviderUiState = ProviderUiState(),
         sync: SyncUiState = SyncUiState(),
@@ -508,7 +537,7 @@ class SettingsScreenSemanticsTest {
         compose.setContent {
             MaterialTheme {
                 SettingsScreen(
-                    state = SettingsUiState(vault, provider, sync),
+                    state = SettingsUiState(appLanguage = appLanguage, vault = vault, provider = provider, sync = sync),
                     actions = actions,
                     modifier = Modifier.size(width = 360.dp, height = 720.dp),
                 )
