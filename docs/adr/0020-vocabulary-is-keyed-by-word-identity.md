@@ -39,3 +39,12 @@ one **Word token** at a time, so a saved entry is one word's; saving a multi-wor
 selection work and lands with it, not here. The `translation` stored is the offline
 result's first gloss, a single coherent translation; a richer, ordered list is future
 work if the vocabulary screen wants it.
+
+## Update — the stored translation is a fallback, not what the list shows (issue #67)
+
+The **Vocabulary** list no longer shows the `translation` an entry stores: it
+derives a gloss from the installed **Dictionary pack** and falls back to this
+value when no pack answers (ADR-0032). The record shape and the keying above are
+unchanged; the stored value is now the entry's seed and its offline fallback. The
+**Translation language** it resolves against is the reader's own, held in the
+**Vault** (ADR-0033), no longer the constant `fr`.

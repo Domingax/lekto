@@ -139,9 +139,11 @@ held per Reading language.
 _Avoid_: Source language, book language
 
 **Translation language**:
-The language a **Dictionary pack** translates a **Reading language** into. A pack is
-keyed by the (Reading language × Translation language) pair.
-_Avoid_: Target language, output language
+The language the reader wants translations in — the language a **Dictionary pack**
+translates a **Reading language** into. Chosen once for the whole app and held in the
+**Vault**, so it follows the reader; a pack is keyed by the (Reading language ×
+Translation language) pair.
+_Avoid_: Target language, output language, user language, native language
 
 **Reader level**:
 The level a reader declares in a language they read, on the six-point CEFR scale
