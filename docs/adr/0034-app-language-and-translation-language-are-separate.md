@@ -55,3 +55,20 @@ name table does not know today. The app must externalise its own texts so the
 **app language** can select them; that work is staged in its own issue (#165), and
 until it lands the interface stays English while the translation language already
 drives every lookup.
+
+## Update — the app's own texts are externalised (issue #165)
+
+The externalisation this ADR stages has landed. The app's own texts are one table
+per shipped language — `EnglishTexts` and `FrenchTexts`, resolved by `TextKey` —
+selected by the **app language** through `LocalAppTexts`, which the app's root
+re-provides whenever the setting moves, so choosing English or French re-renders
+the whole interface with no relaunch. A screen, a controller or a platform entry
+point names a key or an `AppMessage`, never a literal, and a message the app
+composes outside a composable carries its key and values so it still reads in the
+reader's language after the choice — or after a restart, for the sync outcome kept
+device-locally. Domain outcomes whose text is a fixed constant (an **LLM provider**
+failure, an unavailable **Secret store**, an uninstalled dictionary) are mapped to
+their key, so an honest failure reads in the app language too; a free-text reason
+from a transport or the platform passes through, because it is not ours to
+translate.
+

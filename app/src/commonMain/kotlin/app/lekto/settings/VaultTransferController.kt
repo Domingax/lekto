@@ -1,6 +1,8 @@
 package app.lekto.settings
 
 import app.lekto.core.vault.VaultFormatException
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +23,8 @@ import kotlinx.serialization.SerializationException
 data class VaultUiState(
     val available: Boolean = false,
     val transferring: Boolean = false,
-    val message: String? = null,
-    val error: String? = null,
+    val message: AppMessage? = null,
+    val error: AppMessage? = null,
 )
 
 /**
@@ -56,7 +58,7 @@ class VaultTransferController(
                 val saved = transfer.save(FILE_NAME, bytes)
                 _state.update { current -> current.copy(transferring = false, message = if (saved) EXPORTED else null) }
             } catch (failure: Exception) {
-                fail(failure.message ?: "The vault could not be exported.")
+                fail(AppMessage.failure(failure, TextKey.MESSAGE_VAULT_EXPORT_FAILED))
             }
         }
     }
@@ -95,23 +97,23 @@ class VaultTransferController(
         _state.update { current -> current.copy(transferring = true, message = null, error = null) }
     }
 
-    private fun fail(message: String) {
+    private fun fail(message: AppMessage) {
         _state.update { current -> current.copy(transferring = false, error = message) }
     }
 
     /** A user-facing reason [failure] stopped an import. */
-    private fun importProblem(failure: Exception): String = when (failure) {
-        is VaultFormatException -> failure.message ?: "That vault file cannot be read by this version of the app."
-        is SerializationException -> "That file isn't a Lekto vault export."
-        else -> failure.message ?: "The vault could not be imported."
+    private fun importProblem(failure: Exception): AppMessage = when (failure) {
+        is VaultFormatException -> AppMessage.failure(failure, TextKey.MESSAGE_VAULT_UNREADABLE)
+        is SerializationException -> AppMessage.Text(TextKey.MESSAGE_NOT_A_VAULT)
+        else -> AppMessage.failure(failure, TextKey.MESSAGE_VAULT_IMPORT_FAILED)
     }
 
     companion object {
         /** The name the save dialog suggests; the user may change it. */
         const val FILE_NAME: String = "lekto-vault.json"
 
-        const val EXPORTED: String = "Vault exported. Keep that file somewhere safe."
+        val EXPORTED: AppMessage = AppMessage.Text(TextKey.MESSAGE_VAULT_EXPORTED)
 
-        const val IMPORTED: String = "Vault imported. Your books and vocabulary are restored."
+        val IMPORTED: AppMessage = AppMessage.Text(TextKey.MESSAGE_VAULT_IMPORTED)
     }
 }

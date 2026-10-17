@@ -6,6 +6,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import app.lekto.core.speech.JvmPronouncer
 import app.lekto.core.text.IcuTextSegmenter
+import app.lekto.text.appTextsFor
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
@@ -26,7 +27,12 @@ fun main() {
         val languages = remember { desktopLanguage() }
         val pronouncer = remember { JvmPronouncer() }
         val vaultTransfer = remember {
-            desktopVaultTransfer(save = ::saveVaultToFile, open = ::pickVaultFileToImport)
+            desktopVaultTransfer(
+                save = { name, bytes ->
+                    saveVaultToFile(appTextsFor(languageSettings.load().appLanguage), name, bytes)
+                },
+                open = { pickVaultFileToImport(appTextsFor(languageSettings.load().appLanguage)) },
+            )
         }
         val secrets = remember { desktopSecretStore() }
         val llm = remember { desktopLlm() }
@@ -55,7 +61,7 @@ fun main() {
                     readerLevels = readerLevels,
                     languageSettings = languageSettings,
                     systemLanguage = systemLanguage,
-                    pickFile = ::pickFileToImport,
+                    pickFile = { pickFileToImport(appTextsFor(languageSettings.load().appLanguage)) },
                     dictionary = dictionary,
                     difficulty = difficulty,
                     languages = languages,

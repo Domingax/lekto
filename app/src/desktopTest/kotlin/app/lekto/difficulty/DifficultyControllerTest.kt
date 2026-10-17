@@ -6,6 +6,7 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -94,7 +95,7 @@ class DifficultyControllerTest {
         controller.install("en", artifact("en"))
         advanceUntilIdle()
 
-        assertEquals("offline", controller.states.value.getValue("en").error)
+        assertEquals(AppMessage.core("offline"), controller.states.value.getValue("en").error)
         assertTrue(!controller.states.value.getValue("en").installing)
     }
 
@@ -110,7 +111,7 @@ class DifficultyControllerTest {
         controller.dismissError("en")
 
         assertNull(controller.states.value.getValue("en").error)
-        assertEquals("down", controller.states.value.getValue("fr").error)
+        assertEquals(AppMessage.core("down"), controller.states.value.getValue("fr").error)
     }
 
     @Test

@@ -9,6 +9,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ImportStage
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -61,7 +62,7 @@ class LibraryControllerTest {
         advanceUntilIdle()
 
         assertEquals(false, controller.state.value.importing)
-        assertEquals("Could not read 'broken.epub'.", controller.state.value.error)
+        assertEquals(AppMessage.core("Could not read 'broken.epub'."), controller.state.value.error)
     }
 
     @Test
@@ -151,7 +152,7 @@ class LibraryControllerTest {
         controller.delete("b1")
         advanceUntilIdle()
 
-        assertEquals("Could not delete 'Lantern'.", controller.state.value.error)
+        assertEquals(AppMessage.core("Could not delete 'Lantern'."), controller.state.value.error)
         assertEquals(listOf("b1"), controller.state.value.books.map { stored -> stored.id })
     }
 

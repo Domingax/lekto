@@ -3,6 +3,8 @@ package app.lekto.library
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +29,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
+import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 import app.lekto.ui.ConfirmationDialog
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
@@ -46,16 +51,17 @@ internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
 @Composable
 fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryActions(), modifier: Modifier = Modifier) {
     var pendingDelete by remember { mutableStateOf<Book?>(null) }
+    val texts = LocalAppTexts.current
 
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
         LibraryHeader(actions)
 
-        state.error?.let { message -> LibraryError(message, actions.onDismissError) }
+        state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
         if (state.importing) Importing(state.progress)
 
         if (state.books.isEmpty() && !state.importing) {
             Text(
-                text = "No books yet — tap Import to add your first book",
+                text = texts[TextKey.LIBRARY_EMPTY],
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 24.dp),
             )
@@ -68,15 +74,15 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
         }
 
         Button(onClick = actions.onImport, enabled = !state.importing, modifier = Modifier.fillMaxWidth()) {
-            Text("Import")
+            Text(texts[TextKey.IMPORT])
         }
     }
 
     pendingDelete?.let { target ->
         ConfirmationDialog(
-            title = "Delete « ${target.title} »?",
-            message = "This cannot be undone.",
-            confirmLabel = "Delete",
+            title = texts.message(AppMessage.of(TextKey.DELETE_BOOK_TITLE, target.title)),
+            message = texts[TextKey.DELETE_BOOK_MESSAGE],
+            confirmLabel = texts[TextKey.DELETE],
             onConfirm = {
                 pendingDelete = null
                 actions.onDelete(target)
@@ -87,18 +93,24 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
 }
 
 /** The library's chrome: its title and the way to the vocabulary list and settings. */
+@OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps the navigation below a title too wide to share the line.
 @Composable
 private fun LibraryHeader(actions: LibraryActions) {
-    Row(
+    val texts = LocalAppTexts.current
+    // A **FlowRow**, not a **Row**: the French title ("Bibliothèque") is wider than
+    // the English one, so on a phone the navigation cannot share its line. It wraps
+    // to its own line rather than being squeezed into a one-character column.
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Library", style = MaterialTheme.typography.headlineMedium)
+        Text(texts[TextKey.LIBRARY], style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = actions.onOpenLanguages) { Text("Languages") }
-            TextButton(onClick = actions.onOpenVocabulary) { Text("Vocabulary") }
-            TextButton(onClick = actions.onOpenSettings) { Text("Settings") }
+            TextButton(onClick = actions.onOpenLanguages) { Text(texts[TextKey.LANGUAGES]) }
+            TextButton(onClick = actions.onOpenVocabulary) { Text(texts[TextKey.VOCABULARY]) }
+            TextButton(onClick = actions.onOpenSettings) { Text(texts[TextKey.SETTINGS]) }
         }
     }
 }
@@ -106,6 +118,7 @@ private fun LibraryHeader(actions: LibraryActions) {
 /** One library row: the title, the format, the tap that opens it and the delete action. */
 @Composable
 private fun BookRow(book: Book, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
+    val texts = LocalAppTexts.current
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,30 +138,33 @@ private fun BookRow(book: Book, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit
             onClick = { onDelete(book) },
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
             modifier = Modifier.testTag(libraryDeleteTag(book.id)),
-        ) { Text("Delete") }
+        ) { Text(texts[TextKey.DELETE]) }
     }
 }
 
 /** The inline library failure — an import or a delete — with a way to dismiss it. */
 @Composable
 private fun LibraryError(message: String, onDismiss: () -> Unit) {
+    val texts = LocalAppTexts.current
+    val described = texts.message(AppMessage.of(TextKey.ERROR_DETAIL, message))
     Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
         Text(
             text = message,
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.semantics { contentDescription = "Error: $message" },
+            modifier = Modifier.semantics { contentDescription = described },
         )
-        TextButton(onClick = onDismiss) { Text("Dismiss") }
+        TextButton(onClick = onDismiss) { Text(texts[TextKey.DISMISS]) }
     }
 }
 
 /** The inline import progress, determinate so it reports how far along it is. */
 @Composable
 private fun Importing(fraction: Float) {
+    val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
         Text(
-            text = "Importing…",
+            text = texts[TextKey.IMPORTING],
             style = MaterialTheme.typography.bodyMedium,
         )
         LinearProgressIndicator(
@@ -156,7 +172,7 @@ private fun Importing(fraction: Float) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp)
-                .semantics { contentDescription = "Import progress" },
+                .semantics { contentDescription = texts[TextKey.IMPORT_PROGRESS] },
         )
     }
 }

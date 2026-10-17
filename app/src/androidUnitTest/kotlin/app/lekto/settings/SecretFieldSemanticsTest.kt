@@ -38,12 +38,12 @@ class SecretFieldSemanticsTest {
 
         compose.onNode(hasSetTextAction()).performTextInput("sk-live-1234")
         compose.onNode(hasSetTextAction()).assertTextContains("••••••••••••")
-        compose.onNodeWithText(SHOW).assertIsDisplayed()
+        compose.onNodeWithText("Show").assertIsDisplayed()
 
-        compose.onNodeWithText(SHOW).performClick()
+        compose.onNodeWithText("Show").performClick()
 
         compose.onNode(hasSetTextAction()).assertTextContains("sk-live-1234")
-        compose.onNodeWithText(HIDE).assertIsDisplayed()
+        compose.onNodeWithText("Hide").assertIsDisplayed()
     }
 
     @Test

@@ -28,10 +28,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
 import app.lekto.core.language.OfferedLanguage
-import app.lekto.core.language.readingLanguageName
 import app.lekto.core.text.baseLanguage
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /** The test tag on the **Reload list** action, so a UI test can click exactly it. */
 const val LANGUAGES_RELOAD_TAG: String = "languages-reload"
@@ -111,7 +112,7 @@ fun LanguagesScreen(
 
         ReloadAction(onReload = actions.onReload, reloading = state.reloading)
         if (state.reloading) Reloading()
-        state.error?.let { message -> Error(message) }
+        state.error?.let { message -> Error(LocalAppTexts.current.message(message)) }
 
         if (state.languages.isEmpty()) {
             EmptyState(available = state.available)
@@ -141,11 +142,12 @@ fun LanguagesScreen(
 /** The surface's chrome: the way back, its title and the way to attribution. */
 @Composable
 private fun Header(onBack: () -> Unit, onOpenAttribution: () -> Unit) {
+    val texts = LocalAppTexts.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text("Back") }
-        Text("Languages", style = MaterialTheme.typography.headlineMedium)
+        TextButton(onClick = onBack) { Text(texts[TextKey.BACK]) }
+        Text(texts[TextKey.LANGUAGES], style = MaterialTheme.typography.headlineMedium)
         TextButton(onClick = onOpenAttribution, modifier = Modifier.testTag(LANGUAGES_ATTRIBUTION_TAG)) {
-            Text("Attribution")
+            Text(texts[TextKey.ATTRIBUTION])
         }
     }
 }
@@ -160,7 +162,7 @@ private fun ReloadAction(onReload: () -> Unit, reloading: Boolean) {
         onClick = onReload,
         enabled = !reloading,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag(LANGUAGES_RELOAD_TAG),
-    ) { Text("Reload list") }
+    ) { Text(LocalAppTexts.current[TextKey.RELOAD_LIST]) }
 }
 
 /**
@@ -209,20 +211,21 @@ private fun LanguageRow(
  */
 @Composable
 private fun TranslationLanguagePicker(selected: String?, languages: List<String>, actions: LanguagesActions) {
+    val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text("Translation language", style = MaterialTheme.typography.titleMedium)
+        Text(texts[TextKey.TRANSLATION_LANGUAGE], style = MaterialTheme.typography.titleMedium)
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
                 modifier = Modifier.testTag(TRANSLATION_LANGUAGE_PICKER_TAG),
             ) {
-                Text(selected?.let(::readingLanguageName) ?: NOT_SET)
+                Text(selected?.let(texts::languageName) ?: texts[TextKey.NOT_SET])
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 languages.forEach { language ->
                     DropdownMenuItem(
-                        text = { Text(readingLanguageName(language)) },
+                        text = { Text(texts.languageName(language)) },
                         onClick = {
                             expanded = false
                             actions.onSetTranslationLanguage(language)
@@ -241,17 +244,18 @@ private fun TranslationLanguagePicker(selected: String?, languages: List<String>
  */
 @Composable
 private fun LevelPicker(language: String, level: CefrLevel?, actions: LanguagesActions) {
+    val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(
             onClick = { expanded = true },
             modifier = Modifier.testTag(languageLevelPickerTag(language)),
         ) {
-            Text(level?.name ?: NOT_SET)
+            Text(level?.name ?: texts[TextKey.NOT_SET])
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text(NOT_SET) },
+                text = { Text(texts[TextKey.NOT_SET]) },
                 onClick = {
                     expanded = false
                     actions.onClearLevel(language)
@@ -272,17 +276,15 @@ private fun LevelPicker(language: String, level: CefrLevel?, actions: LanguagesA
     }
 }
 
-/** The picker's label for a language with no level declared. */
-private const val NOT_SET: String = "Not set"
-
 /** The honest empty state: no offered languages are known. */
 @Composable
 private fun EmptyState(available: Boolean) {
+    val texts = LocalAppTexts.current
     Text(
         text = if (available) {
-            "Lekto doesn't offer any languages for reading yet."
+            texts[TextKey.LANGUAGES_EMPTY_AVAILABLE]
         } else {
-            "Lekto hasn't loaded the list of languages it offers yet. Reload the list, or check your connection."
+            texts[TextKey.LANGUAGES_EMPTY_UNAVAILABLE]
         },
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
@@ -294,7 +296,7 @@ private fun EmptyState(available: Boolean) {
 private fun Reloading() {
     Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
         LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text("Loading the language list…", style = MaterialTheme.typography.bodyMedium)
+        Text(LocalAppTexts.current[TextKey.LOADING_LANGUAGES], style = MaterialTheme.typography.bodyMedium)
     }
 }
 

@@ -720,8 +720,9 @@ class AppSemanticsTest {
         compose.onNodeWithTag(appLanguageOptionTag("fr")).performClick()
 
         assertEquals("fr", settings.load().appLanguage)
-        // Settings shows the choice without a relaunch.
-        compose.onNodeWithText("French").assertIsDisplayed()
+        // Settings shows the choice without a relaunch — and the whole interface
+        // follows it into French (ADR-0034).
+        compose.onNodeWithText("français").assertIsDisplayed()
     }
 
     @Test
@@ -797,7 +798,7 @@ class AppSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("Languages").performClick()
+        compose.onNodeWithText("Langues").performClick()
 
         // The default lands once the manifest is read; no question is asked.
         compose.waitUntil { settings.load().translationLanguage != null }

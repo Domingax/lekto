@@ -719,8 +719,9 @@ class AppSemanticsTest {
         onNodeWithTag(appLanguageOptionTag("fr")).performClick()
 
         assertEquals("fr", settings.load().appLanguage)
-        // Settings shows the choice without a relaunch.
-        onNodeWithText("French").assertIsDisplayed()
+        // Settings shows the choice without a relaunch — and the whole interface
+        // follows it into French (ADR-0034).
+        onNodeWithText("français").assertIsDisplayed()
     }
 
     @Test
@@ -796,7 +797,7 @@ class AppSemanticsTest {
             )
         }
 
-        onNodeWithText("Languages").performClick()
+        onNodeWithText("Langues").performClick()
 
         // The default lands once the manifest is read; no question is asked.
         waitUntil { settings.load().translationLanguage != null }

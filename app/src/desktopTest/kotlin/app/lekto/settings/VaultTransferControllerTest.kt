@@ -5,6 +5,8 @@ import app.lekto.core.vault.VaultCodec
 import app.lekto.core.vault.VaultStore
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.testVaultRecord
+import app.lekto.text.AppMessage
+import app.lekto.text.appTextsFor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -101,7 +103,7 @@ class VaultTransferControllerTest {
         advanceUntilIdle()
 
         val error = assertNotNull(controller.state.value.error)
-        assertTrue(error.contains("vault"), "the message must say it is not a vault: $error")
+        assertTrue(appTextsFor(null).message(error).contains("vault"), "the message must say it is not a vault: $error")
         assertTrue(target.all().isEmpty(), "a rejected file must not touch the vault")
     }
 
@@ -112,7 +114,7 @@ class VaultTransferControllerTest {
         controller.import()
         advanceUntilIdle()
 
-        assertEquals("permission denied", controller.state.value.error)
+        assertEquals(AppMessage.core("permission denied"), controller.state.value.error)
     }
 
     @Test
@@ -127,7 +129,10 @@ class VaultTransferControllerTest {
         advanceUntilIdle()
 
         val error = assertNotNull(controller.state.value.error)
-        assertTrue(error.contains("99"), "the message must name the version it cannot read: $error")
+        assertTrue(
+            appTextsFor(null).message(error).contains("99"),
+            "the message must name the version it cannot read: $error",
+        )
     }
 
     @Test
@@ -137,7 +142,7 @@ class VaultTransferControllerTest {
         controller.export()
         advanceUntilIdle()
 
-        assertEquals("disk full", controller.state.value.error)
+        assertEquals(AppMessage.core("disk full"), controller.state.value.error)
         assertTrue(!controller.state.value.transferring)
     }
 

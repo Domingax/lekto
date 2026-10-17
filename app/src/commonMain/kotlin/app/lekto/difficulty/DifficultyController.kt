@@ -2,6 +2,8 @@ package app.lekto.difficulty
 
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.text.baseLanguage
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +19,7 @@ import kotlinx.coroutines.withContext
 data class DifficultyUiState(
     val status: DifficultyState = DifficultyState.NotInstalled,
     val installing: Boolean = false,
-    val error: String? = null,
+    val error: AppMessage? = null,
 )
 
 /**
@@ -75,7 +77,10 @@ class DifficultyController(
                 if (status is DifficultyState.Ready) onInstalled()
             } catch (failure: Exception) {
                 update(base) { current ->
-                    current.copy(installing = false, error = failure.message ?: "The download failed.")
+                    current.copy(
+                        installing = false,
+                        error = AppMessage.failure(failure, TextKey.MESSAGE_DIFFICULTY_DOWNLOAD_FAILED),
+                    )
                 }
             }
         }
@@ -91,19 +96,4 @@ class DifficultyController(
     private fun update(base: String, transform: (DifficultyUiState) -> DifficultyUiState) {
         _states.update { current -> current + (base to transform(current[base] ?: DifficultyUiState())) }
     }
-}
-
-/** An honest one-line summary of a **Difficulty table**'s state, for the **Languages** surface. */
-fun DifficultyState.summary(): String = when (this) {
-    DifficultyState.NotInstalled ->
-        "Word-difficulty data isn't installed yet. Download it to colour words by how hard they are."
-
-    is DifficultyState.Ready ->
-        "Word-difficulty data is installed. Words are coloured by how hard they are for your level."
-
-    is DifficultyState.Incompatible ->
-        "The installed word-difficulty data is format $found, but this app reads format $expected. Download it again."
-
-    is DifficultyState.Corrupt ->
-        "The installed word-difficulty data is damaged and couldn't be read. Download it again."
 }

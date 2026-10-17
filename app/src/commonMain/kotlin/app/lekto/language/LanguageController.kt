@@ -5,6 +5,8 @@ import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.language.orderOfferedLanguages
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +28,7 @@ data class LanguagesUiState(
     val languages: List<OfferedLanguage> = emptyList(),
     val available: Boolean = false,
     val reloading: Boolean = false,
-    val error: String? = null,
+    val error: AppMessage? = null,
 )
 
 /**
@@ -75,7 +77,7 @@ class LanguageController(
                 _state.update { current ->
                     current.copy(
                         reloading = false,
-                        error = failure.message ?: "The language list couldn't be loaded.",
+                        error = AppMessage.failure(failure, TextKey.MESSAGE_LANGUAGES_LOAD_FAILED),
                     )
                 }
             }

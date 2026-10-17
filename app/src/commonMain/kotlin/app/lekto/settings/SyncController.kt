@@ -11,6 +11,8 @@ import app.lekto.core.sync.SyncSchedule
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.sync.SyncSettingsStore
 import app.lekto.core.sync.SyncTarget
+import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,13 +58,13 @@ data class SyncServices(
  * the failure in the error colour and nothing has to read a boolean flag.
  */
 sealed interface SyncResult {
-    val message: String
+    val message: AppMessage
 
     /** The action completed; [message] is a short confirmation. */
-    data class Success(override val message: String) : SyncResult
+    data class Success(override val message: AppMessage) : SyncResult
 
     /** The action did not complete; [message] is an honest reason, never carrying a password. */
-    data class Failure(override val message: String) : SyncResult
+    data class Failure(override val message: AppMessage) : SyncResult
 }
 
 /**
@@ -92,7 +94,7 @@ data class SyncUiState(
      * make a run possible, so the flag can never promise a sync that cannot
      * happen.
      */
-    val status: String
+    val status: AppMessage
         get() = when {
             !config.isConfigured -> NOT_SET_UP
             config.enabled && hasStoredPassword -> SYNC_ON
@@ -100,9 +102,9 @@ data class SyncUiState(
         }
 
     companion object {
-        const val SYNC_ON: String = "Sync is on."
-        const val SYNC_OFF: String = "Sync is off."
-        const val NOT_SET_UP: String = "Sync isn't set up yet."
+        val SYNC_ON: AppMessage = AppMessage.Text(TextKey.SYNC_STATUS_ON)
+        val SYNC_OFF: AppMessage = AppMessage.Text(TextKey.SYNC_STATUS_OFF)
+        val NOT_SET_UP: AppMessage = AppMessage.Text(TextKey.SYNC_STATUS_NOT_SET_UP)
     }
 }
 
@@ -302,7 +304,9 @@ class SyncController(
                 config = SyncSettings.DEFAULT,
                 hasStoredPassword = deletion is SecretResult.Unavailable && current.hasStoredPassword,
                 lastSync = null,
-                result = (deletion as? SecretResult.Unavailable)?.let { outcome -> SyncResult.Failure(outcome.message) }
+                result = (deletion as? SecretResult.Unavailable)?.let { outcome ->
+                    SyncResult.Failure(AppMessage.core(outcome.message))
+                }
                     ?: SyncResult.Success(DISCONNECTED),
             )
         }
@@ -436,17 +440,21 @@ class SyncController(
     }
 
     /** Lists the target as the lightest proof that the URL and credentials reach it. */
-    private suspend fun probe(config: SyncSettings, password: String): SyncResult =
-        reach("Couldn't reach the server:") {
-            services.target(config, password).list()
-            CONNECTED
-        }
+    private suspend fun probe(config: SyncSettings, password: String): SyncResult = reach(
+        key = TextKey.MESSAGE_SYNC_PROBE_FAILED,
+        unknown = TextKey.MESSAGE_SYNC_PROBE_FAILED_UNKNOWN,
+    ) {
+        services.target(config, password).list()
+        CONNECTED
+    }
 
     /** Runs one sync, mapping a recoverable failure to a plain-language line. */
-    private suspend fun runSync(config: SyncSettings, password: String): SyncResult =
-        reach("The last sync didn't finish:") {
-            services.engine(services.target(config, password)).sync().summary()
-        }
+    private suspend fun runSync(config: SyncSettings, password: String): SyncResult = reach(
+        key = TextKey.MESSAGE_SYNC_RUN_FAILED,
+        unknown = TextKey.MESSAGE_SYNC_RUN_FAILED_UNKNOWN,
+    ) {
+        services.engine(services.target(config, password)).sync().summary()
+    }
 
     /**
      * Runs [action], reporting any failure as a plain-language line rather than a
@@ -454,15 +462,18 @@ class SyncController(
      * retries ([app.lekto.core.sync.SyncTargetException], ADR-0009).
      */
     @Suppress("TooGenericExceptionCaught") // Any driver failure becomes a message; the app stays usable.
-    private suspend fun reach(context: String, action: suspend () -> String): SyncResult = try {
+    private suspend fun reach(key: TextKey, unknown: TextKey, action: suspend () -> AppMessage): SyncResult = try {
         SyncResult.Success(action())
     } catch (failure: Exception) {
-        SyncResult.Failure("$context ${failure.message ?: UNKNOWN_REASON}")
+        val reason = failure.message
+        SyncResult.Failure(
+            if (reason.isNullOrBlank()) AppMessage.Text(unknown) else AppMessage.of(key, reason),
+        )
     }
 
     /** Stores [value] as the application password, returning an honest message when the store is unavailable. */
-    private fun storePassword(value: String): String? = when (val outcome = secrets.put(PASSWORD_KEY, value)) {
-        is SecretResult.Unavailable -> outcome.message
+    private fun storePassword(value: String): AppMessage? = when (val outcome = secrets.put(PASSWORD_KEY, value)) {
+        is SecretResult.Unavailable -> AppMessage.core(outcome.message)
         else -> null
     }
 
@@ -472,13 +483,11 @@ class SyncController(
         /** The key slot the single application password lives under in the **Secret store**. */
         const val PASSWORD_KEY: String = "sync-password"
 
-        const val SAVED: String = "Saved."
-        const val CONNECTED: String = "The server answered. Sync is ready."
-        const val DISCONNECTED: String = "Disconnected. Your vault stays on this device."
-        const val NOT_CONFIGURED: String = "Add a server address and a username first."
-        const val NO_PASSWORD: String = "Add the application password first."
-
-        private const val UNKNOWN_REASON: String = "an unknown error"
+        val SAVED: AppMessage = AppMessage.Text(TextKey.MESSAGE_SAVED)
+        val CONNECTED: AppMessage = AppMessage.Text(TextKey.MESSAGE_SYNC_CONNECTED)
+        val DISCONNECTED: AppMessage = AppMessage.Text(TextKey.MESSAGE_SYNC_DISCONNECTED)
+        val NOT_CONFIGURED: AppMessage = AppMessage.Text(TextKey.MESSAGE_SYNC_NOT_CONFIGURED)
+        val NO_PASSWORD: AppMessage = AppMessage.Text(TextKey.MESSAGE_SYNC_NO_PASSWORD)
     }
 }
 
@@ -487,39 +496,21 @@ class SyncController(
  * nothing needed to, with a note when a write could not be settled and will
  * retry.
  */
-internal fun SyncReport.summary(): String {
-    val moved = movedParts()
-    val base = when {
-        moved.isNotEmpty() -> "Synced: ${moved.joinToString(", ")}."
-
-        // A run that moved nothing because every write was refused is not "up to
-        // date": say so, or the user reads success into a sync that reached nothing.
-        unresolved > 0 -> "Nothing was synced."
-
-        else -> "Everything was already up to date."
-    }
-    return (listOf(base) + notes()).joinToString(" ")
-}
-
-/** The changes this report names, in the order the section reads them. */
-private fun SyncReport.movedParts(): List<String> = buildList {
-    if (downloaded > 0) add("downloaded $downloaded")
-    if (uploaded > 0) add("uploaded $uploaded")
-    if (deletions > 0) add("removed $deletions")
-    if (attachments > 0) add("carried $attachments book ${plural("original", attachments)}")
-}
-
-/** The honest notes that follow the move count: a resync, and a write that will retry. */
-private fun SyncReport.notes(): List<String> = buildList {
-    if (resynced) add("This device had been away, so it restarted from the server.")
-    if (unresolved > 0) add("Some changes couldn't be settled; they'll retry next time.")
-}
-
-private fun plural(noun: String, count: Int): String = if (count == 1) noun else "${noun}s"
+internal fun SyncReport.summary(): AppMessage = AppMessage.SyncReportText(
+    uploaded = uploaded,
+    downloaded = downloaded,
+    deletions = deletions,
+    attachments = attachments,
+    unresolved = unresolved,
+    resynced = resynced,
+)
 
 /** The outcome as it is kept device-locally, so it can be read back after a restart (issue #121). */
-private fun SyncResult.toOutcome(): SyncOutcome = SyncOutcome(succeeded = this is SyncResult.Success, message = message)
+private fun SyncResult.toOutcome(): SyncOutcome = SyncOutcome(
+    succeeded = this is SyncResult.Success,
+    message = AppMessage.encode(message),
+)
 
 /** The stored outcome back as the section's value, so a restart shows the same line. */
 private fun SyncOutcome.toResult(): SyncResult =
-    if (succeeded) SyncResult.Success(message) else SyncResult.Failure(message)
+    if (succeeded) SyncResult.Success(AppMessage.decode(message)) else SyncResult.Failure(AppMessage.decode(message))

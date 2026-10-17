@@ -1,5 +1,7 @@
 package app.lekto
 
+import app.lekto.text.AppTexts
+import app.lekto.text.TextKey
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -14,8 +16,13 @@ import javax.swing.filechooser.FileNameExtensionFilter
  * is correct: it suspends the compose frame until the user answers, which is what
  * a file dialog does. `sun.awt`/Swing is already present on the desktop JVM, so
  * this adds no dependency.
+ *
+ * The dialog's own chrome — its title and its file-type filter — is visible text,
+ * so it comes from the reader's [AppTexts] (ADR-0034): the entry point resolves
+ * the **app language** at the moment a dialog opens, so it follows the setting.
  */
-fun pickFileToImport(): PickedFile? = chooseFile("Import a book", "Books (EPUB, TXT)", "epub", "txt")
+fun pickFileToImport(texts: AppTexts): PickedFile? =
+    chooseFile(texts[TextKey.PICK_BOOK_TITLE], texts[TextKey.BOOKS_FILTER], "epub", "txt")
 
 /**
  * The desktop save dialog for a vault export (issue #20): writes [bytes] to the
@@ -23,11 +30,11 @@ fun pickFileToImport(): PickedFile? = chooseFile("Import a book", "Books (EPUB, 
  * failure throws, so the settings screen can report it rather than read as a
  * cancel.
  */
-fun saveVaultToFile(fileName: String, bytes: ByteArray): Boolean {
+fun saveVaultToFile(texts: AppTexts, fileName: String, bytes: ByteArray): Boolean {
     val chooser = JFileChooser().apply {
-        dialogTitle = "Export vault"
+        dialogTitle = texts[TextKey.EXPORT_VAULT_TITLE]
         selectedFile = File(fileName)
-        fileFilter = FileNameExtensionFilter("Lekto vault (JSON)", "json")
+        fileFilter = FileNameExtensionFilter(texts[TextKey.VAULT_FILTER], "json")
     }
     if (chooser.showSaveDialog(null) != JFileChooser.APPROVE_OPTION) return false
     val file = chooser.selectedFile
@@ -36,7 +43,8 @@ fun saveVaultToFile(fileName: String, bytes: ByteArray): Boolean {
 }
 
 /** The desktop open dialog for a vault export to import. `null` when the user cancels. */
-fun pickVaultFileToImport(): PickedFile? = chooseFile("Import a vault", "Lekto vault (JSON)", "json")
+fun pickVaultFileToImport(texts: AppTexts): PickedFile? =
+    chooseFile(texts[TextKey.IMPORT_VAULT_TITLE], texts[TextKey.VAULT_FILTER], "json")
 
 private fun chooseFile(title: String, description: String, vararg extensions: String): PickedFile? {
     val chooser = JFileChooser().apply {

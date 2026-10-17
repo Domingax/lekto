@@ -878,6 +878,16 @@ tokeniser's lemma index resolve the pack for the chosen pair and none when it is
 unset, and `WordTapHandlerTest` pins the same through a tap. The reference
 shortcuts' Spanish pair is `DictionarySourceTest` in `core/commonTest`.
 
+The app's own texts (issue #165; ADR-0034) are one per-language table selected by
+the **app language**. `AppTextsTest` in `app/desktopTest` pins that every
+`TextKey` resolves in both languages the app ships, that a parameterised message
+fills its values, that a known domain constant reads in the chosen language, that
+an unknown domain text passes through unchanged, and that a stored message
+round-trips so a kept sync outcome still reads after a restart. The whole
+**Settings** screen re-rendered in French is `SettingsScreenSemanticsTest` on both
+lanes, and the picker's re-render without a relaunch is `AppSemanticsTest` on both
+lanes.
+
 ## Naming and placement
 
 A few conventions the compiler cannot check are asserted by the `architecture`

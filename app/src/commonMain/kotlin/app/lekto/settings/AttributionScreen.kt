@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.PackMetadata
 import app.lekto.core.difficulty.DifficultyMetadata
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /**
  * The mandatory attribution screen (issues #18, #64 and #149; ADR-0011,
@@ -38,8 +40,8 @@ fun AttributionScreen(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        TextButton(onClick = onBack) { Text("Back") }
-        Text("Attribution", style = MaterialTheme.typography.headlineMedium)
+        TextButton(onClick = onBack) { Text(LocalAppTexts.current[TextKey.BACK]) }
+        Text(LocalAppTexts.current[TextKey.ATTRIBUTION], style = MaterialTheme.typography.headlineMedium)
         DictionaryAttribution(metadata)
         DifficultyAttribution(difficulty)
     }
@@ -48,15 +50,14 @@ fun AttributionScreen(
 /** The dictionary pack's block: the Wiktionary grant, and its metadata when a pack is installed. */
 @Composable
 private fun DictionaryAttribution(metadata: PackMetadata?) {
+    val texts = LocalAppTexts.current
     Text(
-        "Dictionary data is derived from Wiktionary contributors, licensed under CC BY-SA 4.0 " +
-            "(and GFDL at your choice). Lekto is not affiliated with, nor endorsed by, the Wikimedia " +
-            "Foundation or Wiktionary.",
+        texts[TextKey.ATTRIBUTION_DICTIONARY_GRANT],
         style = MaterialTheme.typography.bodyMedium,
     )
     if (metadata == null) {
         Text(
-            "The offline dictionary isn't installed yet. Its full attribution appears here once it is.",
+            texts[TextKey.ATTRIBUTION_DICTIONARY_NOT_INSTALLED],
             style = MaterialTheme.typography.bodyMedium,
         )
     } else {
@@ -74,14 +75,14 @@ private fun DictionaryAttribution(metadata: PackMetadata?) {
 /** The difficulty table's block: the wordfreq grant, and its metadata when a table is installed. */
 @Composable
 private fun DifficultyAttribution(difficulty: DifficultyMetadata?) {
+    val texts = LocalAppTexts.current
     Text(
-        "Word-difficulty data is derived from wordfreq by Robyn Speer, licensed under CC BY-SA 4.0. " +
-            "Lekto is not affiliated with, nor endorsed by, wordfreq.",
+        texts[TextKey.ATTRIBUTION_DIFFICULTY_GRANT],
         style = MaterialTheme.typography.bodyMedium,
     )
     if (difficulty == null) {
         Text(
-            "The word-difficulty data isn't installed yet. Its full attribution appears here once it is.",
+            texts[TextKey.ATTRIBUTION_DIFFICULTY_NOT_INSTALLED],
             style = MaterialTheme.typography.bodyMedium,
         )
     } else {
@@ -107,10 +108,11 @@ private fun Fields(
     modifications: String?,
     notice: String?,
 ) {
-    Field("Source", attribution)
-    Field("Data", sourceData)
-    Field("Licence", license(licenseName, licenseUrl))
-    Field("Modifications", modifications)
+    val texts = LocalAppTexts.current
+    Field(texts[TextKey.FIELD_SOURCE], attribution)
+    Field(texts[TextKey.FIELD_DATA], sourceData)
+    Field(texts[TextKey.FIELD_LICENCE], license(licenseName, licenseUrl))
+    Field(texts[TextKey.FIELD_MODIFICATIONS], modifications)
     notice?.let { text -> Text(text, style = MaterialTheme.typography.bodySmall) }
 }
 

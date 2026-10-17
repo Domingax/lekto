@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /**
  * A secret input (issue #24, acceptance criterion 4; ADR-0021): the value is
@@ -39,13 +41,9 @@ fun SecretField(value: String, onValueChange: (String) -> Unit, label: String, m
         visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             TextButton(onClick = { revealed = !revealed }) {
-                Text(if (revealed) HIDE else SHOW)
+                Text(LocalAppTexts.current[if (revealed) TextKey.HIDE else TextKey.SHOW])
             }
         },
         modifier = modifier,
     )
 }
-
-/** The toggle's labels, so the control and its tests name the same words. */
-internal const val SHOW: String = "Show"
-internal const val HIDE: String = "Hide"

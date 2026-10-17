@@ -11,6 +11,7 @@ import app.lekto.settings.ProviderController
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemorySecretStore
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -110,7 +111,10 @@ class PhraseTranslationControllerTest {
         controller.translate("the lantern", null, "fr")
         advanceUntilIdle()
 
-        assertEquals(PhraseTranslationState.Failed(LlmConnectionResult.REJECTED_KEY), controller.state.value.state)
+        assertEquals(
+            PhraseTranslationState.Failed(AppMessage.core(LlmConnectionResult.REJECTED_KEY)),
+            controller.state.value.state,
+        )
     }
 
     @Test

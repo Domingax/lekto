@@ -31,6 +31,10 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryChip
 import app.lekto.reader.readerColorOr
+import app.lekto.text.AppMessage
+import app.lekto.text.AppTexts
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /** The test tag on the search field, so a UI test can type into it unambiguously. */
 internal const val VOCABULARY_SEARCH_TAG: String = "vocabulary-search"
@@ -96,7 +100,7 @@ fun VocabularyScreen(
         Header(actions.onBack)
         when (state) {
             VocabularyUiState.Empty -> Text(
-                text = "No words saved yet — tap a word while reading to save it",
+                text = LocalAppTexts.current[TextKey.VOCABULARY_EMPTY],
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 24.dp),
             )
@@ -108,19 +112,21 @@ fun VocabularyScreen(
 
 @Composable
 private fun Header(onBack: () -> Unit) {
+    val texts = LocalAppTexts.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text("Library") }
-        Text("Vocabulary", style = MaterialTheme.typography.headlineMedium)
+        TextButton(onClick = onBack) { Text(texts[TextKey.LIBRARY]) }
+        Text(texts[TextKey.VOCABULARY], style = MaterialTheme.typography.headlineMedium)
     }
 }
 
 @Composable
 private fun ColumnScope.Results(state: VocabularyUiState.Results, actions: VocabularyActions) {
+    val texts = LocalAppTexts.current
     Search(state.query, actions.onSearch)
     MasteryFilter(state.masteryLevel, actions.onFilter)
     if (state.entries.isEmpty()) {
         Text(
-            text = noMatchMessage(state.query, state.masteryLevel),
+            text = noMatchMessage(texts, state.query, state.masteryLevel),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 16.dp),
         )
@@ -138,7 +144,7 @@ private fun Search(query: String, onSearch: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = onSearch,
-        label = { Text("Search") },
+        label = { Text(LocalAppTexts.current[TextKey.SEARCH]) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag(VOCABULARY_SEARCH_TAG),
     )
@@ -151,13 +157,14 @@ private fun Search(query: String, onSearch: (String) -> Unit) {
  */
 @Composable
 private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit) {
+    val texts = LocalAppTexts.current
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MasteryChip(
             level = null,
-            label = "All levels",
+            label = texts[TextKey.ALL_LEVELS],
             selected = selected == null,
             onClick = { onFilter(null) },
             modifier = Modifier.testTag(vocabularyFilterTag(null)),
@@ -165,7 +172,7 @@ private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> 
         MasteryLevel.entries.forEach { level ->
             MasteryChip(
                 level = level,
-                label = level.fullLabel(),
+                label = texts.masteryName(level),
                 selected = level == selected,
                 onClick = { onFilter(level) },
                 modifier = Modifier.testTag(vocabularyFilterTag(level)),
@@ -175,23 +182,27 @@ private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> 
 }
 
 /** Why the filtered list is empty, naming each filter that emptied it. */
-private fun noMatchMessage(query: String, masteryLevel: MasteryLevel?): String {
+private fun noMatchMessage(texts: AppTexts, query: String, masteryLevel: MasteryLevel?): String {
     val searched = query.trim()
     return when {
-        searched.isNotEmpty() && masteryLevel != null ->
-            "No words match \"$searched\" at the ${masteryLevel.fullLabel()} level."
+        searched.isNotEmpty() && masteryLevel != null -> texts.message(
+            AppMessage.of(TextKey.NO_WORDS_MATCH_QUERY_AT_LEVEL, searched, texts.masteryName(masteryLevel)),
+        )
 
-        searched.isNotEmpty() -> "No words match \"$searched\"."
+        searched.isNotEmpty() -> texts.message(AppMessage.of(TextKey.NO_WORDS_MATCH_QUERY, searched))
 
-        masteryLevel != null -> "No words at the ${masteryLevel.fullLabel()} level."
+        masteryLevel != null -> texts.message(
+            AppMessage.of(TextKey.NO_WORDS_AT_LEVEL, texts.masteryName(masteryLevel)),
+        )
 
-        else -> "No words to show."
+        else -> texts[TextKey.NO_WORDS_TO_SHOW]
     }
 }
 
 /** One entry: its word, translation, context sentence, mastery and delete action. */
 @Composable
 private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit) {
+    val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -203,7 +214,7 @@ private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit
                 onClick = { onDelete(entry) },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.testTag(vocabularyDeleteTag(entry.key)),
-            ) { Text("Delete") }
+            ) { Text(texts[TextKey.DELETE]) }
         }
         Mastery(entry.mastery, entry.key)
         entry.translation?.let { translation ->
@@ -224,6 +235,7 @@ private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit
  */
 @Composable
 private fun Mastery(level: MasteryLevel, key: WordKey) {
+    val texts = LocalAppTexts.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier
@@ -231,20 +243,11 @@ private fun Mastery(level: MasteryLevel, key: WordKey) {
                 .background(level.readerColorOr(MaterialTheme.colorScheme.outline), CircleShape),
         )
         Text(
-            level.fullLabel(),
+            texts.masteryName(level),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.testTag(vocabularyMasteryTag(key)),
         )
     }
-}
-
-/** A mastery level's readable name, so the list shows the level and not just its colour. */
-private fun MasteryLevel.fullLabel(): String = when (this) {
-    MasteryLevel.UNKNOWN -> "Unknown"
-    MasteryLevel.RECOGNIZED -> "Recognized"
-    MasteryLevel.FAMILIAR -> "Familiar"
-    MasteryLevel.LEARNED -> "Learned"
-    MasteryLevel.KNOWN -> "Known"
 }
 
 /**

@@ -37,13 +37,13 @@ class SecretFieldSemanticsTest {
 
         // Masked by default: one bullet per character, never the key itself.
         onNode(hasSetTextAction()).assertTextContains("••••••••••••")
-        onNodeWithText(SHOW).assertIsDisplayed()
+        onNodeWithText("Show").assertIsDisplayed()
 
-        onNodeWithText(SHOW).performClick()
+        onNodeWithText("Show").performClick()
 
         // Revealed: the value itself, and the toggle now offers to hide it.
         onNode(hasSetTextAction()).assertTextContains("sk-live-1234")
-        onNodeWithText(HIDE).assertIsDisplayed()
+        onNodeWithText("Hide").assertIsDisplayed()
     }
 
     @Test

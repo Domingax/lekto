@@ -8,6 +8,7 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.testOfferedLanguage
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -102,7 +103,7 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        assertEquals("offline", controller.states.value.getValue(artifact("en", "fr")).error)
+        assertEquals(AppMessage.core("offline"), controller.states.value.getValue(artifact("en", "fr")).error)
         assertTrue(!controller.states.value.getValue(artifact("en", "fr")).installing)
     }
 

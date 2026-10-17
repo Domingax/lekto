@@ -4,9 +4,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -14,6 +16,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
+import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.appTextsFor
 import app.lekto.ui.CONFIRM_DIALOG_CANCEL_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import org.junit.Assert.assertEquals
@@ -79,7 +84,7 @@ class LibraryScreenSemanticsTest {
         var dismissed = false
         compose.setContent {
             Library(
-                LibraryUiState(error = "Could not read 'broken.epub'."),
+                LibraryUiState(error = AppMessage.core("Could not read 'broken.epub'.")),
                 onDismissError = { dismissed = true },
             )
         }
@@ -130,6 +135,25 @@ class LibraryScreenSemanticsTest {
 
         compose.onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
         assertNull(deleted)
+    }
+
+    @Test
+    fun theHeaderKeepsItsNavigationReadableInFrench() {
+        // The French title is wider than the English one, so on a phone the
+        // navigation cannot share its line: it must wrap below, not be squeezed
+        // into a one-character column (ADR-0034).
+        compose.setContent {
+            CompositionLocalProvider(LocalAppTexts provides appTextsFor("fr")) {
+                Library(LibraryUiState())
+            }
+        }
+
+        compose.onNodeWithText("Bibliothèque").assertIsDisplayed()
+        compose.onNodeWithText("Langues").assertIsDisplayed()
+        compose.onNodeWithText("Vocabulaire").assertIsDisplayed()
+        val settings = compose.onNodeWithText("Réglages").assertIsDisplayed().getBoundsInRoot()
+        val height = settings.bottom - settings.top
+        assertTrue("the nav label must stay on one line: $height", height < 80.dp)
     }
 
     @Composable

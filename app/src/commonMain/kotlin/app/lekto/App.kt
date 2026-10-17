@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,6 +82,8 @@ import app.lekto.settings.SyncUiState
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.appTextsFor
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
@@ -360,22 +363,24 @@ fun App(
     // edge to edge whether it asks to or not, so without this the chrome sits
     // under the status bar and the system, which owns that strip, eats its taps.
     Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-        AppScreens(
-            environment,
-            controller,
-            state,
-            scope,
-            progress,
-            settings,
-            vocabulary,
-            mastery,
-            language,
-            languageSettings,
-            lemmas,
-            difficulty,
-            difficultyStates,
-            dictionaryStates,
-        )
+        CompositionLocalProvider(LocalAppTexts provides appTextsFor(languageSettings?.appLanguage)) {
+            AppScreens(
+                environment,
+                controller,
+                state,
+                scope,
+                progress,
+                settings,
+                vocabulary,
+                mastery,
+                language,
+                languageSettings,
+                lemmas,
+                difficulty,
+                difficultyStates,
+                dictionaryStates,
+            )
+        }
     }
 }
 

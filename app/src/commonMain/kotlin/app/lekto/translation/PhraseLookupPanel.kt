@@ -18,6 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.TranslationShortcut
+import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /** The test tag on the translation shortcut, so a UI test can click exactly it. */
 internal const val TRANSLATION_SHORTCUT_TAG: String = "lookup-translation-shortcut"
@@ -68,7 +71,7 @@ fun PhraseLookupPanel(
         ) {
             Text(phrase, style = MaterialTheme.typography.titleLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = actions.onDismiss) { Text("Close") }
+                TextButton(onClick = actions.onDismiss) { Text(LocalAppTexts.current[TextKey.CLOSE]) }
             }
             TranslationSection(translation, onOpenSettings)
             ShortcutSection(shortcut, actions)
@@ -103,15 +106,16 @@ private fun TranslationSection(translation: PhraseTranslationUiState, onOpenSett
 /** The non-blocking prompt shown with no usable provider, with a link to settings beside the shortcut. */
 @Composable
 private fun NoProviderPrompt(onOpenSettings: () -> Unit) {
+    val texts = LocalAppTexts.current
     Text(
-        "Connect an LLM provider in settings to translate phrases here.",
+        texts[TextKey.CONNECT_PROVIDER_PROMPT],
         style = MaterialTheme.typography.bodyLarge,
     )
     TextButton(
         onClick = onOpenSettings,
         modifier = Modifier.testTag(TRANSLATION_SETTINGS_TAG),
     ) {
-        Text("Open settings")
+        Text(texts[TextKey.OPEN_SETTINGS])
     }
 }
 
@@ -119,7 +123,7 @@ private fun NoProviderPrompt(onOpenSettings: () -> Unit) {
 @Composable
 private fun StreamingResult(text: String) {
     if (text.isEmpty()) {
-        Text("Translating…", style = MaterialTheme.typography.bodyLarge)
+        Text(LocalAppTexts.current[TextKey.TRANSLATING], style = MaterialTheme.typography.bodyLarge)
     } else {
         TranslationResult(text)
     }
@@ -129,7 +133,7 @@ private fun StreamingResult(text: String) {
 @Composable
 private fun DoneResult(text: String) {
     if (text.isBlank()) {
-        TranslationResult("The provider returned no translation.")
+        TranslationResult(LocalAppTexts.current[TextKey.PROVIDER_RETURNED_NO_TRANSLATION])
     } else {
         TranslationResult(text)
     }
@@ -137,9 +141,9 @@ private fun DoneResult(text: String) {
 
 /** The inline failure, tagged so a test can read it apart from the phrase title. */
 @Composable
-private fun FailureResult(message: String) {
+private fun FailureResult(message: AppMessage) {
     Text(
-        message,
+        LocalAppTexts.current.message(message),
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodyLarge,
         modifier = Modifier.testTag(TRANSLATION_RESULT_TAG),
@@ -153,16 +157,22 @@ private fun FailureResult(message: String) {
  */
 @Composable
 private fun TranslationDisclosure(translation: PhraseTranslationUiState) {
+    val texts = LocalAppTexts.current
     var expanded by remember(translation.context) { mutableStateOf(false) }
     TextButton(
         onClick = { expanded = !expanded },
         modifier = Modifier.testTag(TRANSLATION_DISCLOSURE_TAG),
     ) {
-        Text(if (expanded) "Hide what's sent" else "What's sent?")
+        Text(texts[if (expanded) TextKey.HIDE_WHAT_IS_SENT else TextKey.WHAT_IS_SENT])
     }
     if (expanded) {
         Text(
-            "Sends your selection and its sentence to ${translation.provider ?: "the provider"}.",
+            texts.message(
+                AppMessage.of(
+                    TextKey.SENDS_SELECTION_TO,
+                    translation.provider ?: texts[TextKey.THE_PROVIDER],
+                ),
+            ),
             style = MaterialTheme.typography.labelMedium,
         )
         if (translation.context.isNotBlank()) {
@@ -184,13 +194,14 @@ private fun TranslationResult(text: String) {
 /** The zero-configuration Translation shortcut, or an honest message when the phrase cannot be addressed. */
 @Composable
 private fun ShortcutSection(shortcut: TranslationShortcut?, actions: PhraseLookupActions) {
+    val texts = LocalAppTexts.current
     if (shortcut == null) {
         Text(
-            "No translation service is available for this phrase.",
+            texts[TextKey.NO_TRANSLATION_SERVICE],
             style = MaterialTheme.typography.bodyLarge,
         )
     } else {
-        Text("Translate online", style = MaterialTheme.typography.labelLarge)
+        Text(texts[TextKey.TRANSLATE_ONLINE], style = MaterialTheme.typography.labelLarge)
         TextButton(
             onClick = { actions.onOpenShortcut(shortcut) },
             modifier = Modifier.testTag(TRANSLATION_SHORTCUT_TAG),

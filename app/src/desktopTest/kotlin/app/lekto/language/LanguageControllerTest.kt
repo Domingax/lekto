@@ -5,6 +5,7 @@ import app.lekto.core.book.BookFormat
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.testOfferedLanguage
+import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -65,7 +66,7 @@ class LanguageControllerTest {
 
         assertTrue(controller.state.value.languages.isEmpty())
         assertEquals(false, controller.state.value.available)
-        assertEquals("offline", controller.state.value.error)
+        assertEquals(AppMessage.core("offline"), controller.state.value.error)
     }
 
     @Test

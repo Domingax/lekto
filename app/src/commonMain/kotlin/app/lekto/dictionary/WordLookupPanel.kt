@@ -23,6 +23,9 @@ import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryChip
+import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
@@ -91,6 +94,7 @@ fun WordLookupPanel(
     modifier: Modifier = Modifier,
 ) {
     Card(modifier.fillMaxWidth().padding(8.dp)) {
+        val texts = LocalAppTexts.current
         Column(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -101,11 +105,14 @@ fun WordLookupPanel(
                 is WordLookup.Found -> Found(result, term)
 
                 is WordLookup.NotInDictionary -> Text(
-                    "\"${result.query}\" isn't in the offline dictionary.",
+                    texts.message(AppMessage.of(TextKey.NOT_IN_DICTIONARY, result.query)),
                     style = MaterialTheme.typography.bodyLarge,
                 )
 
-                is WordLookup.Unavailable -> Text(result.message, style = MaterialTheme.typography.bodyLarge)
+                is WordLookup.Unavailable -> Text(
+                    texts.coreMessage(result.message),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
             }
             Shortcuts(shortcuts, actions.onOpenShortcut)
             MasterySelector(vocabulary)
@@ -115,17 +122,20 @@ fun WordLookupPanel(
 
 @Composable
 private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPanel, onDismiss: () -> Unit) {
+    val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth()) {
         Text(term, style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) { Text("Listen") }
+            TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) {
+                Text(texts[TextKey.LISTEN])
+            }
             TextButton(
                 onClick = { vocabulary.onSave(vocabulary.level) },
                 modifier = Modifier.testTag(SAVE_TAG),
             ) {
-                Text(if (vocabulary.entry == null) "Save" else "Saved")
+                Text(texts[if (vocabulary.entry == null) TextKey.SAVE else TextKey.SAVED])
             }
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(texts[TextKey.CLOSE]) }
         }
     }
 }
@@ -140,7 +150,7 @@ private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPane
  */
 @Composable
 private fun MasterySelector(vocabulary: VocabularyPanel) {
-    Text("Mastery", style = MaterialTheme.typography.labelLarge)
+    Text(LocalAppTexts.current[TextKey.MASTERY], style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         MasteryLevel.entries.forEach { level ->
             MasteryChip(
@@ -166,14 +176,15 @@ private fun MasteryLevel.shortLabel(): String = when (this) {
 /** The honest outcome of the last pronunciation attempt: a failure is a message, success is silent. */
 @Composable
 private fun SpeechMessage(speech: SpeechResult?) {
+    val texts = LocalAppTexts.current
     val message = when (speech) {
         null, is SpeechResult.Spoken -> null
 
-        is SpeechResult.NoVoice ->
-            speech.language?.let { language -> "No voice is installed for \"$language\"." }
-                ?: "No voice is installed for this language."
+        is SpeechResult.NoVoice -> speech.language?.let { language ->
+            texts.message(AppMessage.of(TextKey.NO_VOICE_FOR_LANGUAGE, language))
+        } ?: texts[TextKey.NO_VOICE_FOR_UNKNOWN_LANGUAGE]
 
-        is SpeechResult.Unavailable -> speech.message
+        is SpeechResult.Unavailable -> texts.coreMessage(speech.message)
     }
     message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
 }
@@ -199,7 +210,7 @@ private fun Entry(entry: DictionaryEntry) {
 @Composable
 private fun Shortcuts(shortcuts: List<DictionaryShortcut>, onOpenShortcut: (DictionaryShortcut) -> Unit) {
     if (shortcuts.isEmpty()) return
-    Text("Look it up online", style = MaterialTheme.typography.labelLarge)
+    Text(LocalAppTexts.current[TextKey.LOOK_IT_UP_ONLINE], style = MaterialTheme.typography.labelLarge)
     shortcuts.forEach { shortcut ->
         TextButton(
             onClick = { onOpenShortcut(shortcut) },

@@ -8,6 +8,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 
 /** The test tag on a confirmation dialog's destructive confirm button. */
 internal const val CONFIRM_DIALOG_CONFIRM_TAG: String = "confirm-dialog-confirm"
@@ -49,7 +51,7 @@ fun ConfirmationDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.testTag(CONFIRM_DIALOG_CANCEL_TAG)) {
-                Text("Cancel")
+                Text(LocalAppTexts.current[TextKey.CANCEL])
             }
         },
         modifier = modifier,
