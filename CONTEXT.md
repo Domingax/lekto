@@ -159,6 +159,13 @@ reader's own level, on the same scale as a word's **Word difficulty**, and
 user-authored data rather than app configuration.
 _Avoid_: Proficiency, language level, user level
 
+**Reading preference**:
+How Lekto renders a book's text for the reader on this device: the face, size,
+leading and margins. One choice per device and not per **Reading language**,
+app-private and never synced, so it does not travel with the **Vault** the way
+the **Reader level** does (ADR-0035).
+_Avoid_: Reading settings, reader style, font settings, typography
+
 **Lemma**:
 The dictionary form of a word — "manger" for "mangeais". Used as the canonical key for
 mastery when known; otherwise the normalised surface form is used. The dictionary
