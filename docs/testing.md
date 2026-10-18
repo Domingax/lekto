@@ -897,6 +897,27 @@ tokeniser's lemma index resolve the pack for the chosen pair and none when it is
 unset, and `WordTapHandlerTest` pins the same through a tap. The reference
 shortcuts' Spanish pair is `DictionarySourceTest` in `core/commonTest`.
 
+The reader's **Reading preference** (issue #169; ADR-0035) — the face, size, leading
+and margins a book renders with — is proved at its own levels. The
+`ReadingPreferencesStore` seam runs the shared `ReadingPreferencesStoreContract`
+against the in-memory fake and the JSON document store over an in-memory filesystem
+in `core/commonTest`, and against the same document over a real directory in
+`core/jvmTest`; `JsonReadingPreferencesStoreTest` adds the cases the contract does
+not — a corrupt document, and a face or margin this build does not know, both read
+as the defaults — and pins that the preference lives under the settings root and
+never lands in the vault or its export. The value's own rules — the default
+reproduces today's fixed style, the leading is derived from the size, and the size
+steps and stops at its bounds — are `ReadingPreferencesTest` and `ReaderStylesTest`.
+`ReadingPreferencesControllerTest` pins that the store is the truth (a choice is
+written through and survives a restart) and `ReaderPaginationTest` that a bigger
+size takes more pages, so the repagination the ticket's Evidence names is proved
+where pagination lands. The **Aa** panel is
+`ReadingPreferencesPanelSemanticsTest` on both lanes — the current face, size and
+margin with the chosen chip marked `selected`, each control raising the next value
+the reader sees repaginated, and the size disabled at its bounds — and the whole
+loop, changing the size in the reader and finding it kept after leaving and
+reopening the book, runs through `AppSemanticsTest` on both lanes.
+
 The app's own texts (issue #165; ADR-0034) are one per-language table selected by
 the **app language**. `AppTextsTest` in `app/desktopTest` pins that every
 `TextKey` resolves in both languages the app ships, that a parameterised message

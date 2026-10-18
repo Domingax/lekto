@@ -58,6 +58,17 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.PREVIOUS_PAGE to "Page précédente",
     TextKey.NEXT_PAGE to "Page suivante",
     TextKey.PAGE_OF to "Page {0} sur {1}",
+    TextKey.READING_PREFERENCES to "Aa",
+    TextKey.READING_FACE to "Police du texte",
+    TextKey.READING_FACE_SERIF to "À empattements",
+    TextKey.READING_FACE_SANS_SERIF to "Sans empattements",
+    TextKey.READING_SIZE to "Taille du texte",
+    TextKey.READING_SMALLER to "Réduire",
+    TextKey.READING_LARGER to "Agrandir",
+    TextKey.READING_MARGINS to "Marges",
+    TextKey.READING_MARGIN_NARROW to "Étroites",
+    TextKey.READING_MARGIN_COMFORTABLE to "Confortables",
+    TextKey.READING_MARGIN_WIDE to "Larges",
 
     // Word lookup panel.
     TextKey.LISTEN to "Écouter",

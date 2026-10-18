@@ -37,6 +37,7 @@ import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
+import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
@@ -70,6 +71,8 @@ import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READING_LARGER_TAG
+import app.lekto.reader.READING_PREFERENCES_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
@@ -92,6 +95,7 @@ import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryReaderLevels
+import app.lekto.testkit.InMemoryReadingPreferencesStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
@@ -125,7 +129,8 @@ import kotlin.test.assertTrue
  * resumes at the page the reader left.
  */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
+// One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass", "MagicNumber")
 class AppSemanticsTest {
 
     @Test
@@ -165,6 +170,28 @@ class AppSemanticsTest {
         onNodeWithText("The Lantern Keeper").performClick()
 
         onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theReadingPreferenceIsKeptAcrossSessions() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        val preferences = InMemoryReadingPreferencesStore()
+        setContent { App(environment(library, readingPreferences = preferences)) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        onNodeWithTag(READING_LARGER_TAG).performClick()
+
+        assertEquals(20f, preferences.load().size)
+
+        // Leave the book and reopen it: the choice is device-local configuration,
+        // not session state, so the reader starts from it (ADR-0035).
+        onNodeWithText("Library").performClick()
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        onNodeWithTag(READING_LARGER_TAG).performClick()
+
+        assertEquals(22f, preferences.load().size)
     }
 
     @Test
@@ -1096,6 +1123,7 @@ internal fun environment(
     readerLevels: ReaderLevels? = null,
     languageSettings: LanguageSettingsStore? = null,
     systemLanguage: String? = null,
+    readingPreferences: ReadingPreferencesStore? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
@@ -1109,6 +1137,7 @@ internal fun environment(
     readerLevels = readerLevels,
     languageSettings = languageSettings,
     systemLanguage = systemLanguage,
+    readingPreferences = readingPreferences,
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,

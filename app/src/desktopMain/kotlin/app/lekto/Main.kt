@@ -22,6 +22,7 @@ fun main() {
         val vocabulary = remember { desktopVocabulary() }
         val readerLevels = remember { desktopReaderLevels() }
         val languageSettings = remember { desktopLanguageSettings() }
+        val readingPreferences = remember { desktopReadingPreferences() }
         val dictionary = remember { desktopDictionary() }
         val difficulty = remember { desktopDifficulty() }
         val languages = remember { desktopLanguage() }
@@ -61,6 +62,7 @@ fun main() {
                     readerLevels = readerLevels,
                     languageSettings = languageSettings,
                     systemLanguage = systemLanguage,
+                    readingPreferences = readingPreferences,
                     pickFile = { pickFileToImport(appTextsFor(languageSettings.load().appLanguage)) },
                     dictionary = dictionary,
                     difficulty = difficulty,

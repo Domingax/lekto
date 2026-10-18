@@ -49,8 +49,8 @@ class ReaderScreenSemanticsTest {
     )
 
     private companion object {
-        /** Previous and Next: the only clickable nodes the screen adds itself. */
-        const val CHROME_BUTTONS = 2
+        /** Previous, Next and the **Aa** control: the clickable nodes the screen adds itself. */
+        const val CHROME_BUTTONS = 3
 
         /** One short line, so the page has blank space below it for a centre tap. */
         val SHORT_CHAPTER = ReaderChapter(

@@ -7,6 +7,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
+import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.IcuTextSegmenter
 import app.lekto.core.text.TextBlock
@@ -51,9 +52,10 @@ class LongChapterPerformanceTest {
     @Suppress("LongMethod") // One linear measurement: chapter text, first page, first-page tokens, whole-book layout.
     fun aLongBookIsOpenedWithoutProcessingTheWholeBook() = runComposeUiTest {
         val renderer = ReaderRenderer(IcuTextSegmenter(), MasteryLookup { MasteryLevel.UNKNOWN })
+        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT)
 
         var start = System.nanoTime()
-        val chapterText = buildChapterText(chapter, renderer.styles)
+        val chapterText = buildChapterText(chapter, styles)
         val chapterTextMs = millisSince(start)
 
         lateinit var firstPage: ReaderPage
@@ -66,16 +68,16 @@ class LongChapterPerformanceTest {
             val density = LocalDensity.current
             val width = with(density) { 320.dp.roundToPx() }
             val height = with(density) { 560.dp.roundToPx() }
-            val layout = ReaderLayout(measurer, renderer.styles.body, width, height)
+            val layout = ReaderLayout(measurer, styles.body, width, height)
             // Warm up the text engine and the segmenter so the timings separate the
             // first page's steady-state cost from one-off JIT and ICU startup.
             val warmUp = paginateChapter(chapterText, layout).first()
-            buildPageTokens(chapterText, warmUp, renderer, chapter)
+            buildPageTokens(chapterText, warmUp, renderer, chapter, styles)
             start = System.nanoTime()
             firstPage = paginateChapter(chapterText, layout).first()
             firstPageMs = millisSince(start)
             start = System.nanoTime()
-            buildPageTokens(chapterText, firstPage, renderer, chapter)
+            buildPageTokens(chapterText, firstPage, renderer, chapter, styles)
             firstPageTokensMs = millisSince(start)
             start = System.nanoTime()
             pages = paginateChapter(chapterText, layout).toList()
@@ -84,7 +86,7 @@ class LongChapterPerformanceTest {
         waitForIdle()
 
         start = System.nanoTime()
-        val eagerTokens = buildReaderTokens(chapter, renderer)
+        val eagerTokens = buildReaderTokens(chapter, renderer, styles)
         val eagerTokensMs = millisSince(start)
 
         println(

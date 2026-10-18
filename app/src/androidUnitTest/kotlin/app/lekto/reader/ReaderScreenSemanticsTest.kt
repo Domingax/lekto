@@ -67,10 +67,11 @@ class ReaderScreenSemanticsTest {
 
     private companion object {
         /**
-         * Library, Previous page and Next page: the clickable nodes the chrome
-         * adds itself, so a count above this needs at least one word link.
+         * Library, Previous page, Next page and the **Aa** control: the clickable
+         * nodes the chrome adds itself, so a count above this needs at least one
+         * word link.
          */
-        const val CHROME_BUTTONS = 3
+        const val CHROME_BUTTONS = 4
 
         /** One short line, so the page has blank space below it for a centre tap. */
         val SHORT_CHAPTER = ReaderChapter(

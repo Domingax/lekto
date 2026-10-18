@@ -20,6 +20,17 @@ the offset names the same place whether you change the font size, resize the
 window, or open the book on another device. You return to a book from the
 [Library](/library).
 
+## Changing how the text looks
+
+Tap **Aa** in the reader's top bar to open the reading controls. There you choose
+the text face (serif or sans-serif), the text size, and how wide the page margins
+are. The book repaginates as you change each one, so you see the effect straight
+away and stay on the same passage.
+
+Your **Reading preference** is kept on this device only. It is not part of your
+vault, so it does not travel with an export or a sync — set it again on another
+device.
+
 ## Mastery colouring
 
 Every **Word token** is coloured by its **Mastery level**, on a five-point scale:

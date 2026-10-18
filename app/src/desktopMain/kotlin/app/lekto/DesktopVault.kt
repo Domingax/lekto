@@ -3,6 +3,8 @@ package app.lekto
 import app.lekto.core.Seams
 import app.lekto.core.language.JsonLanguageSettingsStore
 import app.lekto.core.language.LanguageSettingsStore
+import app.lekto.core.reading.JsonReadingPreferencesStore
+import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
 import app.lekto.core.sync.JsonTombstoneStore
@@ -57,6 +59,18 @@ fun desktopReaderLevels(root: File = desktopVaultRoot()): ReaderLevels = VaultRe
  */
 fun desktopLanguageSettings(root: File = File(appDataDirectory("lekto"), "settings")): LanguageSettingsStore =
     JsonLanguageSettingsStore(JvmVaultFileSystem(root))
+
+/**
+ * The desktop reading preference (ADR-0035) over [root], defaulting to an
+ * app-private folder beside the vault: the device's face, size and margin for a
+ * book's text. It is device-local app configuration (ADR-0023's pattern), not a
+ * vault record, so it never enters an export.
+ *
+ * @param root the settings root, defaulting to the app-data directory; the
+ *   parameter is the test seam, so production never passes one.
+ */
+fun desktopReadingPreferences(root: File = File(appDataDirectory("lekto"), "settings")): ReadingPreferencesStore =
+    JsonReadingPreferencesStore(JvmVaultFileSystem(root))
 
 /**
  * The vault's whole-file transfer (issue #20) over [root], with the platform's

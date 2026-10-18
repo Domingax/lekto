@@ -40,6 +40,7 @@ import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
+import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
@@ -71,6 +72,8 @@ import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READING_LARGER_TAG
+import app.lekto.reader.READING_PREFERENCES_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
@@ -92,6 +95,7 @@ import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryReaderLevels
+import app.lekto.testkit.InMemoryReadingPreferencesStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
@@ -141,7 +145,8 @@ import java.io.IOException
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
+// One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass", "MagicNumber")
 class AppSemanticsTest {
 
     @get:Rule
@@ -188,6 +193,28 @@ class AppSemanticsTest {
         // and Previous page enabled proves it is not page one.
         compose.awaitPage(2)
         compose.onNodeWithText("Previous page").assertIsEnabled()
+    }
+
+    @Test
+    fun theReadingPreferenceIsKeptAcrossSessions() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        val preferences = InMemoryReadingPreferencesStore()
+        compose.setContent { App(environment(library, readingPreferences = preferences)) }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithTag(READING_LARGER_TAG).performClick()
+
+        assertEquals(20f, preferences.load().size)
+
+        // Leave the book and reopen it: the choice is device-local configuration,
+        // not session state, so the reader starts from it (ADR-0035).
+        compose.onNodeWithText("Library").performClick()
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithTag(READING_LARGER_TAG).performClick()
+
+        assertEquals(22f, preferences.load().size)
     }
 
     @Test
@@ -1101,6 +1128,7 @@ internal fun environment(
     readerLevels: ReaderLevels? = null,
     languageSettings: LanguageSettingsStore? = null,
     systemLanguage: String? = null,
+    readingPreferences: ReadingPreferencesStore? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
@@ -1114,6 +1142,7 @@ internal fun environment(
     readerLevels = readerLevels,
     languageSettings = languageSettings,
     systemLanguage = systemLanguage,
+    readingPreferences = readingPreferences,
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,
