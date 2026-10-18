@@ -914,9 +914,11 @@ size takes more pages, so the repagination the ticket's Evidence names is proved
 where pagination lands. The **Aa** panel is
 `ReadingPreferencesPanelSemanticsTest` on both lanes — the current face, size and
 margin with the chosen chip marked `selected`, each control raising the next value
-the reader sees repaginated, and the size disabled at its bounds — and the whole
-loop, changing the size in the reader and finding it kept after leaving and
-reopening the book, runs through `AppSemanticsTest` on both lanes.
+the reader sees repaginated, the **Close** action and a tap outside the panel both
+dismissing it without looking a word up (a dismiss scrim over the page), and the
+size disabled at its bounds — and the whole loop, changing the size in the reader
+and finding it kept after leaving and reopening the book, runs through
+`AppSemanticsTest` on both lanes.
 
 The app's own texts (issue #165; ADR-0034) are one per-language table selected by
 the **app language**. `AppTextsTest` in `app/desktopTest` pins that every

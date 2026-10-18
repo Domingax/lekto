@@ -25,7 +25,9 @@ window, or open the book on another device. You return to a book from the
 Tap **Aa** in the reader's top bar to open the reading controls. There you choose
 the text face (serif or sans-serif), the text size, and how wide the page margins
 are. The book repaginates as you change each one, so you see the effect straight
-away and stay on the same passage.
+away and stay on the same passage. Close the panel with **Close**, by tapping
+**Aa** again, or by tapping the page outside it — a tap outside the panel closes
+it and does not look a word up.
 
 Your **Reading preference** is kept on this device only. It is not part of your
 vault, so it does not travel with an export or a sync — set it again on another

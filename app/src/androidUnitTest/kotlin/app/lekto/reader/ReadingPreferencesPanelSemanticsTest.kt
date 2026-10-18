@@ -9,15 +9,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -31,6 +34,7 @@ import app.lekto.testkit.WhitespaceTextSegmenter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,7 +65,13 @@ class ReadingPreferencesPanelSemanticsTest {
     fun thePanelShowsTheCurrentChoiceAndRaisesANewFace() {
         var changed: ReadingPreferences? = null
         compose.setContent {
-            MaterialTheme { ReadingPreferencesPanel(ReadingPreferences.DEFAULT, onChange = { next -> changed = next }) }
+            MaterialTheme {
+                ReadingPreferencesPanel(
+                    ReadingPreferences.DEFAULT,
+                    onChange = { next -> changed = next },
+                    onDismiss = {},
+                )
+            }
         }
 
         compose.onNodeWithTag(readerFaceTag(ReadingFace.SERIF)).assertIsSelected()
@@ -74,13 +84,37 @@ class ReadingPreferencesPanelSemanticsTest {
     fun thePanelRaisesANewMargin() {
         var changed: ReadingPreferences? = null
         compose.setContent {
-            MaterialTheme { ReadingPreferencesPanel(ReadingPreferences.DEFAULT, onChange = { next -> changed = next }) }
+            MaterialTheme {
+                ReadingPreferencesPanel(
+                    ReadingPreferences.DEFAULT,
+                    onChange = { next -> changed = next },
+                    onDismiss = {},
+                )
+            }
         }
 
         compose.onNodeWithTag(readerMarginTag(ReadingMargin.COMFORTABLE)).assertIsSelected()
         compose.onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).performClick()
 
         assertEquals(ReadingMargin.WIDE, changed?.margin)
+    }
+
+    @Test
+    fun thePanelRaisesADismiss() {
+        var dismissed = false
+        compose.setContent {
+            MaterialTheme {
+                ReadingPreferencesPanel(
+                    ReadingPreferences.DEFAULT,
+                    onChange = {},
+                    onDismiss = { dismissed = true },
+                )
+            }
+        }
+
+        compose.onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
+
+        assertTrue("the panel's Close must dismiss it", dismissed)
     }
 
     @Test
@@ -91,6 +125,7 @@ class ReadingPreferencesPanelSemanticsTest {
                 ReadingPreferencesPanel(
                     ReadingPreferences(size = ReadingPreferences.MAX_SIZE),
                     onChange = { next -> changed = next },
+                    onDismiss = {},
                 )
             }
         }
@@ -110,6 +145,22 @@ class ReadingPreferencesPanelSemanticsTest {
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
 
         compose.onNodeWithText("Text face").assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingOutsideThePanelDismissesItWithoutTappingAWord() {
+        var tappedWord = false
+        compose.setContent { PreferencesReader(renderer, onWordTap = { tappedWord = true }) }
+
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithText("Text face").assertIsDisplayed()
+
+        // A tap on the page, well above the panel, is outside it: it dismisses
+        // rather than opening the lookup on a word or turning the page.
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        compose.onNodeWithText("Text face").assertDoesNotExist()
+        assertTrue("a tap that dismisses the panel must not tap a word", !tappedWord)
     }
 
     @Test
@@ -147,13 +198,18 @@ private val LONG_CHAPTER = ReaderChapter(
  * exactly as the app wires it (ADR-0035).
  */
 @Composable
-private fun PreferencesReader(renderer: ReaderRenderer, onChange: (ReadingPreferences) -> Unit = {}) {
+private fun PreferencesReader(
+    renderer: ReaderRenderer,
+    onWordTap: (WordTap) -> Unit = {},
+    onChange: (ReadingPreferences) -> Unit = {},
+) {
     var preferences by remember { mutableStateOf(ReadingPreferences.DEFAULT) }
     MaterialTheme {
         ReaderScreen(
             document = ReaderDocument(LONG_CHAPTER, renderer, preferences = preferences),
             modifier = Modifier.size(width = 360.dp, height = 640.dp),
             actions = ReaderActions(
+                onWordTap = onWordTap,
                 onBack = {},
                 onReadingPreferencesChange = { next ->
                     preferences = next

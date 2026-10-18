@@ -1,5 +1,6 @@
 package app.lekto.reader
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,6 +29,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -102,9 +104,19 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
             }
         }
         if (state.chromeVisible && state.preferencesVisible) {
+            // A scrim over the whole reader dismisses the panel on a tap outside it,
+            // so a tap meant to close the panel never lands on a word (opening the
+            // lookup) or turns the page. The panel, drawn on top, swallows its own
+            // taps, so tapping between its controls does not dismiss it.
+            Box(
+                Modifier.fillMaxSize().pointerInput(Unit) {
+                    detectTapGestures { state.dismissPreferences() }
+                },
+            )
             ReadingPreferencesPanel(
                 preferences = document.preferences,
                 onChange = actions.onReadingPreferencesChange,
+                onDismiss = state::dismissPreferences,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -167,6 +179,11 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit) {
     fun togglePreferences() {
         chromeVisible = true
         preferencesVisible = !preferencesVisible
+    }
+
+    /** Closes the **Aa** panel; a tap outside it, or its own **Close**, lands here. */
+    fun dismissPreferences() {
+        preferencesVisible = false
     }
 
     private fun goTo(target: Int) {

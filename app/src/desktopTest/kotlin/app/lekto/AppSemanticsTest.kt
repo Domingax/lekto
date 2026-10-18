@@ -72,6 +72,7 @@ import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READING_LARGER_TAG
+import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
 import app.lekto.reader.READING_PREFERENCES_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
@@ -186,6 +187,7 @@ class AppSemanticsTest {
 
         // Leave the book and reopen it: the choice is device-local configuration,
         // not session state, so the reader starts from it (ADR-0035).
+        onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
         onNodeWithText("Library").performClick()
         onNodeWithText("The Lantern Keeper").performClick()
         onNodeWithTag(READING_PREFERENCES_TAG).performClick()

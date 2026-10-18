@@ -8,15 +8,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -29,6 +32,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * The reader's **Aa** panel (ADR-0035): it shows the current face, size and margin,
@@ -49,7 +53,13 @@ class ReadingPreferencesPanelSemanticsTest {
     fun thePanelShowsTheCurrentChoiceAndRaisesANewFace() = runComposeUiTest {
         var changed: ReadingPreferences? = null
         setContent {
-            MaterialTheme { ReadingPreferencesPanel(ReadingPreferences.DEFAULT, onChange = { next -> changed = next }) }
+            MaterialTheme {
+                ReadingPreferencesPanel(
+                    ReadingPreferences.DEFAULT,
+                    onChange = { next -> changed = next },
+                    onDismiss = {},
+                )
+            }
         }
 
         onNodeWithTag(readerFaceTag(ReadingFace.SERIF)).assertIsSelected()
@@ -62,13 +72,37 @@ class ReadingPreferencesPanelSemanticsTest {
     fun thePanelRaisesANewMargin() = runComposeUiTest {
         var changed: ReadingPreferences? = null
         setContent {
-            MaterialTheme { ReadingPreferencesPanel(ReadingPreferences.DEFAULT, onChange = { next -> changed = next }) }
+            MaterialTheme {
+                ReadingPreferencesPanel(
+                    ReadingPreferences.DEFAULT,
+                    onChange = { next -> changed = next },
+                    onDismiss = {},
+                )
+            }
         }
 
         onNodeWithTag(readerMarginTag(ReadingMargin.COMFORTABLE)).assertIsSelected()
         onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).performClick()
 
         assertEquals(ReadingMargin.WIDE, changed?.margin)
+    }
+
+    @Test
+    fun thePanelRaisesADismiss() = runComposeUiTest {
+        var dismissed = false
+        setContent {
+            MaterialTheme {
+                ReadingPreferencesPanel(
+                    ReadingPreferences.DEFAULT,
+                    onChange = {},
+                    onDismiss = { dismissed = true },
+                )
+            }
+        }
+
+        onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
+
+        assertTrue(dismissed, "the panel's Close must dismiss it")
     }
 
     @Test
@@ -79,6 +113,7 @@ class ReadingPreferencesPanelSemanticsTest {
                 ReadingPreferencesPanel(
                     ReadingPreferences(size = ReadingPreferences.MAX_SIZE),
                     onChange = { next -> changed = next },
+                    onDismiss = {},
                 )
             }
         }
@@ -98,6 +133,23 @@ class ReadingPreferencesPanelSemanticsTest {
         onNodeWithTag(READING_PREFERENCES_TAG).performClick()
 
         onNodeWithText("Text face").assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingOutsideThePanelDismissesItWithoutTappingAWord() = runComposeUiTest {
+        var tappedWord = false
+        setContent { PreferencesReader(renderer, onWordTap = { tappedWord = true }) }
+
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        onNodeWithText("Text face").assertIsDisplayed()
+
+        // A tap on the page, well above the panel, is outside it: it dismisses
+        // rather than opening the lookup on a word or turning the page.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        onNodeWithText("Text face").assertDoesNotExist()
+        assertTrue(!tappedWord, "a tap that dismisses the panel must not tap a word")
+        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -125,6 +177,7 @@ class ReadingPreferencesPanelSemanticsTest {
 private fun PreferencesReader(
     renderer: ReaderRenderer,
     chapter: ReaderChapter = SampleChapter.chapter,
+    onWordTap: (WordTap) -> Unit = {},
     onChange: (ReadingPreferences) -> Unit = {},
 ) {
     var preferences by remember { mutableStateOf(ReadingPreferences.DEFAULT) }
@@ -133,6 +186,7 @@ private fun PreferencesReader(
             document = ReaderDocument(chapter, renderer, preferences = preferences),
             modifier = Modifier.size(width = 360.dp, height = 640.dp),
             actions = ReaderActions(
+                onWordTap = onWordTap,
                 onBack = {},
                 onReadingPreferencesChange = { next ->
                     preferences = next
