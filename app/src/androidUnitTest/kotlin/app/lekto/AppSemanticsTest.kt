@@ -286,6 +286,26 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun tappingOutsideTheWordLookupPanelClosesItWithoutTurningThePage() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithText("Next page").performClick()
+        compose.awaitPage(2)
+
+        compose.tapFirstWord()
+        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+
+        // A tap on the page, above the panel, is outside it: it closes the panel
+        // and does not turn the page.
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        compose.onNodeWithText("Look it up online").assertDoesNotExist()
+        compose.awaitPage(2)
+    }
+
+    @Test
     fun selectingAPhraseOffersTheTranslationShortcutWithNoProviderConfigured() {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         var opened: String? = null
@@ -626,6 +646,8 @@ class AppSemanticsTest {
         compose.waitUntil { vocabulary.all().isNotEmpty() }
         assertEquals("the save must key on the lemma", "lantern", vocabulary.all().single().key.key)
 
+        // The word panel is open over the page bar; close it before turning the page.
+        compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Next page").performClick()
         compose.tapFirstWord()
         // The same lemma again, so its entry updates in place rather than adding a

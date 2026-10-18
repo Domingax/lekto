@@ -261,6 +261,26 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun tappingOutsideTheWordLookupPanelClosesItWithoutTurningThePage() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        tapFirstWord()
+        onNodeWithText("Look it up online").assertIsDisplayed()
+
+        // A tap on the page, above the panel, is outside it: it closes the panel
+        // and does not turn the page.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        onNodeWithText("Look it up online").assertDoesNotExist()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun selectingAPhraseOffersTheTranslationShortcutWithNoProviderConfigured() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         var opened: String? = null
@@ -629,6 +649,8 @@ class AppSemanticsTest {
         onNodeWithText("Save").performClick()
         waitUntil { vocabulary.all().isNotEmpty() }
 
+        // The word panel is open over the page bar; close it before turning the page.
+        onNodeWithText("Close").performClick()
         onNodeWithText("Next page").performClick()
         tapFirstWord()
         // The same word (page two starts with "On.", so its key is "on"), so its

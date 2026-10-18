@@ -557,7 +557,11 @@ reader's selection wash, which keeps the tapped word visible behind the panel, i
 pinned on the word layer in `ReaderTextTest`,
 and the whole loop — turn a page, tap a word, open Reverso through the injected
 browser opener, close, and find the reader still on the same page — is driven
-through `AppSemanticsTest`. Opening a shortcut is a platform action: the desktop
+through `AppSemanticsTest`. A tap on the page outside the panel closes it without
+looking the word under the finger up or turning the page, pinned through
+`AppSemanticsTest` on both lanes; the panel and the reader's **Aa** panel share the
+`app.lekto.ui.DismissScrim` that gives them the affordance. Opening a shortcut is
+a platform action: the desktop
 opener takes its browse call as a parameter so it is unit-tested, and the Android
 glue sits behind the coverage exclusion like the rest of the platform entry
 points.

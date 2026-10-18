@@ -26,6 +26,7 @@ import app.lekto.reader.MasteryChip
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.swallowTaps
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
@@ -81,6 +82,10 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * the [vocabulary] controls: one tap on Save stores the word with its
  * translation, context sentence and level, and the selector moves a saved word
  * between levels — the reader's colour updating is the only confirmation.
+ *
+ * The panel swallows taps that land on it, so only a tap truly outside it — which
+ * its [app.lekto.ui.DismissScrim] handles — dismisses it; a tap on the reader
+ * behind it then never turns the page or opens another lookup.
  */
 @Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts, actions and the two controls.
 @Composable
@@ -93,7 +98,7 @@ fun WordLookupPanel(
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier.fillMaxWidth().padding(8.dp)) {
+    Card(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
         val texts = LocalAppTexts.current
         Column(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),

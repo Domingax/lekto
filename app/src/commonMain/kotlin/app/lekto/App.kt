@@ -93,7 +93,6 @@ import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
-import app.lekto.ui.DismissScrim
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyScreen
@@ -608,7 +607,10 @@ private class Lookup(
     val onWordTap: (WordTap) -> Unit,
     val onPhraseSelected: (PhraseSelection) -> Unit,
     val onDismiss: () -> Unit,
-)
+) {
+    /** Whether a word or phrase panel is open above the reader, for the page's dismiss scrim. */
+    val hasPanel: Boolean get() = selection != null || phrase != null
+}
 
 /**
  * The settings screen's live pieces, bundled so [AppScreens] stays within the
@@ -871,6 +873,9 @@ private fun ReaderSession(
                 onBack = onBack,
                 onPositionChange = onPositionChange,
                 onReadingPreferencesChange = { next -> readingPreferences?.update(next) },
+                // A lookup panel is open above the reader: a tap on the page outside
+                // it closes it, rather than looking a word up or turning the page.
+                onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
             ),
         )
         LookupOverlays(lookup, session.book.language, environment.openUrl)
@@ -892,9 +897,6 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
         )
     }
     lookup.phrase?.let { phrase ->
-        // A tap outside the translation panel closes it, the way it closes the
-        // **Aa** panel; the scrim keeps that tap from landing on a word.
-        DismissScrim(onDismiss = lookup.onDismiss)
         PhrasePanel(
             phrase = phrase,
             language = language,

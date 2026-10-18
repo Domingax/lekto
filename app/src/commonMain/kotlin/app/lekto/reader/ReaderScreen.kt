@@ -54,8 +54,9 @@ internal const val READER_PAGE_TAG = "reader-page"
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
  * a word, a phrase selected by a long-press drag, a way back to the library, the
- * position a page turn lands on, and a **Reading preference** change (ADR-0035)
- * the **Aa** panel raises.
+ * position a page turn lands on, a **Reading preference** change (ADR-0035) the
+ * **Aa** panel raises, and — when a lookup panel is open above the reader — the
+ * dismiss a tap on the page outside it runs.
  */
 data class ReaderActions(
     val onWordTap: (WordTap) -> Unit = {},
@@ -63,6 +64,12 @@ data class ReaderActions(
     val onBack: (() -> Unit)? = null,
     val onPositionChange: (Int) -> Unit = {},
     val onReadingPreferencesChange: (ReadingPreferences) -> Unit = {},
+    /**
+     * The dismiss of a lookup panel open above the reader, or `null` when none is
+     * open. When set, a tap on the page closes that panel instead of looking a
+     * word up or turning the page, so "tap outside to dismiss" never misfires.
+     */
+    val onDismissOverlay: (() -> Unit)? = null,
 )
 
 /**
@@ -93,30 +100,54 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
         val pages = rememberReaderPages(chapterText, styles)
         val state = remember(document.chapter) { ReaderState(actions.onPositionChange) }
         state.bind(pages, chapterText.length, document.initialOffset)
-        Column(Modifier.fillMaxSize()) {
-            if (state.chromeVisible) {
-                ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences, styles.horizontalMargin)
-            }
-            ReaderPage(document, chapterText, styles, state, actions.onWordTap, actions.onPhraseSelected)
-            if (state.chromeVisible && state.page != null) {
-                ReaderPageBar(state.index, state.total, styles.horizontalMargin, state::previous, state::next)
-            }
-        }
-        if (state.chromeVisible && state.preferencesVisible) {
-            // A scrim over the whole reader dismisses the panel on a tap outside it,
-            // so a tap meant to close the panel never lands on a word (opening the
-            // lookup) or turns the page. The panel, drawn on top, swallows its own
-            // taps, so tapping between its controls does not dismiss it.
-            DismissScrim(onDismiss = state::dismissPreferences)
-            ReadingPreferencesPanel(
-                preferences = document.preferences,
-                onChange = actions.onReadingPreferencesChange,
-                onDismiss = state::dismissPreferences,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
+        ReaderContent(document, chapterText, styles, state, actions)
     }
 }
+
+/**
+ * The reader's chrome, page and **Aa** panel. A tap on the page closes whatever
+ * panel is open above it — the **Aa** panel or a lookup — and the page scrim keeps
+ * that tap from looking a word up or turning the page. The chrome stays usable.
+ */
+@Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
+@Composable
+private fun BoxWithConstraintsScope.ReaderContent(
+    document: ReaderDocument,
+    chapterText: AnnotatedString,
+    styles: ReaderStyles,
+    state: ReaderState,
+    actions: ReaderActions,
+) {
+    Column(Modifier.fillMaxSize()) {
+        if (state.chromeVisible) {
+            ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences, styles.horizontalMargin)
+        }
+        ReaderPage(
+            document,
+            chapterText,
+            styles,
+            state,
+            overlayDismiss(state, actions),
+            actions.onWordTap,
+            actions.onPhraseSelected,
+        )
+        if (state.chromeVisible && state.page != null) {
+            ReaderPageBar(state.index, state.total, styles.horizontalMargin, state::previous, state::next)
+        }
+    }
+    if (state.chromeVisible && state.preferencesVisible) {
+        ReadingPreferencesPanel(
+            preferences = document.preferences,
+            onChange = actions.onReadingPreferencesChange,
+            onDismiss = state::dismissPreferences,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+/** The dismiss a tap on the page runs: the **Aa** panel's, or the lookup panel's, or none. */
+private fun overlayDismiss(state: ReaderState, actions: ReaderActions): (() -> Unit)? =
+    if (state.preferencesVisible) state::dismissPreferences else actions.onDismissOverlay
 
 /**
  * The reader's page state: where the anchor is, which page that is, and the
@@ -196,6 +227,7 @@ private fun ColumnScope.ReaderPage(
     chapterText: AnnotatedString,
     styles: ReaderStyles,
     state: ReaderState,
+    dismissOverlay: (() -> Unit)?,
     onWordTap: (WordTap) -> Unit,
     onPhraseSelected: (PhraseSelection) -> Unit,
 ) {
@@ -207,7 +239,9 @@ private fun ColumnScope.ReaderPage(
     val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val marginPx = with(LocalDensity.current) { styles.horizontalMargin.roundToPx() }
-    val latestTap = rememberUpdatedState(readerSurfaceTap(marginPx, tokens, layout, state))
+    val latestTap = rememberUpdatedState(
+        readerSurfaceTap(marginPx, tokens, layout, state, enabled = dismissOverlay == null),
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -225,16 +259,31 @@ private fun ColumnScope.ReaderPage(
                     dragRange = null
                     onPhraseSelected(phrase)
                 },
-            )
-            .padding(horizontal = styles.horizontalMargin),
+            ),
     ) {
+        PageText(tokens, styles, styles.horizontalMargin) { result -> layout = result }
+        // Drawn over the whole page, margins included, so an outside tap dismisses
+        // the open panel rather than landing in a tap zone or on a word.
+        dismissOverlay?.let { dismiss -> DismissScrim(onDismiss = dismiss) }
+    }
+}
+
+/** The page's text, inset by the reading margin; a slice built for this page, styled and selectable. */
+@Composable
+private fun PageText(
+    tokens: ReaderTokens?,
+    styles: ReaderStyles,
+    horizontalMargin: Dp,
+    onLayout: (TextLayoutResult) -> Unit,
+) {
+    Box(Modifier.fillMaxSize().padding(horizontal = horizontalMargin)) {
         if (tokens != null) {
             SelectionContainer {
                 Text(
                     text = tokens.text,
                     style = styles.body,
                     modifier = Modifier.fillMaxSize(),
-                    onTextLayout = { result -> layout = result },
+                    onTextLayout = onLayout,
                 )
             }
         }
@@ -271,20 +320,27 @@ private fun rememberPageTokens(
 }
 
 /** The tap the page handles: a word's link wins, otherwise the tap's zone decides. */
+@Suppress("LongParameterList") // The tap's inputs are the page's own geometry; a bundle would only hide them.
 private fun readerSurfaceTap(
     marginPx: Int,
     tokens: ReaderTokens?,
     layout: TextLayoutResult?,
     state: ReaderState,
+    enabled: Boolean,
 ): (Offset, Float) -> Unit = { position, width ->
-    val zone = readerTapZone(position.x, width.toInt())
-    // A tap on a word is left to the word's link, wherever it lands.
-    val onWord = wordAt(position, marginPx, tokens?.words.orEmpty(), layout) != null
-    when {
-        onWord -> Unit
-        zone == ReaderTapZone.CHROME -> state.toggleChrome()
-        zone == ReaderTapZone.PREVIOUS -> state.previous()
-        zone == ReaderTapZone.NEXT -> state.next()
+    // While a panel is open above the page (the **Aa** panel or a lookup), a tap on
+    // the page only dismisses it — through the page scrim — and must not look a
+    // word up or turn the page.
+    if (enabled) {
+        val zone = readerTapZone(position.x, width.toInt())
+        // A tap on a word is left to the word's link, wherever it lands.
+        val onWord = wordAt(position, marginPx, tokens?.words.orEmpty(), layout) != null
+        when {
+            onWord -> Unit
+            zone == ReaderTapZone.CHROME -> state.toggleChrome()
+            zone == ReaderTapZone.PREVIOUS -> state.previous()
+            zone == ReaderTapZone.NEXT -> state.next()
+        }
     }
 }
 
