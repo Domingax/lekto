@@ -180,6 +180,9 @@ class AppSemanticsTest {
         setContent { App(environment(library, readingPreferences = preferences)) }
 
         onNodeWithText("The Lantern Keeper").performClick()
+        // Opening a book runs on the environment's dispatcher, so wait for the
+        // reader's chrome before touching its **Aa** control.
+        waitUntil { onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         onNodeWithTag(READING_LARGER_TAG).performClick()
 
@@ -190,6 +193,7 @@ class AppSemanticsTest {
         onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
         onNodeWithText("Library").performClick()
         onNodeWithText("The Lantern Keeper").performClick()
+        waitUntil { onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         onNodeWithTag(READING_LARGER_TAG).performClick()
 

@@ -203,6 +203,9 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, readingPreferences = preferences)) }
 
         compose.onNodeWithText("The Lantern Keeper").performClick()
+        // Opening a book runs on the environment's dispatcher, so wait for the
+        // reader's chrome before touching its **Aa** control.
+        compose.waitUntil { compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         compose.onNodeWithTag(READING_LARGER_TAG).performClick()
 
@@ -213,6 +216,7 @@ class AppSemanticsTest {
         compose.onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
         compose.onNodeWithText("Library").performClick()
         compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.waitUntil { compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         compose.onNodeWithTag(READING_LARGER_TAG).performClick()
 
