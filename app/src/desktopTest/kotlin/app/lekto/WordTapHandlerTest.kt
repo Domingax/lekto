@@ -52,7 +52,7 @@ class WordTapHandlerTest {
             result = lookup
         }(tap)
 
-        assertTrue(result is WordLookup.NotInDictionary, "the empty fake pack does not know the word: $result")
+        assertTrue(result is WordLookup.Found, "the installed fake pack answers the fixture word: $result")
     }
 
     @Test

@@ -603,6 +603,124 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun theVocabularyListDerivesItsTranslationFromTheInstalledPack() {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(
+            VocabularyEntry(
+                key = WordKey("en", "blorple"),
+                surface = "blorpled",
+                translation = "lanterne",
+                mastery = MasteryLevel.LEARNED,
+            ),
+        )
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    dictionary = installedDictionary(),
+                    vocabulary = vocabulary,
+                    languageSettings = frenchTranslations(),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Vocabulary").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("blorper").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // The pack's gloss for the lemma, not the frozen translation the entry kept.
+        compose.onNodeWithText("blorper").assertIsDisplayed()
+        compose.onNodeWithText("lanterne").assertDoesNotExist()
+    }
+
+    @Test
+    fun theVocabularyListFallsBackToTheStoredTranslationWhenThePackDoesNotKnowTheWord() {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", translation = "lanterne"))
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    dictionary = installedDictionary(),
+                    vocabulary = vocabulary,
+                    languageSettings = frenchTranslations(),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Vocabulary").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("lanterne").assertIsDisplayed()
+    }
+
+    @Test
+    fun theVocabularyListFallsBackToTheStoredTranslationWithNoPackInstalled() {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(VocabularyEntry(WordKey("en", "blorple"), "blorpled", translation = "lanterne"))
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    dictionary = dictionaryServices(),
+                    vocabulary = vocabulary,
+                    languageSettings = frenchTranslations(),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Vocabulary").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("lanterne").assertIsDisplayed()
+    }
+
+    @Test
+    fun theVocabularyListFallsBackToTheStoredTranslationWhenNoTranslationLanguageIsChosen() {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(VocabularyEntry(WordKey("en", "blorple"), "blorpled", translation = "lanterne"))
+        compose.setContent {
+            App(environment(InMemoryLibrary(), dictionary = installedDictionary(), vocabulary = vocabulary))
+        }
+
+        compose.onNodeWithText("Vocabulary").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("lanterne").assertIsDisplayed()
+    }
+
+    @Test
+    fun theVocabularySearchesThePackDerivedTranslation() {
+        val vocabulary = inMemoryVocabulary()
+        vocabulary.save(
+            VocabularyEntry(WordKey("en", "blorple"), "blorpled", translation = "lanterne"),
+        )
+        vocabulary.save(VocabularyEntry(WordKey("en", "harbour"), "harbour", translation = "port"))
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    dictionary = installedDictionary(),
+                    vocabulary = vocabulary,
+                    languageSettings = frenchTranslations(),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Vocabulary").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("blorper").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // The row searches what it shows: the derived gloss, not the frozen one.
+        compose.onNodeWithTag(VOCABULARY_SEARCH_TAG).performTextInput("blorper")
+
+        compose.onNodeWithText("blorpled").assertIsDisplayed()
+        compose.onNodeWithText("harbour").assertDoesNotExist()
+    }
+
+    @Test
     fun theVocabularyCanBeSearched() {
         val vocabulary = inMemoryVocabulary()
         vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.LEARNED))
@@ -1063,6 +1181,11 @@ private fun dictionaryServices(): DictionaryServices {
         val files = FakeDictionaryPackFiles(derived, reading, translation)
         DictionaryPackInstaller(derived, files, files, reading, translation)
     }
+}
+
+/** The dictionary services with the en→fr pack installed, so a lookup answers the fixture words. */
+private fun installedDictionary(): DictionaryServices = dictionaryServices().also { services ->
+    services.installer("en", "fr").install(DictionaryRelease.url(DictionaryRelease.artifact("en", "fr")))
 }
 
 /** Enough one-line paragraphs to span several pages at any test viewport. */

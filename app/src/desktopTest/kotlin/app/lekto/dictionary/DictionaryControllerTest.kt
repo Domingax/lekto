@@ -156,7 +156,7 @@ class DictionaryControllerTest {
         advanceUntilIdle()
 
         assertTrue(
-            controller.lookUp("blorple", "en", "es") is WordLookup.NotInDictionary,
+            controller.lookUp("blorple", "en", "es") is WordLookup.Found,
             "an installed en-es pack answers the es lookup even though en-fr is not installed",
         )
         assertTrue(
@@ -171,7 +171,7 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        assertTrue(controller.lookUp("blorple", "en", "fr") is WordLookup.NotInDictionary)
+        assertTrue(controller.lookUp("zzzz", "en", "fr") is WordLookup.NotInDictionary)
     }
 
     /** The asset name the manifest publishes a pair's pack under. */

@@ -742,8 +742,9 @@ context and level, change the level afterwards, and find an earlier session's
 entry already saved — runs through `AppSemanticsTest` against the in-memory
 vocabulary, including that saving an inflected form does not create a second
 entry; its same-named `app/androidUnitTest` twin (issue #79) re-proves the save
-loop on the runtime Android uses. The translation a save keeps is a pure transform,
-`VocabularySaveTest`; the desktop wiring that saves to a real directory and
+loop on the runtime Android uses. The translation a save keeps is the shared
+`firstGloss` rule, pinned in `core/commonTest`'s `DictionaryLookupTest`; the desktop
+wiring that saves to a real directory and
 reloads it is `DesktopLibraryTest`, which also proves the whole-vault export
 carries the saved word — the vocabulary is a vault record, so it is portable
 with no separate export. The selector's chips carry their level's colour (the
@@ -787,6 +788,24 @@ list's filter and the lookup panel's level selector cannot drift;
 `VocabularyScreenSemanticsTest` proves a chip raises its level, the all-levels
 chip clears it, and a filter that matches nothing says so, and `AppSemanticsTest`
 filters the list to a level and finds only that level's word.
+
+The translation the list shows (issue #67; ADR-0032) is derived from the installed
+**Dictionary packs**, not the one the entry froze at save time, and falls back to
+it when no pack answers. `firstGloss` in `core` is the shared rule — the first
+translation of the first entry that carries one, a blank counting as none — pinned
+in `core/commonTest`'s `DictionaryLookupTest` beside the save that keeps it. The
+derivation is a pure
+transform, `PackTranslationsTest` in `app/desktopTest`: an entry the pack knows is
+glossed by its first gloss; an entry the pack does not know, a pair with no pack
+installed and a blank gloss all keep no derived gloss, so the caller falls back;
+and each entry is queried in its own **Reading language**. The whole loop —
+installing a pack, opening the list, reading the pack's gloss where the stored one
+would have shown, falling back when the pack does not know the word, no pack is
+installed or no **Translation language** is chosen, and searching by the resolved
+gloss rather than the stored one — runs through `AppSemanticsTest` on both lanes,
+over the `testkit` fake pack, which now answers a word the way the real pack does.
+The list shows no translation line at all when neither the pack nor the entry has
+one, pinned by `VocabularyScreenSemanticsTest` on both lanes.
 
 Default mastery from the reader's level (issue #64; ADR-0029, ADR-0030) is proved
 at the same levels. The rule itself is a domain invariant, so `DefaultMasteryTest`

@@ -27,6 +27,7 @@ import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.dictionary.dictionaryShortcuts
+import app.lekto.core.dictionary.firstGloss
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.AppLanguages
@@ -42,6 +43,7 @@ import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.TextSegmenter
+import app.lekto.core.text.WordKey
 import app.lekto.core.text.baseLanguage
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
@@ -93,6 +95,7 @@ import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
 import app.lekto.vocabulary.filterByMastery
+import app.lekto.vocabulary.packTranslations
 import app.lekto.vocabulary.searchVocabulary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -447,7 +450,7 @@ private fun AppScreens(
                 onBack = { destination = current.returnTo },
             )
 
-            Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, scope) {
+            Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope) {
                 destination = Destination.Library
             }
 
@@ -560,18 +563,12 @@ private fun saveWord(
     val entry = VocabularyEntry(
         key = selection.tap.token.key,
         surface = selection.tap.token.surface,
-        translation = translationOf(selection.result),
+        translation = selection.result.firstGloss(),
         contextSentence = selection.tap.contextSentence,
         mastery = level,
     )
     scope.launch { withContext(environment.dispatcher) { mastery.save(entry) } }
 }
-
-/** The translation an offline lookup found, or `null` when it found none. */
-internal fun translationOf(result: WordLookup): String? = (result as? WordLookup.Found)
-    ?.entries
-    ?.firstNotNullOfOrNull { entry -> entry.translations.firstOrNull() }
-    ?.takeIf { translation -> translation.isNotBlank() }
 
 /**
  * The lookup panel's live state and events, bundled so the reader's signature
@@ -677,22 +674,49 @@ private fun LibraryDestination(
  * vault. The query is local to the screen; the delete is a blocking vault write,
  * so it runs on the environment's dispatcher, and the reader recolours through
  * the controller's bumped revision.
+ *
+ * The translation each row shows is derived from the installed **Dictionary
+ * packs** (issue #67; ADR-0032), not the one the entry froze at save time: the
+ * whole list is queried once per entry set and **Translation language**, off the
+ * UI thread because the pack read blocks, and an entry no pack answers falls back
+ * to its stored translation. Nothing derived is written back to the vault, and the
+ * search matches the resolved translation, because the list searches what it
+ * shows.
  */
 @Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
 @Composable
 private fun VocabularyDestination(
     vocabulary: VocabularyController?,
     environment: AppEnvironment,
+    languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
     onBack: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
+    val translationLanguage = languageSettings?.translationLanguage
     val all = vocabulary?.all().orEmpty()
+    var derived by remember { mutableStateOf(emptyMap<WordKey, String>()) }
+    LaunchedEffect(all, translationLanguage, environment.dictionary) {
+        // Each Reading language's pack is resolved here, on the composition thread
+        // where the reader resolves its own, so the services' per-pair installer
+        // cache is only ever written from one thread; only the blocking query moves
+        // off it (docs/testing.md, "Deterministic seams").
+        val dictionary = environment.dictionary
+        val lookups = all.map { entry -> entry.key.language }.distinct()
+            .associateWith { reading -> dictionary?.lookup(reading, translationLanguage) }
+        derived = withContext(environment.dispatcher) {
+            packTranslations(all) { reading, surface ->
+                lookups[reading]?.lookup(surface, reading)
+                    ?: WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED)
+            }
+        }
+    }
+    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
     val state = if (all.isEmpty()) {
         VocabularyUiState.Empty
     } else {
-        VocabularyUiState.Results(filterByMastery(searchVocabulary(all, query), masteryLevel), query, masteryLevel)
+        VocabularyUiState.Results(filterByMastery(searchVocabulary(shown, query), masteryLevel), query, masteryLevel)
     }
     VocabularyScreen(
         state = state,

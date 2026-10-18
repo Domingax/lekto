@@ -54,4 +54,32 @@ class DictionaryLookupTest :
             lookup.lookup("blorple", "en-US").shouldBeInstanceOf<WordLookup.Found>()
             lookup.lookup("bonjour", "fr") shouldBe WordLookup.Unavailable(DictionaryLookup.NOT_INSTALLED)
         }
+
+        // The first gloss is the rule both the translation a save keeps (issue #22)
+        // and the gloss the **Vocabulary** list derives from the pack (issue #67;
+        // ADR-0032) share.
+        test("the first gloss is the first entry's first translation, not a spliced list") {
+            val found = found(
+                DictionarySense("To move swiftly.", listOf("blorper", "filtrer")),
+                DictionarySense("To shimmer.", listOf("scintiller")),
+            )
+
+            found.firstGloss() shouldBe "blorper"
+        }
+
+        test("a lookup that found nothing has no first gloss") {
+            WordLookup.NotInDictionary("zzzz", "en").firstGloss() shouldBe null
+            WordLookup.Unavailable("offline").firstGloss() shouldBe null
+        }
+
+        test("a found entry with no translation has no first gloss rather than an empty string") {
+            found(DictionarySense("A name.", emptyList())).firstGloss() shouldBe null
+        }
     })
+
+private fun found(vararg senses: DictionarySense): WordLookup.Found = WordLookup.Found(
+    query = "blorpled",
+    language = "en",
+    lemma = "blorple",
+    entries = listOf(DictionaryEntry("blorple", "en", "verb", null, null, senses.toList())),
+)

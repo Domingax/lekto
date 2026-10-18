@@ -24,8 +24,9 @@ the source; opening the shortcut hands the page to your device's own browser.
 
 ## Saving the word
 
-Save a word to keep its translation and the **Context sentence** it appeared in.
-See [Vocabulary](/vocabulary) and [Pronunciation](/pronunciation).
+Save a word to keep the **Context sentence** it appeared in and a translation to
+fall back on when no **Dictionary pack** answers. See [Vocabulary](/vocabulary) and
+[Pronunciation](/pronunciation).
 
 ## Screenshots
 
