@@ -571,9 +571,12 @@ address, in `core/commonTest`. The reader's long-press drag is split from the
 page: `PhraseSelectionTest` pins the pure range-to-phrase math, `ReaderTextTest`
 pins that a selected phrase washes every word it covers, and the gesture itself
 is driven through `ReaderScreenSemanticsTest` on both lanes. The panel is
-`PhraseLookupPanelSemanticsTest` on both lanes, and the whole loop — select a
+`PhraseLookupPanelSemanticsTest` on both lanes; it shares its tap-outside dismissal
+with the reader's **Aa** panel through `app.lekto.ui.DismissScrim`, and
+`AppSemanticsTest` proves on both lanes that a tap outside the translation panel
+closes it without looking the word under it up. The whole loop — select a
 phrase on page two, open the shortcut through the injected browser, close and
-land on the same page — runs through `AppSemanticsTest` on both lanes. Robolectric's
+land on the same page — also runs through `AppSemanticsTest` on both lanes. Robolectric's
 glyph metrics are sub-pixel, so its text hit-testing does not extend the drag
 reliably; the Android lane proves the gesture selects a phrase and opens the
 panel, while the multi-word range is pinned by `PhraseSelectionTest` and the

@@ -49,3 +49,9 @@ translation service with your selected phrase already filled in. Like a
 
 The shortcut translates into your **Translation language**, so it appears once you
 have chosen one on the **Languages** surface.
+
+## Closing the panel
+
+Close the translation panel with **Close**, or by tapping the page outside it. A tap
+outside the panel only closes it: it does not look up the word under your finger or
+turn the page.

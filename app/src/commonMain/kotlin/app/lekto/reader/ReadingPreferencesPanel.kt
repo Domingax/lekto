@@ -15,7 +15,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -25,6 +24,7 @@ import app.lekto.core.reading.ReadingMargin
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.swallowTaps
 
 /** The test tag on the reader's **Aa** control, so a UI test can open the panel exactly. */
 const val READING_PREFERENCES_TAG: String = "reader-reading-preferences"
@@ -86,15 +86,6 @@ private fun CloseRow(onDismiss: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextButton(onClick = onDismiss, modifier = Modifier.testTag(READING_PREFERENCES_CLOSE_TAG)) {
             Text(LocalAppTexts.current[TextKey.CLOSE])
-        }
-    }
-}
-
-/** Consumes every pointer event on the panel, so a tap between controls does not fall through to the dismiss scrim. */
-private fun Modifier.swallowTaps(): Modifier = pointerInput(Unit) {
-    awaitPointerEventScope {
-        while (true) {
-            awaitPointerEvent().changes.forEach { change -> change.consume() }
         }
     }
 }

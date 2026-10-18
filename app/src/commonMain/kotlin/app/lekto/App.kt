@@ -93,6 +93,7 @@ import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
+import app.lekto.ui.DismissScrim
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyScreen
@@ -891,6 +892,9 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
         )
     }
     lookup.phrase?.let { phrase ->
+        // A tap outside the translation panel closes it, the way it closes the
+        // **Aa** panel; the scrim keeps that tap from landing on a word.
+        DismissScrim(onDismiss = lookup.onDismiss)
         PhrasePanel(
             phrase = phrase,
             language = language,

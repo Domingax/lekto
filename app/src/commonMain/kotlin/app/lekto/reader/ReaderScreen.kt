@@ -1,6 +1,5 @@
 package app.lekto.reader
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,7 +28,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -41,6 +39,7 @@ import app.lekto.core.reading.ReadingPreferences
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.DismissScrim
 import kotlinx.coroutines.yield
 
 private val ChromeHeight = 48.dp
@@ -108,11 +107,7 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
             // so a tap meant to close the panel never lands on a word (opening the
             // lookup) or turns the page. The panel, drawn on top, swallows its own
             // taps, so tapping between its controls does not dismiss it.
-            Box(
-                Modifier.fillMaxSize().pointerInput(Unit) {
-                    detectTapGestures { state.dismissPreferences() }
-                },
-            )
+            DismissScrim(onDismiss = state::dismissPreferences)
             ReadingPreferencesPanel(
                 preferences = document.preferences,
                 onChange = actions.onReadingPreferencesChange,

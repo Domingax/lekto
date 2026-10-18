@@ -7,6 +7,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -292,6 +293,27 @@ class AppSemanticsTest {
 
         onNodeWithText("Close").performClick()
         onNodeWithText("Translate online").assertDoesNotExist()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingOutsideTheTranslationPanelClosesItWithoutLookingAWordUp() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+
+        selectFirstPhrase()
+        onNodeWithText("Translate online").assertIsDisplayed()
+
+        // A tap on the page, above the panel, is outside it: it closes the panel
+        // and does not look the word under it up, nor turn the page.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        onNodeWithText("Translate online").assertDoesNotExist()
+        onNodeWithText("Look it up online").assertDoesNotExist()
         onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
     }
 
