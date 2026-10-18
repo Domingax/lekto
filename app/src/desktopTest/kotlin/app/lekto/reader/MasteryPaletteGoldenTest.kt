@@ -23,6 +23,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
+import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.WordToken
 import app.lekto.testkit.WhitespaceTextSegmenter
 import io.github.takahirom.roborazzi.captureRoboImage
@@ -59,6 +60,7 @@ private fun PalettePreview() {
         buildReaderTokens(
             chapter = SampleChapter.chapter,
             renderer = ReaderRenderer(WhitespaceTextSegmenter(), SampleChapter.mastery),
+            styles = ReaderStyles.of(ReadingPreferences.DEFAULT),
         )
     }
     val words = tokens.words.take(WORDS_PER_ROW * 3)
@@ -90,7 +92,7 @@ private fun WordRow(words: List<WordToken>) {
 }
 
 /** A level's colour, with a known word drawn in normal ink rather than transparent. */
-private fun MasteryLevel.swatch(): Color = readerColorOr(ReaderStyles.Reading.body.color)
+private fun MasteryLevel.swatch(): Color = readerColorOr(ReaderStyles.of(ReadingPreferences.DEFAULT).body.color)
 
 /** A box roughly proportional to the word, clamped so a long word still fits. */
 private fun wordWidth(word: String): Dp = (word.length * 5).coerceIn(10, 46).dp

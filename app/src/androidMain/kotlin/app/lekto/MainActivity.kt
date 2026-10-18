@@ -62,6 +62,7 @@ private fun LektoApp(
     val languages = remember { androidLanguage(context) }
     val readerLevels = remember { androidReaderLevels(context) }
     val languageSettings = remember { androidLanguageSettings(context) }
+    val readingPreferences = remember { androidReadingPreferences(context) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) {
             picker.resolve(null)
@@ -81,6 +82,7 @@ private fun LektoApp(
             readerLevels = readerLevels,
             languageSettings = languageSettings,
             systemLanguage = systemLanguage,
+            readingPreferences = readingPreferences,
             pickFile = {
                 // Arm the picker before launching, then park the import until
                 // it answers — the order closes the resolve-before-await race.

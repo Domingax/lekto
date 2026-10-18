@@ -8,6 +8,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
+import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
@@ -42,6 +43,8 @@ class ReaderTextTest {
         },
     )
 
+    private val styles = ReaderStyles.of(ReadingPreferences.DEFAULT)
+
     private val chapter = ReaderChapter(
         title = "Chapter",
         language = "en",
@@ -50,7 +53,7 @@ class ReaderTextTest {
 
     @Test
     fun rendersTheBlocksAsOneText() {
-        val tokens = buildReaderTokens(chapter, renderer)
+        val tokens = buildReaderTokens(chapter, renderer, styles)
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
@@ -58,7 +61,7 @@ class ReaderTextTest {
 
     @Test
     fun wordOffsetsSliceBackToTheWord() {
-        val tokens = buildReaderTokens(chapter, renderer)
+        val tokens = buildReaderTokens(chapter, renderer, styles)
 
         tokens.words.forEach { word ->
             assertEquals(word.surface, tokens.text.text.substring(word.start, word.end))
@@ -67,7 +70,7 @@ class ReaderTextTest {
 
     @Test
     fun highlightedLevelsAreDistinctAndKnownIsNotHighlighted() {
-        val tokens = buildReaderTokens(chapter, renderer)
+        val tokens = buildReaderTokens(chapter, renderer, styles)
 
         val unknown = styleOf(tokens, "lantern").color
         val recognized = styleOf(tokens, "glows").color
@@ -76,12 +79,12 @@ class ReaderTextTest {
         assertNotEquals(unknown, recognized, "two mastery levels must not share a colour")
         assertNotEquals(unknown, known, "a highlighted word must stand out from normal text")
         assertNotEquals(recognized, known, "a highlighted word must stand out from normal text")
-        assertEquals(ReaderStyles.Reading.body.color, known)
+        assertEquals(styles.body.color, known)
     }
 
     @Test
     fun highlightedWordsAreUnderlinedAndKnownWordsAreNot() {
-        val tokens = buildReaderTokens(chapter, renderer)
+        val tokens = buildReaderTokens(chapter, renderer, styles)
 
         assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
         assertEquals(TextDecoration.None, styleOf(tokens, "the").textDecoration)
@@ -90,7 +93,7 @@ class ReaderTextTest {
     @Test
     fun everyWordIsTappable() {
         val tapped = mutableListOf<WordTap>()
-        val tokens = buildReaderTokens(chapter, renderer, onWordTap = { tap -> tapped += tap })
+        val tokens = buildReaderTokens(chapter, renderer, styles, onWordTap = { tap -> tapped += tap })
 
         tokens.words.forEach { word -> tap(tokens, word) }
 
@@ -114,7 +117,7 @@ class ReaderTextTest {
                 ),
             ),
         )
-        val tokens = buildReaderTokens(emphasised, renderer)
+        val tokens = buildReaderTokens(emphasised, renderer, styles)
 
         assertEquals("plain loud and soft", tokens.text.text)
         assertEquals(FontWeight.Bold, styleOf(tokens, "loud").fontWeight)
@@ -131,16 +134,16 @@ class ReaderTextTest {
                 TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("body"))),
             ),
         )
-        val tokens = buildReaderTokens(heading, renderer)
+        val tokens = buildReaderTokens(heading, renderer, styles)
 
         assertEquals("A Title\n\nbody", tokens.text.text)
         val titleSpan = tokens.text.spanStyles.first { span -> span.start == 0 && span.end == 7 }
-        assertEquals(ReaderStyles.Reading.heading.fontSize, titleSpan.item.fontSize)
+        assertEquals(styles.heading.fontSize, titleSpan.item.fontSize)
     }
 
     @Test
     fun theChapterTextHasNoWordLayer() {
-        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val chapterText = buildChapterText(chapter, styles)
 
         assertEquals("the lantern glows", chapterText.text)
         assertTrue(chapterText.getLinkAnnotations(0, chapterText.length).isEmpty(), "chapter text must carry no links")
@@ -148,11 +151,11 @@ class ReaderTextTest {
 
     @Test
     fun aPageCarriesItsStylesAndItsWordsOnly() {
-        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val chapterText = buildChapterText(chapter, styles)
         val page = ReaderPage(0, chapterText.length)
         var tapped: WordTap? = null
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter) { tap -> tapped = tap }
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles) { tap -> tapped = tap }
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
@@ -172,23 +175,31 @@ class ReaderTextTest {
                 TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("plain "), TextRun("loud", setOf(InlineStyle.STRONG)))),
             ),
         )
-        val chapterText = buildChapterText(styled, ReaderStyles.Reading)
+        val chapterText = buildChapterText(styled, styles)
         val whole = ReaderPage(0, chapterText.length)
 
-        val tokens = buildPageTokens(chapterText, whole, renderer, styled)
+        val tokens = buildPageTokens(chapterText, whole, renderer, styled, styles)
 
         val titleSpan = tokens.text.spanStyles.first { span -> span.start == 0 && span.end == 7 }
-        assertEquals(ReaderStyles.Reading.heading.fontSize, titleSpan.item.fontSize)
+        assertEquals(styles.heading.fontSize, titleSpan.item.fontSize)
         assertEquals(FontWeight.Bold, styleOf(tokens, "loud").fontWeight)
     }
 
     @Test
     fun theSelectedWordCarriesTheSelectionHighlightAndItsNeighboursDoNot() {
-        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val chapterText = buildChapterText(chapter, styles)
         val page = ReaderPage(0, chapterText.length)
-        val lantern = buildPageTokens(chapterText, page, renderer, chapter).words.first { it.surface == "lantern" }
+        val lantern = buildPageTokens(chapterText, page, renderer, chapter, styles)
+            .words.first { it.surface == "lantern" }
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter, selected = lantern.start..lantern.end)
+        val tokens = buildPageTokens(
+            chapterText,
+            page,
+            renderer,
+            chapter,
+            styles,
+            selected = lantern.start..lantern.end,
+        )
 
         assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
         assertEquals(Color.Unspecified, styleOf(tokens, "the").background)
@@ -196,12 +207,12 @@ class ReaderTextTest {
 
     @Test
     fun aSelectedPhraseWashesEveryWordItCoversAndNoWordOutsideIt() {
-        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val chapterText = buildChapterText(chapter, styles)
         val page = ReaderPage(0, chapterText.length)
-        val words = buildPageTokens(chapterText, page, renderer, chapter).words
+        val words = buildPageTokens(chapterText, page, renderer, chapter, styles).words
         val phrase = words.first().start..words[1].end
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter, selected = phrase)
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles, selected = phrase)
 
         assertEquals(SelectionHighlight, styleOf(tokens, "the").background)
         assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
@@ -218,18 +229,18 @@ class ReaderTextTest {
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lanterns glow")))),
         )
 
-        val tokens = buildReaderTokens(plural, lemmaRenderer)
+        val tokens = buildReaderTokens(plural, lemmaRenderer, styles)
 
         assertEquals(WordKey("en", "lantern"), tokens.words.first { it.surface == "lanterns" }.key)
     }
 
     @Test
     fun aTapCarriesTheSentenceTheWordWasFoundIn() {
-        val chapterText = buildChapterText(chapter, ReaderStyles.Reading)
+        val chapterText = buildChapterText(chapter, styles)
         val page = ReaderPage(0, chapterText.length)
         var tapped: WordTap? = null
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter) { tap -> tapped = tap }
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles) { tap -> tapped = tap }
         tap(tokens, tokens.words.first { it.surface == "lantern" })
 
         assertEquals("the lantern glows", tapped?.contextSentence)

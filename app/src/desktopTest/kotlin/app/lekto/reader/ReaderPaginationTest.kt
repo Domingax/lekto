@@ -7,6 +7,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import app.lekto.core.reading.ReadingPreferences
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -38,7 +39,7 @@ class ReaderPaginationTest {
             val text = remember { AnnotatedString(passage) }
             pages = paginateChapter(
                 text = text,
-                layout = ReaderLayout(measurer, ReaderStyles.Reading.body, width, height),
+                layout = ReaderLayout(measurer, ReaderStyles.of(ReadingPreferences.DEFAULT).body, width, height),
             ).toList()
         }
         waitForIdle()
@@ -60,7 +61,7 @@ class ReaderPaginationTest {
             val width = with(density) { 240.dp.roundToPx() }
             val height = with(density) { 160.dp.roundToPx() }
             val text = remember { AnnotatedString(passage) }
-            val layout = ReaderLayout(measurer, ReaderStyles.Reading.body, width, height)
+            val layout = ReaderLayout(measurer, ReaderStyles.of(ReadingPreferences.DEFAULT).body, width, height)
             firstPage = paginateChapter(text, layout).first()
             allPages = paginateChapter(text, layout).toList()
         }
@@ -77,7 +78,7 @@ class ReaderPaginationTest {
             val measurer = rememberTextMeasurer()
             pages = paginateChapter(
                 text = AnnotatedString(""),
-                layout = ReaderLayout(measurer, ReaderStyles.Reading.body, 240, 160),
+                layout = ReaderLayout(measurer, ReaderStyles.of(ReadingPreferences.DEFAULT).body, 240, 160),
             ).toList()
         }
         waitForIdle()
@@ -95,5 +96,31 @@ class ReaderPaginationTest {
         assertEquals(1, pageIndexFor(pages, 249))
         assertEquals(2, pageIndexFor(pages, 399))
         assertEquals(2, pageIndexFor(pages, 400), "an offset past the end clamps to the last page")
+    }
+
+    @Test
+    fun aBiggerReadingPreferencePaginatesIntoMorePages() = runComposeUiTest {
+        lateinit var smallPages: List<ReaderPage>
+        lateinit var largePages: List<ReaderPage>
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val height = with(density) { 160.dp.roundToPx() }
+            val text = remember { AnnotatedString(passage) }
+            fun pagesAt(size: Float): List<ReaderPage> {
+                val styles = ReaderStyles.of(ReadingPreferences(size = size))
+                val width = with(density) { (240.dp - styles.horizontalMargin * 2).roundToPx() }
+                return paginateChapter(text, ReaderLayout(measurer, styles.body, width, height)).toList()
+            }
+            smallPages = pagesAt(ReadingPreferences.MIN_SIZE)
+            largePages = pagesAt(ReadingPreferences.MAX_SIZE)
+        }
+        waitForIdle()
+
+        assertTrue(
+            largePages.size > smallPages.size,
+            "a bigger text must take more pages: ${smallPages.size} at ${ReadingPreferences.MIN_SIZE} vs " +
+                "${largePages.size} at ${ReadingPreferences.MAX_SIZE}",
+        )
     }
 }

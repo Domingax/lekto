@@ -21,6 +21,7 @@ import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.swallowTaps
 
 /** The test tag on the translation shortcut, so a UI test can click exactly it. */
 internal const val TRANSLATION_SHORTCUT_TAG: String = "lookup-translation-shortcut"
@@ -51,8 +52,10 @@ data class PhraseLookupActions(val onOpenShortcut: (TranslationShortcut) -> Unit
  * ([PhraseTranslationUiState.context]) behind a control the reader can open, and
  * without a provider it shows a non-blocking prompt beside the shortcut, never a
  * dead action. A provider failure is rendered inline, so reading is never
- * interrupted (ADR-0022). Like a Dictionary shortcut, Lekto never embeds or
- * scrapes the service.
+ * interrupted (ADR-0022). The panel swallows taps that land on it, so only a tap
+ * truly outside it — which its [app.lekto.ui.DismissScrim] handles — dismisses it;
+ * a tap on the reader behind it then never reaches a word. Like a Dictionary
+ * shortcut, Lekto never embeds or scrapes the service.
  */
 @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide them.
 @Composable
@@ -64,7 +67,7 @@ fun PhraseLookupPanel(
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier.fillMaxWidth().padding(8.dp)) {
+    Card(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
         Column(
             Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),

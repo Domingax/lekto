@@ -37,6 +37,8 @@ import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
+import app.lekto.core.reading.ReadingPreferences
+import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
@@ -71,6 +73,7 @@ import app.lekto.reader.ReaderChapter
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
+import app.lekto.reader.ReadingPreferencesController
 import app.lekto.reader.WordTap
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.ProviderController
@@ -135,6 +138,12 @@ data class AppEnvironment(
      * stays honest.
      */
     val languageSettings: LanguageSettingsStore? = null,
+    /**
+     * The app-private reading preference store (ADR-0035): the device-local
+     * face, size and margin a book's text renders with, never a **Vault** record.
+     * `null` when the platform wires none, so the reader renders the defaults.
+     */
+    val readingPreferences: ReadingPreferencesStore? = null,
     /**
      * The language the platform reports for this device (ADR-0034): the first-launch
      * suggestion for the **app language**. `null` when the platform reports none —
@@ -302,6 +311,11 @@ fun App(
         environment.languageSettings?.let { store -> LanguageSettingsController(store) }
     }
     LaunchedEffect(languageSettings) { languageSettings?.applyAppLanguageDefault(environment.systemLanguage) }
+    // The reader's reading preference (ADR-0035): the device-local face, size and
+    // margin the reader's own **Aa** panel changes, read once and observed as state.
+    val readingPreferences = remember(environment.readingPreferences) {
+        environment.readingPreferences?.let { store -> ReadingPreferencesController(store) }
+    }
     // The translation-language default needs the manifest, so it is filled from the
     // cached catalogue at launch and again when the Languages surface reads it; a
     // device whose language a pack serves needs no choice.
@@ -378,6 +392,7 @@ fun App(
                 mastery,
                 language,
                 languageSettings,
+                readingPreferences,
                 lemmas,
                 difficulty,
                 difficultyStates,
@@ -401,6 +416,7 @@ private fun AppScreens(
     mastery: MasteryController?,
     language: LanguageController?,
     languageSettings: LanguageSettingsController?,
+    readingPreferences: ReadingPreferencesController?,
     lemmas: LemmaLookup,
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
@@ -418,6 +434,7 @@ private fun AppScreens(
                 progress,
                 mastery,
                 languageSettings,
+                readingPreferences,
                 lemmas,
                 onBack = { destination = Destination.Library },
                 onOpenSettings = { destination = Destination.Settings },
@@ -482,6 +499,7 @@ private fun ReaderDestination(
     progress: ReadingProgressWriter,
     mastery: MasteryController?,
     languageSettings: LanguageSettingsController?,
+    readingPreferences: ReadingPreferencesController?,
     lemmas: LemmaLookup,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -530,6 +548,7 @@ private fun ReaderDestination(
         masteryRevision = mastery?.revision ?: 0,
         lemmas = lemmas,
         lookup = lookup,
+        readingPreferences = readingPreferences,
         onBack = onBack,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
@@ -588,7 +607,10 @@ private class Lookup(
     val onWordTap: (WordTap) -> Unit,
     val onPhraseSelected: (PhraseSelection) -> Unit,
     val onDismiss: () -> Unit,
-)
+) {
+    /** Whether a word or phrase panel is open above the reader, for the page's dismiss scrim. */
+    val hasPanel: Boolean get() = selection != null || phrase != null
+}
 
 /**
  * The settings screen's live pieces, bundled so [AppScreens] stays within the
@@ -817,6 +839,7 @@ private fun ReaderSession(
     masteryRevision: Int,
     lemmas: LemmaLookup,
     lookup: Lookup,
+    readingPreferences: ReadingPreferencesController?,
     onBack: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
@@ -842,12 +865,17 @@ private fun ReaderSession(
                     selected.tap.token.start..selected.tap.token.end
                 } ?: lookup.phrase?.range,
                 masteryRevision = masteryRevision,
+                preferences = readingPreferences?.preferences ?: ReadingPreferences.DEFAULT,
             ),
             actions = ReaderActions(
                 onWordTap = lookup.onWordTap,
                 onPhraseSelected = lookup.onPhraseSelected,
                 onBack = onBack,
                 onPositionChange = onPositionChange,
+                onReadingPreferencesChange = { next -> readingPreferences?.update(next) },
+                // A lookup panel is open above the reader: a tap on the page outside
+                // it closes it, rather than looking a word up or turning the page.
+                onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
             ),
         )
         LookupOverlays(lookup, session.book.language, environment.openUrl)

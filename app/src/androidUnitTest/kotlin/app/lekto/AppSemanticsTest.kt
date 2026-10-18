@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -40,6 +41,7 @@ import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
+import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
@@ -71,6 +73,9 @@ import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READING_LARGER_TAG
+import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
+import app.lekto.reader.READING_PREFERENCES_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
@@ -92,6 +97,7 @@ import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryReaderLevels
+import app.lekto.testkit.InMemoryReadingPreferencesStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
@@ -141,7 +147,8 @@ import java.io.IOException
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("TooManyFunctions", "LargeClass") // One flow, one test per step; splitting the class hides the whole path.
+// One flow, one test per step; splitting the class hides the whole path.
+@Suppress("TooManyFunctions", "LargeClass", "MagicNumber")
 class AppSemanticsTest {
 
     @get:Rule
@@ -188,6 +195,33 @@ class AppSemanticsTest {
         // and Previous page enabled proves it is not page one.
         compose.awaitPage(2)
         compose.onNodeWithText("Previous page").assertIsEnabled()
+    }
+
+    @Test
+    fun theReadingPreferenceIsKeptAcrossSessions() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        val preferences = InMemoryReadingPreferencesStore()
+        compose.setContent { App(environment(library, readingPreferences = preferences)) }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        // Opening a book runs on the environment's dispatcher, so wait for the
+        // reader's chrome before touching its **Aa** control.
+        compose.waitUntil { compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithTag(READING_LARGER_TAG).performClick()
+
+        assertEquals(20f, preferences.load().size)
+
+        // Leave the book and reopen it: the choice is device-local configuration,
+        // not session state, so the reader starts from it (ADR-0035).
+        compose.onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
+        compose.onNodeWithText("Library").performClick()
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.waitUntil { compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithTag(READING_LARGER_TAG).performClick()
+
+        assertEquals(22f, preferences.load().size)
     }
 
     @Test
@@ -252,6 +286,26 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun tappingOutsideTheWordLookupPanelClosesItWithoutTurningThePage() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithText("Next page").performClick()
+        compose.awaitPage(2)
+
+        compose.tapFirstWord()
+        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+
+        // A tap on the page, above the panel, is outside it: it closes the panel
+        // and does not turn the page.
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        compose.onNodeWithText("Look it up online").assertDoesNotExist()
+        compose.awaitPage(2)
+    }
+
+    @Test
     fun selectingAPhraseOffersTheTranslationShortcutWithNoProviderConfigured() {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         var opened: String? = null
@@ -283,6 +337,27 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Translate online").assertDoesNotExist()
+        compose.awaitPage(2)
+    }
+
+    @Test
+    fun tappingOutsideTheTranslationPanelClosesItWithoutLookingAWordUp() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.onNodeWithText("Next page").performClick()
+        compose.awaitPage(2)
+
+        compose.selectFirstPhrase()
+        compose.onNodeWithText("Translate online").assertIsDisplayed()
+
+        // A tap on the page, above the panel, is outside it: it closes the panel
+        // and does not look the word under it up, nor turn the page.
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
+
+        compose.onNodeWithText("Translate online").assertDoesNotExist()
+        compose.onNodeWithText("Look it up online").assertDoesNotExist()
         compose.awaitPage(2)
     }
 
@@ -571,6 +646,8 @@ class AppSemanticsTest {
         compose.waitUntil { vocabulary.all().isNotEmpty() }
         assertEquals("the save must key on the lemma", "lantern", vocabulary.all().single().key.key)
 
+        // The word panel is open over the page bar; close it before turning the page.
+        compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Next page").performClick()
         compose.tapFirstWord()
         // The same lemma again, so its entry updates in place rather than adding a
@@ -1101,6 +1178,7 @@ internal fun environment(
     readerLevels: ReaderLevels? = null,
     languageSettings: LanguageSettingsStore? = null,
     systemLanguage: String? = null,
+    readingPreferences: ReadingPreferencesStore? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
@@ -1114,6 +1192,7 @@ internal fun environment(
     readerLevels = readerLevels,
     languageSettings = languageSettings,
     systemLanguage = systemLanguage,
+    readingPreferences = readingPreferences,
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,

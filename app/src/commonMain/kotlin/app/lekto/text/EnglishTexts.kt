@@ -59,6 +59,17 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.PREVIOUS_PAGE to "Previous page",
     TextKey.NEXT_PAGE to "Next page",
     TextKey.PAGE_OF to "Page {0} of {1}",
+    TextKey.READING_PREFERENCES to "Aa",
+    TextKey.READING_FACE to "Text face",
+    TextKey.READING_FACE_SERIF to "Serif",
+    TextKey.READING_FACE_SANS_SERIF to "Sans-serif",
+    TextKey.READING_SIZE to "Text size",
+    TextKey.READING_SMALLER to "Smaller",
+    TextKey.READING_LARGER to "Larger",
+    TextKey.READING_MARGINS to "Margins",
+    TextKey.READING_MARGIN_NARROW to "Narrow",
+    TextKey.READING_MARGIN_COMFORTABLE to "Comfortable",
+    TextKey.READING_MARGIN_WIDE to "Wide",
 
     // Word lookup panel.
     TextKey.LISTEN to "Listen",

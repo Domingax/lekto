@@ -28,6 +28,12 @@ Save a word to keep the **Context sentence** it appeared in and a translation to
 fall back on when no **Dictionary pack** answers. See [Vocabulary](/vocabulary) and
 [Pronunciation](/pronunciation).
 
+## Closing the panel
+
+Close the panel with **Close**, or by tapping the page outside it. A tap outside
+the panel only closes it: it does not look up the word under your finger or turn
+the page.
+
 ## Screenshots
 
 Tapping a word opens the panel over the reader:

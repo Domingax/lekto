@@ -41,17 +41,19 @@ data class WordTap(val token: WordToken, val contextSentence: String?)
  * [selected] marks the word whose lookup panel is open, so it stays visibly
  * highlighted while the panel is up.
  */
+@Suppress("LongParameterList") // The chapter, its renderer, its styles and the tap; a bundle would only hide that.
 fun buildReaderTokens(
     chapter: ReaderChapter,
     renderer: ReaderRenderer,
+    styles: ReaderStyles,
     selected: IntRange? = null,
     onWordTap: (WordTap) -> Unit = {},
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
-    val blockStarts = appendBlocks(builder, chapter, renderer.styles)
+    val blockStarts = appendBlocks(builder, chapter, styles)
     val text = chapter.blocks.joinToString(separator = "\n\n") { block -> block.text }
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, renderer.styles, selected, onWordTap, offset = 0, text = text)
+    val writer = WordWriter(builder, styles, selected, onWordTap, offset = 0, text = text)
     chapter.blocks.forEachIndexed { index, block ->
         tokenise(block.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
@@ -94,13 +96,14 @@ fun buildPageTokens(
     page: ReaderPage,
     renderer: ReaderRenderer,
     chapter: ReaderChapter,
+    styles: ReaderStyles,
     selected: IntRange? = null,
     onWordTap: (WordTap) -> Unit = {},
 ): ReaderTokens {
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, renderer.styles, selected, onWordTap, page.start, chapterText.text)
+    val writer = WordWriter(builder, styles, selected, onWordTap, page.start, chapterText.text)
     tokenise(slice.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
         words += token
         writer.write(token, renderer.mastery.levelOf(token.key))

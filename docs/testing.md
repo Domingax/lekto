@@ -557,7 +557,11 @@ reader's selection wash, which keeps the tapped word visible behind the panel, i
 pinned on the word layer in `ReaderTextTest`,
 and the whole loop — turn a page, tap a word, open Reverso through the injected
 browser opener, close, and find the reader still on the same page — is driven
-through `AppSemanticsTest`. Opening a shortcut is a platform action: the desktop
+through `AppSemanticsTest`. A tap on the page outside the panel closes it without
+looking the word under the finger up or turning the page, pinned through
+`AppSemanticsTest` on both lanes; the panel and the reader's **Aa** panel share the
+`app.lekto.ui.DismissScrim` that gives them the affordance. Opening a shortcut is
+a platform action: the desktop
 opener takes its browse call as a parameter so it is unit-tested, and the Android
 glue sits behind the coverage exclusion like the rest of the platform entry
 points.
@@ -571,9 +575,12 @@ address, in `core/commonTest`. The reader's long-press drag is split from the
 page: `PhraseSelectionTest` pins the pure range-to-phrase math, `ReaderTextTest`
 pins that a selected phrase washes every word it covers, and the gesture itself
 is driven through `ReaderScreenSemanticsTest` on both lanes. The panel is
-`PhraseLookupPanelSemanticsTest` on both lanes, and the whole loop — select a
+`PhraseLookupPanelSemanticsTest` on both lanes; it shares its tap-outside dismissal
+with the reader's **Aa** panel through `app.lekto.ui.DismissScrim`, and
+`AppSemanticsTest` proves on both lanes that a tap outside the translation panel
+closes it without looking the word under it up. The whole loop — select a
 phrase on page two, open the shortcut through the injected browser, close and
-land on the same page — runs through `AppSemanticsTest` on both lanes. Robolectric's
+land on the same page — also runs through `AppSemanticsTest` on both lanes. Robolectric's
 glyph metrics are sub-pixel, so its text hit-testing does not extend the drag
 reliably; the Android lane proves the gesture selects a phrase and opens the
 panel, while the multi-word range is pinned by `PhraseSelectionTest` and the
@@ -896,6 +903,29 @@ lands: `DictionaryServicesTest` pins that both the reader's lookup and the
 tokeniser's lemma index resolve the pack for the chosen pair and none when it is
 unset, and `WordTapHandlerTest` pins the same through a tap. The reference
 shortcuts' Spanish pair is `DictionarySourceTest` in `core/commonTest`.
+
+The reader's **Reading preference** (issue #169; ADR-0035) — the face, size, leading
+and margins a book renders with — is proved at its own levels. The
+`ReadingPreferencesStore` seam runs the shared `ReadingPreferencesStoreContract`
+against the in-memory fake and the JSON document store over an in-memory filesystem
+in `core/commonTest`, and against the same document over a real directory in
+`core/jvmTest`; `JsonReadingPreferencesStoreTest` adds the cases the contract does
+not — a corrupt document, and a face or margin this build does not know, both read
+as the defaults — and pins that the preference lives under the settings root and
+never lands in the vault or its export. The value's own rules — the default
+reproduces today's fixed style, the leading is derived from the size, and the size
+steps and stops at its bounds — are `ReadingPreferencesTest` and `ReaderStylesTest`.
+`ReadingPreferencesControllerTest` pins that the store is the truth (a choice is
+written through and survives a restart) and `ReaderPaginationTest` that a bigger
+size takes more pages, so the repagination the ticket's Evidence names is proved
+where pagination lands. The **Aa** panel is
+`ReadingPreferencesPanelSemanticsTest` on both lanes — the current face, size and
+margin with the chosen chip marked `selected`, each control raising the next value
+the reader sees repaginated, the **Close** action and a tap outside the panel both
+dismissing it without looking a word up (a dismiss scrim over the page), and the
+size disabled at its bounds — and the whole loop, changing the size in the reader
+and finding it kept after leaving and reopening the book, runs through
+`AppSemanticsTest` on both lanes.
 
 The app's own texts (issue #165; ADR-0034) are one per-language table selected by
 the **app language**. `AppTextsTest` in `app/desktopTest` pins that every
