@@ -105,10 +105,16 @@ renders, chosen so the place survives a reflow onto a different screen size or f
 Saved per book in the vault and restored when the book is reopened.
 _Avoid_: Page number, bookmark, scroll position
 
+**Reading progress**:
+How far through a **Book** the reader is, held as the book's **Reading position**. A
+book with no Reading position has none. Distinct from **Last read**, which records
+when the position moved, not how far.
+_Avoid_: Percentage, completion, furthest read
+
 **Last read**:
 The moment a book's **Reading position** last moved — a page turned, not the book
-opened. It orders the **Library** and says nothing about how far through the book the
-reader is.
+opened. It orders the **Library** and is distinct from **Reading progress**, which
+says how far.
 _Avoid_: Last opened, recent, progress
 
 **Word token**:

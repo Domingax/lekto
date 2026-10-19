@@ -176,9 +176,17 @@ A row is a **language vignette** (44 × 60), the title, a line of `FORMAT · 28 
 progress rule**. There are **no covers**: a `Book` carries a title, a language, a format and a
 file name, and only the EPUB format has a cover image at all — a shelf with covers for some books
 and none for others reads as broken. The vignette is where a cover would go if one ever exists.
+The file name is not on the row: it survives in import errors and the delete confirmation, where
+it identifies a file rather than a book.
 
-Ordering is the vault's today; the reader wants recency (#174). Progress and search are both
-missing (#172, #173).
+**Reading progress** is where the reader is now, not the furthest point reached: the share of the
+book's rendered text before the **Reading position**, rounded down, so a book on its last page
+reads just under 100 %. The number and the rule carry the same whole percentage. A book with no
+Reading position reads `FORMAT · Not started` and has no rule; one whose text has not been
+measured yet reads `FORMAT · …`, also without a rule. The Library never claims a book is finished;
+that distinction is #175's.
+
+Ordering leads with the three books read last (#174, #188); search is still missing (#173).
 
 **States**: empty says what to do and carries the action; loading shows **skeleton rows**, never
 the empty message; a failed import is a bordered block in the list, with a way to dismiss it.
