@@ -232,8 +232,8 @@ private fun Rampe.couleur(niveau: Niveau): Color = when (niveau) {
  * parce que c'est la seule chose qui compte : une page en cours de lecture.
  *
  * [lavis] non nul passe derrière le mot, et c'est alors [theme.ink] qui colore
- * les lettres. [souligne] ajoute le repère non-couleur. [selection] nomme le mot
- * que le lecteur vient de toucher.
+ * les lettres. [souligne] ajoute le repère non-couleur. [selection] nomme les
+ * mots que le lecteur vient de toucher — un seul, ou toute une phrase.
  */
 @Composable
 private fun Phrase(
@@ -241,7 +241,7 @@ private fun Phrase(
     couleur: Rampe,
     lavis: Rampe? = null,
     souligne: Boolean = false,
-    selection: String? = null,
+    selection: List<String> = emptyList(),
     mots: List<Mot> = PHRASE,
 ) {
     val decoration = if (souligne) TextDecoration.Underline else TextDecoration.None
@@ -255,7 +255,7 @@ private fun Phrase(
                         textDecoration = decoration,
                     )
                 }
-                val fond = if (mot.texte == selection) {
+                val fond = if (mot.texte in selection) {
                     SpanStyle(background = theme.ink.copy(alpha = 0.14f))
                 } else {
                     null
@@ -865,9 +865,9 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranLecteur(Clair, chrome = true, selection = "stood")
-                    EcranLecteur(Sombre, chrome = true, selection = "told")
-                    EcranLecteur(Sepia, chrome = true, selection = "another")
+                    EcranLecteur(Clair, chrome = true, selection = listOf("stood"))
+                    EcranLecteur(Sombre, chrome = true, selection = listOf("told"))
+                    EcranLecteur(Sepia, chrome = true, selection = listOf("another"))
                 }
             }
         }
@@ -896,11 +896,407 @@ class VisualIdentityPrototype {
                 ) {
                     EcranLecteur(Clair, chrome = false)
                     EcranLecteur(Clair, chrome = false, zones = true)
-                    EcranLecteur(Clair, chrome = true, panneau = true, selection = "stood")
+                    EcranLecteur(Clair, chrome = true, panneau = true, selection = listOf("stood"))
                 }
             }
         }
         onRoot().captureRoboImage("prototype/lecteur-moments.png")
+    }
+
+    /**
+     * Planche 10 — le panneau, dans les trois fonds. Un mot touché, sa définition,
+     * son niveau : c'est l'interaction qui définit le produit.
+     */
+    @Test
+    fun recherche() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Le panneau du mot — l'interaction signature",
+                    sousTitre = "La page reste visible au-dessus, le mot touché reste lavé, et " +
+                        "le panneau ne prend jamais plus de la moitié de l'écran.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    EcranRecherche(Clair, EtatRecherche.MOT)
+                    EcranRecherche(Sombre, EtatRecherche.MOT)
+                    EcranRecherche(Sepia, EtatRecherche.MOT)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/recherche.png")
+    }
+
+    /**
+     * Planche 11 — les trois états que le panneau doit savoir montrer :
+     * le dictionnaire absent, une phrase traduite par l'IA, et une phrase sans
+     * aucun fournisseur configuré.
+     */
+    @Test
+    fun rechercheEtats() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Le panneau — quand il n'a pas ce qu'on lui demande",
+                    sousTitre = "Un dictionnaire absent, une phrase traduite, une phrase sans " +
+                        "fournisseur : trois messages dans le panneau, jamais une alerte.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    EcranRecherche(Clair, EtatRecherche.HORS_LIGNE)
+                    EcranRecherche(Clair, EtatRecherche.PHRASE_IA)
+                    EcranRecherche(Clair, EtatRecherche.PHRASE_SANS_IA)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/recherche-etats.png")
+    }
+}
+
+/** Les états du panneau de recherche. */
+private enum class EtatRecherche { MOT, HORS_LIGNE, PHRASE_IA, PHRASE_SANS_IA }
+
+/** Le lecteur, avec le panneau posé dessus. */
+@Composable
+private fun EcranRecherche(theme: Theme, etat: EtatRecherche) {
+    Box(modifier = Modifier.width(390.dp).height(844.dp)) {
+        val selection = when (etat) {
+            EtatRecherche.PHRASE_IA, EtatRecherche.PHRASE_SANS_IA -> listOf("fir", "tree", "stood")
+            else -> listOf("stood")
+        }
+        EcranLecteur(theme, chrome = true, selection = selection)
+        val bas = Modifier.align(Alignment.BottomCenter)
+        when (etat) {
+            EtatRecherche.MOT -> PanneauMot(theme, modifier = bas)
+            EtatRecherche.HORS_LIGNE -> PanneauMot(theme, horsLigne = true, modifier = bas)
+            EtatRecherche.PHRASE_IA -> PanneauPhrase(theme, ia = true, modifier = bas)
+            EtatRecherche.PHRASE_SANS_IA -> PanneauPhrase(theme, ia = false, modifier = bas)
+        }
+    }
+}
+
+/**
+ * Le panneau d'un mot. Il n'y a pas de bouton « Enregistrer » : **le niveau est
+ * l'enregistrement**. Un geste, et le mot est au niveau choisi.
+ */
+@Composable
+private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(theme.surface, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline))
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .size(36.dp, 4.dp)
+                    .background(theme.outline, RoundedCornerShape(2.dp)),
+            )
+            Row(verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "stood",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.ink,
+                        ),
+                    )
+                    Text(
+                        text = "verbe · /stʊd/",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Icon(
+                        imageVector = LucideDemo.Volume2,
+                        contentDescription = null,
+                        tint = theme.ink,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Icon(
+                        imageVector = LucideDemo.X,
+                        contentDescription = null,
+                        tint = theme.ink,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+            Separateur(theme)
+            if (horsLigne) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Le dictionnaire n'est pas installé sur cet appareil.",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = theme.ink,
+                        ),
+                    )
+                    Text(
+                        text = "Le mot peut quand même être enregistré : il sera traduit dès " +
+                            "qu'un dictionnaire sera là.",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                    Text(
+                        text = "Voir les langues",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = theme.ink,
+                        ),
+                    )
+                }
+            } else {
+                Sens("1", "the past tense of stand.", null, theme)
+                Sens("2", "to be in an upright position, supported by the feet.", "se tenir debout", theme)
+                Sens("3", "to remain in a place without moving.", "rester", theme)
+                Text(
+                    text = "…",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        color = theme.muted,
+                    ),
+                )
+            }
+            Separateur(theme)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "Niveau",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 11.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                    Text(
+                        text = "Reconnu",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = theme.ink,
+                        ),
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val rampe = theme.rampe()
+                    ChipNiveau(theme, "0", rampe.unknown, choisi = false)
+                    ChipNiveau(theme, "1", rampe.recognized, choisi = true)
+                    ChipNiveau(theme, "2", rampe.familiar, choisi = false)
+                    ChipNiveau(theme, "3", rampe.learned, choisi = false)
+                    ChipNiveau(theme, "4", theme.outline, choisi = false)
+                }
+            }
+            Separateur(theme)
+            Text(
+                text = "WordReference · Reverso · Linguee · Google Traduction",
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 11.sp,
+                    color = theme.muted,
+                ),
+            )
+        }
+    }
+}
+
+/** Un sens : le numéro, la définition, et la traduction quand elle existe. */
+@Composable
+private fun Sens(numero: String, definition: String, traduction: String?, theme: Theme) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = numero,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                color = theme.muted,
+            ),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = definition,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = theme.ink,
+                ),
+            )
+            if (traduction != null) {
+                Text(
+                    text = "→ $traduction",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        color = theme.muted,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+/** Un niveau du panneau : sa couleur, son numéro, et un anneau s'il est le niveau courant. */
+@Composable
+private fun ChipNiveau(theme: Theme, numero: String, fond: Color, choisi: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .background(fond, RoundedCornerShape(8.dp))
+            .then(if (choisi) Modifier.border(2.dp, theme.ink, RoundedCornerShape(8.dp)) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = numero,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (fond.luminance() > 0.4f) Color(0xFF1A1A1A) else Color.White,
+            ),
+        )
+    }
+}
+
+/** Le trait qui sépare, dans le panneau : une couleur, pas une ombre. */
+@Composable
+private fun Separateur(theme: Theme) {
+    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline.copy(alpha = 0.6f)))
+}
+
+/**
+ * Le panneau d'une phrase : la traduction vient du fournisseur du lecteur, ou
+ * d'une invite qui ne bloque rien. Aucun dictionnaire hors ligne ne traduit une
+ * phrase, donc l'invite est le seul chemin quand rien n'est configuré.
+ */
+@Composable
+private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(theme.surface, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline))
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .size(36.dp, 4.dp)
+                    .background(theme.outline, RoundedCornerShape(2.dp)),
+            )
+            Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    text = "the fir tree stood",
+                    modifier = Modifier.weight(1f),
+                    style = TextStyle(
+                        fontFamily = FontFamily.Serif,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.ink,
+                    ),
+                )
+                Icon(
+                    imageVector = LucideDemo.X,
+                    contentDescription = null,
+                    tint = theme.ink,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Separateur(theme)
+            if (ia) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Le sapin se tenait debout",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                            color = theme.ink,
+                        ),
+                    )
+                    Text(
+                        text = "Traduit par ton fournisseur — 12 mots envoyés",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 11.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Une phrase a besoin d'une IA pour être traduite.",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = theme.ink,
+                        ),
+                    )
+                    Text(
+                        text = "Un mot a son dictionnaire hors ligne ; une phrase n'en a pas.",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                    Text(
+                        text = "Configurer un fournisseur",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = theme.ink,
+                        ),
+                    )
+                }
+            }
+            Separateur(theme)
+            Text(
+                text = "Google Traduction",
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 11.sp,
+                    color = theme.muted,
+                ),
+            )
+        }
     }
 }
 
@@ -1040,7 +1436,7 @@ private fun EcranLecteur(
     chrome: Boolean,
     zones: Boolean = false,
     panneau: Boolean = false,
-    selection: String? = null,
+    selection: List<String> = emptyList(),
 ) {
     Column(
         modifier = Modifier
