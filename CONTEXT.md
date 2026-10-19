@@ -152,6 +152,14 @@ choice per device, app-private and never synced, so it does not travel with the
 app translates into.
 _Avoid_: Locale, UI language, device language
 
+**App theme**:
+The colours the app paints itself in: **Light**, **Dark** or **Sepia**. One choice per
+device, app-private and never synced, so it does not travel with the **Vault**; it is not
+a **Reading preference**, because it recolours the whole app rather than a book's text
+(ADR-0036). Light and Dark are also what the device may choose, so the setting names a
+fourth possibility, **System**, which resolves to one of those two and never to Sepia.
+_Avoid_: Colour scheme, dark mode, skin, reading theme
+
 **Reader level**:
 The level a reader declares in a language they read, on the six-point CEFR scale
 A1–C2, held per **Reading language** in the **Vault** so it exports and syncs with it. The
