@@ -20,6 +20,8 @@ et le verdict sont sur l'issue #168.
 | `bibliotheque-etats.png` | Vide, en cours de lecture, en échec — et pourquoi les deux premiers ne doivent pas se confondre ? |
 | `lecteur.png` | À quoi ressemble une page en cours de lecture, chrome compris ? |
 | `lecteur-moments.png` | La page nue, les zones de toucher, et le panneau du texte. |
+| `recherche.png` | Le panneau du mot posé sur la page, dans les trois fonds. |
+| `recherche-etats.png` | Le dictionnaire absent, la phrase traduite, la phrase sans fournisseur. |
 
 ## Regénérer
 
