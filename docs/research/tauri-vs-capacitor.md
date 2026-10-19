@@ -2,8 +2,9 @@
 
 **Date:** 2026-09-27
 > **Update (2026-10-19):** the UX specification these notes cite was replaced by
-> [`docs/design.md`](../design.md). The citations below record what was read at the time and are
-> left as they were written.
+> [`docs/design.md`](../design.md), and the product brief was retired once ADR-0008 closed the
+> web target it described. The citations below record what was read at the time and are left as
+> they were written.
 
 **Scope:** Which native shell should wrap Lekto's single React/TypeScript UI for **Web + Android** (iOS later), given the hard requirement of a **local-first, user-chosen "vault" folder** (ideally a cloud-synced directory), plus **TTS**, **secure API-key storage**, and **offline-first**?
 **Method:** Primary sources only — Tauri's official docs/site (v2.tauri.app, tauri.app/blog), the `tauri-apps` GitHub org, Capacitor's official docs (capacitorjs.com), the `ionic-team`/`capacitor-community` repos, the Capawesome plugin docs, the W3C/MDN secure-context definitions, and Chrome release notes. Where sources disagree, both are cited. Every claim carries a URL. Companion to `docs/research/cross-platform-file-access.md`, which established the Android SAF constraints this report builds on.
@@ -107,7 +108,7 @@ On desktop, Tauri gives you a native window over an OS webview — a desktop bin
 
 Plugins with web support "perform feature detection and throw exceptions if a browser does not support a particular Web API." ([Web Project](https://capacitorjs.com/docs/web))
 
-**Verdict (Q3):** Tauri **cannot** deliver a true in-browser web app from the same codebase. Capacitor **can**. Since Lekto's product brief names **Web as a primary target** ("The web app is the primary development target" — `docs/ux-design-specification.md` §58; "Platforms: Web (browser) + Android" — `docs/product-brief-2026-03-02.md` §184), this is the single most consequential difference in the comparison.
+**Verdict (Q3):** Tauri **cannot** deliver a true in-browser web app from the same codebase. Capacitor **can**. Since Lekto's product brief names **Web as a primary target** ("The web app is the primary development target" — `docs/ux-design-specification.md` §58; "Platforms: Web (browser) + Android" — the product brief then in force, §184), this is the single most consequential difference in the comparison.
 
 ---
 
@@ -236,7 +237,7 @@ Reasoning, in order of weight:
 
 1. **The browser target is non-negotiable for Lekto, and only Capacitor can ship it.** The product brief lists **Web (browser)** as a target and the UX spec calls the web app "the primary development target" (product brief §184; UX spec §58). Capacitor "fully supports traditional web and Progressive Web Apps" from the same assets ([Web Project](https://capacitorjs.com/docs/web)); Tauri produces desktop/mobile binaries and its APIs are inert in a browser ([What is Tauri?](https://v2.tauri.app/start/), [Develop](https://v2.tauri.app/develop/)). No amount of Android advantage can recover a target Tauri does not have.
 2. **On the file-access requirement, the two are close to a wash — and both need native SAF work.** Tauri's built-ins **also** cannot pick an Android folder or write to a chosen tree ([dialog](https://v2.tauri.app/plugin/dialog/), [#14587](https://github.com/tauri-apps/tauri/issues/14587)), so switching frameworks does **not** make the vault "just work." Capacitor's gap is a **native SAF adapter** (tree pick → `takePersistableUriPermission` → `DocumentsContract.createDocument`/`openOutputStream`), which the prior study already specified and which is small, well-understood Android code ([Android SAF](https://developer.android.com/training/data-storage/shared/documents-files)). Capawesome's `pickDirectory()` now sets `FLAG_GRANT_PERSISTABLE_URI_PERMISSION`, moving Capacitor closer to parity ([discussion #8484](https://github.com/ionic-team/capacitor/discussions/8484)).
-3. **Capacitor's TTS and secure-storage plugins are more mature and better fits** (§5, §6), and its contributor story is simpler — relevant to the brief's forkability goal ([product brief §162](./product-brief-2026-03-02.md)).
+3. **Capacitor's TTS and secure-storage plugins are more mature and better fits** (§5, §6), and its contributor story is simpler — relevant to the brief's forkability goal (the product brief then in force, §162).
 4. **The WebView engine is a tie on Android** (§4): both use the same updatable system WebView, so Keyboard/FSA API availability is identical and governed by WebView version, not framework. Tauri's Linux/macOS desktop WebKit is actually *worse* for the Chromium-only File System Access API than a user's Chromium browser.
 
 **Concrete path:** keep the storage seam from the prior study, and implement the Android vault as **one** native SAF adapter behind the `VaultStore` interface (`picker: 'saf'`), with app-private storage + export/import as the always-available default. Do the same file-access capability work you would have had to do in Tauri anyway; the difference is that in Capacitor it also ships to the browser.
