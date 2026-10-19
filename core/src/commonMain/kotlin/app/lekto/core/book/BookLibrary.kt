@@ -16,6 +16,13 @@ interface BookLibrary {
     fun books(): List<Book>
 
     /**
+     * The books in the vault split the way the Library screen shows them: the
+     * three most recently read first, most recent first, then every other book
+     * by title (CONTEXT.md, "Library"; issue #188).
+     */
+    fun listing(): LibraryListing
+
+    /**
      * Imports [bytes] as the file named [fileName], storing the book in the
      * vault and reporting [onProgress] as it runs.
      *

@@ -36,6 +36,7 @@ enum class TextKey {
 
     // Library.
     LIBRARY_EMPTY,
+    CONTINUE_READING,
     IMPORT,
     IMPORTING,
     IMPORT_PROGRESS,

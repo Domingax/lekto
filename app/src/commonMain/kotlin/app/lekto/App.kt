@@ -384,6 +384,7 @@ fun App(
             AppScreens(
                 environment,
                 controller,
+                changes,
                 state,
                 scope,
                 progress,
@@ -408,6 +409,7 @@ fun App(
 private fun AppScreens(
     environment: AppEnvironment,
     controller: LibraryController,
+    changes: LocalChanges,
     libraryState: LibraryUiState,
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
@@ -423,6 +425,17 @@ private fun AppScreens(
     dictionaryStates: Map<String, DictionaryUiState>,
 ) {
     var destination by remember { mutableStateOf<Destination>(Destination.Library) }
+
+    // The Library is re-read whenever it is shown, and again when a reading
+    // position lands while it is shown: a page turned just before leaving must
+    // still lead the list, even if its write had not reached the vault yet
+    // (CONTEXT.md, "Last read"; issue #188).
+    LaunchedEffect(destination) {
+        if (destination is Destination.Library) controller.refresh()
+    }
+    LaunchedEffect(controller, changes) {
+        changes.progress.collect { if (destination is Destination.Library) controller.refresh() }
+    }
 
     MaterialTheme {
         when (val current = destination) {

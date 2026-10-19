@@ -102,6 +102,15 @@ Android twin in `app/androidUnitTest` (issue #74), and the
 `LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
 
+The Library's order (issue #188) is a pure split — `LibraryListing.of` over the
+books and their last-read instants — so `LibraryListingTest` pins the three-book
+lead, the title order of the rest and the tie at the edge, while
+`VaultBookLibraryTest` proves the instants come from the position records,
+including a position at offset 0. The screen's section is
+`LibraryScreenSemanticsTest` on both lanes, and `AppSemanticsTest` proves that a
+page turned just before leaving the reader still leads the list, which is the
+refresh the composition root wires.
+
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
 record, its original, its derived text and its reading position and leaves a

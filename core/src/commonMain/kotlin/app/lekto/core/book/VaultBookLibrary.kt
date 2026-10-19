@@ -7,7 +7,9 @@ import app.lekto.core.text.StructuredText
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
+import app.lekto.core.vault.VaultRecord
 import app.lekto.core.vault.VaultStore
+import kotlin.time.Instant
 
 /**
  * The [BookLibrary] over a [VaultStore] and a [DerivedAssetStore] (issue #15).
@@ -43,10 +45,12 @@ class VaultBookLibrary(
 
     private val cache = BookTextCache(derived)
 
-    override fun books(): List<Book> = vault.all()
-        .filter { record -> record.kind == BookRecord.KIND }
-        .mapNotNull { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
-        .sortedBy { book -> book.title.lowercase() }
+    override fun books(): List<Book> = booksIn(vault.all())
+
+    override fun listing(): LibraryListing {
+        val records = vault.all()
+        return LibraryListing.of(books = booksIn(records), lastReadByBook = lastReadIn(records))
+    }
 
     override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
         val name = displayName(fileName)
@@ -148,10 +152,29 @@ class VaultBookLibrary(
         }
     }
 
-    private fun displayName(fileName: String): String = fileName.substringAfterLast('/')
-
     private companion object {
         /** Parsing is most of the work; the remaining tenth is the vault write. */
         const val PARSE_SHARE = 0.9f
     }
 }
+
+private fun displayName(fileName: String): String = fileName.substringAfterLast('/')
+
+/** The vault's books, in title order, skipping a record this build cannot read. */
+private fun booksIn(records: List<VaultRecord>): List<Book> = records
+    .filter { record -> record.kind == BookRecord.KIND }
+    .mapNotNull { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
+    .inTitleOrder()
+
+/**
+ * When each book's position last moved: the position record's `updatedAt`
+ * (CONTEXT.md, "Last read"). A record this build cannot read names no book, so
+ * it is skipped rather than misdated.
+ */
+private fun lastReadIn(records: List<VaultRecord>): Map<String, Instant> = records
+    .filter { record -> record.kind == ReadingPositionRecord.KIND }
+    .mapNotNull { record ->
+        runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull()
+            ?.let { position -> position.bookId to record.updatedAt }
+    }
+    .toMap()
