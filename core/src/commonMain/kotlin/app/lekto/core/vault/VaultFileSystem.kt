@@ -9,6 +9,12 @@ package app.lekto.core.vault
  * Paths are `/`-separated segments relative to the store's root. The
  * implementation guarantees [writeAtomically]: a reader either sees the previous
  * bytes or the new bytes, never a partial write (ADR-0003, "write temp, rename").
+ *
+ * One vault is read and written from several threads: composition and the
+ * reader read it while blocking work lands on the injected dispatcher, and sync
+ * reads it on its own. Every method is therefore safe to call from any thread,
+ * and [listFiles] returns a consistent snapshot rather than walking a tree a
+ * concurrent write or delete is changing (issue #194).
  */
 interface VaultFileSystem {
 
