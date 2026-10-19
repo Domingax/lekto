@@ -12,10 +12,12 @@ import javax.swing.filechooser.FileNameExtensionFilter
  *
  * The dialogs are deliberately their own file so the testable wiring beside them
  * (`DesktopLibrary.kt`, `DesktopVault.kt`) is not dragged into a coverage
- * exclusion. A dialog is modal and must run on the UI thread, so blocking here
- * is correct: it suspends the compose frame until the user answers, which is what
- * a file dialog does. `sun.awt`/Swing is already present on the desktop JVM, so
- * this adds no dependency.
+ * exclusion. A dialog is **modal**: it pumps its own nested event loop while the
+ * user answers. It must therefore not run on the composition's dispatcher, whose
+ * flush the loop would re-enter mid-resume (issue #192) — the desktop
+ * composition root hands these to its own dialog dispatcher, and blocking there
+ * is what a file dialog does. `sun.awt`/Swing is already present on the desktop
+ * JVM, so this adds no dependency.
  *
  * The dialog's own chrome — its title and its file-type filter — is visible text,
  * so it comes from the reader's [AppTexts] (ADR-0034): the entry point resolves
