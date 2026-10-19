@@ -1154,6 +1154,428 @@ class VisualIdentityPrototype {
         }
         onRoot().captureRoboImage("prototype/icone.png")
     }
+
+    /**
+     * Planche 17 — les deux formulaires que Réglages cachait : le fournisseur IA
+     * et le coffre avec sa synchronisation.
+     */
+    @Test
+    fun formulaires() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Les deux formulaires — la clé, et le serveur",
+                    sousTitre = "Des champs qui se lisent comme un formulaire imprimé : le " +
+                        "libellé au-dessus, la valeur, un filet. Pas de mur de cadres.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    EcranFournisseur(Clair)
+                    EcranCoffre(Clair)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/reglages-formulaires.png")
+    }
+
+    /**
+     * Planche 18 — « le L dans le livre » n'est pas « le L dans la page ».
+     * Les deux marques, à 96 dp et à 48 dp, puis le lancement.
+     */
+    @Test
+    fun marque() = runDesktopComposeUiTest(width = LARGEUR, height = 640) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 640.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "La marque — le L dans le livre, ou le L dans la page",
+                    sousTitre = "Deux façons de combiner la lettre et le papier. La première est " +
+                        "un livre ouvert ; la seconde est une feuille à tranche colorée.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(40.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Column {
+                        Text(
+                            text = "Le L dans le livre",
+                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                        )
+                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                            MarqueV2Dessin(MarqueV2.Livre, 96)
+                            MarqueV2Dessin(MarqueV2.Livre, 48)
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Le L dans la page",
+                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                        )
+                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                            MarqueV2Dessin(MarqueV2.Page, 96)
+                            MarqueV2Dessin(MarqueV2.Page, 48)
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Le lancement",
+                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                        )
+                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            LancementV2(Clair, MarqueV2.Livre)
+                            LancementV2(Sombre, MarqueV2.Livre)
+                        }
+                    }
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/icone-marque.png")
+    }
+}
+
+/** Les deux combinaisons de la lettre et du papier. */
+private enum class MarqueV2 { Livre, Page }
+
+/** Une marque à [taille], sur la tuile du lanceur. */
+@Composable
+private fun MarqueV2Dessin(marque: MarqueV2, taille: Int) {
+    val d = taille.dp
+    Box(
+        modifier = Modifier
+            .size(d)
+            .background(Clair.paper, RoundedCornerShape((taille * 0.22f).dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(modifier = Modifier.size(d * 0.62f), contentAlignment = Alignment.Center) {
+            when (marque) {
+                MarqueV2.Livre -> {
+                    Icon(
+                        imageVector = LucideDemo.BookOpen,
+                        contentDescription = null,
+                        tint = Clair.ink,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Text(
+                        text = "L",
+                        modifier = Modifier
+                            .background(Clair.paper, RoundedCornerShape(d * 0.05f))
+                            .padding(horizontal = d * 0.03f),
+                        style = TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = (taille * 0.3f).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Clair.ink,
+                        ),
+                    )
+                }
+
+                MarqueV2.Page -> {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        Column(modifier = Modifier.width(d * 0.11f).fillMaxHeight()) {
+                            listOf(
+                                Clair.rampe().unknown,
+                                Clair.rampe().recognized,
+                                Clair.rampe().familiar,
+                                Clair.rampe().learned,
+                            ).forEach { couleur ->
+                                Box(modifier = Modifier.weight(1f).fillMaxWidth().background(couleur))
+                            }
+                        }
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFFF2ECE2)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "L",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Serif,
+                                    fontSize = (taille * 0.3f).sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Clair.ink,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Le lancement, avec la marque retenue. */
+@Composable
+private fun LancementV2(theme: Theme, marque: MarqueV2) {
+    Box(
+        modifier = Modifier
+            .width(280.dp)
+            .height(360.dp)
+            .background(theme.paper),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(88.dp)
+                .background(theme.surface, RoundedCornerShape(20.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(modifier = Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+                when (marque) {
+                    MarqueV2.Livre -> {
+                        Icon(
+                            imageVector = LucideDemo.BookOpen,
+                            contentDescription = null,
+                            tint = theme.ink,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Text(
+                            text = "L",
+                            modifier = Modifier
+                                .background(theme.surface, RoundedCornerShape(3.dp))
+                                .padding(horizontal = 2.dp),
+                            style = TextStyle(
+                                fontFamily = FontFamily.Serif,
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = theme.ink,
+                            ),
+                        )
+                    }
+
+                    MarqueV2.Page -> Text(
+                        text = "L",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 34.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.ink,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** L'écran du fournisseur IA : la clé, le modèle, et ce que l'app en fait. */
+@Composable
+private fun EcranFournisseur(theme: Theme) {
+    Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EnTeteEcran(theme, "Fournisseur IA")
+            Text(
+                text = "Une phrase sélectionnée peut être traduite par ton fournisseur. La clé " +
+                    "reste dans le trousseau de cet appareil ; tes livres ne quittent jamais le coffre.",
+                modifier = Modifier.padding(bottom = 10.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    color = theme.muted,
+                ),
+            )
+            Champ(theme, "Fournisseur", "Anthropic", action = null, chevron = true)
+            Champ(theme, "Clé d'API", "••••••••••••••••", action = "Montrer")
+            Champ(theme, "Modèle", "claude-sonnet-4", action = null, chevron = true)
+            Text(
+                text = "Clé enregistrée · testée le 12 octobre",
+                modifier = Modifier.padding(top = 10.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 11.sp,
+                    color = theme.muted,
+                ),
+            )
+            Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                BoutonPlein(theme, "Tester la connexion")
+                Text(
+                    text = "Supprimer la clé",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFB3261E),
+                    ),
+                )
+            }
+        }
+        BarreNavigation(theme, selection = 2)
+    }
+}
+
+/** L'écran du coffre et de la synchronisation. */
+@Composable
+private fun EcranCoffre(theme: Theme) {
+    Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EnTeteEcran(theme, "Coffre et synchronisation")
+            Text(
+                text = "Le coffre vit dans le stockage privé de l'application. Il porte tes " +
+                    "livres, ton vocabulaire et tes positions.",
+                modifier = Modifier.padding(bottom = 8.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    color = theme.muted,
+                ),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                BoutonContour(theme, "Exporter", Modifier.weight(1f))
+                BoutonContour(theme, "Importer", Modifier.weight(1f))
+            }
+            Text(
+                text = "Synchronisation",
+                modifier = Modifier.padding(top = 20.dp, bottom = 2.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 11.sp,
+                    color = theme.muted,
+                ),
+            )
+            Text(
+                text = "Synchronisé il y a 2 min · 3 appareils",
+                modifier = Modifier.padding(bottom = 6.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    color = theme.ink,
+                ),
+            )
+            Champ(theme, "Serveur", "cloud.example.com/dav", action = null)
+            Champ(theme, "Utilisateur", "damien", action = null)
+            Champ(theme, "Mot de passe", "••••••••••", action = "Montrer")
+            Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                BoutonPlein(theme, "Synchroniser maintenant")
+                BoutonContour(theme, "Tester la connexion", Modifier.fillMaxWidth())
+                Text(
+                    text = "Déconnecter ce serveur",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFB3261E),
+                    ),
+                )
+            }
+        }
+        BarreNavigation(theme, selection = 2)
+    }
+}
+
+/** Un champ de formulaire imprimé : le libellé, la valeur, un filet. */
+@Composable
+private fun Champ(
+    theme: Theme,
+    label: String,
+    valeur: String,
+    action: String?,
+    chevron: Boolean = false,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = label,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 11.sp,
+                    color = theme.muted,
+                ),
+            )
+            Spacer(Modifier.weight(1f))
+            if (action != null) {
+                Text(
+                    text = action,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = theme.ink,
+                    ),
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = valeur,
+                modifier = Modifier.weight(1f),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 15.sp,
+                    color = theme.ink,
+                ),
+            )
+            if (chevron) {
+                Icon(
+                    imageVector = LucideDemo.ChevronRight,
+                    contentDescription = null,
+                    tint = theme.muted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline))
+    }
+}
+
+/** Le bouton d'action d'un écran : l'encre, pleine largeur. */
+@Composable
+private fun BoutonPlein(theme: Theme, label: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.ink, RoundedCornerShape(8.dp))
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = theme.paper,
+            ),
+        )
+    }
+}
+
+/** L'action secondaire : un contour, jamais une deuxième encre pleine. */
+@Composable
+private fun BoutonContour(theme: Theme, label: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .border(1.dp, theme.outline, RoundedCornerShape(8.dp))
+            .padding(vertical = 11.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = theme.ink,
+            ),
+        )
+    }
 }
 
 /** Les trois marques candidates (issue #177). */
