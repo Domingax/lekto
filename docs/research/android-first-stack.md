@@ -1,6 +1,10 @@
 # Client architecture for an Android-first Lekto
 
 **Date:** 2026-09-27
+> **Update (2026-10-19):** the UX specification these notes cite was replaced by
+> [`docs/design.md`](../design.md). The citations below record what was read at the time and are
+> left as they were written.
+
 **Scope:** Choose the client stack for Lekto now that the premise has changed: **Android is the primary target, desktop (a "heavy client") is the likely second target, and the browser target is in question**. The founder accepts **separate codebases per platform** if that is simpler, and is **averse to being locked in by a third-party shell/framework**.
 **Requirements assessed (per option):** a real user-chosen vault folder (Android SAF read/write without a third-party plugin; plain filesystem on desktop), TTS, secure API-key storage (Android Keystore / OS keychain), EPUB / TXT import with PDF best-effort, a performant immersive reader, offline-first, and an open-source contributor-friendly repo.
 **Method:** Primary sources only — official docs, GitHub repos, issue trackers and release notes (Kotlin/JetBrains, Android Developers, Flutter/Dart, Tauri, Capacitor, Readium, .NET/MAUI, Avalonia, React Native, pub.dev, crates.io). Where a source is secondary or a claim could not be verified, it is flagged. Every claim carries a URL. This report **supersedes the premise** of `docs/research/tauri-vs-capacitor.md` and `docs/research/cross-platform-file-access.md`, which assumed one web codebase wrapped for Android; those studies remain valid as primary-source references for the SAF/TTS/secure-storage details they established.

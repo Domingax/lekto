@@ -18,10 +18,9 @@ internal const val CONFIRM_DIALOG_CONFIRM_TAG: String = "confirm-dialog-confirm"
 internal const val CONFIRM_DIALOG_CANCEL_TAG: String = "confirm-dialog-cancel"
 
 /**
- * The confirmation dialog the UX spec prescribes for irreversible actions —
- * book deletion, vault migration (`docs/ux-design-specification.md`, "Dialog"
- * and "Destructive"): a title, a message in plain language, and a cancel /
- * destructive-confirm pair.
+ * The confirmation dialog `docs/design.md` prescribes for irreversible actions —
+ * book deletion, vault migration (§2.4, §8): a title, a message in plain
+ * language, and a cancel / destructive-confirm pair.
  *
  * It carries no state of its own, so the caller decides what each choice does and
  * the dialog cannot act before the user confirms. The confirm button takes the

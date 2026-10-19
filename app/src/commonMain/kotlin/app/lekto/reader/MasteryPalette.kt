@@ -7,7 +7,7 @@ import app.lekto.core.MasteryLevel
 
 /**
  * The mastery palette, the most important colour system in the product
- * (`docs/ux-design-specification.md` §Color System). It lives in the
+ * (`docs/design.md` §2.2). It lives in the
  * presentation module, not the domain: `MasteryLevel` is the domain fact, the
  * colour is how the reader paints it.
  */

@@ -1,6 +1,10 @@
 # Tauri v2 vs Capacitor for Lekto: a cross-platform stack decision
 
 **Date:** 2026-09-27
+> **Update (2026-10-19):** the UX specification these notes cite was replaced by
+> [`docs/design.md`](../design.md). The citations below record what was read at the time and are
+> left as they were written.
+
 **Scope:** Which native shell should wrap Lekto's single React/TypeScript UI for **Web + Android** (iOS later), given the hard requirement of a **local-first, user-chosen "vault" folder** (ideally a cloud-synced directory), plus **TTS**, **secure API-key storage**, and **offline-first**?
 **Method:** Primary sources only — Tauri's official docs/site (v2.tauri.app, tauri.app/blog), the `tauri-apps` GitHub org, Capacitor's official docs (capacitorjs.com), the `ionic-team`/`capacitor-community` repos, the Capawesome plugin docs, the W3C/MDN secure-context definitions, and Chrome release notes. Where sources disagree, both are cited. Every claim carries a URL. Companion to `docs/research/cross-platform-file-access.md`, which established the Android SAF constraints this report builds on.
 
