@@ -103,10 +103,11 @@ progress and surfaces failure rather than blocking.
 _Avoid_: Scan, upload, add
 
 **Library**:
-The list of books in the vault: the three most recently read books first, most recent
-first, then every other book by title. It is the app's starting screen and the way back
-from a reading session. Distinct from the **Vault**, which is the storage it reads: the
-library is the view, not the store.
+The view of the vault's books, narrowed by **Reading state** and ordered with the three
+most recently read unfinished books first, most recent first, then every other listed book
+by title. It opens on **Unread** and **In progress**; the reader may add **Finished**. It is
+the app's starting screen and the way back from a reading session. Distinct from the
+**Vault**, which is the storage it reads: the library is the view, not the store.
 _Avoid_: Shelf, collection
 
 **Reading session**:
@@ -129,8 +130,31 @@ _Avoid_: Percentage, completion, furthest read
 **Last read**:
 The moment a book's **Reading position** last moved — a page turned, not the book
 opened. It orders the **Library** and is distinct from **Reading progress**, which
-says how far.
+says how far. Declaring a book **Finished** is not a page turn and does not move it.
 _Avoid_: Last opened, recent, progress
+
+**Reading state**:
+The place a **Book** occupies in the reader's **Library**: **Unread**, **In progress** or
+**Finished**. Unread and In progress are derived from the **Reading position**; Finished is
+declared by the reader. A filter narrows the Library to a set of Reading states; the filter is
+view state, not Vault data.
+_Avoid_: Status, progress, shelf state
+
+**Finished**:
+A **Book** the reader has declared they have read, stored in the **Vault** and independent of
+the **Reading position** and of **Reading progress**. Reaching the last page does not declare it,
+and reopening the book or turning a page does not revoke it; only an explicit undo does.
+_Avoid_: Read, done, complete, ended
+
+**Unread**:
+A **Book** that is not **Finished** and has no **Reading position**: the reader has not turned a
+page in it. One of the three **Reading states**.
+_Avoid_: New, unopened, to read
+
+**In progress**:
+A **Book** that is not **Finished** and has a **Reading position**. One of the three
+**Reading states**.
+_Avoid_: Reading, started, current
 
 **Word token**:
 A single tappable unit of text in the reader — the unit of lookup and colouring.

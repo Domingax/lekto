@@ -147,7 +147,7 @@ Three sections, and no fourth:
 
 | Section | What it is for | Icon |
 | ------- | -------------- | ---- |
-| **Library** | the books, progress, search, import | `book-open` |
+| **Library** | the books, progress, search, filter, import | `book-open` |
 | **Vocabulary** | the words the reader saved | `bookmark` |
 | **Settings** | everything else: appearance, languages, provider, vault | `settings` |
 
@@ -171,7 +171,7 @@ Each screen below is one row of what it shows, and one note on what it must not 
 
 ### 7.1 Library
 
-`Library` (serif) · `Import` (word) · `Search` · rows · bottom navigation.
+`Library` (serif) · `Import` (word) · `Search` · filter chips · rows · bottom navigation.
 
 A row is a **language vignette** (44 × 60), the title, a line of `FORMAT · 28 %`, and a **3 dp
 progress rule**. There are **no covers**: a `Book` carries a title, a language, a format and a
@@ -182,15 +182,32 @@ it identifies a file rather than a book.
 
 **Reading progress** is where the reader is now, not the furthest point reached: the share of the
 book's rendered text before the **Reading position**, rounded down, so a book on its last page
-reads just under 100 %. The number and the rule carry the same whole percentage. A book with no
-Reading position reads `FORMAT · Not started` and has no rule; one whose text has not been
-measured yet reads `FORMAT · …`, also without a rule. The Library never claims a book is finished;
-that distinction is #175's.
+reads just under 100 %. The number and the rule carry the same whole percentage. An **Unread**
+book — no Reading position, and not **Finished** — reads `FORMAT · Not started`, with no rule; an
+**In progress** book whose text has not been measured yet reads `FORMAT · …`, also without a rule.
+A **Finished** book reads `FORMAT · Finished` with a check and carries **no progress rule**: the
+declaration is not a percentage, and a book read to the end may have been reread or skipped
+(ADR-0038).
 
-Ordering leads with the three books read last (#174, #188); search is still missing (#173).
+Under `Search` sits one row of filter chips once the vault has a book: `Unread`, `In progress`,
+`Finished`. They are **multi-select**, and the Library opens with **Unread and In progress**
+selected: the shelf shows what is still to read, not the books already finished. Tapping
+`Finished` adds finished books; all three selected is the whole library. The last selected chip
+cannot be turned off. The row scrolls horizontally when a translation overflows it, and it carries
+no counts. The filter is **view state**: it survives leaving the Library and coming back, and
+resets to Unread and In progress when the app restarts. It is never written to the **Vault**.
 
-**States**: empty says what to do and carries the action; loading shows **skeleton rows**, never
-the empty message; a failed import is a bordered block in the list, with a way to dismiss it.
+The three most recently read unfinished books lead under the `Continue reading` heading, most
+recent first; then every other listed book by title. A finished book is never in the leading group,
+even if it was the last book read, because that group is for books the reader can continue
+(ADR-0038). The leading group is hidden when it is empty. Search and this filter are still to
+build (#173, #175).
+
+**States**: an empty vault says what to do and carries the action. A Library whose filter matches
+nothing says why — "All your books are finished." with `Show all books`, or "No books in this
+state." with the same action — and a search with no match names the query back and offers to clear
+it or show all books. Loading shows **skeleton rows**, never the empty message; a failed import is
+a bordered block in the list, with a way to dismiss it.
 
 ### 7.2 Reader
 
@@ -215,6 +232,16 @@ The **`Aa` panel** (`Text face`, `Text size`, `Margins`: `Serif`/`Sans-serif`,
 `Narrow`/`Comfortable`/`Wide`) sets the face, the size and the margins, and previews live: there
 is no button to confirm a reading preference. The App theme is **not** here — it recolours the
 app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
+
+**The end of the book** is a full-screen reader state, not a page. Tapping the next zone on the
+last page raises it; reaching the last page does not. Reaching the panel never declares the book
+finished by itself. `THE END` is set in the interface's small caps, the book's title in the
+reading serif, then `Mark as finished` as the filled action and `Back to Library` as the text
+action. Declaring finished keeps the panel open: the check and the word `Finished` appear, the
+primary action becomes `Back to Library`, and `Mark as unfinished` takes the text action. Marking
+never moves the reading position. The state hides the reader's chrome; system back closes it and
+returns to the last page, and `Back to Library` leaves for the Library. Reopening a finished book
+opens at the saved position, not on this state.
 
 ### 7.3 The lookup panel
 
@@ -295,10 +322,13 @@ animation, no tagline, no artificial delay.
 | Situation | What the reader sees |
 | --------- | -------------------- |
 | Saving a word | the word's colour changes in the page. No toast |
+| Finishing a book | the end panel confirms it. No toast |
 | Importing | an inline progress bar in the Library |
 | Loading a list | skeleton rows, never the empty message |
 | Empty | a sentence saying what to do, and the action |
-| No search results | the query named back, and a way to clear it |
+| All books finished | "All your books are finished." and a way to show them |
+| No books in this state | "No books in this state." and a way to show all books |
+| No search results | the query named back, with `Clear search` and `Show all books` |
 | Offline dictionary | a sentence inside the lookup panel |
 | Failure | a block where the action was, with a way to dismiss it |
 | Deleting anything | a confirmation, because there is no undo |
@@ -310,7 +340,8 @@ the page behind it.
 
 - **4.5:1** for any coloured word (§2.2), measured per theme.
 - A **non-colour indicator** for every highlighted level: the underline.
-- **48 × 48 dp** minimum for anything tappable.
+- **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
+  its touch target is not, and its selected state is exposed to accessibility.
 - The language vignette's colour is decoration; its two letters are the information.
 - Every icon either carries a `contentDescription` or sits beside a label that names it.
 - The reading text honours the platform's font scale, and the **Reading preference**'s size stays
