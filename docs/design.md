@@ -158,7 +158,8 @@ Three sections, and no fourth:
 - **Languages and Appearance are entries inside Settings**, not sections (ADR-0034, ADR-0036).
 - **The back stack is real**, and Android's back button walks it. Today it is a single `when` over
   a sealed destination with no history, and back leaves the app from anywhere: that is a defect,
-  not a choice.
+  not a choice. The reader's chapter list closes on Back before the shell sees it (ADR-0037); the
+  shell's history is #185.
 - **Desktop**: the same three sections become a fixed left column. In the reader, the right side is
   a **context column** — the chapter list when nothing is touched, the word when something is. It
   is reserved rather than overlaid, so the page never moves. Below roughly **1100 dp** the column
@@ -196,10 +197,19 @@ the empty message; a failed import is a bordered block in the list, with a way t
 `arrow-left` · book title · `Aa` | the page | `‹` · position · `›`.
 
 The chevrons are not buttons: they *show* the three tap zones (previous third, chrome third, next
-third). The position reads `Page 99 of 357`; it gains the chapter when chapters exist (#176).
+third). The position reads `Chapter 4 · Page 99 of 357`. Before the first chapter, and in a book
+with one chapter, it reads `Page 99 of 357` and no chapter is current.
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
-label (#176).
+label. A book with one chapter has no list, so its position stays a label (ADR-0037).
+
+The chapter list is a bottom sheet over the page on a phone, up to about 60 % of the height, and
+the reserved context column on desktop (§6). It keeps the book's hierarchy, highlights the current
+chapter and scrolls it into view. It closes on a choice, a tap outside, its Close action, or Back.
+The lookup panel and the chapter list are never open together.
+
+Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
+at once, and the page number and total update as pagination counts them.
 
 The **`Aa` panel** (`Text face`, `Text size`, `Margins`: `Serif`/`Sans-serif`,
 `Narrow`/`Comfortable`/`Wide`) sets the face, the size and the margins, and previews live: there
@@ -209,7 +219,8 @@ app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
 ### 7.3 The lookup panel
 
 Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
-and the touched word still washed above it. On desktop it is the context column instead.
+and the touched word still washed above it. On desktop it is the context column instead, and
+closing the word returns the column to the chapter list.
 
 A **word**: the word in the serif, its part of speech and pronunciation, the speaker and the close
 action; then the senses with their translation; then the level; then the external references as a

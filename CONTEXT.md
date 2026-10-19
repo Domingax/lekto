@@ -81,6 +81,21 @@ attachment so export carries it. Parsed text is a **Derived asset** re-derivable
 it; the original is not reproducible and is never left device-local.
 _Avoid_: Source file, raw file
 
+**Chapter**:
+A titled division of a **Book**, beginning at a place in the book's text. A chapter may
+contain other chapters.
+_Avoid_: Section, division
+
+**Part**:
+A **Chapter** that contains other chapters. It may also have text of its own before its
+first child.
+_Avoid_: Volume, book
+
+**Chapter list**:
+The ordered, nested **Chapters** of a **Book**, as its original file declares them. A
+**Derived asset**, re-derived from the book original and never synced.
+_Avoid_: Table of contents, TOC, index
+
 **Import**:
 Getting a book original into the vault: read the file, parse it to text, store the
 book and its original, and list it in the library. An occasional action that reports
