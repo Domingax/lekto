@@ -1042,6 +1042,548 @@ class VisualIdentityPrototype {
         }
         onRoot().captureRoboImage("prototype/vocabulaire-etats.png")
     }
+
+    /**
+     * Planche 15 — les Réglages : un index, puis deux écrans qu'il ouvre.
+     * L'apparence et les langues sont des entrées de Réglages, pas des onglets.
+     */
+    @Test
+    fun reglages() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Les Réglages — un index, pas un formulaire",
+                    sousTitre = "Aujourd'hui le fournisseur IA et le serveur WebDAV sont deux " +
+                        "formulaires au milieu de Réglages. Ils deviennent des écrans, et " +
+                        "l'index ne garde que des lignes.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    EcranReglages(Clair)
+                    EcranApparence(Clair)
+                    EcranLangues(Clair)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/reglages.png")
+    }
+
+    /**
+     * Planche 16 — l'icône de l'application, et l'écran de lancement qu'Android
+     * impose. Trois marques candidates, à leur taille réelle, puis le lancement
+     * sur papier clair et sur nuit chaude (issue #177).
+     */
+    @Test
+    fun icone() = runDesktopComposeUiTest(width = LARGEUR, height = 760) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 760.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "L'icône — trois marques, et l'écran de lancement d'Android",
+                    sousTitre = "Android 12 impose un écran de lancement : l'icône sur le fond " +
+                        "de la fenêtre. La seule décision qui reste, c'est la marque — et le fond.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    Column(modifier = Modifier.width(600.dp)) {
+                        Text(
+                            text = "Les trois candidats, à 96 dp puis à la taille d'un lanceur (48 dp)",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
+                            MarqueAffichee(Marque.Lettre, 96)
+                            MarqueAffichee(Marque.Livre, 96)
+                            MarqueAffichee(Marque.Page, 96)
+                        }
+                        Row(
+                            modifier = Modifier.padding(top = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
+                            MarqueAffichee(Marque.Lettre, 48)
+                            MarqueAffichee(Marque.Livre, 48)
+                            MarqueAffichee(Marque.Page, 48)
+                        }
+                        Column(modifier = Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "La lettre — la sérif de lecture, rien d'autre. Lisible à 48 dp, et une seule couche monochrome.",
+                                style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = Color(0xFFB9B2A6)),
+                            )
+                            Text(
+                                text = "Le livre — la géométrie Lucide du reste de l'app. Honnête, mais générique.",
+                                style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = Color(0xFFB9B2A6)),
+                            )
+                            Text(
+                                text = "La page — une feuille, et la palette de maîtrise en tranche. La plus singulière, la plus fragile en petit.",
+                                style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = Color(0xFFB9B2A6)),
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Le lancement, sur papier clair et sur nuit chaude",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Lancement(Clair)
+                            Lancement(Sombre)
+                        }
+                    }
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/icone.png")
+    }
+}
+
+/** Les trois marques candidates (issue #177). */
+private enum class Marque { Lettre, Livre, Page }
+
+/** Une marque dessinée à [taille], dans une tuile de lanceur. */
+@Composable
+private fun MarqueAffichee(marque: Marque, taille: Int) {
+    val d = taille.dp
+    Box(
+        modifier = Modifier
+            .size(d)
+            .background(Clair.paper, RoundedCornerShape((taille * 0.22f).dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        MarqueDessin(marque, (taille * 0.62f).dp)
+    }
+}
+
+/** Le dessin de la marque, quelle que soit sa taille. */
+@Composable
+private fun MarqueDessin(marque: Marque, d: androidx.compose.ui.unit.Dp) {
+    when (marque) {
+        Marque.Lettre -> Text(
+            text = "L",
+            style = TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontSize = (d.value * 1.1f).sp,
+                fontWeight = FontWeight.Bold,
+                color = Clair.ink,
+            ),
+        )
+
+        Marque.Livre -> Icon(
+            imageVector = LucideDemo.BookOpen,
+            contentDescription = null,
+            tint = Clair.ink,
+            modifier = Modifier.size(d),
+        )
+
+        Marque.Page -> Row(modifier = Modifier.size(d * 0.8f, d)) {
+            Column(modifier = Modifier.width(d * 0.18f).fillMaxHeight()) {
+                listOf(
+                    Clair.rampe().unknown,
+                    Clair.rampe().recognized,
+                    Clair.rampe().familiar,
+                    Clair.rampe().learned,
+                ).forEach { couleur ->
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(couleur))
+                }
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFFF2ECE2)))
+        }
+    }
+}
+
+/** L'écran de lancement tel qu'Android le peint : le fond, puis l'icône au centre. */
+@Composable
+private fun Lancement(theme: Theme) {
+    Column {
+        Box(
+            modifier = Modifier
+                .width(300.dp)
+                .height(380.dp)
+                .background(theme.paper),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .background(theme.surface, RoundedCornerShape(22.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "L",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Serif,
+                        fontSize = 62.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.ink,
+                    ),
+                )
+            }
+        }
+        Text(
+            text = theme.name,
+            modifier = Modifier.padding(top = 6.dp),
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 11.sp,
+                color = Color(0xFFB9B2A6),
+            ),
+        )
+    }
+}
+
+/** L'écran des réglages : un index, groupé par ce que chaque groupe sert. */
+@Composable
+private fun EcranReglages(theme: Theme) {
+    Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = "Réglages",
+                modifier = Modifier.padding(bottom = 10.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = theme.ink,
+                ),
+            )
+            GroupeReglages(theme, "Lecture")
+            LigneReglage(theme, "Apparence", "Sépia")
+            LigneReglagesSeparation(theme, derniere = false)
+            LigneReglage(theme, "Langue de l'application", "Français")
+            LigneReglagesSeparation(theme, derniere = false)
+            LigneReglage(theme, "Langues de lecture", "Anglais, espagnol")
+            GroupeReglages(theme, "Données")
+            LigneReglage(theme, "Fournisseur IA", "Anthropic · configuré")
+            LigneReglagesSeparation(theme, derniere = false)
+            LigneReglage(theme, "Coffre et synchronisation", "Synchronisé il y a 2 min")
+            GroupeReglages(theme, "Application")
+            LigneReglage(theme, "Licences et attribution", null)
+            LigneReglagesSeparation(theme, derniere = false)
+            LigneReglage(theme, "À propos", "version 0.9")
+        }
+        BarreNavigation(theme, selection = 2)
+    }
+}
+
+/** Un intitulé de groupe, discret, en bas de casse. */
+@Composable
+private fun GroupeReglages(theme: Theme, titre: String) {
+    Text(
+        text = titre,
+        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
+        style = TextStyle(
+            fontFamily = FontFamily.SansSerif,
+            fontSize = 11.sp,
+            color = theme.muted,
+        ),
+    )
+}
+
+/** Une ligne d'index : le nom, la valeur courante, et rien de plus. */
+@Composable
+private fun LigneReglage(theme: Theme, titre: String, valeur: String?) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = titre,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 15.sp,
+                    color = theme.ink,
+                ),
+            )
+            if (valeur != null) {
+                Text(
+                    text = valeur,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        color = theme.muted,
+                    ),
+                )
+            }
+        }
+        Icon(
+            imageVector = LucideDemo.ChevronRight,
+            contentDescription = null,
+            tint = theme.muted,
+            modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+/** Le trait entre deux lignes d'index. */
+@Composable
+private fun LigneReglagesSeparation(theme: Theme, derniere: Boolean) {
+    if (!derniere) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline.copy(alpha = 0.6f)))
+    }
+}
+
+/** L'écran Apparence : quatre choix, chacun montré sur son propre papier. */
+@Composable
+private fun EcranApparence(theme: Theme) {
+    Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EnTeteEcran(theme, "Apparence")
+            Text(
+                text = "Le thème recolore toute l'application — jamais le texte du livre, " +
+                    "qui garde sa police, sa taille et ses marges (ADR-0035).",
+                modifier = Modifier.padding(bottom = 10.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    color = theme.muted,
+                ),
+            )
+            ChoixTheme(theme, "Système", "suit le réglage de l'appareil", ThemePreview.Systeme, choisi = false)
+            ChoixTheme(theme, "Clair", "papier chaud, encre noire", ThemePreview.Clair, choisi = false)
+            ChoixTheme(theme, "Sombre", "nuit chaude, encre claire", ThemePreview.Sombre, choisi = false)
+            ChoixTheme(theme, "Sépia", "papier chiffon", ThemePreview.Sepia, choisi = true)
+        }
+        BarreNavigation(theme, selection = 2)
+    }
+}
+
+/** Les quatre aperçus d'un thème, dessinés à leur vraie couleur. */
+private enum class ThemePreview { Systeme, Clair, Sombre, Sepia }
+
+/** Une ligne de l'écran Apparence : l'aperçu, le nom, et la coche. */
+@Composable
+private fun ChoixTheme(
+    theme: Theme,
+    nom: String,
+    sousTitre: String,
+    apercu: ThemePreview,
+    choisi: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ApercuTheme(apercu)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = nom,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 15.sp,
+                    fontWeight = if (choisi) FontWeight.Medium else FontWeight.Normal,
+                    color = theme.ink,
+                ),
+            )
+            Text(
+                text = sousTitre,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 11.sp,
+                    color = theme.muted,
+                ),
+            )
+        }
+        if (choisi) {
+            Text(
+                text = "✓",
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 16.sp,
+                    color = theme.ink,
+                ),
+            )
+        }
+    }
+}
+
+/** L'aperçu : un rectangle du papier du thème, avec deux lignes d'encre. */
+@Composable
+private fun ApercuTheme(apercu: ThemePreview) {
+    val clair = Clair
+    val sombre = Sombre
+    val sepia = Sepia
+    Row(
+        modifier = Modifier
+            .size(48.dp, 34.dp)
+            .background(clair.outline.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+            .padding(1.dp),
+    ) {
+        when (apercu) {
+            ThemePreview.Systeme -> {
+                ApercuMoitie(clair.paper, clair.ink, Modifier.weight(1f))
+                ApercuMoitie(sombre.paper, sombre.ink, Modifier.weight(1f))
+            }
+
+            ThemePreview.Clair -> ApercuMoitie(clair.paper, clair.ink, Modifier.weight(1f))
+            ThemePreview.Sombre -> ApercuMoitie(sombre.paper, sombre.ink, Modifier.weight(1f))
+            ThemePreview.Sepia -> ApercuMoitie(sepia.paper, sepia.ink, Modifier.weight(1f))
+        }
+    }
+}
+
+/** Une moitié d'aperçu : le papier, et deux traits d'encre. */
+@Composable
+private fun ApercuMoitie(papier: Color, encre: Color, modifier: Modifier) {
+    Column(
+        modifier = modifier.fillMaxHeight().background(papier, RoundedCornerShape(5.dp)),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 6.dp)
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(encre.copy(alpha = 0.8f), RoundedCornerShape(1.dp)),
+        )
+        Box(
+            modifier = Modifier
+                .padding(start = 6.dp, end = 14.dp, top = 4.dp)
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(encre.copy(alpha = 0.35f), RoundedCornerShape(1.dp)),
+        )
+    }
+}
+
+/** L'écran Langues : une langue par ligne, son état, et un chevron. */
+@Composable
+private fun EcranLangues(theme: Theme) {
+    Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EnTeteEcran(theme, "Langues")
+            Text(
+                text = "Ce que l'app sait faire pour chaque langue : situer ses mots, et les " +
+                    "traduire vers le français.",
+                modifier = Modifier.padding(bottom = 6.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    color = theme.muted,
+                ),
+            )
+            LangueLigne(theme, "Anglais", "Table de difficulté · dictionnaire EN→FR", null)
+            LangueLigne(theme, "Espagnol", "Rien d'installé", "Télécharger 12 Mo")
+            LangueLigne(theme, "Allemand", "Table installée · dictionnaire absent", "Télécharger 9 Mo")
+            Text(
+                text = "Licences et attribution",
+                modifier = Modifier.padding(top = 18.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = theme.ink,
+                ),
+            )
+        }
+        BarreNavigation(theme, selection = 2)
+    }
+}
+
+/** Une langue : son nom, son état, et l'action quand il en manque une. */
+@Composable
+private fun LangueLigne(theme: Theme, nom: String, etat: String, action: String?) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = nom,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 15.sp,
+                        color = theme.ink,
+                    ),
+                )
+                Text(
+                    text = etat,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 11.sp,
+                        color = theme.muted,
+                    ),
+                )
+            }
+            if (action != null) {
+                Text(
+                    text = action,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = theme.ink,
+                    ),
+                )
+            } else {
+                Icon(
+                    imageVector = LucideDemo.ChevronRight,
+                    contentDescription = null,
+                    tint = theme.muted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline.copy(alpha = 0.6f)))
+    }
+}
+
+/** L'en-tête d'un écran qui se quitte : la flèche, puis le titre en sérif. */
+@Composable
+private fun EnTeteEcran(theme: Theme, titre: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = LucideDemo.ArrowLeft,
+            contentDescription = null,
+            tint = theme.ink,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = titre,
+            style = TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = theme.ink,
+            ),
+        )
+    }
 }
 
 /** Les états du Vocabulaire. */

@@ -25,6 +25,8 @@ et le verdict sont sur l'issue #168.
 | `desktop.png` | Le lecteur desktop et sa colonne de contexte : les chapitres quand rien n'est touché, le mot quand on touche. |
 | `vocabulaire.png` | Le vocabulaire, dans les trois fonds. |
 | `vocabulaire-etats.png` | Vocabulaire vide, recherche sans résultat, et la confirmation de suppression. |
+| `reglages.png` | L'index des réglages, l'écran Apparence et l'écran Langues. |
+| `icone.png` | Trois marques candidates, à 96 dp et à 48 dp, et l'écran de lancement sur les deux fonds. |
 
 ## Regénérer
 
