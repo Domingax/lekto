@@ -26,20 +26,39 @@ internal object XhtmlBlocks {
     fun of(bytes: ByteArray): List<TextBlock> {
         val document = Jsoup.parse(ByteArrayInputStream(bytes), null, "")
         val blocks = mutableListOf<TextBlock>()
-        collectBlocks(document.body(), blocks)
+        descend(document.body(), blocks)
         return blocks
     }
 
-    private fun collectBlocks(container: Element, into: MutableList<TextBlock>) {
-        for (child in container.children()) {
-            when (val tag = child.normalName()) {
-                in CONTAINERS -> collectBlocks(child, into)
-                in SKIPPED -> Unit
-                in BLOCKS -> runsOf(child).takeIf { it.isNotEmpty() }?.let { into += block(tag, it) }
-                else -> runsOf(child).takeIf { it.isNotEmpty() }?.let { into += TextBlock(BlockKind.PARAGRAPH, it) }
-            }
+    /** Reads every child of [container] in order, keeping their place in the reading order. */
+    private fun descend(container: Element, into: MutableList<TextBlock>) {
+        for (child in container.children()) collectBlock(child, into)
+    }
+
+    private fun collectBlock(element: Element, into: MutableList<TextBlock>) {
+        val tag = element.normalName()
+        when {
+            tag in SKIPPED -> Unit
+
+            tag in CONTAINERS -> descend(element, into)
+
+            tag in BLOCKS -> runsOf(element).takeIf { it.isNotEmpty() }?.let { into += block(tag, it) }
+
+            // An element the format does not classify: usually an inline wrapper
+            // whose text belongs in a paragraph. But a heading that writes its
+            // anchor self-closing (`<a id="toc"/>Title`) leaves the HTML parser
+            // with an `<a>` it never closes, and the rest of the chapter lands
+            // inside it — so descend when the element holds blocks, or that
+            // chapter would be lost.
+            element.wrapsBlocks -> descend(element, into)
+
+            else -> runsOf(element).takeIf { it.isNotEmpty() }?.let { into += TextBlock(BlockKind.PARAGRAPH, it) }
         }
     }
+
+    /** Whether the element holds a block-level child, so the walk must descend into it. */
+    private val Element.wrapsBlocks: Boolean
+        get() = children().any { child -> child.normalName() in BLOCKS || child.normalName() in CONTAINERS }
 
     private fun runsOf(element: Element): List<TextRun> {
         val characters = mutableListOf<StyledChar>()
