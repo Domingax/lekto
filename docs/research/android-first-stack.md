@@ -2,8 +2,9 @@
 
 **Date:** 2026-09-27
 > **Update (2026-10-19):** the UX specification these notes cite was replaced by
-> [`docs/design.md`](../design.md). The citations below record what was read at the time and are
-> left as they were written.
+> [`docs/design.md`](../design.md), and the product brief was retired once ADR-0008 closed the
+> web target it described. The citations below record what was read at the time and are left as
+> they were written.
 
 **Scope:** Choose the client stack for Lekto now that the premise has changed: **Android is the primary target, desktop (a "heavy client") is the likely second target, and the browser target is in question**. The founder accepts **separate codebases per platform** if that is simpler, and is **averse to being locked in by a third-party shell/framework**.
 **Requirements assessed (per option):** a real user-chosen vault folder (Android SAF read/write without a third-party plugin; plain filesystem on desktop), TTS, secure API-key storage (Android Keystore / OS keychain), EPUB / TXT import with PDF best-effort, a performant immersive reader, offline-first, and an open-source contributor-friendly repo.
@@ -41,7 +42,7 @@ Two internal decisions constrain any recommendation and are carried forward: the
 
 **TTS:** first-party `android.speech.tts.TextToSpeech`, including the Android 11+ requirement to declare `TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE` in the manifest `<queries>` and to feature-detect voices/language packs at runtime ([`TextToSpeech`](https://developer.android.com/reference/android/speech/tts/TextToSpeech); the `<queries>` requirement is documented in the [`flutter_tts` Android notes](https://pub.dev/packages/flutter_tts)). Desktop TTS depends on the desktop stack (see §2 for KMP, §6 for Flutter/Tauri).
 
-**Secure storage:** first-party **Android Keystore** — key material never enters the app process and can be hardware-bound (TEE/StrongBox), with optional user-authentication binding ([Android Keystore](https://developer.android.com/privacy-and-security/keystore)). This satisfies the product brief's "API key storage … using OS-level secure storage (Android Keystore on Android)" directly ([product brief](./product-brief-2026-03-02.md), Security Constraints).
+**Secure storage:** first-party **Android Keystore** — key material never enters the app process and can be hardware-bound (TEE/StrongBox), with optional user-authentication binding ([Android Keystore](https://developer.android.com/privacy-and-security/keystore)). This satisfies the product brief's "API key storage … using OS-level secure storage (Android Keystore on Android)" directly (the product brief then in force, Security Constraints).
 
 **EPUB / PDF / TXT + reader:** the strongest option by far on Android. **Readium Mobile Kotlin toolkit** is a mature EPUB/audiobook/comics toolkit whose current minimum is Android API 24 and which ships EPUB, PDF and image navigators and an EPUB rendering engine ([kotlin-toolkit](https://github.com/readium/kotlin-toolkit), [3.0.0-alpha.1](https://github.com/readium/kotlin-toolkit/discussions/451), [3.2.0 release note](https://blog.readium.org/release-note-kotlin-toolkit-version-3-2-0/)). For a Lekto-style reader (per-word tokens and mastery colouring), Readium offers deco/rendering hooks, but the exact seam for **per-word interaction and colouring** would have to be validated against Readium's navigator API before committing — this report does **not** verify that seam (see §10). PDF best-effort text extraction is separate (pdfbox-android / PDFium bindings) — also unverified here.
 
