@@ -75,8 +75,7 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * offers the reference-site shortcuts beside that result — so with no pack and
  * no network it still degrades to the shortcuts and an honest message rather
  * than an empty panel. The reader stays in place behind it, so closing returns
- * to the exact reading position (docs/ux-design-specification.md, "Success
- * Criteria").
+ * to the exact reading position (docs/design.md, §7.3).
  *
  * Since issue #21 it also carries the pronunciation control, and since issue #22
  * the [vocabulary] controls: one tap on Save stores the word with its
@@ -151,7 +150,7 @@ private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPane
  * carries its level's colour — the current one filled, the others ringed — so the
  * reader's text colours can be read straight off the selector (issue #22
  * feedback). The chips are compact, a number and a check for known, so all five
- * fit one row (docs/ux-design-specification.md, `MasterySelector`).
+ * fit one row (docs/design.md, §7.3).
  */
 @Composable
 private fun MasterySelector(vocabulary: VocabularyPanel) {

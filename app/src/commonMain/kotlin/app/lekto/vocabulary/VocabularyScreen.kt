@@ -82,8 +82,8 @@ data class VocabularyActions(
 /**
  * The vocabulary list (issue #23): the saved words with their translation,
  * context sentence and mastery level, searchable and deletable, with the
- * instructional empty state the UX spec prescribes when nothing is saved
- * (`docs/ux-design-specification.md`, "Empty States").
+ * instructional empty state `docs/design.md` prescribes when nothing is saved
+ * (§7.4).
  *
  * The screen is deliberately stateless: it renders [state] and raises [actions],
  * so its behaviours are testable through semantics alone. The composition root
