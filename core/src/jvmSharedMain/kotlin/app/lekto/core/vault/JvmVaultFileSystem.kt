@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The [VaultFileSystem] backed by a real directory, used by both clients.
@@ -23,6 +24,20 @@ class JvmVaultFileSystem(root: File) : VaultFileSystem {
     /** The root as an absolute, normalised path; the anchor every other path is resolved against. */
     private val rootPath: Path = root.toPath().toAbsolutePath().normalize()
 
+    /**
+     * Guards the directory tree against a listing walking it while a write or a
+     * delete changes it. A `Files.walk` that meets a file deleted between the
+     * listing and the read throws `NoSuchFileException`, so mutations and
+     * [listFiles] take turns (issue #194). Reads stay outside the lock: a write
+     * replaces a whole file atomically, and [read] already treats a file deleted
+     * underneath it as absent.
+     *
+     * The lock is shared by every filesystem over the same root, because the app
+     * opens several for one directory — the derived assets in particular — and
+     * each would otherwise walk a tree another was changing.
+     */
+    private val treeLock: Any = locks.computeIfAbsent(rootPath) { Any() }
+
     override fun read(path: String): ByteArray? {
         val file = resolve(path)
         if (!Files.isRegularFile(file)) return null
@@ -35,18 +50,20 @@ class JvmVaultFileSystem(root: File) : VaultFileSystem {
     }
 
     override fun writeAtomically(path: String, bytes: ByteArray) {
-        val target = resolve(path)
-        val parent = target.parent ?: rootPath
-        Files.createDirectories(parent)
-        val temporary = Files.createTempFile(parent, ".${target.fileName}.", TEMP_SUFFIX)
-        try {
-            Files.write(temporary, bytes)
-            // The temporary is a sibling, so source and target share a filesystem
-            // and the move is atomic; a cross-filesystem move would throw
-            // AtomicMoveNotSupportedException instead of falling back to a copy.
-            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        } finally {
-            Files.deleteIfExists(temporary)
+        synchronized(treeLock) {
+            val target = resolve(path)
+            val parent = target.parent ?: rootPath
+            Files.createDirectories(parent)
+            val temporary = Files.createTempFile(parent, ".${target.fileName}.", TEMP_SUFFIX)
+            try {
+                Files.write(temporary, bytes)
+                // The temporary is a sibling, so source and target share a filesystem
+                // and the move is atomic; a cross-filesystem move would throw
+                // AtomicMoveNotSupportedException instead of falling back to a copy.
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } finally {
+                Files.deleteIfExists(temporary)
+            }
         }
     }
 
@@ -54,15 +71,18 @@ class JvmVaultFileSystem(root: File) : VaultFileSystem {
         // An absent path is already deleted, not an error (VaultFileSystem); a
         // present path that will not delete — a non-empty directory, say —
         // surfaces its IOException.
-        Files.deleteIfExists(resolve(path))
+        synchronized(treeLock) { Files.deleteIfExists(resolve(path)) }
     }
 
-    override fun listFiles(): List<String> {
-        if (!Files.isDirectory(rootPath)) return emptyList()
-        return Files.walk(rootPath).use { tree ->
-            tree.filter { Files.isRegularFile(it) }
-                .map { rootPath.relativize(it).joinToString("/") }
-                .toList()
+    override fun listFiles(): List<String> = synchronized(treeLock) {
+        if (!Files.isDirectory(rootPath)) {
+            emptyList()
+        } else {
+            Files.walk(rootPath).use { tree ->
+                tree.filter { Files.isRegularFile(it) }
+                    .map { rootPath.relativize(it).joinToString("/") }
+                    .toList()
+            }
         }
     }
 
@@ -86,5 +106,8 @@ class JvmVaultFileSystem(root: File) : VaultFileSystem {
     private companion object {
         /** The suffix on a write's temporary neighbour; the move leaves none behind. */
         const val TEMP_SUFFIX: String = ".tmp"
+
+        /** One lock per vault root, shared by every filesystem instance over it. */
+        val locks = ConcurrentHashMap<Path, Any>()
     }
 }

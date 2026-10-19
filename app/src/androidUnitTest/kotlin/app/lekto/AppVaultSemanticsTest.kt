@@ -33,6 +33,13 @@ import org.robolectric.annotation.Config
 import kotlin.time.Instant
 
 /**
+ * The budget for a wait that follows work on the app's injected dispatcher.
+ * That work crosses a real thread, so the wait has to outlast a busy machine
+ * rather than the one-second Compose default (issue #194).
+ */
+private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
+
+/**
  * The vault's export/import through the whole app on a **simulated Android
  * runtime** (issue #79): the same-named twin of `app/desktopTest`'s
  * `AppVaultSemanticsTest`, so the parity rule (issue #73) sees the two lanes
@@ -63,7 +70,7 @@ class AppVaultSemanticsTest {
         compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("Export vault").performScrollTo().performClick()
 
-        compose.waitUntil { exported != null }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { exported != null }
         val bundle = VaultCodec.decodeBundle(checkNotNull(exported).decodeToString())
         assertEquals(listOf("a"), bundle.records.map { it.id })
         compose.onNodeWithText("Vault exported", substring = true).performScrollTo().assertIsDisplayed()
@@ -82,14 +89,14 @@ class AppVaultSemanticsTest {
 
         compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("Import vault").performScrollTo().performClick()
-        compose.waitUntil(timeoutMillis = 10_000) { vault.get("restored") != null }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vault.get("restored") != null }
 
         compose.onNodeWithText("Vault imported", substring = true).performScrollTo().assertIsDisplayed()
         // The settings column is scrolled down to the vault actions, so the header's
         // way back must be scrolled to before it can be clicked.
         compose.onNodeWithText("Library").performScrollTo().performClick()
 
-        compose.waitUntil(timeoutMillis = 10_000) {
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("The Restored Book").assertIsDisplayed()

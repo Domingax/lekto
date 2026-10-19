@@ -36,7 +36,7 @@ jobs:
   # The guide's build, its licence gate and its own tests. The Pages deploy
   # below only runs when this job succeeds on a push to `main`.
   guide:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

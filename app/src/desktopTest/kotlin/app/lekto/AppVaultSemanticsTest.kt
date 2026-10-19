@@ -30,6 +30,13 @@ import kotlin.test.assertNotNull
 import kotlin.time.Instant
 
 /**
+ * The budget for a wait that follows work on the app's injected dispatcher.
+ * That work crosses a real thread, so the wait has to outlast a busy machine
+ * rather than the one-second Compose default (issue #194).
+ */
+private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
+
+/**
  * The vault's export/import through the whole app (issue #20): settings exports
  * the vault to the platform's save action, an import restores the vault and
  * refreshes the library that reads it, and a build with no file picker says so
@@ -53,7 +60,7 @@ class AppVaultSemanticsTest {
         onNodeWithText("Settings").performClick()
         onNodeWithText("Export vault").performScrollTo().performClick()
 
-        waitUntil { exported != null }
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { exported != null }
         val bundle = VaultCodec.decodeBundle(assertNotNull(exported).decodeToString())
         assertEquals(listOf("a"), bundle.records.map { it.id })
         onNodeWithText("Vault exported", substring = true).performScrollTo().assertIsDisplayed()
@@ -72,14 +79,16 @@ class AppVaultSemanticsTest {
 
         onNodeWithText("Settings").performClick()
         onNodeWithText("Import vault").performScrollTo().performClick()
-        waitUntil { vault.get("restored") != null }
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vault.get("restored") != null }
 
         onNodeWithText("Vault imported", substring = true).performScrollTo().assertIsDisplayed()
         // The settings column is scrolled down to the vault actions, so the header's
         // way back must be scrolled to before it can be clicked.
         onNodeWithText("Library").performScrollTo().performClick()
 
-        waitUntil { onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty() }
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty()
+        }
         onNodeWithText("The Restored Book").assertIsDisplayed()
     }
 
