@@ -69,7 +69,11 @@ Project Gutenberg book — read through `TestResources` in `testkit`, and the
 pure-Kotlin `TxtParser` (ticket #15), whose tests run in `core/commonTest`. The
 extraction goldens in `resources/golden/` pin the EPUB parser's output; a change
 that alters the text fails until the golden is deliberately updated. See
-`docs/research/epub-to-tokens-spike.md`.
+`docs/research/epub-to-tokens-spike.md`. The block walk has its own guard,
+`XhtmlBlocksTest` in `core/jvmTest`: a heading that writes its anchor
+self-closing leaves the HTML parser with an `<a>` it never closes, and the rest
+of the chapter lands inside it, which imported three real books as their table
+of contents alone (issue #190).
 
 The platform-backed implementation lives in `core/src/jvmSharedMain`, a source
 set shared by the JVM target and the Android target, so `EpubParser`,
@@ -101,6 +105,15 @@ The library UI's semantics are proved in `app/desktopTest` and its same-named
 Android twin in `app/androidUnitTest` (issue #74), and the
 `LibraryController`'s async import is driven with
 `kotlinx-coroutines-test`'s `runTest` and an injected dispatcher.
+
+The Library's order (issue #188) is a pure split — `LibraryListing.of` over the
+books and their last-read instants — so `LibraryListingTest` pins the three-book
+lead, the title order of the rest and the tie at the edge, while
+`VaultBookLibraryTest` proves the instants come from the position records,
+including a position at offset 0. The screen's section is
+`LibraryScreenSemanticsTest` on both lanes, and `AppSemanticsTest` proves that a
+page turned just before leaving the reader still leads the list, which is the
+refresh the composition root wires.
 
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's

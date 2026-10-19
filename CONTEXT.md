@@ -88,9 +88,10 @@ progress and surfaces failure rather than blocking.
 _Avoid_: Scan, upload, add
 
 **Library**:
-The list of books in the vault, ordered by title; the app's starting screen and the
-way back from a reading session. Distinct from the **Vault**, which is the storage it
-reads: the library is the view, not the store.
+The list of books in the vault: the three most recently read books first, most recent
+first, then every other book by title. It is the app's starting screen and the way back
+from a reading session. Distinct from the **Vault**, which is the storage it reads: the
+library is the view, not the store.
 _Avoid_: Shelf, collection
 
 **Reading session**:
@@ -103,6 +104,12 @@ Where the user left off in a book: a character offset into the text the reader
 renders, chosen so the place survives a reflow onto a different screen size or font.
 Saved per book in the vault and restored when the book is reopened.
 _Avoid_: Page number, bookmark, scroll position
+
+**Last read**:
+The moment a book's **Reading position** last moved — a page turned, not the book
+opened. It orders the **Library** and says nothing about how far through the book the
+reader is.
+_Avoid_: Last opened, recent, progress
 
 **Word token**:
 A single tappable unit of text in the reader — the unit of lookup and colouring.

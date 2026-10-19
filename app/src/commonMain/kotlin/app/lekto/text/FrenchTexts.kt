@@ -33,6 +33,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
 
     // Library.
     TextKey.LIBRARY_EMPTY to "Aucun livre pour l'instant — touchez Importer pour ajouter votre premier livre",
+    TextKey.CONTINUE_READING to "Continuer la lecture",
     TextKey.IMPORT to "Importer",
     TextKey.IMPORTING to "Importation…",
     TextKey.IMPORT_PROGRESS to "Progression de l'importation",

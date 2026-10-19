@@ -3,6 +3,7 @@ package app.lekto.library
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,9 @@ import app.lekto.ui.ConfirmationDialog
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
 
+/** The lazy item key of the "Continue reading" heading, which is not a book. */
+private const val CONTINUE_READING_KEY: String = "continue-reading"
+
 /**
  * The library screen: the books in the vault, an Import action, a per-book delete
  * behind a destructive confirmation, and the import's progress and failure inline
@@ -66,11 +70,7 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
                 modifier = Modifier.padding(top = 24.dp),
             )
         } else {
-            LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
-                items(state.books, key = { book -> book.id }) { book ->
-                    BookRow(book, onOpen = actions.onOpen, onDelete = { target -> pendingDelete = target })
-                }
-            }
+            LibraryList(state, onOpen = actions.onOpen, onDelete = { target -> pendingDelete = target })
         }
 
         Button(onClick = actions.onImport, enabled = !state.importing, modifier = Modifier.fillMaxWidth()) {
@@ -89,6 +89,32 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
             },
             onDismiss = { pendingDelete = null },
         )
+    }
+}
+
+/**
+ * The scrollable book list: the recently read books under their heading, then
+ * the rest (issue #188). Its own composable so the screen's layout stays short.
+ */
+@Composable
+private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
+    val texts = LocalAppTexts.current
+    LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
+        if (state.listing.lastRead.isNotEmpty()) {
+            item(key = CONTINUE_READING_KEY) {
+                Text(
+                    text = texts[TextKey.CONTINUE_READING],
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                )
+            }
+            items(state.listing.lastRead, key = { book -> book.id }) { book ->
+                BookRow(book, onOpen = onOpen, onDelete = onDelete)
+            }
+        }
+        items(state.listing.others, key = { book -> book.id }) { book ->
+            BookRow(book, onOpen = onOpen, onDelete = onDelete)
+        }
     }
 }
 

@@ -26,6 +26,7 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportProgress
+import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
@@ -123,6 +124,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /**
  * The application's reading-loop flow through semantics (issues #15 and #16): it
@@ -172,6 +174,24 @@ class AppSemanticsTest {
         onNodeWithText("The Lantern Keeper").performClick()
 
         onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aPageTurnedJustBeforeLeavingLeadsTheLibrary() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library)) }
+
+        onNodeWithText("Continue reading").assertDoesNotExist()
+        onNodeWithText("The Lantern Keeper").performClick()
+        onNodeWithText("Next page").performClick()
+        // Leave at once: the position write is still in flight, and the library
+        // still has to re-read when it lands (issue #188).
+        onNodeWithText("Library").performClick()
+
+        // Only a refresh after the write can fill the section, so its
+        // appearance proves the library re-read the vault (issue #188).
+        waitUntil { onAllNodesWithText("Continue reading").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Continue reading").assertIsDisplayed()
     }
 
     @Test
@@ -1277,8 +1297,15 @@ internal class InMemoryLibrary : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val positions = mutableMapOf<String, Int>()
+    private val lastRead = mutableMapOf<String, Long>()
+    private var reads = 0L
 
     override fun books(): List<Book> = stored
+
+    override fun listing(): LibraryListing = LibraryListing.of(
+        books = stored,
+        lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
+    )
 
     override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
         val book = Book(
@@ -1304,12 +1331,14 @@ internal class InMemoryLibrary : BookLibrary {
     override fun delete(id: String) {
         stored = stored.filterNot { book -> book.id == id }
         positions.remove(id)
+        lastRead.remove(id)
     }
 
     override fun position(bookId: String): ReadingPosition? = positions[bookId]?.let { ReadingPosition(bookId, it) }
 
     override fun savePosition(position: ReadingPosition) {
         positions[position.bookId] = position.offset
+        lastRead[position.bookId] = ++reads
     }
 
     /** The last offset written, so a test can wait for the asynchronous save. */

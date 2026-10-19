@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
+import app.lekto.core.book.LibraryListing
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
@@ -40,6 +41,7 @@ import org.robolectric.annotation.Config
  * the same-named tests so the two suites cannot drift apart unseen.
  */
 @RunWith(RobolectricTestRunner::class)
+@Suppress("TooManyFunctions") // One test per behaviour; the list is the screen's.
 @Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
 class LibraryScreenSemanticsTest {
 
@@ -54,6 +56,38 @@ class LibraryScreenSemanticsTest {
         fileName = "lantern.epub",
     )
 
+    private val otherBook = Book(
+        id = "b2",
+        title = "A Smaller Book",
+        language = "en",
+        format = BookFormat.TXT,
+        fileName = "smaller.txt",
+    )
+
+    @Test
+    fun theContinueReadingSectionLeadsTheTitleList() {
+        compose.setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Continue reading").assertIsDisplayed()
+        val lastRead = compose.onNodeWithText(book.title).getBoundsInRoot()
+        val other = compose.onNodeWithText(otherBook.title).getBoundsInRoot()
+        assertTrue("the recently read book must lead: $lastRead vs $other", lastRead.top < other.top)
+    }
+
+    @Test
+    fun theContinueReadingHeadingIsAbsentUntilABookIsRead() {
+        compose.setContent { Library(books(book)) }
+
+        compose.onNodeWithText("Continue reading").assertDoesNotExist()
+        compose.onNodeWithText(book.title).assertIsDisplayed()
+    }
+
     @Test
     fun showsTheEmptyStateUntilABookExists() {
         compose.setContent { Library(LibraryUiState()) }
@@ -64,7 +98,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun listsBooksAndOpensTheTappedOne() {
         var opened: Book? = null
-        compose.setContent { Library(LibraryUiState(books = listOf(book)), onOpen = { opened = it }) }
+        compose.setContent { Library(books(book), onOpen = { opened = it }) }
 
         compose.onNodeWithText("The Lantern Keeper").assertIsDisplayed()
         compose.onNodeWithText("The Lantern Keeper").performClick()
@@ -105,7 +139,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun theDeleteActionAsksForConfirmationBeforeDeleting() {
         var deleted: Book? = null
-        compose.setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+        compose.setContent { Library(books(book), onDelete = { deleted = it }) }
 
         compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
 
@@ -117,7 +151,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun confirmingTheDialogDeletesTheBook() {
         var deleted: Book? = null
-        compose.setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+        compose.setContent { Library(books(book), onDelete = { deleted = it }) }
 
         compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
@@ -128,7 +162,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun cancellingTheDialogLeavesTheBook() {
         var deleted: Book? = null
-        compose.setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+        compose.setContent { Library(books(book), onDelete = { deleted = it }) }
 
         compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         compose.onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
@@ -155,6 +189,10 @@ class LibraryScreenSemanticsTest {
         val height = settings.bottom - settings.top
         assertTrue("the nav label must stay on one line: $height", height < 80.dp)
     }
+
+    /** A state whose books are all unread, so only the title list shows. */
+    private fun books(vararg books: Book): LibraryUiState =
+        LibraryUiState(listing = LibraryListing(others = books.toList()))
 
     @Composable
     private fun Library(

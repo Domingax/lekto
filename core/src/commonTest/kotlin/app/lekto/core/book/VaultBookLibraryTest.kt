@@ -14,12 +14,14 @@ import app.lekto.core.vault.VaultStore
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
+import app.lekto.testkit.TestClock
 import app.lekto.testkit.deterministicSeams
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlin.test.assertFailsWith
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * The import-and-library domain behaviour (issue #15).
@@ -46,14 +48,14 @@ class VaultBookLibraryTest :
             vault: InMemoryVaultStore = InMemoryVaultStore(),
             derived: DerivedAssetStore = DerivedAssetStore(InMemoryVaultFileSystem()),
             tombstones: TombstoneStore = InMemoryTombstoneStore(),
-            deviceId: DeviceId = DeviceId("device-a"),
+            seams: app.lekto.core.Seams = deterministicSeams(),
         ): VaultBookLibrary = VaultBookLibrary(
             vault = vault,
             derived = derived,
             parsers = parsers,
             tombstones = tombstones,
-            seams = deterministicSeams(),
-            deviceId = deviceId,
+            seams = seams,
+            deviceId = DeviceId("device-a"),
         )
 
         test("importing an EPUB stores it in the vault and lists it in the library") {
@@ -125,6 +127,63 @@ class VaultBookLibraryTest :
 
             vault.get(book.id)?.kind shouldBe BookRecord.KIND
             library.books() shouldContainExactly listOf(book)
+        }
+
+        test("the listing counts a saved position, even at its first page, as read") {
+            val clock = TestClock()
+            val library = newLibrary(seams = deterministicSeams(clock = clock))
+            val alpha = library.import("Alpha.txt", "Text.".encodeToByteArray())
+            val bravo = library.import("Bravo.txt", "Text.".encodeToByteArray())
+            val charlie = library.import("Charlie.txt", "Text.".encodeToByteArray())
+            val delta = library.import("Delta.txt", "Text.".encodeToByteArray())
+
+            library.savePosition(ReadingPosition(alpha.id, offset = 10))
+            clock.advanceBy(1.minutes)
+            library.savePosition(ReadingPosition(bravo.id, offset = 10))
+            clock.advanceBy(1.minutes)
+            library.savePosition(ReadingPosition(charlie.id, offset = 10))
+            clock.advanceBy(1.minutes)
+            // Read last, then turned back to its first page: still the most recent.
+            library.savePosition(ReadingPosition(delta.id, offset = 0))
+
+            library.listing().lastRead.map { book -> book.title } shouldBe listOf("Delta", "Charlie", "Bravo")
+            library.listing().others.map { book -> book.title } shouldBe listOf("Alpha")
+        }
+
+        test("the listing orders books by when their position last moved") {
+            val clock = TestClock()
+            val library = newLibrary(seams = deterministicSeams(clock = clock))
+            val alpha = library.import("Alpha.txt", "Text.".encodeToByteArray())
+            val bravo = library.import("Bravo.txt", "Text.".encodeToByteArray())
+            val charlie = library.import("Charlie.txt", "Text.".encodeToByteArray())
+            val delta = library.import("Delta.txt", "Text.".encodeToByteArray())
+
+            library.savePosition(ReadingPosition(delta.id, offset = 10))
+            clock.advanceBy(1.minutes)
+            library.savePosition(ReadingPosition(alpha.id, offset = 10))
+            clock.advanceBy(1.minutes)
+            library.savePosition(ReadingPosition(charlie.id, offset = 10))
+            clock.advanceBy(1.minutes)
+            library.savePosition(ReadingPosition(bravo.id, offset = 10))
+
+            library.listing().lastRead.map { book -> book.title } shouldBe listOf("Bravo", "Charlie", "Alpha")
+            library.listing().others.map { book -> book.title } shouldBe listOf("Delta")
+        }
+
+        test("a book with an unreadable position record is not recently read") {
+            val vault = InMemoryVaultStore()
+            val library = newLibrary(vault)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            vault.put(
+                ReadingPositionRecord.of(
+                    ReadingPosition(book.id, 5),
+                    deterministicSeams().clock.now(),
+                    DeviceId("device-a"),
+                ).copy(body = kotlinx.serialization.json.JsonObject(emptyMap())),
+            )
+
+            library.listing().lastRead shouldBe emptyList()
+            library.listing().others shouldContainExactly listOf(book)
         }
 
         test("a book with an unreadable progress record still opens") {
