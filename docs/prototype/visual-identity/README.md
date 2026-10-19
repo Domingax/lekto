@@ -22,6 +22,7 @@ et le verdict sont sur l'issue #168.
 | `lecteur-moments.png` | La page nue, les zones de toucher, et le panneau du texte. |
 | `recherche.png` | Le panneau du mot posé sur la page, dans les trois fonds. |
 | `recherche-etats.png` | Le dictionnaire absent, la phrase traduite, la phrase sans fournisseur. |
+| `desktop.png` | Le lecteur desktop et sa colonne de contexte : les chapitres quand rien n'est touché, le mot quand on touche. |
 
 ## Regénérer
 

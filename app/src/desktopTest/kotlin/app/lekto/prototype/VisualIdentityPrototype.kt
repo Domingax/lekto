@@ -959,6 +959,209 @@ class VisualIdentityPrototype {
         }
         onRoot().captureRoboImage("prototype/recherche-etats.png")
     }
+
+    /**
+     * Planche 12 — le lecteur desktop, et ce que fait la colonne de droite. Elle
+     * est réservée (rien ne bouge quand elle s'ouvre), et elle montre les
+     * chapitres quand rien n'est sélectionné : pas de bande vide, et les
+     * chapitres y trouvent leur place.
+     */
+    @Test
+    fun desktop() = runDesktopComposeUiTest(width = 1280, height = 1680) {
+        setContent {
+            Column(Modifier.size(1280.dp, 1680.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Le lecteur desktop — la colonne de contexte",
+                    sousTitre = "Elle est toujours là, donc la page ne bouge jamais quand un " +
+                        "mot est touché. Fermée, elle montre les chapitres ; ouverte, le mot.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    FenetreDesktop(Clair, EtatDesktop.CHAPITRES)
+                    FenetreDesktop(Clair, EtatDesktop.MOT)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/desktop.png")
+    }
+}
+
+/** Ce que la colonne de contexte montre. */
+private enum class EtatDesktop { CHAPITRES, MOT }
+
+/** La fenêtre desktop : le chrome, la page, et sa colonne de contexte. */
+@Composable
+private fun FenetreDesktop(theme: Theme, etat: EtatDesktop) {
+    Column(modifier = Modifier.width(1280.dp).height(800.dp).background(theme.paper)) {
+        BarreHaut(theme)
+        Row(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                Column(
+                    modifier = Modifier
+                        .width(620.dp)
+                        .align(Alignment.TopCenter)
+                        .padding(vertical = 24.dp),
+                ) {
+                    Phrase(
+                        theme = theme,
+                        couleur = theme.rampe(),
+                        souligne = true,
+                        selection = if (etat == EtatDesktop.MOT) listOf("stood") else emptyList(),
+                        mots = PASSAGE,
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .width(420.dp)
+                    .fillMaxHeight()
+                    .background(theme.surface),
+            ) {
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline))
+                when (etat) {
+                    EtatDesktop.CHAPITRES -> ColonneChapitres(theme)
+                    EtatDesktop.MOT -> ColonneMot(theme)
+                }
+            }
+        }
+        BarreBas(theme)
+    }
+}
+
+/** Fermée, la colonne est le sommaire : ce que le lecteur peut vouloir rejoindre. */
+@Composable
+private fun ColonneChapitres(theme: Theme) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = "Chapitres",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                color = theme.muted,
+            ),
+        )
+        listOf(
+            "1. The Fir Tree" to true,
+            "2. The Snow Queen" to false,
+            "3. The Little Mermaid" to false,
+            "4. The Nightingale" to false,
+            "5. The Ugly Duckling" to false,
+        ).forEach { (titre, courant) ->
+            Text(
+                text = titre,
+                style = TextStyle(
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 15.sp,
+                    fontWeight = if (courant) FontWeight.Bold else FontWeight.Normal,
+                    color = if (courant) theme.ink else theme.muted,
+                ),
+            )
+        }
+        Box(modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(1.dp).background(theme.outline))
+        Text(
+            text = "Page 99 sur 357",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 11.sp,
+                color = theme.muted,
+            ),
+        )
+    }
+}
+
+/** Ouverte, la colonne est le panneau du mot — plus haut, plus aéré, jamais superposé. */
+@Composable
+private fun ColonneMot(theme: Theme) {
+    Column(
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "stood",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Serif,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.ink,
+                    ),
+                )
+                Text(
+                    text = "verbe · /stʊd/",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        color = theme.muted,
+                    ),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(
+                    imageVector = LucideDemo.Volume2,
+                    contentDescription = null,
+                    tint = theme.ink,
+                    modifier = Modifier.size(20.dp),
+                )
+                Icon(
+                    imageVector = LucideDemo.X,
+                    contentDescription = null,
+                    tint = theme.ink,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        Separateur(theme)
+        Sens("1", "the past tense of stand.", null, theme)
+        Sens("2", "to be in an upright position, supported by the feet.", "se tenir debout", theme)
+        Sens("3", "to remain in a place without moving.", "rester", theme)
+        Sens("4", "to rise to one's feet after sitting.", "se lever", theme)
+        Separateur(theme)
+        Text(
+            text = "Niveau — Reconnu",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                color = theme.muted,
+            ),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val rampe = theme.rampe()
+            ChipNiveau(theme, "0", rampe.unknown, choisi = false)
+            ChipNiveau(theme, "1", rampe.recognized, choisi = true)
+            ChipNiveau(theme, "2", rampe.familiar, choisi = false)
+            ChipNiveau(theme, "3", rampe.learned, choisi = false)
+            ChipNiveau(theme, "4", theme.outline, choisi = false)
+        }
+        Separateur(theme)
+        Text(
+            text = "Chercher ailleurs",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                color = theme.muted,
+            ),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("WordReference", "Reverso", "Linguee", "Google Traduction").forEach { lien ->
+                Text(
+                    text = lien,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        color = theme.ink,
+                    ),
+                )
+            }
+        }
+    }
 }
 
 /** Les états du panneau de recherche. */
