@@ -243,7 +243,7 @@ To actually use the mature DOM substrate from a native-Compose stack, Lekto woul
 - [ADR-0010 — The vault is app-private](../adr/0010-vault-is-app-private.md)
 - [ADR-0006 — Word identity is `(language, lemma)`](../adr/0006-word-identity-language-lemma.md)
 - [docs/research/android-first-stack.md](./android-first-stack.md), [docs/research/web-client-viability.md](./web-client-viability.md)
-- [docs/ux-design-specification.md](../ux-design-specification.md)
+- `docs/ux-design-specification.md` — since replaced by `docs/design.md`.
 
 **foliate-js / Readest**
 - foliate-js repository and README — https://github.com/johnfactotum/foliate-js
