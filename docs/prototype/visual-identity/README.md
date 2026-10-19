@@ -29,6 +29,7 @@ et le verdict sont sur l'issue #168.
 | `icone.png` | Trois marques candidates, à 96 dp et à 48 dp, et l'écran de lancement sur les deux fonds. |
 | `reglages-formulaires.png` | Le fournisseur IA, et le coffre avec sa synchronisation. |
 | `icone-marque.png` | Le L dans le livre et le L dans la page, à 96 dp et à 48 dp, plus le lancement. |
+| `icone-finale.png` | La décision : la page pour l'icône, le L seul pour la couche monochrome et le lancement. |
 
 ## Regénérer
 

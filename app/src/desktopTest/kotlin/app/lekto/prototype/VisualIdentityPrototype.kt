@@ -1237,6 +1237,114 @@ class VisualIdentityPrototype {
         }
         onRoot().captureRoboImage("prototype/icone-marque.png")
     }
+
+    /**
+     * Planche 19 — la décision : la page pour l'icône normale, le L seul pour la
+     * couche monochrome et l'écran de lancement.
+     */
+    @Test
+    fun iconeFinale() = runDesktopComposeUiTest(width = LARGEUR, height = 620) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 620.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "L'icône — la page en couleur, le L en monochrome",
+                    sousTitre = "Android 13 teinte la couche monochrome à la palette du fond " +
+                        "d'écran : une seule couleur, donc une seule lettre. Livre ou page, un " +
+                        "dessin combiné y deviendrait une tache.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(40.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Column {
+                        Text(
+                            text = "L'icône — la page",
+                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                        )
+                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                            MarqueV2Dessin(MarqueV2.Page, 96, avecLettre = false)
+                            MarqueV2Dessin(MarqueV2.Page, 48, avecLettre = false)
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "La couche monochrome — le L, en une seule couleur",
+                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                        )
+                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                            Monochrome(96)
+                            Monochrome(48)
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Le lancement — le L sur le papier du thème",
+                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                        )
+                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            LancementFinal(Clair)
+                            LancementFinal(Sombre)
+                        }
+                    }
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/icone-finale.png")
+    }
+}
+
+/** La couche monochrome telle que le système la teinte : une seule couleur, le L seul. */
+@Composable
+private fun Monochrome(taille: Int) {
+    val d = taille.dp
+    Box(
+        modifier = Modifier
+            .size(d)
+            .background(Color(0xFF2B2B2B), RoundedCornerShape((taille * 0.22f).dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "L",
+            style = TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontSize = (taille * 0.7f).sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFB9B2A6),
+            ),
+        )
+    }
+}
+
+/** Le lancement, avec la lettre seule. */
+@Composable
+private fun LancementFinal(theme: Theme) {
+    Box(
+        modifier = Modifier
+            .width(230.dp)
+            .height(300.dp)
+            .background(theme.paper),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .background(theme.surface, RoundedCornerShape(19.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "L",
+                style = TextStyle(
+                    fontFamily = FontFamily.Serif,
+                    fontSize = 54.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = theme.ink,
+                ),
+            )
+        }
+    }
 }
 
 /** Les deux combinaisons de la lettre et du papier. */
@@ -1244,7 +1352,7 @@ private enum class MarqueV2 { Livre, Page }
 
 /** Une marque à [taille], sur la tuile du lanceur. */
 @Composable
-private fun MarqueV2Dessin(marque: MarqueV2, taille: Int) {
+private fun MarqueV2Dessin(marque: MarqueV2, taille: Int, avecLettre: Boolean = true) {
     val d = taille.dp
     Box(
         modifier = Modifier
@@ -1291,15 +1399,17 @@ private fun MarqueV2Dessin(marque: MarqueV2, taille: Int) {
                             modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFFF2ECE2)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = "L",
-                                style = TextStyle(
-                                    fontFamily = FontFamily.Serif,
-                                    fontSize = (taille * 0.3f).sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Clair.ink,
-                                ),
-                            )
+                            if (avecLettre) {
+                                Text(
+                                    text = "L",
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.Serif,
+                                        fontSize = (taille * 0.3f).sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Clair.ink,
+                                    ),
+                                )
+                            }
                         }
                     }
                 }
