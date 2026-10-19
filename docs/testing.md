@@ -741,7 +741,10 @@ runtime Android uses.
 The desktop wiring that roots the transfer at the same directory as the library
 is `DesktopVaultTest`; the modal Swing dialogs and the Android `CreateDocument`
 and `OpenDocument` glue sit behind the coverage exclusion, like the rest of the
-platform entry points.
+platform entry points. A modal dialog pumps a nested event loop, so the desktop
+root runs each dialog on a dispatcher of its own rather than the composition's:
+on the composition's flush dispatcher the loop re-enters it mid-resume and drops
+the import (issue #192).
 
 Saving a word and setting its mastery (issue #22) is proved at the same levels.
 The vocabulary entry is a domain fact, so `VaultVocabularyTest` in
