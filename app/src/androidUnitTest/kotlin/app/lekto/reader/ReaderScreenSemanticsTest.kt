@@ -37,6 +37,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
+ * The budget for a wait that follows work on the app's injected dispatcher.
+ * That work crosses a real thread, so the wait has to outlast a busy machine
+ * rather than the one-second Compose default (issue #194).
+ */
+private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
+
+/**
  * The reader screen on a **simulated Android runtime** (issue #75): the
  * same-named twin of `app/desktopTest`'s `ReaderScreenSemanticsTest`, so the
  * parity rule (issue #73) can see the two lanes together. The reader's page is a
@@ -244,7 +251,7 @@ class ReaderScreenSemanticsTest {
 /** The first word link's centre, in the reader page's coordinates. */
 @Suppress("MagicNumber") // The wait for the word layer is the test's parameter.
 private fun ComposeTestRule.firstWordCentre(): Offset {
-    waitUntil(timeoutMillis = 5_000) {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
         onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
             .fetchSemanticsNodes()
             .isNotEmpty()

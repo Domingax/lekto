@@ -164,7 +164,9 @@ class AppSemanticsTest {
         compose.onNodeWithText("No books yet", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Import").performClick()
 
-        compose.waitUntil { compose.onAllNodesWithText("The Lantern Keeper").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("The Lantern Keeper").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("The Lantern Keeper").assertIsDisplayed()
     }
 
@@ -173,7 +175,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
 
         compose.awaitPage(1)
         compose.onNodeWithText("Library").assertIsDisplayed()
@@ -184,14 +186,14 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
         // Persisting runs off the UI thread; wait for it before leaving the book.
-        compose.waitUntil { library.savedOffset() != null }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { library.savedOffset() != null }
 
         compose.onNodeWithText("Library").performClick()
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
 
         // The reopened reader resumes past page one: the page number is enough,
         // and Previous page enabled proves it is not page one.
@@ -205,7 +207,7 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library)) }
 
         compose.onNodeWithText("Continue reading").assertDoesNotExist()
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         // Leave at once: the position write is still in flight, and the library
         // still has to re-read when it lands (issue #188).
@@ -213,7 +215,7 @@ class AppSemanticsTest {
 
         // Only a refresh after the write can fill the section, so its
         // appearance proves the library re-read the vault (issue #188).
-        compose.waitUntil {
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("Continue reading").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Continue reading").assertIsDisplayed()
@@ -225,10 +227,12 @@ class AppSemanticsTest {
         val preferences = InMemoryReadingPreferencesStore()
         compose.setContent { App(environment(library, readingPreferences = preferences)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         // Opening a book runs on the environment's dispatcher, so wait for the
         // reader's chrome before touching its **Aa** control.
-        compose.waitUntil { compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         compose.onNodeWithTag(READING_LARGER_TAG).performClick()
 
@@ -238,8 +242,10 @@ class AppSemanticsTest {
         // not session state, so the reader starts from it (ADR-0035).
         compose.onNodeWithTag(READING_PREFERENCES_CLOSE_TAG).performClick()
         compose.onNodeWithText("Library").performClick()
-        compose.onNodeWithText("The Lantern Keeper").performClick()
-        compose.waitUntil { compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty() }
+        compose.openBook()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(READING_PREFERENCES_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         compose.onNodeWithTag(READING_LARGER_TAG).performClick()
 
@@ -251,7 +257,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
 
         compose.onNodeWithText("Look it up online").assertIsDisplayed()
@@ -275,7 +281,7 @@ class AppSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Reverso").performClick()
 
@@ -290,7 +296,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
 
@@ -312,7 +318,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
 
@@ -341,7 +347,7 @@ class AppSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
 
@@ -367,7 +373,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
 
@@ -402,14 +408,16 @@ class AppSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
 
         compose.selectFirstPhrase()
 
-        compose.waitUntil { client.translated.isNotEmpty() }
-        compose.waitUntil { compose.onAllNodesWithTag(TRANSLATION_RESULT_TAG).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { client.translated.isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(TRANSLATION_RESULT_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
         // The selection and its containing sentence leave the device; the answer streams in.
         val user = client.translated.single().messages.single { message -> message.role == "user" }
         assertTrue("the request discloses the context: ${user.content}", user.content.contains("Selected phrase:"))
@@ -423,7 +431,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, dictionary = dictionaryServices())) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.onNodeWithText("Next page").performClick()
         compose.awaitPage(2)
 
@@ -442,11 +450,11 @@ class AppSemanticsTest {
         val pronouncer = FakePronouncer()
         compose.setContent { App(environment(library, pronouncer = pronouncer)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Listen").performClick()
 
-        compose.waitUntil { pronouncer.utterances.isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         val (text, language) = pronouncer.utterances.single()
         assertTrue("the tapped word must be spoken", text.isNotBlank())
         assertEquals("en", language)
@@ -458,11 +466,11 @@ class AppSemanticsTest {
         val pronouncer = FakePronouncer(SpeechResult.NoVoice("en"))
         compose.setContent { App(environment(library, pronouncer = pronouncer)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Listen").performClick()
 
-        compose.waitUntil { pronouncer.utterances.isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         compose.waitForIdle()
         compose.onNodeWithText("No voice is installed", substring = true).assertIsDisplayed()
     }
@@ -472,7 +480,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Listen").performClick()
 
@@ -532,7 +540,7 @@ class AppSemanticsTest {
         compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
         compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
 
-        compose.waitUntil { client.tested.isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
         compose.onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
     }
@@ -555,7 +563,7 @@ class AppSemanticsTest {
         compose.onNodeWithText("Anthropic").performClick()
 
         // Choosing the provider loads its models with no separate action.
-        compose.waitUntil(timeoutMillis = 10_000) { client.listed.isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { client.listed.isNotEmpty() }
         compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
         compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performClick()
         compose.onNodeWithText("claude-3-5").performClick()
@@ -601,11 +609,11 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Save").performClick()
 
-        compose.waitUntil { vocabulary.all().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val entry = vocabulary.all().single()
         assertEquals("on", entry.key.key)
         assertTrue(
@@ -616,7 +624,9 @@ class AppSemanticsTest {
         // save defaults to the familiar level (ADR-0030).
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog: the saved state on the panel is the confirmation.
-        compose.waitUntil { compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Saved").assertIsDisplayed()
     }
 
@@ -626,14 +636,16 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Save").performClick()
-        compose.waitUntil { vocabulary.all().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
         compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
 
-        compose.waitUntil { vocabulary.all().single().mastery == MasteryLevel.LEARNED }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.LEARNED
+        }
         assertEquals("changing the level must not add a second entry", 1, vocabulary.all().size)
     }
 
@@ -645,7 +657,7 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
 
         // The entry survived the restart: the panel opens already saved.
@@ -662,10 +674,10 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary, lemmas = lemmas)) }
 
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Save").performClick()
-        compose.waitUntil { vocabulary.all().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         assertEquals("the save must key on the lemma", "lantern", vocabulary.all().single().key.key)
 
         // The word panel is open over the page bar; close it before turning the page.
@@ -724,7 +736,7 @@ class AppSemanticsTest {
         }
 
         compose.onNodeWithText("Vocabulary").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("blorper").fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -808,7 +820,7 @@ class AppSemanticsTest {
         }
 
         compose.onNodeWithText("Vocabulary").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("blorper").fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -869,18 +881,18 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
         // Save the first word from the panel, then find it in the list.
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
         compose.onNodeWithText("Save").performClick()
-        compose.waitUntil { vocabulary.all().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val saved = vocabulary.all().single()
 
         compose.onNodeWithText("Library").performClick()
         compose.onNodeWithText("Vocabulary").performClick()
         compose.onNodeWithTag(vocabularyDeleteTag(saved.key)).performScrollTo().performClick()
-        compose.waitUntil { vocabulary.all().isEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isEmpty() }
         // The list recomposes after the write; wait for the empty state before asserting.
-        compose.waitUntil {
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("No words saved yet", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("No words saved yet", substring = true).assertIsDisplayed()
@@ -888,7 +900,7 @@ class AppSemanticsTest {
         // Reopening the book, the word is unsaved again — the reader's colour
         // dropped with the entry, so list and text agree.
         compose.onNodeWithText("Library").performClick()
-        compose.onNodeWithText("The Lantern Keeper").performClick()
+        compose.openBook()
         compose.tapFirstWord()
 
         compose.onNodeWithText("Save").assertIsDisplayed()
@@ -950,7 +962,7 @@ class AppSemanticsTest {
         }
 
         // The default lands with no question and no surface opened.
-        compose.waitUntil { settings.load().appLanguage != null }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { settings.load().appLanguage != null }
         assertEquals("fr", settings.load().appLanguage)
     }
 
@@ -1018,7 +1030,7 @@ class AppSemanticsTest {
         compose.onNodeWithText("Langues").performClick()
 
         // The default lands once the manifest is read; no question is asked.
-        compose.waitUntil { settings.load().translationLanguage != null }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { settings.load().translationLanguage != null }
         assertEquals("fr", settings.load().translationLanguage)
     }
 
@@ -1058,7 +1070,9 @@ class AppSemanticsTest {
         catalog.onReload = LanguageCatalogState.Available(listOf(testOfferedLanguage("en")))
         compose.onNodeWithTag(LANGUAGES_RELOAD_TAG).performClick()
 
-        compose.waitUntil { compose.onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("English").assertIsDisplayed()
     }
 
@@ -1123,7 +1137,9 @@ class AppSemanticsTest {
         // The manifest publishes a table for English, so the surface offers its download.
         compose.onNodeWithTag(languageDifficultyDownloadTag("en")).performClick()
 
-        compose.waitUntil { compose.onAllNodesWithText("Download again").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Download again").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("is installed", substring = true).assertIsDisplayed()
     }
 }
@@ -1231,11 +1247,25 @@ internal fun environment(
 private fun inMemoryVocabulary(): Vocabulary =
     VaultVocabulary(InMemoryVaultStore(), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
 
+/**
+ * Opens the one book every test imports and waits for its reader.
+ *
+ * Opening runs on the injected dispatcher, so on a loaded machine the reader is
+ * not on screen when the click returns; a test that drove it at once would fail
+ * on timing rather than behaviour (issue #194).
+ */
+private fun ComposeTestRule.openBook() {
+    onNodeWithText("The Lantern Keeper").performClick()
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+        onAllNodesWithTag(READER_PAGE_TAG).fetchSemanticsNodes().isNotEmpty()
+    }
+}
+
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
 private fun ComposeTestRule.tapFirstWord() {
     // The word layer arrives a frame after the reader opens (the page is
     // paginated and tokenised asynchronously), so wait for it before tapping.
-    waitUntil(timeoutMillis = 5_000) {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
         onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
             .fetchSemanticsNodes()
             .isNotEmpty()
@@ -1247,7 +1277,7 @@ private fun ComposeTestRule.tapFirstWord() {
 
 /** Waits until the reader's page bar reports page [page], then asserts it is there. */
 private fun ComposeTestRule.awaitPage(page: Int) {
-    waitUntil(timeoutMillis = 5_000) {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
         onAllNodesWithText("Page $page of", substring = true).fetchSemanticsNodes().isNotEmpty()
     }
     onNodeWithText("Page $page of", substring = true).assertExists()
@@ -1256,7 +1286,7 @@ private fun ComposeTestRule.awaitPage(page: Int) {
 /** Long-presses the first word link and drags across the line, selecting a phrase. */
 @Suppress("MagicNumber") // The long-press delay and the drag distance are the test's parameters.
 private fun ComposeTestRule.selectFirstPhrase() {
-    waitUntil(timeoutMillis = 5_000) {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
         onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
             .fetchSemanticsNodes()
             .isNotEmpty()
@@ -1291,6 +1321,13 @@ private fun installedDictionary(): DictionaryServices = dictionaryServices().als
 
 /** Enough one-line paragraphs to span several pages at any test viewport. */
 private const val PARAGRAPHS = 40
+
+/**
+ * The budget for a wait that follows work on the app's injected dispatcher.
+ * That work crosses a real thread, so the wait has to outlast a busy machine
+ * rather than the one-second Compose default (issue #194).
+ */
+private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
 
 /**
  * A [BookLibrary] held in memory: import, open and reading progress without a

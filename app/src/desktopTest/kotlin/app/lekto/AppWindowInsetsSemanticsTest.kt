@@ -3,6 +3,7 @@ package app.lekto
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -49,6 +50,9 @@ class AppWindowInsetsSemanticsTest {
         }
 
         onNodeWithText("The Lantern Keeper").performClick()
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText("Page 1 of", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
 
         assertTrue(
             onNodeWithText("Library").getUnclippedBoundsInRoot().top >= StatusBarHeight,
@@ -56,6 +60,9 @@ class AppWindowInsetsSemanticsTest {
         )
     }
 }
+
+/** Work on the injected dispatcher crosses a real thread; the Compose default is one second (issue #194). */
+private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
 
 /** A status bar's height: the inset the test injects, so the layout is deterministic. */
 private val StatusBarHeight = 48.dp
