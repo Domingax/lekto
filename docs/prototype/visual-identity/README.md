@@ -1,58 +1,59 @@
-# Prototype — identité visuelle de Lekto
+# Prototype — Lekto's visual identity
 
-Ces images sont les planches du prototype de l'identité visuelle. **Elles sont jetables** :
-le prototype répond à des questions, il ne part pas en production. Ce qui en sort est la
-décision, et elle ira dans `docs/design.md` et dans `app/src/commonMain/kotlin/app/lekto/theme/`.
+These images are the planches of the visual identity prototype. **They are throwaway**: the
+prototype answers questions, it does not ship. What comes out of it is the decision, and the
+decision lives in `docs/design.md` and, eventually, in
+`app/src/commonMain/kotlin/app/lekto/theme/`.
 
-Elles vivent sur une branche jetable, `prototype/visual-identity`, hors de `main`. Le pointeur
-et le verdict sont sur l'issue #168.
+They live on a throwaway branch, `prototype/visual-identity`, out of `main`. The pointer and the
+verdict are on issue #168.
 
-## Les planches
+## The planches
 
-| Image | La question à laquelle elle répond |
-| ----- | ---------------------------------- |
-| `identite.png` | À quoi ressemblent le papier, l'encre et les trois fonds, et quelles couleurs de maîtrise tiennent sur chacun ? |
-| `contraste.png` | La palette livrée échoue-t-elle, et de combien ? |
-| `traitements.png` | Colorer les lettres, les souligner, ou poser un lavis derrière le mot ? |
-| `selection.png` | Comment marquer le mot que le lecteur vient de toucher, dans les trois fonds ? |
-| `geometrie.png` | En quoi un jeu d'icônes au trait et un jeu plein ne se ressemblent pas ? |
-| `bibliotheque.png` | À quoi ressemble l'écran d'arrivée, dans les trois fonds ? |
-| `bibliotheque-etats.png` | Vide, en cours de lecture, en échec — et pourquoi les deux premiers ne doivent pas se confondre ? |
-| `lecteur.png` | À quoi ressemble une page en cours de lecture, chrome compris ? |
-| `lecteur-moments.png` | La page nue, les zones de toucher, et le panneau du texte. |
-| `recherche.png` | Le panneau du mot posé sur la page, dans les trois fonds. |
-| `recherche-etats.png` | Le dictionnaire absent, la phrase traduite, la phrase sans fournisseur. |
-| `desktop.png` | Le lecteur desktop et sa colonne de contexte : les chapitres quand rien n'est touché, le mot quand on touche. |
-| `vocabulaire.png` | Le vocabulaire, dans les trois fonds. |
-| `vocabulaire-etats.png` | Vocabulaire vide, recherche sans résultat, et la confirmation de suppression. |
-| `reglages.png` | L'index des réglages, l'écran Apparence et l'écran Langues. |
-| `icone.png` | Trois marques candidates, à 96 dp et à 48 dp, et l'écran de lancement sur les deux fonds. |
-| `reglages-formulaires.png` | Le fournisseur IA, et le coffre avec sa synchronisation. |
-| `icone-marque.png` | Le L dans le livre et le L dans la page, à 96 dp et à 48 dp, plus le lancement. |
-| `icone-finale.png` | La décision : la page pour l'icône, le L seul pour la couche monochrome et le lancement. |
+| Image | The question it answers |
+| ----- | ----------------------- |
+| `identite.png` | What do the three papers, the ink and the mastery ramps look like, and which colours hold on each background? |
+| `contraste.png` | Does the delivered palette fail, and by how much? |
+| `traitements.png` | Colour the letters, underline them, or put a wash behind the word? |
+| `selection.png` | How is the touched word marked, in the three backgrounds? |
+| `geometrie.png` | How do a stroke icon set and a solid one differ? |
+| `library.png` | What does the landing screen look like, in the three backgrounds? |
+| `library-states.png` | Empty, loading, failed — and why may the first two never be confused? |
+| `reader.png` | What does a page look like while being read, chrome included? |
+| `reader-states.png` | The bare page, the tap zones, and the text panel. |
+| `lookup.png` | The word panel over the page, in the three backgrounds. |
+| `lookup-states.png` | A missing dictionary, a translated phrase, a phrase with no provider. |
+| `desktop.png` | The desktop reader and its context column: chapters when nothing is touched, the word when something is. |
+| `vocabulary.png` | The vocabulary screen, in the three backgrounds. |
+| `vocabulary-states.png` | Empty vocabulary, no search result, and the delete confirmation. |
+| `settings.png` | The settings index, the Appearance screen and the Languages screen. |
+| `settings-forms.png` | The LLM provider, and the vault with its sync. |
+| `icon.png` | Three mark candidates at 96 dp and 48 dp, and Android's launch screen on both papers. |
+| `icon-mark.png` | The L in the book and the L on the page, at 96 dp and 48 dp, plus the launch screen. |
+| `icon-final.png` | The decision: the page for the icon, the L alone for the monochrome layer and the launch screen. |
 
-## Regénérer
+## Regenerate
 
-Depuis la racine du dépôt :
+From the repository root:
 
 ```sh
 docs/prototype/visual-identity/record.sh
 ```
 
-Le script lance Roborazzi sur la cible desktop et déplace les images ici. Il faut un JVM ;
-Gradle, le JDK et les dépendances sont provisionnés par le wrapper.
+The script runs Roborazzi on the desktop target and moves the images here. A JVM is all it needs;
+Gradle, the JDK and the dependencies are provisioned by the wrapper.
 
-## Ce que le prototype contient
+## What the prototype contains
 
-- `app/src/desktopTest/kotlin/app/lekto/prototype/VisualIdentityPrototype.kt` — les planches,
-  avec les jetons candidats écrits en dur. Ils ne dépendent d'aucun code de production, parce
-  que le thème n'existe pas encore.
-- `app/src/desktopTest/kotlin/app/lekto/prototype/icons/` — les icônes générées pour la
-  démonstration : le jeu Lucide (`lucide/`) et six Material Symbols (`symbols/`), converties par
-  Valkyrie depuis des SVG téléchargés. Rien de tout cela n'est le jeu définitif, qui sera
-  généré dans `commonMain` par son propre ticket.
+- `app/src/desktopTest/kotlin/app/lekto/prototype/VisualIdentityPrototype.kt` — the planches, with
+  the candidate tokens written inline. They depend on no production code, because the theme does
+  not exist yet.
+- `app/src/desktopTest/kotlin/app/lekto/prototype/icons/` — the icons generated for the
+  demonstration: the Lucide set (`lucide/`) and six Material Symbols (`symbols/`), converted by
+  Valkyrie from downloaded SVGs. None of this is the final set, which its own ticket will generate
+  into `commonMain`.
 
-## Pourquoi les images sont commitées
+## Why the images are committed
 
-Une image dans `app/build/` disparaît au premier `clean`. Ces planches sont ce que l'issue cite
-et ce que la revue regarde : elles sont donc committées, sur cette branche seulement.
+An image under `app/build/` disappears at the first `clean`. These planches are what the issue
+points at and what the review reads, so they are committed — on this branch only.

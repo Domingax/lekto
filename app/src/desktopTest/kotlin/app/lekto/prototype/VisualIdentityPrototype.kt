@@ -27,6 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -34,9 +37,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.lekto.prototype.icons.lucide.ALargeSmall
@@ -55,12 +55,12 @@ import app.lekto.prototype.icons.lucide.X
 import app.lekto.prototype.icons.symbols.ArrowBack
 import app.lekto.prototype.icons.symbols.Book2
 import app.lekto.prototype.icons.symbols.Close
-import app.lekto.prototype.icons.symbols.Search as SearchSymbols
-import app.lekto.prototype.icons.symbols.Settings as SettingsSymbols
 import app.lekto.prototype.icons.symbols.SymbolsDemo
 import app.lekto.prototype.icons.symbols.VolumeUp
 import io.github.takahirom.roborazzi.captureRoboImage
 import kotlin.test.Test
+import app.lekto.prototype.icons.symbols.Search as SearchSymbols
+import app.lekto.prototype.icons.symbols.Settings as SettingsSymbols
 
 /*
  * PROTOTYPE — identité visuelle de Lekto (issue #168, volet visuel).
@@ -104,8 +104,8 @@ private data class Theme(
  * d'encre. Aucune couleur saturée n'est introduite par la coquille : les seules
  * couleurs de l'écran sont celles qui portent du sens, les niveaux de maîtrise.
  */
-private val Clair = Theme(
-    name = "Clair — papier",
+private val Light = Theme(
+    name = "Light — paper",
     paper = Color(0xFFFAF7F2),
     surface = Color(0xFFF3EEE6),
     outline = Color(0xFFD6CCBC),
@@ -115,11 +115,11 @@ private val Clair = Theme(
     recognized = Color(0xFFA16207),
     familiar = Color(0xFFC2410C),
     learned = Color(0xFF15803D),
-    ratios = "16,2:1 le texte · 6,3 · 4,6 · 4,8 · 4,7",
+    ratios = "16.2:1 text · 6.3 · 4.6 · 4.8 · 4.7",
 )
 
-private val Sombre = Theme(
-    name = "Sombre — nuit chaude",
+private val Dark = Theme(
+    name = "Dark — warm night",
     paper = Color(0xFF15130F),
     surface = Color(0xFF1F1C17),
     outline = Color(0xFF3A342B),
@@ -129,12 +129,12 @@ private val Sombre = Theme(
     recognized = Color(0xFFF2C14E),
     familiar = Color(0xFFEE9A5F),
     learned = Color(0xFF7BD88F),
-    ratios = "14,4:1 le texte · 8,8 · 11,1 · 8,3 · 10,7",
+    ratios = "14.4:1 text · 8.8 · 11.1 · 8.3 · 10.7",
     eclat = 0.35f,
 )
 
 private val Sepia = Theme(
-    name = "Sépia — papier chiffon",
+    name = "Sepia — rag paper",
     paper = Color(0xFFF6ECD8),
     surface = Color(0xFFEFE3C9),
     outline = Color(0xFFD8C7A6),
@@ -144,12 +144,12 @@ private val Sepia = Theme(
     recognized = Color(0xFF92400E),
     familiar = Color(0xFF9A3412),
     learned = Color(0xFF166534),
-    ratios = "11,1:1 le texte · 5,7 · 6,1 · 6,2 · 6,1",
+    ratios = "11.1:1 text · 5.7 · 6.1 · 6.2 · 6.1",
 )
 
 /** La palette livrée aujourd'hui, pour mesurer l'écart. */
 private val Aujourdhui = Theme(
-    name = "Aujourd'hui",
+    name = "As delivered",
     paper = Color.White,
     surface = Color(0xFFF4F4F5),
     outline = Color(0xFFD4D4D8),
@@ -159,42 +159,35 @@ private val Aujourdhui = Theme(
     recognized = Color(0xFFFACC15),
     familiar = Color(0xFFFB923C),
     learned = Color(0xFF22C55E),
-    ratios = "5,2:1 le texte · ÉCHEC 1,5 · ÉCHEC 2,3 · ÉCHEC 2,3",
+    ratios = "5.2:1 text · FAIL 1.5 · FAIL 2.3 · FAIL 2.3",
 )
-
-private const val PHARE = "Phare"
 
 /** Les quatre niveaux d'une rampe, quelle qu'elle soit. */
-private data class Rampe(
-    val unknown: Color,
-    val recognized: Color,
-    val familiar: Color,
-    val learned: Color,
-)
+private data class Rampe(val unknown: Color, val recognized: Color, val familiar: Color, val learned: Color)
 
-private enum class Niveau { UNKNOWN, RECOGNIZED, FAMILIAR, LEARNED }
+private enum class Mastery { UNKNOWN, RECOGNIZED, FAMILIAR, LEARNED }
 
-private data class Mot(val texte: String, val niveau: Niveau?)
+private data class Mot(val texte: String, val niveau: Mastery?)
 
 /** La phrase du livre, étiquetée par niveau. C'est elle qu'on colore. */
 private val PHRASE = listOf(
     Mot("The", null),
-    Mot("fat", Niveau.LEARNED),
+    Mot("fat", Mastery.LEARNED),
     Mot("man", null),
-    Mot("told", Niveau.UNKNOWN),
+    Mot("told", Mastery.UNKNOWN),
     Mot("the", null),
     Mot("children", null),
     Mot("that", null),
-    Mot("tomorrow", Niveau.RECOGNIZED),
+    Mot("tomorrow", Mastery.RECOGNIZED),
     Mot("would", null),
     Mot("be", null),
-    Mot("another", Niveau.FAMILIAR),
+    Mot("another", Mastery.FAMILIAR),
     Mot("day,", null),
     Mot("and", null),
     Mot("the", null),
     Mot("fir", null),
     Mot("tree", null),
-    Mot("stood", Niveau.UNKNOWN),
+    Mot("stood", Mastery.UNKNOWN),
     Mot("silent.", null),
 )
 
@@ -214,18 +207,18 @@ private val RampAujourdhui: Rampe = Rampe(
  * utilisables parce qu'elles passent derrière le mot au lieu de le peindre, et
  * c'est l'encre qui porte le contraste. 35 % d'opacité sur le papier.
  */
-private val VifClair = Rampe(
+private val VifLight = Rampe(
     unknown = Color(0x592563EB),
     recognized = Color(0x8CFACC15),
     familiar = Color(0x73FB923C),
     learned = Color(0x6622C55E),
 )
 
-private fun Rampe.couleur(niveau: Niveau): Color = when (niveau) {
-    Niveau.UNKNOWN -> unknown
-    Niveau.RECOGNIZED -> recognized
-    Niveau.FAMILIAR -> familiar
-    Niveau.LEARNED -> learned
+private fun Rampe.couleur(niveau: Mastery): Color = when (niveau) {
+    Mastery.UNKNOWN -> unknown
+    Mastery.RECOGNIZED -> recognized
+    Mastery.FAMILIAR -> familiar
+    Mastery.LEARNED -> learned
 }
 
 /**
@@ -313,7 +306,7 @@ private fun Feuille(theme: Theme) {
             ),
         )
         Text(
-            text = "Le papier, l'encre, et une seule couleur saturée : le sens.",
+            text = "Paper, ink, and one saturated colour: meaning.",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 13.sp,
@@ -333,7 +326,7 @@ private fun Feuille(theme: Theme) {
                     .padding(horizontal = 20.dp, vertical = 12.dp),
             ) {
                 Text(
-                    text = "Importer",
+                    text = "Import",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
@@ -343,7 +336,7 @@ private fun Feuille(theme: Theme) {
                 )
             }
             Text(
-                text = "Réglages",
+                text = "Settings",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 14.sp,
@@ -384,7 +377,7 @@ private fun Feuille(theme: Theme) {
         Page(theme)
 
         Text(
-            text = "Panneau de recherche",
+            text = "Lookup panel",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 16.sp,
@@ -409,13 +402,13 @@ private fun PageInPanel(theme: Theme) {
     ) {
         Page(theme)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Pastille("Inconnu", theme.unknown)
-            Pastille("Reconnu", theme.recognized)
-            Pastille("Familier", theme.familiar)
-            Pastille("Appris", theme.learned)
+            Pastille("Unknown", theme.unknown)
+            Pastille("Recognized", theme.recognized)
+            Pastille("Familiar", theme.familiar)
+            Pastille("Learned", theme.learned)
         }
         Text(
-            text = "Contraste mesuré — ${theme.ratios}",
+            text = "Measured contrast — ${theme.ratios}",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 10.sp,
@@ -505,9 +498,9 @@ class VisualIdentityPrototype {
                     .background(Color(0xFF101010)),
             ) {
                 TitrePlanche(
-                    titre = "Lekto — trois fonds, une identité",
-                    sousTitre = "Le même écran sur du papier chaud, une nuit chaude et du sépia. " +
-                        "Les seules couleurs saturées sont celles qui portent du sens.",
+                    titre = "Lekto — three papers, one identity",
+                    sousTitre = "The same screen on warm paper, a warm night and rag paper. " +
+                        "The only saturated colours are the ones that carry meaning.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -515,8 +508,8 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Feuille(Clair)
-                    Feuille(Sombre)
+                    Feuille(Light)
+                    Feuille(Dark)
                     Feuille(Sepia)
                 }
             }
@@ -537,9 +530,9 @@ class VisualIdentityPrototype {
                     .background(Color(0xFF101010)),
             ) {
                 TitrePlanche(
-                    titre = "La palette livrée échoue, et le rattrapage est mesurable",
-                    sousTitre = "Un mot coloré est du texte de 18 sp : le seuil WCAG AA est 4,5:1. " +
-                        "Trois niveaux sur quatre sont sous le seuil — le jaune à 1,5:1 est presque invisible.",
+                    titre = "The delivered palette fails, and the fix can be measured",
+                    sousTitre = "A coloured word is 18 sp of body text: the WCAG AA bar is 4.5:1. " +
+                        "Three levels out of four fall short — the yellow at 1.5:1 is almost invisible.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -549,7 +542,7 @@ class VisualIdentityPrototype {
                 ) {
                     Colonne(Aujourdhui) {
                         Text(
-                            text = "Livré aujourd'hui",
+                            text = "As delivered",
                             style = TextStyle(
                                 fontFamily = FontFamily.SansSerif,
                                 fontSize = 18.sp,
@@ -560,31 +553,31 @@ class VisualIdentityPrototype {
                         Page(Aujourdhui)
                         PageInPanel(Aujourdhui)
                     }
-                    Colonne(Clair) {
+                    Colonne(Light) {
                         Text(
-                            text = "Proposé — la même phrase, lisible",
+                            text = "Proposed — the same sentence, legible",
                             style = TextStyle(
                                 fontFamily = FontFamily.SansSerif,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Clair.ink,
+                                color = Light.ink,
                             ),
                         )
-                        Page(Clair)
-                        PageInPanel(Clair)
+                        Page(Light)
+                        PageInPanel(Light)
                     }
-                    Colonne(Sombre) {
+                    Colonne(Dark) {
                         Text(
-                            text = "Le sombre est un autre jeu, pas un éclaircissement",
+                            text = "Dark is another set, not a lightening",
                             style = TextStyle(
                                 fontFamily = FontFamily.SansSerif,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Sombre.ink,
+                                color = Dark.ink,
                             ),
                         )
-                        Page(Sombre)
-                        PageInPanel(Sombre)
+                        Page(Dark)
+                        PageInPanel(Dark)
                     }
                 }
                 Row(
@@ -592,13 +585,13 @@ class VisualIdentityPrototype {
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icone("bibliothèque", Color(0xFF9A9083))
-                    Icone("vocabulaire", Color(0xFF9A9083))
-                    Icone("langues", Color(0xFF9A9083))
-                    Icone("réglages", Color(0xFF9A9083))
+                    Icone("library", Color(0xFF9A9083))
+                    Icone("vocabulary", Color(0xFF9A9083))
+                    Icone("languages", Color(0xFF9A9083))
+                    Icone("settings", Color(0xFF9A9083))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Icônes : géométrie Lucide, 24×24, trait 2, extrémités rondes.",
+                        text = "Icons: Lucide geometry, 24×24, stroke 2, round caps.",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -619,44 +612,44 @@ class VisualIdentityPrototype {
     @Test
     fun traitements() = runDesktopComposeUiTest(width = LARGEUR, height = 660) {
         setContent {
-            Column(Modifier.size(LARGEUR.dp, 660.dp).background(Clair.paper)) {
+            Column(Modifier.size(LARGEUR.dp, 660.dp).background(Light.paper)) {
                 TitrePlanche(
-                    titre = "Quatre façons de marquer un mot, sur le même papier",
-                    sousTitre = "Une seule question : qu'est-ce qui distingue « à travailler » de " +
-                        "« su » sans rendre la phrase illisible ?",
-                    papier = Clair.paper,
-                    encre = Clair.ink,
+                    titre = "Four ways to mark a word, on the same paper",
+                    sousTitre = "One question: what tells a word still to learn apart from " +
+                        "one already known, without making the page unreadable?",
+                    papier = Light.paper,
+                    encre = Light.ink,
                 )
                 Traitement(
-                    titre = "Livré aujourd'hui — les lettres, soulignées",
-                    note = "1,4 · 2,3 · 2,3:1 — trois niveaux sous le seuil AA",
+                    titre = "As delivered — coloured letters, underlined",
+                    note = "1.4 · 2.3 · 2.3:1 — three levels below AA",
                     fond = Color.White,
                 ) {
-                    Phrase(Clair, RampAujourdhui, souligne = true)
+                    Phrase(Light, RampAujourdhui, souligne = true)
                 }
                 Traitement(
-                    titre = "Proposé — les lettres, sans soulignement",
-                    note = "4,7 à 6,3:1 — mais rien ne distingue le mot sans la couleur",
+                    titre = "Proposed — coloured letters, no underline",
+                    note = "4.7 to 6.3:1 — but nothing marks the word without the colour",
                 ) {
-                    Phrase(Clair, Clair.rampe())
+                    Phrase(Light, Light.rampe())
                 }
                 Traitement(
-                    titre = "Proposé — les lettres, soulignées",
-                    note = "4,7 à 6,3:1, et le soulignement porte le sens pour qui ne lit pas la couleur",
+                    titre = "Proposed — coloured letters, underlined",
+                    note = "4.7 to 6.3:1, and the underline carries the meaning without the colour",
                 ) {
-                    Phrase(Clair, Clair.rampe(), souligne = true)
+                    Phrase(Light, Light.rampe(), souligne = true)
                 }
                 Traitement(
-                    titre = "Variante — un lavis derrière le mot",
-                    note = "les teintes vives redeviennent utilisables : c'est l'encre qui porte le contraste",
+                    titre = "Variant — a wash behind the word",
+                    note = "bright hues become usable again: the ink carries the contrast",
                 ) {
-                    Phrase(Clair, VifClair, lavis = VifClair)
+                    Phrase(Light, VifLight, lavis = VifLight)
                 }
                 Traitement(
-                    titre = "Variante — le lavis, souligné",
-                    note = "le repère non-couleur s'ajoute au lavis",
+                    titre = "Variant — the wash, underlined",
+                    note = "the non-colour marker joins the wash",
                 ) {
-                    Phrase(Clair, VifClair, lavis = VifClair, souligne = true)
+                    Phrase(Light, VifLight, lavis = VifLight, souligne = true)
                 }
             }
         }
@@ -673,9 +666,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 660.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le mot touché : de l'encre translucide, pas une couleur de plus",
-                    sousTitre = "Le lavis du mot sélectionné est de l'encre à 14 % ou 24 %, jamais " +
-                        "une teinte : l'accent de l'app reste l'encre.",
+                    titre = "The touched word: translucent ink, not one more colour",
+                    sousTitre = "The selected word's wash is ink at 14 % or 24 %, never " +
+                        "a hue: the app's accent stays the ink.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -683,8 +676,8 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Fond(Clair, "told", 0.14f)
-                    Fond(Sombre, "told", 0.14f)
+                    Fond(Light, "told", 0.14f)
+                    Fond(Dark, "told", 0.14f)
                     Fond(Sepia, "another", 0.24f)
                 }
             }
@@ -700,19 +693,19 @@ class VisualIdentityPrototype {
     @Test
     fun geometrie() = runDesktopComposeUiTest(width = LARGEUR, height = 700) {
         setContent {
-            Column(Modifier.size(LARGEUR.dp, 700.dp).background(Clair.paper)) {
+            Column(Modifier.size(LARGEUR.dp, 700.dp).background(Light.paper)) {
                 TitrePlanche(
-                    titre = "La géométrie, c'est les règles de dessin que tout un jeu partage",
-                    sousTitre = "Grille de tracé, épaisseur du trait, forme des extrémités. " +
-                        "Quand tout un jeu les partage, il lit comme une famille — et un seul icône " +
-                        "étranger saute aux yeux.",
-                    papier = Clair.paper,
-                    encre = Clair.ink,
+                    titre = "Geometry is the drawing rules a whole icon set shares",
+                    sousTitre = "The grid, the stroke width, the shape of the caps. " +
+                        "When a whole set shares them it reads as a family — and one icon " +
+                        "from another set jumps out.",
+                    papier = Light.paper,
+                    encre = Light.ink,
                 )
                 GeometrieLigne(
-                    titre = "Lucide — le jeu choisi",
-                    note = "grille de 24, trait de 2, extrémités et jonctions arrondies. " +
-                        "Le dessin est un contour : l'intérieur reste du papier.",
+                    titre = "Lucide — the chosen set",
+                    note = "24 grid, 2 stroke, round caps and joins. " +
+                        "The drawing is an outline: the inside stays paper.",
                     icones = listOf(
                         LucideDemo.Library,
                         LucideDemo.Search,
@@ -723,9 +716,9 @@ class VisualIdentityPrototype {
                     ),
                 )
                 GeometrieLigne(
-                    titre = "Material Symbols — l'autre école",
-                    note = "grille de 960, formes pleines. Plus gras, plus massif, " +
-                        "et aucun trait à partager.",
+                    titre = "Material Symbols — the other school",
+                    note = "960 grid, solid shapes. Heavier, bulkier, " +
+                        "and no stroke to share.",
                     icones = listOf(
                         SymbolsDemo.Book2,
                         SymbolsDemo.SearchSymbols,
@@ -736,9 +729,9 @@ class VisualIdentityPrototype {
                     ),
                 )
                 GeometrieLigne(
-                    titre = "Le mélange, dans une même rangée",
-                    note = "première, troisième et cinquième de Lucide ; les autres de Material " +
-                        "Symbols. Rien n'est cassé, mais plus rien ne se ressemble.",
+                    titre = "The mix, in one row",
+                    note = "first, third and fifth from Lucide; the rest from Material " +
+                        "Symbols. Nothing is broken, but nothing matches.",
                     icones = listOf(
                         LucideDemo.Library,
                         SymbolsDemo.SearchSymbols,
@@ -750,12 +743,12 @@ class VisualIdentityPrototype {
                 )
                 Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
                     Text(
-                        text = "Le même concept, agrandi : le trait contre la pleine forme",
+                        text = "The same concept, enlarged: the stroke against the solid shape",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Clair.ink,
+                            color = Light.ink,
                         ),
                     )
                     Row(
@@ -766,22 +759,22 @@ class VisualIdentityPrototype {
                         Icon(
                             imageVector = LucideDemo.Settings,
                             contentDescription = null,
-                            tint = Clair.ink,
+                            tint = Light.ink,
                             modifier = Modifier.size(96.dp),
                         )
                         Icon(
                             imageVector = SymbolsDemo.SettingsSymbols,
                             contentDescription = null,
-                            tint = Clair.ink,
+                            tint = Light.ink,
                             modifier = Modifier.size(96.dp),
                         )
                         Text(
-                            text = "Même taille de cadre, même concept, deux dessins qui " +
-                                "n'appartiennent pas à la même famille.",
+                            text = "Same frame, same concept, two drawings that " +
+                                "do not belong to the same family.",
                             style = TextStyle(
                                 fontFamily = FontFamily.SansSerif,
                                 fontSize = 12.sp,
-                                color = Clair.muted,
+                                color = Light.muted,
                             ),
                         )
                     }
@@ -792,7 +785,7 @@ class VisualIdentityPrototype {
     }
 
     /**
-     * Planche 6 — la Bibliothèque, l'écran d'arrivée, dans les trois fonds.
+     * Planche 6 — la Library, l'écran d'arrivée, dans les trois fonds.
      * Le champ de recherche est là (issue #173), la progression aussi (#172).
      */
     @Test
@@ -800,9 +793,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "La Bibliothèque — l'écran d'arrivée",
-                    sousTitre = "Deux signaux, pas plus : la langue, par la couleur de la " +
-                        "vignette, et la progression, par la barre sous le titre.",
+                    titre = "The Library — the landing screen",
+                    sousTitre = "Two signals, no more: the language, by the vignette's " +
+                        "colour, and the progress, by the rule under the title.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -810,17 +803,17 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranBibliotheque(Clair, EtatEcran.PLEIN)
-                    EcranBibliotheque(Sombre, EtatEcran.PLEIN)
+                    EcranBibliotheque(Light, EtatEcran.PLEIN)
+                    EcranBibliotheque(Dark, EtatEcran.PLEIN)
                     EcranBibliotheque(Sepia, EtatEcran.PLEIN)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/bibliotheque.png")
+        onRoot().captureRoboImage("prototype/library.png")
     }
 
     /**
-     * Planche 7 — les trois états que la Bibliothèque n'a pas aujourd'hui : vide,
+     * Planche 7 — les trois états que la Library n'a pas aujourd'hui : vide,
      * en cours de lecture (celui qui manque, et qui fait clignoter « aucun
      * livre »), et en échec.
      */
@@ -829,9 +822,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "La Bibliothèque — les trois états",
-                    sousTitre = "Aujourd'hui un coffre vide et un coffre en cours de lecture " +
-                        "s'affichent tous les deux « aucun livre ».",
+                    titre = "The Library — the three states",
+                    sousTitre = "Today an empty vault and a vault still being read " +
+                        "both show “no books yet”.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -839,13 +832,13 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranBibliotheque(Clair, EtatEcran.VIDE)
-                    EcranBibliotheque(Clair, EtatEcran.CHARGEMENT)
-                    EcranBibliotheque(Clair, EtatEcran.ERREUR)
+                    EcranBibliotheque(Light, EtatEcran.VIDE)
+                    EcranBibliotheque(Light, EtatEcran.CHARGEMENT)
+                    EcranBibliotheque(Light, EtatEcran.ERREUR)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/bibliotheque-etats.png")
+        onRoot().captureRoboImage("prototype/library-states.png")
     }
 
     /**
@@ -857,9 +850,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le lecteur — la page, et rien de plus",
-                    sousTitre = "Le chrome tient en deux bandes de 48 et 64 dp. Entre les deux, " +
-                        "seulement le texte — jusqu'à ce qu'un doigt le touche.",
+                    titre = "The reader — the page, and nothing more",
+                    sousTitre = "The chrome is two bands, 48 and 64 dp. Between them, " +
+                        "only the text — until a finger touches it.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -867,13 +860,13 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranLecteur(Clair, chrome = true, selection = listOf("stood"))
-                    EcranLecteur(Sombre, chrome = true, selection = listOf("told"))
+                    EcranLecteur(Light, chrome = true, selection = listOf("stood"))
+                    EcranLecteur(Dark, chrome = true, selection = listOf("told"))
                     EcranLecteur(Sepia, chrome = true, selection = listOf("another"))
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/lecteur.png")
+        onRoot().captureRoboImage("prototype/reader.png")
     }
 
     /**
@@ -885,10 +878,10 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le lecteur — la page, les zones, le panneau du texte",
-                    sousTitre = "Toucher le tiers central fait disparaître le chrome et revenir " +
-                        "la page nue ; le panneau Aa change la face, la taille et les marges, " +
-                        "et la page se remet en page sous les yeux du lecteur.",
+                    titre = "The reader — the page, the zones, the text panel",
+                    sousTitre = "Touching the middle third hides the chrome and brings back " +
+                        "the bare page; the Aa panel sets the face, the size and the margins, " +
+                        "and the page reflows in front of the reader.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -896,13 +889,13 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranLecteur(Clair, chrome = false)
-                    EcranLecteur(Clair, chrome = false, zones = true)
-                    EcranLecteur(Clair, chrome = true, panneau = true, selection = listOf("stood"))
+                    EcranLecteur(Light, chrome = false)
+                    EcranLecteur(Light, chrome = false, zones = true)
+                    EcranLecteur(Light, chrome = true, panneau = true, selection = listOf("stood"))
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/lecteur-moments.png")
+        onRoot().captureRoboImage("prototype/reader-states.png")
     }
 
     /**
@@ -914,9 +907,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le panneau du mot — l'interaction signature",
-                    sousTitre = "La page reste visible au-dessus, le mot touché reste lavé, et " +
-                        "le panneau ne prend jamais plus de la moitié de l'écran.",
+                    titre = "The word panel — the signature interaction",
+                    sousTitre = "The page stays visible above, the touched word stays washed, and " +
+                        "the panel never takes more than half the screen.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -924,13 +917,13 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranRecherche(Clair, EtatRecherche.MOT)
-                    EcranRecherche(Sombre, EtatRecherche.MOT)
+                    EcranRecherche(Light, EtatRecherche.MOT)
+                    EcranRecherche(Dark, EtatRecherche.MOT)
                     EcranRecherche(Sepia, EtatRecherche.MOT)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/recherche.png")
+        onRoot().captureRoboImage("prototype/lookup.png")
     }
 
     /**
@@ -943,9 +936,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le panneau — quand il n'a pas ce qu'on lui demande",
-                    sousTitre = "Un dictionnaire absent, une phrase traduite, une phrase sans " +
-                        "fournisseur : trois messages dans le panneau, jamais une alerte.",
+                    titre = "The panel — when it cannot answer",
+                    sousTitre = "A missing dictionary, a translated phrase, a phrase with no " +
+                        "provider: three messages in the panel, never an alert.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -953,13 +946,13 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranRecherche(Clair, EtatRecherche.HORS_LIGNE)
-                    EcranRecherche(Clair, EtatRecherche.PHRASE_IA)
-                    EcranRecherche(Clair, EtatRecherche.PHRASE_SANS_IA)
+                    EcranRecherche(Light, EtatRecherche.HORS_LIGNE)
+                    EcranRecherche(Light, EtatRecherche.PHRASE_IA)
+                    EcranRecherche(Light, EtatRecherche.PHRASE_SANS_IA)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/recherche-etats.png")
+        onRoot().captureRoboImage("prototype/lookup-states.png")
     }
 
     /**
@@ -973,9 +966,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(1280.dp, 1680.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le lecteur desktop — la colonne de contexte",
-                    sousTitre = "Elle est toujours là, donc la page ne bouge jamais quand un " +
-                        "mot est touché. Fermée, elle montre les chapitres ; ouverte, le mot.",
+                    titre = "The desktop reader — the context column",
+                    sousTitre = "It is always there, so the page never moves when a " +
+                        "word is touched. Closed, it shows the chapters; open, the word.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -983,24 +976,24 @@ class VisualIdentityPrototype {
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    FenetreDesktop(Clair, EtatDesktop.CHAPITRES)
-                    FenetreDesktop(Clair, EtatDesktop.MOT)
+                    FenetreDesktop(Light, EtatDesktop.CHAPITRES)
+                    FenetreDesktop(Light, EtatDesktop.MOT)
                 }
             }
         }
         onRoot().captureRoboImage("prototype/desktop.png")
     }
 
-    /** Planche 13 — le Vocabulaire, dans les trois fonds. */
+    /** Planche 13 — le Vocabulary, dans les trois fonds. */
     @Test
-    fun vocabulaire() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+    fun vocabulary() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le Vocabulaire — ce qu'on a ramassé en lisant",
-                    sousTitre = "Le mot garde la sérif du livre ; sa traduction et sa phrase de " +
-                        "contexte restent en sans-sérif. La corbeille est une icône discrète, et " +
-                        "elle demande confirmation.",
+                    titre = "The Vocabulary — what you picked up while reading",
+                    sousTitre = "The word keeps the book's serif; its translation and its " +
+                        "context sentence stay in the sans. The bin is a quiet icon, and " +
+                        "it asks for confirmation.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1008,25 +1001,25 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranVocabulaire(Clair, EtatVocabulaire.PLEIN)
-                    EcranVocabulaire(Sombre, EtatVocabulaire.PLEIN)
-                    EcranVocabulaire(Sepia, EtatVocabulaire.PLEIN)
+                    EcranVocabulary(Light, EtatVocabulary.PLEIN)
+                    EcranVocabulary(Dark, EtatVocabulary.PLEIN)
+                    EcranVocabulary(Sepia, EtatVocabulary.PLEIN)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/vocabulaire.png")
+        onRoot().captureRoboImage("prototype/vocabulary.png")
     }
 
-    /** Planche 14 — les états du Vocabulaire : vide, sans résultat, et la suppression. */
+    /** Planche 14 — les états du Vocabulary : vide, sans résultat, et la suppression. */
     @Test
-    fun vocabulaireEtats() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+    fun vocabularyEtats() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Le Vocabulaire — trois états, dont un qui protège",
-                    sousTitre = "Un vocabulaire vide ne dit pas la même chose qu'une recherche " +
-                        "sans résultat ; et supprimer demande confirmation, parce que ça ne " +
-                        "se devine pas.",
+                    titre = "The Vocabulary — three states, one of which protects you",
+                    sousTitre = "An empty vocabulary does not say the same thing as a search " +
+                        "with no result; and deleting asks for confirmation, because that " +
+                        "cannot be guessed.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1034,28 +1027,28 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranVocabulaire(Clair, EtatVocabulaire.VIDE)
-                    EcranVocabulaire(Clair, EtatVocabulaire.SANS_RESULTAT)
-                    EcranVocabulaire(Clair, EtatVocabulaire.SUPPRESSION)
+                    EcranVocabulary(Light, EtatVocabulary.VIDE)
+                    EcranVocabulary(Light, EtatVocabulary.SANS_RESULTAT)
+                    EcranVocabulary(Light, EtatVocabulary.SUPPRESSION)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/vocabulaire-etats.png")
+        onRoot().captureRoboImage("prototype/vocabulary-states.png")
     }
 
     /**
-     * Planche 15 — les Réglages : un index, puis deux écrans qu'il ouvre.
-     * L'apparence et les langues sont des entrées de Réglages, pas des onglets.
+     * Planche 15 — les Settings : un index, puis deux écrans qu'il ouvre.
+     * L'apparence et les languages sont des entrées de Settings, pas des onglets.
      */
     @Test
     fun reglages() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Les Réglages — un index, pas un formulaire",
-                    sousTitre = "Aujourd'hui le fournisseur IA et le serveur WebDAV sont deux " +
-                        "formulaires au milieu de Réglages. Ils deviennent des écrans, et " +
-                        "l'index ne garde que des lignes.",
+                    titre = "Settings — an index, not a form",
+                    sousTitre = "Today the LLM provider and the WebDAV server are two " +
+                        "forms in the middle of Settings. They become screens, and " +
+                        "the index keeps only rows.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1063,13 +1056,13 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranReglages(Clair)
-                    EcranApparence(Clair)
-                    EcranLangues(Clair)
+                    EcranReglages(Light)
+                    EcranAppearance(Light)
+                    EcranLanguages(Light)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/reglages.png")
+        onRoot().captureRoboImage("prototype/settings.png")
     }
 
     /**
@@ -1082,9 +1075,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 760.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "L'icône — trois marques, et l'écran de lancement d'Android",
-                    sousTitre = "Android 12 impose un écran de lancement : l'icône sur le fond " +
-                        "de la fenêtre. La seule décision qui reste, c'est la marque — et le fond.",
+                    titre = "The icon — three marks, and Android's launch screen",
+                    sousTitre = "Android 12 shows a launch screen: the icon on the window " +
+                        "background. The only decision left is the mark — and the background.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1094,7 +1087,7 @@ class VisualIdentityPrototype {
                 ) {
                     Column(modifier = Modifier.width(600.dp)) {
                         Text(
-                            text = "Les trois candidats, à 96 dp puis à la taille d'un lanceur (48 dp)",
+                            text = "The three candidates, at 96 dp then at launcher size (48 dp)",
                             style = TextStyle(
                                 fontFamily = FontFamily.SansSerif,
                                 fontSize = 12.sp,
@@ -1117,24 +1110,41 @@ class VisualIdentityPrototype {
                             MarqueAffichee(Marque.Livre, 48)
                             MarqueAffichee(Marque.Page, 48)
                         }
-                        Column(modifier = Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(
+                            modifier = Modifier.padding(top = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Text(
-                                text = "La lettre — la sérif de lecture, rien d'autre. Lisible à 48 dp, et une seule couche monochrome.",
-                                style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = Color(0xFFB9B2A6)),
+                                text = "The letter — the reading serif, nothing else. " +
+                                    "Legible at 48 dp, one monochrome layer.",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFB9B2A6),
+                                ),
                             )
                             Text(
-                                text = "Le livre — la géométrie Lucide du reste de l'app. Honnête, mais générique.",
-                                style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = Color(0xFFB9B2A6)),
+                                text = "The book — the Lucide geometry of the rest of the app. Honest, but generic.",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFB9B2A6),
+                                ),
                             )
                             Text(
-                                text = "La page — une feuille, et la palette de maîtrise en tranche. La plus singulière, la plus fragile en petit.",
-                                style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = Color(0xFFB9B2A6)),
+                                text = "The page — a sheet, with the mastery palette as its spine. " +
+                                    "The most distinctive, the most fragile small.",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFB9B2A6),
+                                ),
                             )
                         }
                     }
                     Column {
                         Text(
-                            text = "Le lancement, sur papier clair et sur nuit chaude",
+                            text = "Launch, on light paper and on warm night",
                             style = TextStyle(
                                 fontFamily = FontFamily.SansSerif,
                                 fontSize = 12.sp,
@@ -1145,18 +1155,18 @@ class VisualIdentityPrototype {
                             modifier = Modifier.padding(top = 10.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Lancement(Clair)
-                            Lancement(Sombre)
+                            Lancement(Light)
+                            Lancement(Dark)
                         }
                     }
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/icone.png")
+        onRoot().captureRoboImage("prototype/icon.png")
     }
 
     /**
-     * Planche 17 — les deux formulaires que Réglages cachait : le fournisseur IA
+     * Planche 17 — les deux formulaires que Settings cachait : le fournisseur IA
      * et le coffre avec sa synchronisation.
      */
     @Test
@@ -1164,9 +1174,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "Les deux formulaires — la clé, et le serveur",
-                    sousTitre = "Des champs qui se lisent comme un formulaire imprimé : le " +
-                        "libellé au-dessus, la valeur, un filet. Pas de mur de cadres.",
+                    titre = "The two forms — the key, and the server",
+                    sousTitre = "Fields that read like a printed form: the label " +
+                        "above, the value, a hairline. No wall of boxes.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1174,12 +1184,12 @@ class VisualIdentityPrototype {
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    EcranFournisseur(Clair)
-                    EcranCoffre(Clair)
+                    EcranProvider(Light)
+                    EcranCoffre(Light)
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/reglages-formulaires.png")
+        onRoot().captureRoboImage("prototype/settings-forms.png")
     }
 
     /**
@@ -1191,9 +1201,9 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 640.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "La marque — le L dans le livre, ou le L dans la page",
-                    sousTitre = "Deux façons de combiner la lettre et le papier. La première est " +
-                        "un livre ouvert ; la seconde est une feuille à tranche colorée.",
+                    titre = "The mark — the L in the book, or the L on the page",
+                    sousTitre = "Two ways to combine the letter and the paper. The first is " +
+                        "an open book; the second is a sheet with a coloured spine.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1204,38 +1214,59 @@ class VisualIdentityPrototype {
                 ) {
                     Column {
                         Text(
-                            text = "Le L dans le livre",
-                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                            text = "The L in the book",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
                         )
-                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
                             MarqueV2Dessin(MarqueV2.Livre, 96)
                             MarqueV2Dessin(MarqueV2.Livre, 48)
                         }
                     }
                     Column {
                         Text(
-                            text = "Le L dans la page",
-                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                            text = "The L on the page",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
                         )
-                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
                             MarqueV2Dessin(MarqueV2.Page, 96)
                             MarqueV2Dessin(MarqueV2.Page, 48)
                         }
                     }
                     Column {
                         Text(
-                            text = "Le lancement",
-                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                            text = "Launch",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
                         )
-                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            LancementV2(Clair, MarqueV2.Livre)
-                            LancementV2(Sombre, MarqueV2.Livre)
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            LancementV2(Light, MarqueV2.Livre)
+                            LancementV2(Dark, MarqueV2.Livre)
                         }
                     }
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/icone-marque.png")
+        onRoot().captureRoboImage("prototype/icon-mark.png")
     }
 
     /**
@@ -1247,10 +1278,10 @@ class VisualIdentityPrototype {
         setContent {
             Column(Modifier.size(LARGEUR.dp, 620.dp).background(Color(0xFF101010))) {
                 TitrePlanche(
-                    titre = "L'icône — la page en couleur, le L en monochrome",
-                    sousTitre = "Android 13 teinte la couche monochrome à la palette du fond " +
-                        "d'écran : une seule couleur, donc une seule lettre. Livre ou page, un " +
-                        "dessin combiné y deviendrait une tache.",
+                    titre = "The icon — the page in colour, the L in monochrome",
+                    sousTitre = "Android 13 tints the monochrome layer from the wallpaper's " +
+                        "palette: one colour, so one letter. Book or page, a " +
+                        "combined drawing would become a smudge.",
                     papier = Color(0xFF101010),
                     encre = Color(0xFFF5F5F5),
                 )
@@ -1261,38 +1292,59 @@ class VisualIdentityPrototype {
                 ) {
                     Column {
                         Text(
-                            text = "L'icône — la page",
-                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                            text = "The icon — the page",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
                         )
-                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
                             MarqueV2Dessin(MarqueV2.Page, 96, avecLettre = false)
                             MarqueV2Dessin(MarqueV2.Page, 48, avecLettre = false)
                         }
                     }
                     Column {
                         Text(
-                            text = "La couche monochrome — le L, en une seule couleur",
-                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                            text = "The monochrome layer — the L, in one colour",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
                         )
-                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
                             Monochrome(96)
                             Monochrome(48)
                         }
                     }
                     Column {
                         Text(
-                            text = "Le lancement — le L sur le papier du thème",
-                            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = Color(0xFFB9B2A6)),
+                            text = "Launch — the L on the theme's paper",
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                color = Color(0xFFB9B2A6),
+                            ),
                         )
-                        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            LancementFinal(Clair)
-                            LancementFinal(Sombre)
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            LancementFinal(Light)
+                            LancementFinal(Dark)
                         }
                     }
                 }
             }
         }
-        onRoot().captureRoboImage("prototype/icone-finale.png")
+        onRoot().captureRoboImage("prototype/icon-final.png")
     }
 }
 
@@ -1318,7 +1370,7 @@ private fun Monochrome(taille: Int) {
     }
 }
 
-/** Le lancement, avec la lettre seule. */
+/** Launch, avec la lettre seule. */
 @Composable
 private fun LancementFinal(theme: Theme) {
     Box(
@@ -1357,7 +1409,7 @@ private fun MarqueV2Dessin(marque: MarqueV2, taille: Int, avecLettre: Boolean = 
     Box(
         modifier = Modifier
             .size(d)
-            .background(Clair.paper, RoundedCornerShape((taille * 0.22f).dp)),
+            .background(Light.paper, RoundedCornerShape((taille * 0.22f).dp)),
         contentAlignment = Alignment.Center,
     ) {
         Box(modifier = Modifier.size(d * 0.62f), contentAlignment = Alignment.Center) {
@@ -1366,19 +1418,19 @@ private fun MarqueV2Dessin(marque: MarqueV2, taille: Int, avecLettre: Boolean = 
                     Icon(
                         imageVector = LucideDemo.BookOpen,
                         contentDescription = null,
-                        tint = Clair.ink,
+                        tint = Light.ink,
                         modifier = Modifier.fillMaxSize(),
                     )
                     Text(
                         text = "L",
                         modifier = Modifier
-                            .background(Clair.paper, RoundedCornerShape(d * 0.05f))
+                            .background(Light.paper, RoundedCornerShape(d * 0.05f))
                             .padding(horizontal = d * 0.03f),
                         style = TextStyle(
                             fontFamily = FontFamily.Serif,
                             fontSize = (taille * 0.3f).sp,
                             fontWeight = FontWeight.Bold,
-                            color = Clair.ink,
+                            color = Light.ink,
                         ),
                     )
                 }
@@ -1387,10 +1439,10 @@ private fun MarqueV2Dessin(marque: MarqueV2, taille: Int, avecLettre: Boolean = 
                     Row(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.width(d * 0.11f).fillMaxHeight()) {
                             listOf(
-                                Clair.rampe().unknown,
-                                Clair.rampe().recognized,
-                                Clair.rampe().familiar,
-                                Clair.rampe().learned,
+                                Light.rampe().unknown,
+                                Light.rampe().recognized,
+                                Light.rampe().familiar,
+                                Light.rampe().learned,
                             ).forEach { couleur ->
                                 Box(modifier = Modifier.weight(1f).fillMaxWidth().background(couleur))
                             }
@@ -1406,7 +1458,7 @@ private fun MarqueV2Dessin(marque: MarqueV2, taille: Int, avecLettre: Boolean = 
                                         fontFamily = FontFamily.Serif,
                                         fontSize = (taille * 0.3f).sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Clair.ink,
+                                        color = Light.ink,
                                     ),
                                 )
                             }
@@ -1418,7 +1470,7 @@ private fun MarqueV2Dessin(marque: MarqueV2, taille: Int, avecLettre: Boolean = 
     }
 }
 
-/** Le lancement, avec la marque retenue. */
+/** Launch, avec la marque retenue. */
 @Composable
 private fun LancementV2(theme: Theme, marque: MarqueV2) {
     Box(
@@ -1474,16 +1526,16 @@ private fun LancementV2(theme: Theme, marque: MarqueV2) {
 
 /** L'écran du fournisseur IA : la clé, le modèle, et ce que l'app en fait. */
 @Composable
-private fun EcranFournisseur(theme: Theme) {
+private fun EcranProvider(theme: Theme) {
     Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
         Column(
             modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            EnTeteEcran(theme, "Fournisseur IA")
+            EnTeteEcran(theme, "LLM provider")
             Text(
-                text = "Une phrase sélectionnée peut être traduite par ton fournisseur. La clé " +
-                    "reste dans le trousseau de cet appareil ; tes livres ne quittent jamais le coffre.",
+                text = "A selected phrase can be translated by your provider. The key " +
+                    "stays in this device's keychain; your books never leave the vault.",
                 modifier = Modifier.padding(bottom = 10.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -1492,11 +1544,11 @@ private fun EcranFournisseur(theme: Theme) {
                     color = theme.muted,
                 ),
             )
-            Champ(theme, "Fournisseur", "Anthropic", action = null, chevron = true)
-            Champ(theme, "Clé d'API", "••••••••••••••••", action = "Montrer")
-            Champ(theme, "Modèle", "claude-sonnet-4", action = null, chevron = true)
+            Champ(theme, "Provider", "Anthropic", action = null, chevron = true)
+            Champ(theme, "API key", "••••••••••••••••", action = "Show")
+            Champ(theme, "Model", "claude-sonnet-4", action = null, chevron = true)
             Text(
-                text = "Clé enregistrée · testée le 12 octobre",
+                text = "A key is stored · tested on 12 October",
                 modifier = Modifier.padding(top = 10.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -1505,9 +1557,9 @@ private fun EcranFournisseur(theme: Theme) {
                 ),
             )
             Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                BoutonPlein(theme, "Tester la connexion")
+                BoutonPlein(theme, "Test connection")
                 Text(
-                    text = "Supprimer la clé",
+                    text = "Remove key",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 12.sp,
@@ -1529,10 +1581,10 @@ private fun EcranCoffre(theme: Theme) {
             modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            EnTeteEcran(theme, "Coffre et synchronisation")
+            EnTeteEcran(theme, "Vault and sync")
             Text(
-                text = "Le coffre vit dans le stockage privé de l'application. Il porte tes " +
-                    "livres, ton vocabulaire et tes positions.",
+                text = "The vault lives in the app's private storage. It holds your " +
+                    "books, your vocabulary and your positions.",
                 modifier = Modifier.padding(bottom = 8.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -1545,11 +1597,11 @@ private fun EcranCoffre(theme: Theme) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                BoutonContour(theme, "Exporter", Modifier.weight(1f))
-                BoutonContour(theme, "Importer", Modifier.weight(1f))
+                BoutonContour(theme, "Export vault", Modifier.weight(1f))
+                BoutonContour(theme, "Import", Modifier.weight(1f))
             }
             Text(
-                text = "Synchronisation",
+                text = "Sync",
                 modifier = Modifier.padding(top = 20.dp, bottom = 2.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -1558,7 +1610,7 @@ private fun EcranCoffre(theme: Theme) {
                 ),
             )
             Text(
-                text = "Synchronisé il y a 2 min · 3 appareils",
+                text = "Synced 2 minutes ago · 3 devices",
                 modifier = Modifier.padding(bottom = 6.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -1566,14 +1618,14 @@ private fun EcranCoffre(theme: Theme) {
                     color = theme.ink,
                 ),
             )
-            Champ(theme, "Serveur", "cloud.example.com/dav", action = null)
-            Champ(theme, "Utilisateur", "damien", action = null)
-            Champ(theme, "Mot de passe", "••••••••••", action = "Montrer")
+            Champ(theme, "Server address", "cloud.example.com/dav", action = null)
+            Champ(theme, "Username", "damien", action = null)
+            Champ(theme, "Application password", "••••••••••", action = "Show")
             Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                BoutonPlein(theme, "Synchroniser maintenant")
-                BoutonContour(theme, "Tester la connexion", Modifier.fillMaxWidth())
+                BoutonPlein(theme, "Sync now")
+                BoutonContour(theme, "Test connection", Modifier.fillMaxWidth())
                 Text(
-                    text = "Déconnecter ce serveur",
+                    text = "Disconnect",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 12.sp,
@@ -1589,13 +1641,7 @@ private fun EcranCoffre(theme: Theme) {
 
 /** Un champ de formulaire imprimé : le libellé, la valeur, un filet. */
 @Composable
-private fun Champ(
-    theme: Theme,
-    label: String,
-    valeur: String,
-    action: String?,
-    chevron: Boolean = false,
-) {
+private fun Champ(theme: Theme, label: String, valeur: String, action: String?, chevron: Boolean = false) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -1698,7 +1744,7 @@ private fun MarqueAffichee(marque: Marque, taille: Int) {
     Box(
         modifier = Modifier
             .size(d)
-            .background(Clair.paper, RoundedCornerShape((taille * 0.22f).dp)),
+            .background(Light.paper, RoundedCornerShape((taille * 0.22f).dp)),
         contentAlignment = Alignment.Center,
     ) {
         MarqueDessin(marque, (taille * 0.62f).dp)
@@ -1715,24 +1761,24 @@ private fun MarqueDessin(marque: Marque, d: androidx.compose.ui.unit.Dp) {
                 fontFamily = FontFamily.Serif,
                 fontSize = (d.value * 1.1f).sp,
                 fontWeight = FontWeight.Bold,
-                color = Clair.ink,
+                color = Light.ink,
             ),
         )
 
         Marque.Livre -> Icon(
             imageVector = LucideDemo.BookOpen,
             contentDescription = null,
-            tint = Clair.ink,
+            tint = Light.ink,
             modifier = Modifier.size(d),
         )
 
         Marque.Page -> Row(modifier = Modifier.size(d * 0.8f, d)) {
             Column(modifier = Modifier.width(d * 0.18f).fillMaxHeight()) {
                 listOf(
-                    Clair.rampe().unknown,
-                    Clair.rampe().recognized,
-                    Clair.rampe().familiar,
-                    Clair.rampe().learned,
+                    Light.rampe().unknown,
+                    Light.rampe().recognized,
+                    Light.rampe().familiar,
+                    Light.rampe().learned,
                 ).forEach { couleur ->
                     Box(modifier = Modifier.weight(1f).fillMaxWidth().background(couleur))
                 }
@@ -1782,7 +1828,7 @@ private fun Lancement(theme: Theme) {
     }
 }
 
-/** L'écran des réglages : un index, groupé par ce que chaque groupe sert. */
+/** L'écran des settings : un index, groupé par ce que chaque groupe sert. */
 @Composable
 private fun EcranReglages(theme: Theme) {
     Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
@@ -1791,7 +1837,7 @@ private fun EcranReglages(theme: Theme) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = "Réglages",
+                text = "Settings",
                 modifier = Modifier.padding(bottom = 10.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.Serif,
@@ -1800,20 +1846,20 @@ private fun EcranReglages(theme: Theme) {
                     color = theme.ink,
                 ),
             )
-            GroupeReglages(theme, "Lecture")
-            LigneReglage(theme, "Apparence", "Sépia")
+            GroupeReglages(theme, "Reading")
+            LigneReglage(theme, "Appearance", "Sépia")
             LigneReglagesSeparation(theme, derniere = false)
-            LigneReglage(theme, "Langue de l'application", "Français")
+            LigneReglage(theme, "App language", "French")
             LigneReglagesSeparation(theme, derniere = false)
-            LigneReglage(theme, "Langues de lecture", "Anglais, espagnol")
-            GroupeReglages(theme, "Données")
-            LigneReglage(theme, "Fournisseur IA", "Anthropic · configuré")
+            LigneReglage(theme, "Reading languages", "English, Spanish")
+            GroupeReglages(theme, "Data")
+            LigneReglage(theme, "LLM provider", "Anthropic · configured")
             LigneReglagesSeparation(theme, derniere = false)
-            LigneReglage(theme, "Coffre et synchronisation", "Synchronisé il y a 2 min")
+            LigneReglage(theme, "Vault and sync", "Synced 2 minutes ago")
             GroupeReglages(theme, "Application")
-            LigneReglage(theme, "Licences et attribution", null)
+            LigneReglage(theme, "Attribution", null)
             LigneReglagesSeparation(theme, derniere = false)
-            LigneReglage(theme, "À propos", "version 0.9")
+            LigneReglage(theme, "About", "version 0.9")
         }
         BarreNavigation(theme, selection = 2)
     }
@@ -1877,18 +1923,18 @@ private fun LigneReglagesSeparation(theme: Theme, derniere: Boolean) {
     }
 }
 
-/** L'écran Apparence : quatre choix, chacun montré sur son propre papier. */
+/** L'écran Appearance : quatre choix, chacun montré sur son propre papier. */
 @Composable
-private fun EcranApparence(theme: Theme) {
+private fun EcranAppearance(theme: Theme) {
     Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
         Column(
             modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            EnTeteEcran(theme, "Apparence")
+            EnTeteEcran(theme, "Appearance")
             Text(
-                text = "Le thème recolore toute l'application — jamais le texte du livre, " +
-                    "qui garde sa police, sa taille et ses marges (ADR-0035).",
+                text = "The theme recolours the whole app — never the book's text, " +
+                    "which keeps its face, size and margins (ADR-0035).",
                 modifier = Modifier.padding(bottom = 10.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -1897,27 +1943,21 @@ private fun EcranApparence(theme: Theme) {
                     color = theme.muted,
                 ),
             )
-            ChoixTheme(theme, "Système", "suit le réglage de l'appareil", ThemePreview.Systeme, choisi = false)
-            ChoixTheme(theme, "Clair", "papier chaud, encre noire", ThemePreview.Clair, choisi = false)
-            ChoixTheme(theme, "Sombre", "nuit chaude, encre claire", ThemePreview.Sombre, choisi = false)
-            ChoixTheme(theme, "Sépia", "papier chiffon", ThemePreview.Sepia, choisi = true)
+            ChoixTheme(theme, "System", "follows the device setting", ThemePreview.Systeme, choisi = false)
+            ChoixTheme(theme, "Light", "warm paper, black ink", ThemePreview.Light, choisi = false)
+            ChoixTheme(theme, "Dark", "warm night, light ink", ThemePreview.Dark, choisi = false)
+            ChoixTheme(theme, "Sépia", "rag paper", ThemePreview.Sepia, choisi = true)
         }
         BarreNavigation(theme, selection = 2)
     }
 }
 
 /** Les quatre aperçus d'un thème, dessinés à leur vraie couleur. */
-private enum class ThemePreview { Systeme, Clair, Sombre, Sepia }
+private enum class ThemePreview { Systeme, Light, Dark, Sepia }
 
-/** Une ligne de l'écran Apparence : l'aperçu, le nom, et la coche. */
+/** Une ligne de l'écran Appearance : l'aperçu, le nom, et la coche. */
 @Composable
-private fun ChoixTheme(
-    theme: Theme,
-    nom: String,
-    sousTitre: String,
-    apercu: ThemePreview,
-    choisi: Boolean,
-) {
+private fun ChoixTheme(theme: Theme, nom: String, sousTitre: String, apercu: ThemePreview, choisi: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -1959,8 +1999,8 @@ private fun ChoixTheme(
 /** L'aperçu : un rectangle du papier du thème, avec deux lignes d'encre. */
 @Composable
 private fun ApercuTheme(apercu: ThemePreview) {
-    val clair = Clair
-    val sombre = Sombre
+    val clair = Light
+    val sombre = Dark
     val sepia = Sepia
     Row(
         modifier = Modifier
@@ -1974,8 +2014,10 @@ private fun ApercuTheme(apercu: ThemePreview) {
                 ApercuMoitie(sombre.paper, sombre.ink, Modifier.weight(1f))
             }
 
-            ThemePreview.Clair -> ApercuMoitie(clair.paper, clair.ink, Modifier.weight(1f))
-            ThemePreview.Sombre -> ApercuMoitie(sombre.paper, sombre.ink, Modifier.weight(1f))
+            ThemePreview.Light -> ApercuMoitie(clair.paper, clair.ink, Modifier.weight(1f))
+
+            ThemePreview.Dark -> ApercuMoitie(sombre.paper, sombre.ink, Modifier.weight(1f))
+
             ThemePreview.Sepia -> ApercuMoitie(sepia.paper, sepia.ink, Modifier.weight(1f))
         }
     }
@@ -2005,18 +2047,18 @@ private fun ApercuMoitie(papier: Color, encre: Color, modifier: Modifier) {
     }
 }
 
-/** L'écran Langues : une langue par ligne, son état, et un chevron. */
+/** L'écran Languages : une langue par ligne, son état, et un chevron. */
 @Composable
-private fun EcranLangues(theme: Theme) {
+private fun EcranLanguages(theme: Theme) {
     Column(modifier = Modifier.width(390.dp).height(844.dp).background(theme.paper)) {
         Column(
             modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            EnTeteEcran(theme, "Langues")
+            EnTeteEcran(theme, "Languages")
             Text(
-                text = "Ce que l'app sait faire pour chaque langue : situer ses mots, et les " +
-                    "traduire vers le français.",
+                text = "What the app can do for each language: place its words, and " +
+                    "translate them into French.",
                 modifier = Modifier.padding(bottom = 6.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -2025,11 +2067,11 @@ private fun EcranLangues(theme: Theme) {
                     color = theme.muted,
                 ),
             )
-            LangueLigne(theme, "Anglais", "Table de difficulté · dictionnaire EN→FR", null)
-            LangueLigne(theme, "Espagnol", "Rien d'installé", "Télécharger 12 Mo")
-            LangueLigne(theme, "Allemand", "Table installée · dictionnaire absent", "Télécharger 9 Mo")
+            LangueLigne(theme, "English", "Word difficulty · EN→FR dictionary", null)
+            LangueLigne(theme, "Spanish", "Nothing installed yet", "Download 12 MB")
+            LangueLigne(theme, "German", "Difficulty installed · no dictionary", "Download 9 MB")
             Text(
-                text = "Licences et attribution",
+                text = "Attribution",
                 modifier = Modifier.padding(top = 18.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -2118,61 +2160,56 @@ private fun EnTeteEcran(theme: Theme, titre: String) {
     }
 }
 
-/** Les états du Vocabulaire. */
-private enum class EtatVocabulaire { PLEIN, VIDE, SANS_RESULTAT, SUPPRESSION }
+/** Les états du Vocabulary. */
+private enum class EtatVocabulary { PLEIN, VIDE, SANS_RESULTAT, SUPPRESSION }
 
-/** Une entrée du vocabulaire, telle que la liste la donne. */
-private data class MotVocabulaire(
-    val mot: String,
-    val traduction: String,
-    val contexte: String,
-    val niveau: Niveau,
-)
+/** Une entrée du vocabulary, telle que la liste la donne. */
+private data class MotVocabulary(val mot: String, val traduction: String, val contexte: String, val niveau: Mastery)
 
-private val Vocabulaire = listOf(
-    MotVocabulaire(
+private val Vocabulary = listOf(
+    MotVocabulary(
         "stood",
         "se tenir debout",
         "The fir tree stood in the wood and the children clapped their hands…",
-        Niveau.UNKNOWN,
+        Mastery.UNKNOWN,
     ),
-    MotVocabulaire(
+    MotVocabulary(
         "adorned",
         "orné, décoré",
         "looked forward with pleasure to being adorned again",
-        Niveau.UNKNOWN,
+        Mastery.UNKNOWN,
     ),
-    MotVocabulaire(
+    MotVocabulary(
         "Princess",
         "princesse",
         "who fell downstairs, and yet was raised to honour and married the Princess.",
-        Niveau.RECOGNIZED,
+        Mastery.RECOGNIZED,
     ),
-    MotVocabulaire(
+    MotVocabulary(
         "another",
         "un autre",
         "Tell another! tell another! for they wanted to hear about Ivede-Avede",
-        Niveau.FAMILIAR,
+        Mastery.FAMILIAR,
     ),
-    MotVocabulaire(
+    MotVocabulary(
         "story",
         "histoire",
         "but they only got the story of Klumpey-Dumpey",
-        Niveau.LEARNED,
+        Mastery.LEARNED,
     ),
 )
 
 /** Le nom français d'un niveau, tel que l'écran et le panneau le disent. */
-private fun Niveau.nom(): String = when (this) {
-    Niveau.UNKNOWN -> "Inconnu"
-    Niveau.RECOGNIZED -> "Reconnu"
-    Niveau.FAMILIAR -> "Familier"
-    Niveau.LEARNED -> "Appris"
+private fun Mastery.nom(): String = when (this) {
+    Mastery.UNKNOWN -> "Unknown"
+    Mastery.RECOGNIZED -> "Recognized"
+    Mastery.FAMILIAR -> "Familiar"
+    Mastery.LEARNED -> "Learned"
 }
 
-/** L'écran du vocabulaire, tel qu'un téléphone le montre. */
+/** L'écran du vocabulary, tel qu'un téléphone le montre. */
 @Composable
-private fun EcranVocabulaire(theme: Theme, etat: EtatVocabulaire) {
+private fun EcranVocabulary(theme: Theme, etat: EtatVocabulary) {
     Box(modifier = Modifier.width(390.dp).height(844.dp)) {
         Column(modifier = Modifier.fillMaxSize().background(theme.paper)) {
             Column(
@@ -2184,7 +2221,7 @@ private fun EcranVocabulaire(theme: Theme, etat: EtatVocabulaire) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Vocabulaire",
+                        text = "Vocabulary",
                         style = TextStyle(
                             fontFamily = FontFamily.Serif,
                             fontSize = 26.sp,
@@ -2194,7 +2231,7 @@ private fun EcranVocabulaire(theme: Theme, etat: EtatVocabulaire) {
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
-                        text = "128 mots",
+                        text = "128 words",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -2202,33 +2239,33 @@ private fun EcranVocabulaire(theme: Theme, etat: EtatVocabulaire) {
                         ),
                     )
                 }
-                if (etat == EtatVocabulaire.PLEIN || etat == EtatVocabulaire.SUPPRESSION) {
-                    ChampRecherche(theme, placeholder = "Rechercher un mot")
+                if (etat == EtatVocabulary.PLEIN || etat == EtatVocabulary.SUPPRESSION) {
+                    ChampRecherche(theme, placeholder = "Search")
                     Filtres(theme)
                     Column {
-                        Vocabulaire.forEach { entree ->
+                        Vocabulary.forEach { entree ->
                             LigneMot(theme, entree)
                         }
                     }
                 }
                 when (etat) {
-                    EtatVocabulaire.VIDE -> {
-                        ChampRecherche(theme, placeholder = "Rechercher un mot")
+                    EtatVocabulary.VIDE -> {
+                        ChampRecherche(theme, placeholder = "Search")
                         MessageCentre(
                             theme = theme,
-                            titre = "Aucun mot",
-                            corps = "Touche un mot pendant la lecture, et il atterrit ici.",
+                            titre = "No words saved yet",
+                            corps = "Tap a word while reading, and it lands here.",
                         )
                     }
 
-                    EtatVocabulaire.SANS_RESULTAT -> {
-                        ChampRecherche(theme, placeholder = "Rechercher un mot", query = "princesse")
+                    EtatVocabulary.SANS_RESULTAT -> {
+                        ChampRecherche(theme, placeholder = "Search", query = "princesse")
                         Filtres(theme)
                         MessageCentre(
                             theme = theme,
-                            titre = "Aucun mot pour « princesse »",
-                            corps = "La recherche porte sur le mot et sur sa traduction.",
-                            lien = "Effacer la recherche",
+                            titre = "No words match « princesse ».",
+                            corps = "The search covers the word and its translation.",
+                            lien = "Clear search",
                         )
                     }
 
@@ -2237,7 +2274,7 @@ private fun EcranVocabulaire(theme: Theme, etat: EtatVocabulaire) {
             }
             BarreNavigation(theme, selection = 1)
         }
-        if (etat == EtatVocabulaire.SUPPRESSION) {
+        if (etat == EtatVocabulary.SUPPRESSION) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -2257,13 +2294,13 @@ private fun Filtres(theme: Theme) {
             .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Filtre(theme, "Tous", null, choisi = true)
+        Filtre(theme, "All levels", null, choisi = true)
         val rampe = theme.rampe()
-        Filtre(theme, "Inconnu", rampe.unknown, choisi = false)
-        Filtre(theme, "Reconnu", rampe.recognized, choisi = false)
-        Filtre(theme, "Familier", rampe.familiar, choisi = false)
-        Filtre(theme, "Appris", rampe.learned, choisi = false)
-        Filtre(theme, "Connu", theme.outline, choisi = false)
+        Filtre(theme, "Unknown", rampe.unknown, choisi = false)
+        Filtre(theme, "Recognized", rampe.recognized, choisi = false)
+        Filtre(theme, "Familiar", rampe.familiar, choisi = false)
+        Filtre(theme, "Learned", rampe.learned, choisi = false)
+        Filtre(theme, "Known", theme.outline, choisi = false)
     }
 }
 
@@ -2300,7 +2337,7 @@ private fun Filtre(theme: Theme, nom: String, pastille: Color?, choisi: Boolean)
 
 /** Une entrée : le mot en sérif, la traduction, la phrase qui l'a fait naître. */
 @Composable
-private fun LigneMot(theme: Theme, entree: MotVocabulaire) {
+private fun LigneMot(theme: Theme, entree: MotVocabulary) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -2423,7 +2460,7 @@ private fun DialogueSuppression(theme: Theme, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            text = "Supprimer « stood » ?",
+            text = "Delete « stood »?",
             style = TextStyle(
                 fontFamily = FontFamily.Serif,
                 fontSize = 19.sp,
@@ -2432,8 +2469,8 @@ private fun DialogueSuppression(theme: Theme, modifier: Modifier = Modifier) {
             ),
         )
         Text(
-            text = "L'entrée quitte le vocabulaire. Le mot peut être enregistré de nouveau " +
-                "en le touchant dans le livre.",
+            text = "This removes the entry from your vocabulary. The word can be saved again " +
+                "by tapping it in the book.",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -2446,7 +2483,7 @@ private fun DialogueSuppression(theme: Theme, modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.End,
         ) {
             Text(
-                text = "Annuler",
+                text = "Cancel",
                 modifier = Modifier.padding(end = 20.dp),
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -2456,7 +2493,7 @@ private fun DialogueSuppression(theme: Theme, modifier: Modifier = Modifier) {
                 ),
             )
             Text(
-                text = "Supprimer",
+                text = "Delete",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 13.sp,
@@ -2501,7 +2538,7 @@ private fun FenetreDesktop(theme: Theme, etat: EtatDesktop) {
             ) {
                 Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline))
                 when (etat) {
-                    EtatDesktop.CHAPITRES -> ColonneChapitres(theme)
+                    EtatDesktop.CHAPITRES -> ColonneChapters(theme)
                     EtatDesktop.MOT -> ColonneMot(theme)
                 }
             }
@@ -2512,13 +2549,13 @@ private fun FenetreDesktop(theme: Theme, etat: EtatDesktop) {
 
 /** Fermée, la colonne est le sommaire : ce que le lecteur peut vouloir rejoindre. */
 @Composable
-private fun ColonneChapitres(theme: Theme) {
+private fun ColonneChapters(theme: Theme) {
     Column(
         modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text(
-            text = "Chapitres",
+            text = "Chapters",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -2544,7 +2581,7 @@ private fun ColonneChapitres(theme: Theme) {
         }
         Box(modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(1.dp).background(theme.outline))
         Text(
-            text = "Page 99 sur 357",
+            text = "Page 99 of 357",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 11.sp,
@@ -2573,7 +2610,7 @@ private fun ColonneMot(theme: Theme) {
                     ),
                 )
                 Text(
-                    text = "verbe · /stʊd/",
+                    text = "verb · /stʊd/",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 12.sp,
@@ -2603,7 +2640,7 @@ private fun ColonneMot(theme: Theme) {
         Sens("4", "to rise to one's feet after sitting.", "se lever", theme)
         Separateur(theme)
         Text(
-            text = "Niveau — Reconnu",
+            text = "Mastery — Recognized",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -2612,15 +2649,15 @@ private fun ColonneMot(theme: Theme) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             val rampe = theme.rampe()
-            ChipNiveau(theme, "0", rampe.unknown, choisi = false)
-            ChipNiveau(theme, "1", rampe.recognized, choisi = true)
-            ChipNiveau(theme, "2", rampe.familiar, choisi = false)
-            ChipNiveau(theme, "3", rampe.learned, choisi = false)
-            ChipNiveau(theme, "4", theme.outline, choisi = false)
+            ChipMastery(theme, "0", rampe.unknown, choisi = false)
+            ChipMastery(theme, "1", rampe.recognized, choisi = true)
+            ChipMastery(theme, "2", rampe.familiar, choisi = false)
+            ChipMastery(theme, "3", rampe.learned, choisi = false)
+            ChipMastery(theme, "4", theme.outline, choisi = false)
         }
         Separateur(theme)
         Text(
-            text = "Chercher ailleurs",
+            text = "Look it up online",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -2628,7 +2665,7 @@ private fun ColonneMot(theme: Theme) {
             ),
         )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("WordReference", "Reverso", "Linguee", "Google Traduction").forEach { lien ->
+            listOf("WordReference", "Reverso", "Linguee", "Google Translate").forEach { lien ->
                 Text(
                     text = lien,
                     style = TextStyle(
@@ -2698,7 +2735,7 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
                         ),
                     )
                     Text(
-                        text = "verbe · /stʊd/",
+                        text = "verb · /stʊd/",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -2725,7 +2762,7 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
             if (horsLigne) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Le dictionnaire n'est pas installé sur cet appareil.",
+                        text = "The offline dictionary isn't installed on this device.",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 13.sp,
@@ -2734,8 +2771,8 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
                         ),
                     )
                     Text(
-                        text = "Le mot peut quand même être enregistré : il sera traduit dès " +
-                            "qu'un dictionnaire sera là.",
+                        text = "The word can still be saved: it will be translated " +
+                            "as soon as a dictionary is here.",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -2744,7 +2781,7 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
                         ),
                     )
                     Text(
-                        text = "Voir les langues",
+                        text = "See Languages",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -2770,7 +2807,7 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "Niveau",
+                        text = "Mastery",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 11.sp,
@@ -2778,7 +2815,7 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
                         ),
                     )
                     Text(
-                        text = "Reconnu",
+                        text = "Recognized",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 13.sp,
@@ -2790,16 +2827,16 @@ private fun PanneauMot(theme: Theme, horsLigne: Boolean = false, modifier: Modif
                 Spacer(Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val rampe = theme.rampe()
-                    ChipNiveau(theme, "0", rampe.unknown, choisi = false)
-                    ChipNiveau(theme, "1", rampe.recognized, choisi = true)
-                    ChipNiveau(theme, "2", rampe.familiar, choisi = false)
-                    ChipNiveau(theme, "3", rampe.learned, choisi = false)
-                    ChipNiveau(theme, "4", theme.outline, choisi = false)
+                    ChipMastery(theme, "0", rampe.unknown, choisi = false)
+                    ChipMastery(theme, "1", rampe.recognized, choisi = true)
+                    ChipMastery(theme, "2", rampe.familiar, choisi = false)
+                    ChipMastery(theme, "3", rampe.learned, choisi = false)
+                    ChipMastery(theme, "4", theme.outline, choisi = false)
                 }
             }
             Separateur(theme)
             Text(
-                text = "WordReference · Reverso · Linguee · Google Traduction",
+                text = "WordReference · Reverso · Linguee · Google Translate",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 11.sp,
@@ -2849,7 +2886,7 @@ private fun Sens(numero: String, definition: String, traduction: String?, theme:
 
 /** Un niveau du panneau : sa couleur, son numéro, et un anneau s'il est le niveau courant. */
 @Composable
-private fun ChipNiveau(theme: Theme, numero: String, fond: Color, choisi: Boolean) {
+private fun ChipMastery(theme: Theme, numero: String, fond: Color, choisi: Boolean) {
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -2929,7 +2966,7 @@ private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifi
                         ),
                     )
                     Text(
-                        text = "Traduit par ton fournisseur — 12 mots envoyés",
+                        text = "Translated by your provider — 12 words sent",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 11.sp,
@@ -2940,7 +2977,7 @@ private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifi
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Une phrase a besoin d'une IA pour être traduite.",
+                        text = "A phrase needs an AI to be translated.",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 13.sp,
@@ -2949,7 +2986,7 @@ private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifi
                         ),
                     )
                     Text(
-                        text = "Un mot a son dictionnaire hors ligne ; une phrase n'en a pas.",
+                        text = "A word has its offline dictionary; a phrase has none.",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -2958,7 +2995,7 @@ private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifi
                         ),
                     )
                     Text(
-                        text = "Configurer un fournisseur",
+                        text = "Set up a provider",
                         style = TextStyle(
                             fontFamily = FontFamily.SansSerif,
                             fontSize = 12.sp,
@@ -2970,7 +3007,7 @@ private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifi
             }
             Separateur(theme)
             Text(
-                text = "Google Traduction",
+                text = "Google Translate",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 11.sp,
@@ -2984,46 +3021,46 @@ private fun PanneauPhrase(theme: Theme, ia: Boolean, modifier: Modifier = Modifi
 /** La page telle qu'un livre la donne : un passage, pas deux lignes. */
 private val PASSAGE = listOf(
     Mot("The", null),
-    Mot("fir", Niveau.LEARNED),
+    Mot("fir", Mastery.LEARNED),
     Mot("tree", null),
-    Mot("stood", Niveau.UNKNOWN),
+    Mot("stood", Mastery.UNKNOWN),
     Mot("in", null),
     Mot("the", null),
-    Mot("wood", Niveau.FAMILIAR),
+    Mot("wood", Mastery.FAMILIAR),
     Mot("and", null),
     Mot("the", null),
     Mot("children", null),
-    Mot("clapped", Niveau.UNKNOWN),
+    Mot("clapped", Mastery.UNKNOWN),
     Mot("their", null),
     Mot("hands", null),
     Mot("and", null),
-    Mot("cried", Niveau.RECOGNIZED),
+    Mot("cried", Mastery.RECOGNIZED),
     Mot("Tell", null),
-    Mot("another!", Niveau.FAMILIAR),
+    Mot("another!", Mastery.FAMILIAR),
     Mot("for", null),
     Mot("they", null),
     Mot("wanted", null),
     Mot("to", null),
     Mot("hear", null),
     Mot("about", null),
-    Mot("Ivede-Avede;", Niveau.UNKNOWN),
+    Mot("Ivede-Avede;", Mastery.UNKNOWN),
     Mot("but", null),
     Mot("they", null),
     Mot("only", null),
     Mot("got", null),
     Mot("the", null),
-    Mot("story", Niveau.LEARNED),
+    Mot("story", Mastery.LEARNED),
     Mot("of", null),
-    Mot("Klumpey-Dumpey,", Niveau.UNKNOWN),
+    Mot("Klumpey-Dumpey,", Mastery.UNKNOWN),
     Mot("who", null),
     Mot("fell", null),
     Mot("downstairs,", null),
     Mot("and", null),
     Mot("yet", null),
     Mot("was", null),
-    Mot("raised", Niveau.RECOGNIZED),
+    Mot("raised", Mastery.RECOGNIZED),
     Mot("to", null),
-    Mot("honour", Niveau.UNKNOWN),
+    Mot("honour", Mastery.UNKNOWN),
     Mot("and", null),
     Mot("married", null),
     Mot("the", null),
@@ -3034,10 +3071,10 @@ private val PASSAGE = listOf(
     Mot("looked", null),
     Mot("forward", null),
     Mot("with", null),
-    Mot("pleasure", Niveau.FAMILIAR),
+    Mot("pleasure", Mastery.FAMILIAR),
     Mot("to", null),
     Mot("being", null),
-    Mot("adorned", Niveau.UNKNOWN),
+    Mot("adorned", Mastery.UNKNOWN),
     Mot("again,", null),
     Mot("the", null),
     Mot("next", null),
@@ -3051,9 +3088,9 @@ private val PASSAGE = listOf(
     Mot("fruit.", null),
     Mot("Then", null),
     Mot("the", null),
-    Mot("fir", Niveau.LEARNED),
+    Mot("fir", Mastery.LEARNED),
     Mot("tree", null),
-    Mot("thought", Niveau.UNKNOWN),
+    Mot("thought", Mastery.UNKNOWN),
     Mot("of", null),
     Mot("the", null),
     Mot("next", null),
@@ -3062,24 +3099,24 @@ private val PASSAGE = listOf(
     Mot("looked", null),
     Mot("forward", null),
     Mot("with", null),
-    Mot("pleasure", Niveau.FAMILIAR),
+    Mot("pleasure", Mastery.FAMILIAR),
     Mot("to", null),
     Mot("being", null),
-    Mot("adorned", Niveau.UNKNOWN),
+    Mot("adorned", Mastery.UNKNOWN),
     Mot("again.", null),
     Mot("Yes,", null),
     Mot("so", null),
     Mot("it", null),
-    Mot("happens", Niveau.UNKNOWN),
+    Mot("happens", Mastery.UNKNOWN),
     Mot("in", null),
     Mot("the", null),
-    Mot("world!", Niveau.RECOGNIZED),
-    Mot("thought", Niveau.UNKNOWN),
+    Mot("world!", Mastery.RECOGNIZED),
+    Mot("thought", Mastery.UNKNOWN),
     Mot("the", null),
-    Mot("fir", Niveau.LEARNED),
+    Mot("fir", Mastery.LEARNED),
     Mot("tree,", null),
     Mot("and", null),
-    Mot("believed", Niveau.UNKNOWN),
+    Mot("believed", Mastery.UNKNOWN),
     Mot("it", null),
     Mot("must", null),
     Mot("be", null),
@@ -3089,25 +3126,25 @@ private val PASSAGE = listOf(
     Mot("was", null),
     Mot("such", null),
     Mot("a", null),
-    Mot("nice", Niveau.RECOGNIZED),
+    Mot("nice", Mastery.RECOGNIZED),
     Mot("man", null),
     Mot("who", null),
-    Mot("told", Niveau.UNKNOWN),
+    Mot("told", Mastery.UNKNOWN),
     Mot("it.", null),
     Mot("Well,", null),
     Mot("who", null),
     Mot("can", null),
-    Mot("know?", Niveau.UNKNOWN),
+    Mot("know?", Mastery.UNKNOWN),
     Mot("Perhaps", null),
     Mot("I", null),
     Mot("shall", null),
-    Mot("fall", Niveau.RECOGNIZED),
+    Mot("fall", Mastery.RECOGNIZED),
     Mot("downstairs,", null),
     Mot("too,", null),
     Mot("and", null),
-    Mot("marry", Niveau.UNKNOWN),
+    Mot("marry", Mastery.UNKNOWN),
     Mot("a", null),
-    Mot("Princess!", Niveau.FAMILIAR),
+    Mot("Princess!", Mastery.FAMILIAR),
 )
 
 /** L'écran tel qu'un téléphone le montre : deux bandes de chrome, la page au milieu. */
@@ -3200,7 +3237,7 @@ private fun BarreBas(theme: Theme) {
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = "Page 99 sur 357",
+            text = "Page 99 of 357",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -3221,9 +3258,9 @@ private fun BarreBas(theme: Theme) {
 @Composable
 private fun BoxScope.ZonesDeToucher(theme: Theme) {
     Row(modifier = Modifier.fillMaxSize()) {
-        ZoneTactile(theme, "Page précédente", Modifier.weight(1f))
+        ZoneTactile(theme, "Previous page", Modifier.weight(1f))
         ZoneTactile(theme, "Chrome", Modifier.weight(1f))
-        ZoneTactile(theme, "Page suivante", Modifier.weight(1f))
+        ZoneTactile(theme, "Next page", Modifier.weight(1f))
     }
 }
 
@@ -3268,7 +3305,7 @@ private fun PanneauTexte(theme: Theme) {
         ) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Le texte",
+                    text = "Text",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
@@ -3278,7 +3315,7 @@ private fun PanneauTexte(theme: Theme) {
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = "Fermer",
+                    text = "Close",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 13.sp,
@@ -3288,12 +3325,12 @@ private fun PanneauTexte(theme: Theme) {
             }
             RowTexte(
                 theme = theme,
-                label = "Police",
-                options = listOf("Sérif" to true, "Sans" to false),
+                label = "Text face",
+                options = listOf("Serif" to true, "Sans-serif" to false),
             )
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Taille",
+                    text = "Text size",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 13.sp,
@@ -3342,8 +3379,8 @@ private fun PanneauTexte(theme: Theme) {
             }
             RowTexte(
                 theme = theme,
-                label = "Marges",
-                options = listOf("Étroit" to false, "Confort" to true, "Large" to false),
+                label = "Margins",
+                options = listOf("Narrow" to false, "Comfortable" to true, "Wide" to false),
             )
         }
     }
@@ -3391,11 +3428,10 @@ private fun RowTexte(theme: Theme, label: String, options: List<Pair<String, Boo
     }
 }
 
-
 /** Les états que l'écran doit savoir montrer. */
 private enum class EtatEcran { PLEIN, VIDE, CHARGEMENT, ERREUR }
 
-/** Un livre tel que la Bibliothèque le montre — sans couverture, il n'y en a pas. */
+/** Un livre tel que la Library le montre — sans couverture, il n'y en a pas. */
 private data class LivreListe(
     val titre: String,
     val code: String,
@@ -3405,7 +3441,7 @@ private data class LivreListe(
     val part: Float?,
 )
 
-/** Les teintes de langue : mates, terreuses, hors du vocabulaire de la maîtrise. */
+/** Les teintes de langue : mates, terreuses, hors du vocabulary de la maîtrise. */
 private val Livres = listOf(
     LivreListe("Children's Literature", "EN", Color(0xFF4C6B8A), "EPUB", 0.32f),
     LivreListe("The Fir Tree", "EN", Color(0xFF4C6B8A), "EPUB", 0.78f),
@@ -3432,7 +3468,7 @@ private fun EcranBibliotheque(theme: Theme, etat: EtatEcran) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Bibliothèque",
+                    text = "Library",
                     style = TextStyle(
                         fontFamily = FontFamily.Serif,
                         fontSize = 26.sp,
@@ -3442,7 +3478,7 @@ private fun EcranBibliotheque(theme: Theme, etat: EtatEcran) {
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = "Importer",
+                    text = "Import",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
@@ -3458,6 +3494,7 @@ private fun EcranBibliotheque(theme: Theme, etat: EtatEcran) {
                 }
 
                 EtatEcran.VIDE -> EtatVide(theme)
+
                 EtatEcran.CHARGEMENT -> Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     repeat(4) { LigneSquelette(theme) }
                 }
@@ -3471,11 +3508,7 @@ private fun EcranBibliotheque(theme: Theme, etat: EtatEcran) {
 
 /** Le champ de recherche (issue #173) : une surface, la loupe, et rien de plus. */
 @Composable
-private fun ChampRecherche(
-    theme: Theme,
-    placeholder: String = "Rechercher un titre",
-    query: String? = null,
-) {
+private fun ChampRecherche(theme: Theme, placeholder: String = "Search", query: String? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -3526,7 +3559,7 @@ private fun LigneLivre(theme: Theme, livre: LivreListe) {
             )
             Text(
                 text = livre.part?.let { part -> "${livre.format} · ${(part * 100).toInt()} %" }
-                    ?: "${livre.format} · jamais ouvert",
+                    ?: "${livre.format} · never opened",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 12.sp,
@@ -3624,7 +3657,7 @@ private fun EtatVide(theme: Theme) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Aucun livre",
+            text = "No books yet",
             style = TextStyle(
                 fontFamily = FontFamily.Serif,
                 fontSize = 20.sp,
@@ -3633,7 +3666,7 @@ private fun EtatVide(theme: Theme) {
             ),
         )
         Text(
-            text = "Un EPUB ou un texte, et le premier mot est à une minute.",
+            text = "An EPUB or a text file, and the first word is a minute away.",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 13.sp,
@@ -3648,7 +3681,7 @@ private fun EtatVide(theme: Theme) {
                 .padding(horizontal = 24.dp, vertical = 12.dp),
         ) {
             Text(
-                text = "Importer un livre",
+                text = "Import a book",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 14.sp,
@@ -3672,7 +3705,7 @@ private fun EtatErreur(theme: Theme) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Ce livre n'a pas pu être importé",
+            text = "This book could not be imported",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
@@ -3681,7 +3714,7 @@ private fun EtatErreur(theme: Theme) {
             ),
         )
         Text(
-            text = "Le fichier est peut-être protégé. La bibliothèque n'a pas changé.",
+            text = "The file may be protected. The library has not changed.",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -3690,7 +3723,7 @@ private fun EtatErreur(theme: Theme) {
             ),
         )
         Text(
-            text = "Fermer",
+            text = "Close",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 13.sp,
@@ -3710,9 +3743,9 @@ private fun BarreNavigation(theme: Theme, selection: Int = 0) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Onglet(theme, LucideDemo.BookOpen, "Bibliothèque", selection == 0)
-            Onglet(theme, LucideDemo.Bookmark, "Vocabulaire", selection == 1)
-            Onglet(theme, LucideDemo.Settings, "Réglages", selection == 2)
+            Onglet(theme, LucideDemo.BookOpen, "Library", selection == 0)
+            Onglet(theme, LucideDemo.Bookmark, "Vocabulary", selection == 1)
+            Onglet(theme, LucideDemo.Settings, "Settings", selection == 2)
         }
     }
 }
@@ -3755,7 +3788,7 @@ private fun GeometrieLigne(titre: String, note: String, icones: List<ImageVector
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Clair.ink,
+                        color = Light.ink,
                     ),
                 )
                 Text(
@@ -3764,7 +3797,7 @@ private fun GeometrieLigne(titre: String, note: String, icones: List<ImageVector
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 11.sp,
                         lineHeight = 16.sp,
-                        color = Clair.muted,
+                        color = Light.muted,
                     ),
                 )
             }
@@ -3776,7 +3809,7 @@ private fun GeometrieLigne(titre: String, note: String, icones: List<ImageVector
                     Icon(
                         imageVector = icone,
                         contentDescription = null,
-                        tint = Clair.ink,
+                        tint = Light.ink,
                         modifier = Modifier.size(32.dp),
                     )
                 }
@@ -3787,7 +3820,7 @@ private fun GeometrieLigne(titre: String, note: String, icones: List<ImageVector
                 .fillMaxWidth()
                 .padding(top = 10.dp)
                 .height(1.dp)
-                .background(Clair.outline),
+                .background(Light.outline),
         )
     }
 }
@@ -3806,7 +3839,7 @@ private fun Fond(theme: Theme, mot: String, alpha: Float) {
             ),
         )
         Text(
-            text = "Encre à ${(alpha * 100).toInt()} % sur le mot touché — ici « $mot »",
+            text = "Ink at ${(alpha * 100).toInt()} % on the touched word — here « $mot »",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -3815,7 +3848,7 @@ private fun Fond(theme: Theme, mot: String, alpha: Float) {
         )
         PageLave(theme, mot, alpha)
         Text(
-            text = "Sans sélection, pour comparer",
+            text = "With no selection, to compare",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 12.sp,
@@ -3858,12 +3891,7 @@ private fun PageLave(theme: Theme, mot: String, alpha: Float, mots: List<Mot> = 
 
 /** Une ligne de la planche 3 : le libellé, la mesure, et la phrase traitée. */
 @Composable
-private fun Traitement(
-    titre: String,
-    note: String,
-    fond: Color? = null,
-    content: @Composable () -> Unit,
-) {
+private fun Traitement(titre: String, note: String, fond: Color? = null, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.width(300.dp).padding(end = 16.dp)) {
@@ -3873,7 +3901,7 @@ private fun Traitement(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Clair.ink,
+                        color = Light.ink,
                     ),
                 )
                 Text(
@@ -3882,7 +3910,7 @@ private fun Traitement(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 11.sp,
                         lineHeight = 16.sp,
-                        color = Clair.muted,
+                        color = Light.muted,
                     ),
                 )
             }
@@ -3898,7 +3926,7 @@ private fun Traitement(
                 .fillMaxWidth()
                 .padding(top = 8.dp)
                 .height(1.dp)
-                .background(Clair.outline),
+                .background(Light.outline),
         )
     }
 }
