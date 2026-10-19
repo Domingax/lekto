@@ -23,6 +23,8 @@ et le verdict sont sur l'issue #168.
 | `recherche.png` | Le panneau du mot posé sur la page, dans les trois fonds. |
 | `recherche-etats.png` | Le dictionnaire absent, la phrase traduite, la phrase sans fournisseur. |
 | `desktop.png` | Le lecteur desktop et sa colonne de contexte : les chapitres quand rien n'est touché, le mot quand on touche. |
+| `vocabulaire.png` | Le vocabulaire, dans les trois fonds. |
+| `vocabulaire-etats.png` | Vocabulaire vide, recherche sans résultat, et la confirmation de suppression. |
 
 ## Regénérer
 

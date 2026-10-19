@@ -2,6 +2,7 @@ package app.lekto.prototype
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -987,6 +989,408 @@ class VisualIdentityPrototype {
             }
         }
         onRoot().captureRoboImage("prototype/desktop.png")
+    }
+
+    /** Planche 13 — le Vocabulaire, dans les trois fonds. */
+    @Test
+    fun vocabulaire() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Le Vocabulaire — ce qu'on a ramassé en lisant",
+                    sousTitre = "Le mot garde la sérif du livre ; sa traduction et sa phrase de " +
+                        "contexte restent en sans-sérif. La corbeille est une icône discrète, et " +
+                        "elle demande confirmation.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    EcranVocabulaire(Clair, EtatVocabulaire.PLEIN)
+                    EcranVocabulaire(Sombre, EtatVocabulaire.PLEIN)
+                    EcranVocabulaire(Sepia, EtatVocabulaire.PLEIN)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/vocabulaire.png")
+    }
+
+    /** Planche 14 — les états du Vocabulaire : vide, sans résultat, et la suppression. */
+    @Test
+    fun vocabulaireEtats() = runDesktopComposeUiTest(width = LARGEUR, height = 980) {
+        setContent {
+            Column(Modifier.size(LARGEUR.dp, 980.dp).background(Color(0xFF101010))) {
+                TitrePlanche(
+                    titre = "Le Vocabulaire — trois états, dont un qui protège",
+                    sousTitre = "Un vocabulaire vide ne dit pas la même chose qu'une recherche " +
+                        "sans résultat ; et supprimer demande confirmation, parce que ça ne " +
+                        "se devine pas.",
+                    papier = Color(0xFF101010),
+                    encre = Color(0xFFF5F5F5),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    EcranVocabulaire(Clair, EtatVocabulaire.VIDE)
+                    EcranVocabulaire(Clair, EtatVocabulaire.SANS_RESULTAT)
+                    EcranVocabulaire(Clair, EtatVocabulaire.SUPPRESSION)
+                }
+            }
+        }
+        onRoot().captureRoboImage("prototype/vocabulaire-etats.png")
+    }
+}
+
+/** Les états du Vocabulaire. */
+private enum class EtatVocabulaire { PLEIN, VIDE, SANS_RESULTAT, SUPPRESSION }
+
+/** Une entrée du vocabulaire, telle que la liste la donne. */
+private data class MotVocabulaire(
+    val mot: String,
+    val traduction: String,
+    val contexte: String,
+    val niveau: Niveau,
+)
+
+private val Vocabulaire = listOf(
+    MotVocabulaire(
+        "stood",
+        "se tenir debout",
+        "The fir tree stood in the wood and the children clapped their hands…",
+        Niveau.UNKNOWN,
+    ),
+    MotVocabulaire(
+        "adorned",
+        "orné, décoré",
+        "looked forward with pleasure to being adorned again",
+        Niveau.UNKNOWN,
+    ),
+    MotVocabulaire(
+        "Princess",
+        "princesse",
+        "who fell downstairs, and yet was raised to honour and married the Princess.",
+        Niveau.RECOGNIZED,
+    ),
+    MotVocabulaire(
+        "another",
+        "un autre",
+        "Tell another! tell another! for they wanted to hear about Ivede-Avede",
+        Niveau.FAMILIAR,
+    ),
+    MotVocabulaire(
+        "story",
+        "histoire",
+        "but they only got the story of Klumpey-Dumpey",
+        Niveau.LEARNED,
+    ),
+)
+
+/** Le nom français d'un niveau, tel que l'écran et le panneau le disent. */
+private fun Niveau.nom(): String = when (this) {
+    Niveau.UNKNOWN -> "Inconnu"
+    Niveau.RECOGNIZED -> "Reconnu"
+    Niveau.FAMILIAR -> "Familier"
+    Niveau.LEARNED -> "Appris"
+}
+
+/** L'écran du vocabulaire, tel qu'un téléphone le montre. */
+@Composable
+private fun EcranVocabulaire(theme: Theme, etat: EtatVocabulaire) {
+    Box(modifier = Modifier.width(390.dp).height(844.dp)) {
+        Column(modifier = Modifier.fillMaxSize().background(theme.paper)) {
+            Column(
+                modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Vocabulaire",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.ink,
+                        ),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "128 mots",
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 12.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                }
+                if (etat == EtatVocabulaire.PLEIN || etat == EtatVocabulaire.SUPPRESSION) {
+                    ChampRecherche(theme, placeholder = "Rechercher un mot")
+                    Filtres(theme)
+                    Column {
+                        Vocabulaire.forEach { entree ->
+                            LigneMot(theme, entree)
+                        }
+                    }
+                }
+                when (etat) {
+                    EtatVocabulaire.VIDE -> {
+                        ChampRecherche(theme, placeholder = "Rechercher un mot")
+                        MessageCentre(
+                            theme = theme,
+                            titre = "Aucun mot",
+                            corps = "Touche un mot pendant la lecture, et il atterrit ici.",
+                        )
+                    }
+
+                    EtatVocabulaire.SANS_RESULTAT -> {
+                        ChampRecherche(theme, placeholder = "Rechercher un mot", query = "princesse")
+                        Filtres(theme)
+                        MessageCentre(
+                            theme = theme,
+                            titre = "Aucun mot pour « princesse »",
+                            corps = "La recherche porte sur le mot et sur sa traduction.",
+                            lien = "Effacer la recherche",
+                        )
+                    }
+
+                    else -> Unit
+                }
+            }
+            BarreNavigation(theme, selection = 1)
+        }
+        if (etat == EtatVocabulaire.SUPPRESSION) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.32f)),
+            )
+            DialogueSuppression(theme, modifier = Modifier.align(Alignment.Center))
+        }
+    }
+}
+
+/** Les filtres de niveau : le choix courant en encre pleine, la pastille garde sa couleur. */
+@Composable
+private fun Filtres(theme: Theme) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Filtre(theme, "Tous", null, choisi = true)
+        val rampe = theme.rampe()
+        Filtre(theme, "Inconnu", rampe.unknown, choisi = false)
+        Filtre(theme, "Reconnu", rampe.recognized, choisi = false)
+        Filtre(theme, "Familier", rampe.familiar, choisi = false)
+        Filtre(theme, "Appris", rampe.learned, choisi = false)
+        Filtre(theme, "Connu", theme.outline, choisi = false)
+    }
+}
+
+@Composable
+private fun Filtre(theme: Theme, nom: String, pastille: Color?, choisi: Boolean) {
+    Row(
+        modifier = Modifier
+            .background(
+                if (choisi) theme.ink else theme.paper,
+                RoundedCornerShape(8.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = if (choisi) theme.ink else theme.outline,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (pastille != null) {
+            Box(modifier = Modifier.size(8.dp).background(pastille, RoundedCornerShape(4.dp)))
+        }
+        Text(
+            text = nom,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                color = if (choisi) theme.paper else theme.ink,
+            ),
+        )
+    }
+}
+
+/** Une entrée : le mot en sérif, la traduction, la phrase qui l'a fait naître. */
+@Composable
+private fun LigneMot(theme: Theme, entree: MotVocabulaire) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = entree.mot,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.ink,
+                        ),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(theme.rampe().couleur(entree.niveau), RoundedCornerShape(4.dp)),
+                    )
+                    Text(
+                        text = entree.niveau.nom(),
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 11.sp,
+                            color = theme.muted,
+                        ),
+                    )
+                }
+                Text(
+                    text = entree.traduction,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 13.sp,
+                        color = theme.ink,
+                    ),
+                )
+                Text(
+                    text = entree.contexte,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        color = theme.muted,
+                    ),
+                )
+            }
+            Icon(
+                imageVector = LucideDemo.Trash,
+                contentDescription = null,
+                tint = theme.muted,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.outline.copy(alpha = 0.6f)))
+    }
+}
+
+/** Un message centré, avec un lien quand il y a une action à proposer. */
+@Composable
+private fun MessageCentre(theme: Theme, titre: String, corps: String, lien: String? = null) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = titre,
+            style = TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = theme.ink,
+            ),
+        )
+        Text(
+            text = corps,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = theme.muted,
+            ),
+        )
+        if (lien != null) {
+            Text(
+                text = lien,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = theme.ink,
+                ),
+            )
+        }
+    }
+}
+
+/**
+ * La suppression demande confirmation. Le rouge est la seule couleur saturée que
+ * l'identité autorise hors des niveaux : il signifie « irréversible », jamais
+ * « décoration ».
+ */
+@Composable
+private fun DialogueSuppression(theme: Theme, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .width(310.dp)
+            .background(theme.paper, RoundedCornerShape(16.dp))
+            .border(1.dp, theme.outline, RoundedCornerShape(16.dp))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "Supprimer « stood » ?",
+            style = TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                color = theme.ink,
+            ),
+        )
+        Text(
+            text = "L'entrée quitte le vocabulaire. Le mot peut être enregistré de nouveau " +
+                "en le touchant dans le livre.",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontSize = 12.sp,
+                lineHeight = 18.sp,
+                color = theme.muted,
+            ),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            Text(
+                text = "Annuler",
+                modifier = Modifier.padding(end = 20.dp),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = theme.ink,
+                ),
+            )
+            Text(
+                text = "Supprimer",
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFB3261E),
+                ),
+            )
+        }
     }
 }
 
@@ -1993,7 +2397,11 @@ private fun EcranBibliotheque(theme: Theme, etat: EtatEcran) {
 
 /** Le champ de recherche (issue #173) : une surface, la loupe, et rien de plus. */
 @Composable
-private fun ChampRecherche(theme: Theme) {
+private fun ChampRecherche(
+    theme: Theme,
+    placeholder: String = "Rechercher un titre",
+    query: String? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2010,11 +2418,11 @@ private fun ChampRecherche(theme: Theme) {
             modifier = Modifier.size(18.dp),
         )
         Text(
-            text = "Rechercher un titre",
+            text = query ?: placeholder,
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
-                color = theme.muted,
+                color = if (query != null) theme.ink else theme.muted,
             ),
         )
     }
