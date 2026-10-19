@@ -167,8 +167,9 @@ class AppSemanticsTest {
         openBook()
         onNodeWithText("Next page").performClick()
         awaitPage(2)
-        // Persisting runs off the UI thread; wait for it before leaving the book.
-        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { library.savedOffset() != null }
+        // Opening records the first page and the turn records the second,
+        // both off the UI thread; wait for the second before leaving the book.
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { (library.savedOffset() ?: 0) > 0 }
 
         onNodeWithText("Library").performClick()
         openBook()
@@ -1367,14 +1368,14 @@ internal class InMemoryLibrary : BookLibrary {
     private val lastRead = mutableMapOf<String, Long>()
     private var reads = 0L
 
-    override fun books(): List<Book> = stored
+    @Synchronized override fun books(): List<Book> = stored
 
-    override fun listing(): LibraryListing = LibraryListing.of(
+    @Synchronized override fun listing(): LibraryListing = LibraryListing.of(
         books = stored,
         lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
     )
 
-    override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
+    @Synchronized override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
         val book = Book(
             id = "b${stored.size + 1}",
             title = "The Lantern Keeper",
@@ -1386,7 +1387,7 @@ internal class InMemoryLibrary : BookLibrary {
         return book
     }
 
-    override fun open(id: String): ReadingSession? {
+    @Synchronized override fun open(id: String): ReadingSession? {
         val book = stored.firstOrNull { it.id == id } ?: return null
         return ReadingSession(
             book = book,
@@ -1395,21 +1396,23 @@ internal class InMemoryLibrary : BookLibrary {
         )
     }
 
-    override fun delete(id: String) {
+    @Synchronized override fun delete(id: String) {
         stored = stored.filterNot { book -> book.id == id }
         positions.remove(id)
         lastRead.remove(id)
     }
 
-    override fun position(bookId: String): ReadingPosition? = positions[bookId]?.let { ReadingPosition(bookId, it) }
+    @Synchronized
+    override fun position(bookId: String): ReadingPosition? =
+        positions[bookId]?.let { offset -> ReadingPosition(bookId, offset) }
 
-    override fun savePosition(position: ReadingPosition) {
+    @Synchronized override fun savePosition(position: ReadingPosition) {
         positions[position.bookId] = position.offset
         lastRead[position.bookId] = ++reads
     }
 
     /** The last offset written, so a test can wait for the asynchronous save. */
-    fun savedOffset(): Int? = positions.values.firstOrNull()
+    @Synchronized fun savedOffset(): Int? = positions.values.firstOrNull()
 
     /** Enough paragraphs to span several pages at any test viewport. */
     private fun longText(book: Book): StructuredText = StructuredText(
