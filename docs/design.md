@@ -7,10 +7,6 @@ The mockups this document records are on the `prototype/visual-identity` branch,
 `docs/prototype/visual-identity/`; each image answers one question and is named after it. They
 are throwaway; the decisions are here.
 
-This document replaces `docs/ux-design-specification.md` and `docs/ux-design-directions.html`,
-which described an abandoned web-first stack (React, Tailwind, shadcn) and had drifted into
-being cited for rules the app no longer follows.
-
 ## 1. The identity in one line
 
 **Ink on paper, and the only saturated colours are the ones that mean something.**
@@ -32,9 +28,9 @@ An **App theme** is one of three (ADR-0036). Each is a paper and an ink:
 
 | Theme | Paper (background) | Surface (cards, sheets, panels) | Ink | Muted |
 | ----- | ------------------ | ------------------------------- | --- | ----- |
-| Light — "papier" | `#FAF7F2` | `#F3EEE6` | `#1C1A17` | `#6B6357` |
-| Dark — "nuit chaude" | `#15130F` | `#1F1C17` | `#E8E2D8` | `#9A9083` |
-| Sepia — "papier chiffon" | `#F6ECD8` | `#EFE3C9` | `#3B2F1E` | `#6B5B41` |
+| Light — paper | `#FAF7F2` | `#F3EEE6` | `#1C1A17` | `#6B6357` |
+| Dark — warm night | `#15130F` | `#1F1C17` | `#E8E2D8` | `#9A9083` |
+| Sepia — rag paper | `#F6ECD8` | `#EFE3C9` | `#3B2F1E` | `#6B5B41` |
 
 The separator between surfaces is `#D6CCBC` on Light, `#3A342B` on Dark and `#D8C7A6` on Sepia.
 
@@ -100,8 +96,8 @@ Two voices, and they never swap roles.
 - **Interface** — everything the app says. The platform's sans-serif. No bundled font: a shipped
   face is a new artefact with its own licence notice, and it buys what the platform already gives.
 
-One deliberate borrowing: a **screen title** is set in the reading serif — "Bibliothèque",
-"Vocabulaire", "Réglages", and the word at the top of the lookup panel. The app's own headings
+One deliberate borrowing: a **screen title** is set in the reading serif — "Library",
+"Vocabulary", "Settings", and the word at the top of the lookup panel. The app's own headings
 sound like a book's headings. Every other piece of interface text is sans.
 
 The scale actually used, and nothing else:
@@ -151,15 +147,15 @@ Three sections, and no fourth:
 
 | Section | What it is for | Icon |
 | ------- | -------------- | ---- |
-| **Bibliothèque** | the books, progress, search, import | `book-open` |
-| **Vocabulaire** | the words the reader saved | `bookmark` |
-| **Réglages** | everything else: appearance, languages, provider, vault | `settings` |
+| **Library** | the books, progress, search, import | `book-open` |
+| **Vocabulary** | the words the reader saved | `bookmark` |
+| **Settings** | everything else: appearance, languages, provider, vault | `settings` |
 
 - **Import is not a section.** It is the Library's action, written as a word beside the title, and
   as a filled button in the empty state. A tab that opens a file picker is not a place.
 - **The reader leaves the shell** and is full-screen. Its chrome is two bands, 48 dp and 64 dp,
   and a tap on the middle third hides both.
-- **Languages and Appearance are entries inside Réglages**, not sections (ADR-0034, ADR-0036).
+- **Languages and Appearance are entries inside Settings**, not sections (ADR-0034, ADR-0036).
 - **The back stack is real**, and Android's back button walks it. Today it is a single `when` over
   a sealed destination with no history, and back leaves the app from anywhere: that is a defect,
   not a choice.
@@ -172,9 +168,9 @@ Three sections, and no fourth:
 
 Each screen below is one row of what it shows, and one note on what it must not do.
 
-### 7.1 Bibliothèque
+### 7.1 Library
 
-`Bibliothèque` (serif) · `Importer` (word) · search field · rows · bottom navigation.
+`Library` (serif) · `Import` (word) · `Search` · rows · bottom navigation.
 
 A row is a **language vignette** (44 × 60), the title, a line of `FORMAT · 28 %`, and a **3 dp
 progress rule**. There are **no covers**: a `Book` carries a title, a language, a format and a
@@ -192,14 +188,15 @@ the empty message; a failed import is a bordered block in the list, with a way t
 `arrow-left` · book title · `Aa` | the page | `‹` · position · `›`.
 
 The chevrons are not buttons: they *show* the three tap zones (previous third, chrome third, next
-third). The position reads `Page 99 sur 357`; it gains the chapter when chapters exist (#176).
+third). The position reads `Page 99 of 357`; it gains the chapter when chapters exist (#176).
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
 label (#176).
 
-The **`Aa` panel** sets the face, the size and the margins, and previews live: there is no button
-to confirm a reading preference. The App theme is **not** here — it recolours the app, not the
-book, and it lives in Réglages ▸ Apparence (ADR-0035, ADR-0036).
+The **`Aa` panel** (`Text face`, `Text size`, `Margins`: `Serif`/`Sans-serif`,
+`Narrow`/`Comfortable`/`Wide`) sets the face, the size and the margins, and previews live: there
+is no button to confirm a reading preference. The App theme is **not** here — it recolours the
+app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
 
 ### 7.3 The lookup panel
 
@@ -210,35 +207,38 @@ A **word**: the word in the serif, its part of speech and pronunciation, the spe
 action; then the senses with their translation; then the level; then the external references as a
 muted line.
 
-**There is no Save button.** The level *is* the save: one tap on a level chip stores the word at
+**There is no Save button.** The level (`Mastery`) *is* the save: one tap on a level chip stores the word at
 that level, which is one gesture for one intention. The chips show the number and the colour, and
 the current level's **name** stands beside them, so the numbers never need a legend.
 
 There are **no dictionary tabs**. The app has one offline dictionary and four external references
 that leave the app; presenting them as tabs would promise a symmetry that does not exist.
 
-**States**: a missing dictionary still allows the save, and says so; a phrase with no provider
+**States**: a missing dictionary still allows the save, and says so
+(`The offline dictionary isn't installed yet.`); a phrase with no provider
 explains that a phrase needs an AI while a word does not, and offers the settings link; a failure
 is a sentence inside the panel, never a dialogue over the reader.
 
-### 7.4 Vocabulaire
+### 7.4 Vocabulary
 
-`Vocabulaire` (serif) · `128 mots` · search · level filters · rows · bottom navigation.
+`Vocabulary` (serif) · `128 words` · `Search` · level filters · rows · bottom navigation.
 
 A row is the **word in the serif** — it is the word as the book printed it — then its colour-dotted
 level and name, its translation, and the sentence it came from. The delete is a muted **trash
 icon**, and it **confirms**: a list with no undo does not get to delete on a mis-tap.
 
-**Empty and no-results are different states.** One says how words arrive; the other names the
-search and offers to clear it. The filter row scrolls, and a partially cut chip is what says so.
+**Empty and no-results are different states.** One says how words arrive (`No words saved yet —
+tap a word while reading to save it`); the other names the search (`No words match "princesse".`)
+and offers to clear it. The filter row scrolls — `All levels`, then the five levels by name — and
+a partially cut chip is what says so.
 
 Tapping a row does nothing today; it should open the word panel so a level can be revised outside
 the reader (#178).
 
-### 7.5 Réglages
+### 7.5 Settings
 
 An **index**, not a form: a row per area, with its current value underneath, grouped in the
-sentence-case labels *Lecture*, *Données*, *Application*.
+sentence-case labels *Reading*, *Data*, *Application*.
 
 The provider's API key and the WebDAV server are **screens of their own**, not two forms buried
 mid-page. Their fields read like a printed form — the label in small muted type, the value under
@@ -248,16 +248,16 @@ The rules for a form: **one filled button per screen**; everything reversible ap
 with no confirmation, and something that costs a network call or writes a secret gets an explicit
 action; anything irreversible is written in red.
 
-### 7.6 Apparence, Langues, Fournisseur IA, Coffre et synchronisation
+### 7.6 Appearance, Languages, LLM provider, Vault and sync
 
-- **Apparence** — the four theme entries, each *shown on its own paper*: a 48 × 34 preview with two
+- **Appearance** — the four theme entries, each *shown on its own paper*: a 48 × 34 preview with two
   lines of ink, System split down the middle. A theme is chosen by looking at it.
-- **Langues** — one row per **Reading language**, its state (difficulty table, dictionary pack) and
-  the download action when one is missing.
-- **Fournisseur IA** — provider, key, model. The key is masked with a reveal, and the screen says
+- **Languages** — one row per **Reading language**, its state (word-difficulty data, offline
+  dictionary) and the download action when one is missing.
+- **LLM provider** — provider, key, model. The key is masked with a reveal, and the screen says
   where it is stored: the device's keychain, never the vault.
-- **Coffre et synchronisation** — export and import; then the server, the user, the application
-  password, the state ("Synchronisé il y a 2 min · 3 appareils") and the actions. The vault is
+- **Vault and sync** — export and import; then the server, the user, the application
+  password, the state ("Sync is on.") and the actions. The vault is
   **app-private** (ADR-0010): there is no folder to choose, and a "change location" control would
   describe an app that does not exist.
 
