@@ -7,6 +7,7 @@ import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportException
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ImportStage
+import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
 import app.lekto.text.AppMessage
@@ -20,6 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /**
  * The library controller: imports run off the main thread, progress reaches the
@@ -27,6 +29,7 @@ import kotlin.test.assertTrue
  * usable afterwards (issue #15).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("TooManyFunctions") // One test per behaviour; the list is the controller's.
 class LibraryControllerTest {
 
     @Test
@@ -100,6 +103,25 @@ class LibraryControllerTest {
         advanceUntilIdle()
 
         assertEquals(listOf("b1"), controller.state.value.books.map { book -> book.id })
+    }
+
+    @Test
+    fun aRefreshPicksUpTheReadingOrderFromTheVault() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1"))
+            recognize(book("b2"))
+            markRead("b2")
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        // Reading b1 later, outside the controller, moves it to the front on the
+        // next refresh — what the app does when the reader hands back (issue #188).
+        library.markRead("b1")
+        controller.refresh()
+        advanceUntilIdle()
+
+        assertEquals(listOf("b1", "b2"), controller.state.value.listing.lastRead.map { stored -> stored.id })
+        assertEquals(emptyList(), controller.state.value.listing.others)
     }
 
     @Test
@@ -186,8 +208,20 @@ private class FakeLibrary(
 ) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
+    private val lastRead = mutableMapOf<String, Long>()
+    private var reads = 0L
 
     override fun books(): List<Book> = stored
+
+    override fun listing(): LibraryListing = LibraryListing.of(
+        books = stored,
+        lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
+    )
+
+    /** Test hook: pretend the book's reading position last moved after the others. */
+    fun markRead(bookId: String) {
+        lastRead[bookId] = ++reads
+    }
 
     /** Test hook: pretend the vault now holds [book], as a restored import would. */
     fun recognize(book: Book) {

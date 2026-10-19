@@ -16,6 +16,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
+import app.lekto.core.book.LibraryListing
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
@@ -30,6 +31,7 @@ import kotlin.test.assertTrue
  * #131).
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One test per behaviour; the list is the screen's.
 class LibraryScreenSemanticsTest {
 
     private val book = Book(
@@ -39,6 +41,38 @@ class LibraryScreenSemanticsTest {
         format = BookFormat.EPUB,
         fileName = "lantern.epub",
     )
+
+    private val otherBook = Book(
+        id = "b2",
+        title = "A Smaller Book",
+        language = "en",
+        format = BookFormat.TXT,
+        fileName = "smaller.txt",
+    )
+
+    @Test
+    fun theContinueReadingSectionLeadsTheTitleList() = runComposeUiTest {
+        setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
+                ),
+            )
+        }
+
+        onNodeWithText("Continue reading").assertIsDisplayed()
+        val lastRead = onNodeWithText(book.title).getBoundsInRoot()
+        val other = onNodeWithText(otherBook.title).getBoundsInRoot()
+        assertTrue(lastRead.top < other.top, "the recently read book must lead: $lastRead vs $other")
+    }
+
+    @Test
+    fun theContinueReadingHeadingIsAbsentUntilABookIsRead() = runComposeUiTest {
+        setContent { Library(books(book)) }
+
+        onNodeWithText("Continue reading").assertDoesNotExist()
+        onNodeWithText(book.title).assertIsDisplayed()
+    }
 
     @Test
     fun showsTheEmptyStateUntilABookExists() = runComposeUiTest {
@@ -50,7 +84,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun listsBooksAndOpensTheTappedOne() = runComposeUiTest {
         var opened: Book? = null
-        setContent { Library(LibraryUiState(books = listOf(book)), onOpen = { opened = it }) }
+        setContent { Library(books(book), onOpen = { opened = it }) }
 
         onNodeWithText("The Lantern Keeper").assertIsDisplayed()
         onNodeWithText("The Lantern Keeper").performClick()
@@ -91,7 +125,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun theDeleteActionAsksForConfirmationBeforeDeleting() = runComposeUiTest {
         var deleted: Book? = null
-        setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+        setContent { Library(books(book), onDelete = { deleted = it }) }
 
         onNodeWithTag(libraryDeleteTag(book.id)).performClick()
 
@@ -103,7 +137,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun confirmingTheDialogDeletesTheBook() = runComposeUiTest {
         var deleted: Book? = null
-        setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+        setContent { Library(books(book), onDelete = { deleted = it }) }
 
         onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
@@ -114,7 +148,7 @@ class LibraryScreenSemanticsTest {
     @Test
     fun cancellingTheDialogLeavesTheBook() = runComposeUiTest {
         var deleted: Book? = null
-        setContent { Library(LibraryUiState(books = listOf(book)), onDelete = { deleted = it }) }
+        setContent { Library(books(book), onDelete = { deleted = it }) }
 
         onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
@@ -141,6 +175,10 @@ class LibraryScreenSemanticsTest {
         val height = settings.bottom - settings.top
         assertTrue(height < 80.dp, "the nav label must stay on one line: $height")
     }
+
+    /** A state whose books are all unread, so only the title list shows. */
+    private fun books(vararg books: Book): LibraryUiState =
+        LibraryUiState(listing = LibraryListing(others = books.toList()))
 
     @Composable
     private fun Library(

@@ -4,6 +4,7 @@ import app.lekto.LocalChanges
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ImportProgress
+import app.lekto.core.book.LibraryListing
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,17 +16,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * What the library screen shows. The screen renders this and nothing else, so
  * every state — empty, importing, failed — is directly testable.
+ *
+ * [listing] is the split the vault hands over: the recently read books first,
+ * then the rest by title (issue #188).
  */
 data class LibraryUiState(
-    val books: List<Book> = emptyList(),
+    val listing: LibraryListing = LibraryListing(),
     val importing: Boolean = false,
     val progress: Float = 0f,
     val error: AppMessage? = null,
-)
+) {
+    /** Every listed book, in the order the screen shows them. */
+    val books: List<Book> get() = listing.lastRead + listing.others
+}
 
 /**
  * The library's state holder: it lists the vault's books, runs imports off the
@@ -45,7 +54,8 @@ class LibraryController(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
 ) {
 
-    private val _state = MutableStateFlow(LibraryUiState(books = library.books()))
+    private val _state = MutableStateFlow(LibraryUiState(listing = library.listing()))
+    private val refreshMutex = Mutex()
     val state: StateFlow<LibraryUiState> = _state.asStateFlow()
 
     /** Imports [bytes] as [fileName], reporting progress and catching failure. */
@@ -58,7 +68,7 @@ class LibraryController(
                 library.import(fileName, bytes) { progress -> report(progress) }
                 changes.contentChanged()
                 _state.update { current ->
-                    current.copy(books = library.books(), importing = false, progress = 1f, error = null)
+                    current.copy(listing = library.listing(), importing = false, progress = 1f, error = null)
                 }
             } catch (failure: Exception) { // Any import failure must surface as a message, not a crash.
                 _state.update { current ->
@@ -86,7 +96,7 @@ class LibraryController(
             try {
                 library.delete(bookId)
                 changes.contentChanged()
-                _state.update { current -> current.copy(books = library.books(), error = null) }
+                _state.update { current -> current.copy(listing = library.listing(), error = null) }
             } catch (failure: Exception) { // Any delete failure must surface as a message, not a crash.
                 _state.update { current ->
                     current.copy(error = AppMessage.failure(failure, TextKey.MESSAGE_BOOK_DELETE_FAILED))
@@ -97,13 +107,20 @@ class LibraryController(
 
     /**
      * Re-reads the vault's books. Called after a vault import replaces the store
-     * (issue #20), so the library shows the restored books rather than the ones
-     * it listed before.
+     * (issue #20) so the library shows the restored books rather than the ones it
+     * listed before, and when the reader returns (issue #188) so the book just
+     * read leads the list.
+     *
+     * Refreshes are serialised: a read that started earlier must not land after
+     * a later one, or a page turn still being written would reorder the list
+     * from a stale snapshot (issue #188).
      */
     fun refresh() {
         scope.launch {
-            val books = library.books()
-            _state.update { current -> current.copy(books = books) }
+            refreshMutex.withLock {
+                val listing = library.listing()
+                _state.update { current -> current.copy(listing = listing) }
+            }
         }
     }
 

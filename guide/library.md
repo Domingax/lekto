@@ -1,10 +1,17 @@
 # Library
 
-The **Library** is the list of **Books** in your **Vault**, ordered by title. It
-is the app's starting screen and the way back from a reading session, on Android
-and on desktop alike.
+The **Library** is the list of **Books** in your **Vault**. It is the app's
+starting screen and the way back from a reading session, on Android and on
+desktop alike.
 
 ## What you see
+
+The three books you read most recently lead the list, under **Continue
+reading**, the most recent first. A book joins that section as soon as you turn
+a page in it, and turning back to its first page does not remove it. Below them,
+every other book — including one you have not opened yet — is listed by title.
+When you have not read anything yet, there is no section: the list is just your
+books, by title.
 
 Each row is one book, showing its title, its format and its file name. A Library
 with no books yet says so and points you at **Import**, the button at the bottom
