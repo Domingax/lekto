@@ -189,6 +189,13 @@ A **Finished** book reads `FORMAT · Finished` with a check and carries **no pro
 declaration is not a percentage, and a book read to the end may have been reread or skipped
 (ADR-0038).
 
+The `Search` field sits under the title, always visible, and hides while the vault holds no book.
+It matches the title alone — a case- and accent-insensitive substring of the trimmed query —
+because a book found by a string its row does not show, its file name or its language, reads as a
+mistake (#173). An empty query leaves the list exactly as it is. A non-empty query flattens it: no
+`Continue reading` heading, every match by title. The query is **view state** too: it is cleared on
+leaving the Library, survives backgrounding, and never reaches the **Vault**.
+
 Under `Search` sits one row of filter chips once the vault has a book: `Unread`, `In progress`,
 `Finished`. They are **multi-select**, and the Library opens with **Unread and In progress**
 selected: the shelf shows what is still to read, not the books already finished. Tapping
@@ -200,8 +207,9 @@ resets to Unread and In progress when the app restarts. It is never written to t
 The three most recently read unfinished books lead under the `Continue reading` heading, most
 recent first; then every other listed book by title. A finished book is never in the leading group,
 even if it was the last book read, because that group is for books the reader can continue
-(ADR-0038). The leading group is hidden when it is empty. Search and this filter are still to
-build (#173, #175).
+(ADR-0038). The leading group is hidden when it is empty. A query narrows the shelf in one more
+step, not instead of the filter: the two apply together, so a book the filter hides stays hidden by
+a query that matches it, and `Show all books` clears both (#173, #200).
 
 **States**: an empty vault says what to do and carries the action. A Library whose filter matches
 nothing says why — "All your books are finished." with `Show all books`, or "No books in this

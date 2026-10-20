@@ -103,10 +103,10 @@ progress and surfaces failure rather than blocking.
 _Avoid_: Scan, upload, add
 
 **Library**:
-The view of the vault's books, narrowed by **Reading state** and ordered with the three
-most recently read unfinished books first, most recent first, then every other listed book
-by title. It opens on **Unread** and **In progress**; the reader may add **Finished**. It is
-the app's starting screen and the way back from a reading session. Distinct from the
+The view of the vault's books, narrowed by **Reading state** and by a title query, and ordered
+with the three most recently read unfinished books first, most recent first, then every other
+listed book by title. It opens on **Unread** and **In progress**; the reader may add **Finished**.
+It is the app's starting screen and the way back from a reading session. Distinct from the
 **Vault**, which is the storage it reads: the library is the view, not the store.
 _Avoid_: Shelf, collection
 
