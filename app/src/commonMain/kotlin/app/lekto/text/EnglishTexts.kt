@@ -24,6 +24,8 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.CLOSE to "Close",
     TextKey.SHOW to "Show",
     TextKey.HIDE to "Hide",
+    TextKey.SEARCH to "Search",
+    TextKey.CLEAR_SEARCH to "Clear search",
 
     // Platform file dialogs.
     TextKey.PICK_BOOK_TITLE to "Import a book",
@@ -41,10 +43,10 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.DELETE_BOOK_TITLE to "Delete « {0} »?",
     TextKey.DELETE_BOOK_MESSAGE to "This cannot be undone.",
     TextKey.ERROR_DETAIL to "Error: {0}",
+    TextKey.NO_BOOKS_MATCH_QUERY to "No books match \"{0}\".",
 
     // Vocabulary.
     TextKey.VOCABULARY_EMPTY to "No words saved yet — tap a word while reading to save it",
-    TextKey.SEARCH to "Search",
     TextKey.ALL_LEVELS to "All levels",
     TextKey.MASTERY_UNKNOWN to "Unknown",
     TextKey.MASTERY_RECOGNIZED to "Recognized",

@@ -8,10 +8,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
@@ -158,6 +160,75 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
+    fun theSearchFieldIsHiddenUntilTheVaultHoldsABook() = runComposeUiTest {
+        setContent { Library(LibraryUiState()) }
+
+        onNodeWithTag(LIBRARY_SEARCH_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun typingInTheFieldRaisesTheQuery() = runComposeUiTest {
+        var query: String? = null
+        setContent { Library(books(book), onSearch = { typed -> query = typed }) }
+
+        // The label names the field for a screen reader, and the field waits to be
+        // asked rather than taking focus on arrival.
+        onNodeWithText("Search").assertIsDisplayed()
+        onNodeWithTag(LIBRARY_SEARCH_TAG).assertIsNotFocused()
+
+        onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput("lant")
+
+        kotlin.test.assertEquals("lant", query)
+    }
+
+    @Test
+    fun aQueryShowsOnlyItsMatchesAndDropsTheContinueReadingHeading() = runComposeUiTest {
+        setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
+                    query = "smaller",
+                ),
+            )
+        }
+
+        onNodeWithText(otherBook.title).assertIsDisplayed()
+        onNodeWithText(book.title).assertDoesNotExist()
+        onNodeWithText("Continue reading").assertDoesNotExist()
+    }
+
+    @Test
+    fun noMatchNamesTheQueryBackAndOffersToClearIt() = runComposeUiTest {
+        var cleared = false
+        setContent {
+            Library(
+                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "zzz"),
+                onClearSearch = { cleared = true },
+            )
+        }
+
+        onNodeWithText("No books match \"zzz\".").assertIsDisplayed()
+        onNodeWithText("Clear search").performClick()
+
+        kotlin.test.assertTrue(cleared)
+    }
+
+    @Test
+    fun theFieldClearActionEmptiesTheQuery() = runComposeUiTest {
+        var cleared = false
+        setContent {
+            Library(
+                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "lan"),
+                onClearSearch = { cleared = true },
+            )
+        }
+
+        onNodeWithTag(LIBRARY_SEARCH_CLEAR_TAG).performClick()
+
+        kotlin.test.assertTrue(cleared)
+    }
+
+    @Test
     fun theHeaderKeepsItsNavigationReadableInFrench() = runComposeUiTest {
         // The French title is wider than the English one, so on a phone the
         // navigation cannot share its line: it must wrap below, not be squeezed
@@ -181,11 +252,14 @@ class LibraryScreenSemanticsTest {
         LibraryUiState(listing = LibraryListing(others = books.toList()))
 
     @Composable
+    @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.
     private fun Library(
         state: LibraryUiState,
         onOpen: (Book) -> Unit = {},
         onDelete: (Book) -> Unit = {},
         onDismissError: () -> Unit = {},
+        onSearch: (String) -> Unit = {},
+        onClearSearch: () -> Unit = {},
     ) {
         MaterialTheme {
             LibraryScreen(
@@ -194,6 +268,8 @@ class LibraryScreenSemanticsTest {
                     onOpen = onOpen,
                     onDelete = onDelete,
                     onDismissError = onDismissError,
+                    onSearch = onSearch,
+                    onClearSearch = onClearSearch,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )

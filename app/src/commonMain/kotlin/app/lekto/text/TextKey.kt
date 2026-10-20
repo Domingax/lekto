@@ -27,6 +27,12 @@ enum class TextKey {
     SHOW,
     HIDE,
 
+    /** The label a search field carries, on the Library and on Vocabulary. */
+    SEARCH,
+
+    /** The action that empties a search field. */
+    CLEAR_SEARCH,
+
     // Platform file dialogs (the native chrome a reader sees on desktop).
     PICK_BOOK_TITLE,
     BOOKS_FILTER,
@@ -43,10 +49,10 @@ enum class TextKey {
     DELETE_BOOK_TITLE,
     DELETE_BOOK_MESSAGE,
     ERROR_DETAIL,
+    NO_BOOKS_MATCH_QUERY,
 
     // Vocabulary.
     VOCABULARY_EMPTY,
-    SEARCH,
     ALL_LEVELS,
     MASTERY_UNKNOWN,
     MASTERY_RECOGNIZED,

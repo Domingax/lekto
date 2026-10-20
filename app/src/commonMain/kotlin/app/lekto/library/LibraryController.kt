@@ -21,19 +21,44 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * What the library screen shows. The screen renders this and nothing else, so
- * every state — empty, importing, failed — is directly testable.
+ * every state — empty, importing, failed, searching — is directly testable.
  *
  * [listing] is the split the vault hands over: the recently read books first,
- * then the rest by title (issue #188).
+ * then the rest by title (issue #188). [query] is the reader's title search, view
+ * state that never reaches the vault (issue #173).
  */
 data class LibraryUiState(
     val listing: LibraryListing = LibraryListing(),
+    val query: String = "",
     val importing: Boolean = false,
     val progress: Float = 0f,
     val error: AppMessage? = null,
 ) {
-    /** Every listed book, in the order the screen shows them. */
+    /**
+     * Every book the vault lists, in the order it hands them over. Stays the whole
+     * set whatever the query says: it is what the Languages surface counts, and a
+     * search must not narrow it (issue #173).
+     */
     val books: List<Book> get() = listing.lastRead + listing.others
+
+    /**
+     * The books the screen shows: the query's matches when it has one, else the
+     * vault's listing unchanged.
+     */
+    val visibleBooks: List<Book> get() = listing.matching(query)
+
+    /** Whether a query narrows the list, so the screen drops the `Continue reading` split. */
+    val searching: Boolean get() = query.isNotBlank()
+
+    /**
+     * Whether the vault holds no book at all — a query cannot have emptied it.
+     *
+     * It reads the vault's own listing, not a narrowed view: when the
+     * **Reading state** filter lands (#200), the state must keep this reading of
+     * the whole vault rather than of the filtered list, or a filter that hides
+     * every book would hide the search field too.
+     */
+    val vaultEmpty: Boolean get() = listing.lastRead.isEmpty() && listing.others.isEmpty()
 }
 
 /**
@@ -81,6 +106,20 @@ class LibraryController(
     /** Dismisses the current error, so the app stays usable after a failure. */
     fun dismissError() {
         _state.update { current -> current.copy(error = null) }
+    }
+
+    /**
+     * Narrows the list to the books whose title matches [query] (issue #173).
+     * The query is view state: it never reaches the vault, and the controller
+     * clears it when the reader leaves the Library.
+     */
+    fun search(query: String) {
+        _state.update { current -> current.copy(query = query) }
+    }
+
+    /** Empties the query, restoring the vault's own listing (issue #173). */
+    fun clearSearch() {
+        search("")
     }
 
     /**
