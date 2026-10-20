@@ -440,8 +440,11 @@ private fun AppScreens(
     // position lands while it is shown: a page turned just before leaving must
     // still lead the list, even if its write had not reached the vault yet
     // (CONTEXT.md, "Last read"; issue #188).
+    //
+    // The search query goes the other way: it is view state that lives only as
+    // long as the screen, so leaving clears it (issue #173).
     LaunchedEffect(destination) {
-        if (destination is Destination.Library) controller.refresh()
+        if (destination is Destination.Library) controller.refresh() else controller.clearSearch()
     }
     LaunchedEffect(controller, changes) {
         changes.progress.collect { if (destination is Destination.Library) controller.refresh() }
@@ -837,6 +840,8 @@ private fun libraryActions(
     },
     onDelete = { book -> controller.delete(book.id) },
     onDismissError = controller::dismissError,
+    onSearch = controller::search,
+    onClearSearch = controller::clearSearch,
     onOpenSettings = navigation.onOpenSettings,
     onOpenVocabulary = navigation.onOpenVocabulary,
     onOpenLanguages = navigation.onOpenLanguages,

@@ -4,8 +4,9 @@ import app.lekto.core.book.Book
 
 /**
  * The actions the library screen raises: import, open a book, delete a book,
- * dismiss a failure. Bundled so the screen's signature stays small as more
- * actions arrive.
+ * dismiss a failure, narrow the list by a title query and clear that query
+ * (issue #173). Bundled so the screen's signature stays small as more actions
+ * arrive.
  */
 data class LibraryActions(
     val onImport: () -> Unit = {},
@@ -15,4 +16,6 @@ data class LibraryActions(
     val onOpenSettings: () -> Unit = {},
     val onOpenVocabulary: () -> Unit = {},
     val onOpenLanguages: () -> Unit = {},
+    val onSearch: (String) -> Unit = {},
+    val onClearSearch: () -> Unit = {},
 )

@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -140,6 +141,51 @@ class LibraryControllerTest {
     }
 
     @Test
+    fun aQueryNarrowsTheListedBooksAndFlagsTheSearch() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1", "The Lantern Keeper"))
+            recognize(book("b2", "A Smaller Book"))
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        controller.search("small")
+
+        assertEquals(listOf("b2"), controller.state.value.visibleBooks.map { listed -> listed.id })
+        assertTrue(controller.state.value.searching)
+    }
+
+    @Test
+    fun clearingTheSearchRestoresTheWholeList() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1", "The Lantern Keeper"))
+            recognize(book("b2", "A Smaller Book"))
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        controller.search("small")
+
+        controller.clearSearch()
+
+        assertEquals(listOf("b2", "b1"), controller.state.value.visibleBooks.map { listed -> listed.id })
+        assertFalse(controller.state.value.searching)
+    }
+
+    @Test
+    fun aRefreshKeepsTheQueryTheReaderTyped() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1", "The Lantern Keeper"))
+            recognize(book("b2", "A Smaller Book"))
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        controller.search("small")
+
+        controller.refresh()
+        advanceUntilIdle()
+
+        assertEquals("small", controller.state.value.query)
+        assertEquals(listOf("b2"), controller.state.value.visibleBooks.map { listed -> listed.id })
+    }
+
+    @Test
     fun deletingABookRemovesItFromTheList() = runTest {
         val library = FakeLibrary().apply { recognize(book("b1")) }
         val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
@@ -195,8 +241,9 @@ class LibraryControllerTest {
     }
 }
 
-/** A book with [id], so a controller test has something to list and delete. */
-private fun book(id: String): Book = Book(id, "Lantern", "en", BookFormat.TXT, "lantern.txt")
+/** A book with [id] and [title], so a controller test has something to list and delete. */
+private fun book(id: String, title: String = "Lantern"): Book =
+    Book(id, title, "en", BookFormat.TXT, "${title.lowercase().replace(' ', '-')}.txt")
 
 /** The progress the fake import reports mid-way, below the final 1.0. */
 private const val REPORTED_PROGRESS = 0.4f

@@ -4,7 +4,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
@@ -22,6 +24,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.AnnotatedString
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -73,6 +76,7 @@ import app.lekto.language.languageLevelClearTag
 import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
+import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
@@ -220,6 +224,52 @@ class AppSemanticsTest {
             compose.onAllNodesWithText("Continue reading").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Continue reading").assertIsDisplayed()
+    }
+
+    @Test
+    fun leavingTheLibraryClearsTheSearch() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library)) }
+
+        compose.onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput("zzz")
+        compose.onNodeWithText("No books match \"zzz\".").assertIsDisplayed()
+
+        // The query is view state, so it lives no longer than the screen (issue #173).
+        compose.onNodeWithText("Vocabulary").performClick()
+        compose.onNodeWithText("Library").performClick()
+
+        compose.onNodeWithText("No books match \"zzz\".").assertDoesNotExist()
+        compose.onNodeWithText("The Lantern Keeper").assertIsDisplayed()
+    }
+
+    @Test
+    fun leavingTheLibraryForSettingsOrLanguagesClearsTheSearch() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library)) }
+
+        compose.typeSearch("zzz")
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithText("Library").performClick()
+        compose.onNodeWithText("No books match \"zzz\".").assertDoesNotExist()
+
+        compose.typeSearch("zzz")
+        compose.onNodeWithText("Languages").performClick()
+        compose.onNodeWithText("Back").performClick()
+        compose.onNodeWithText("No books match \"zzz\".").assertDoesNotExist()
+    }
+
+    @Test
+    fun leavingTheLibraryForABookClearsTheSearch() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library)) }
+
+        compose.typeSearch("lantern")
+        compose.openBook()
+        compose.onNodeWithText("Library").performClick()
+
+        compose.onNodeWithTag(LIBRARY_SEARCH_TAG).assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")),
+        )
     }
 
     @Test
@@ -1260,6 +1310,12 @@ private fun ComposeTestRule.openBook() {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
         onAllNodesWithTag(READER_PAGE_TAG).fetchSemanticsNodes().isNotEmpty()
     }
+}
+
+/** Types [query] into the Library's search field, which the screen owns as view state. */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeTestRule.typeSearch(query: String) {
+    onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput(query)
 }
 
 /** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */

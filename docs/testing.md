@@ -115,6 +115,15 @@ including a position at offset 0. The screen's section is
 page turned just before leaving the reader still leads the list, which is the
 refresh the composition root wires.
 
+Searching the Library (issue #173) is a pure match beside that split, so
+`LibrarySearchTest` in `core/commonTest` pins the substring, case and accent
+cases, that the file name and the language never match, the flattening of the two
+groups, and a property over generated titles that the result is exactly the
+case-insensitive title filter in title order. The field, its cleared state and the
+no-match state are `LibraryScreenSemanticsTest` on both lanes, and
+`AppSemanticsTest` proves the query is dropped when the reader leaves the Library
+for a book, Vocabulary, Settings or Languages.
+
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
 record, its original, its derived text and its reading position and leaves a

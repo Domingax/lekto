@@ -8,11 +8,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
@@ -172,6 +174,75 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
+    fun theSearchFieldIsHiddenUntilTheVaultHoldsABook() {
+        compose.setContent { Library(LibraryUiState()) }
+
+        compose.onNodeWithTag(LIBRARY_SEARCH_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun typingInTheFieldRaisesTheQuery() {
+        var query: String? = null
+        compose.setContent { Library(books(book), onSearch = { typed -> query = typed }) }
+
+        // The label names the field for a screen reader, and the field waits to be
+        // asked rather than taking focus on arrival.
+        compose.onNodeWithText("Search").assertIsDisplayed()
+        compose.onNodeWithTag(LIBRARY_SEARCH_TAG).assertIsNotFocused()
+
+        compose.onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput("lant")
+
+        assertEquals("lant", query)
+    }
+
+    @Test
+    fun aQueryShowsOnlyItsMatchesAndDropsTheContinueReadingHeading() {
+        compose.setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
+                    query = "smaller",
+                ),
+            )
+        }
+
+        compose.onNodeWithText(otherBook.title).assertIsDisplayed()
+        compose.onNodeWithText(book.title).assertDoesNotExist()
+        compose.onNodeWithText("Continue reading").assertDoesNotExist()
+    }
+
+    @Test
+    fun noMatchNamesTheQueryBackAndOffersToClearIt() {
+        var cleared = false
+        compose.setContent {
+            Library(
+                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "zzz"),
+                onClearSearch = { cleared = true },
+            )
+        }
+
+        compose.onNodeWithText("No books match \"zzz\".").assertIsDisplayed()
+        compose.onNodeWithText("Clear search").performClick()
+
+        assertTrue(cleared)
+    }
+
+    @Test
+    fun theFieldClearActionEmptiesTheQuery() {
+        var cleared = false
+        compose.setContent {
+            Library(
+                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "lan"),
+                onClearSearch = { cleared = true },
+            )
+        }
+
+        compose.onNodeWithTag(LIBRARY_SEARCH_CLEAR_TAG).performClick()
+
+        assertTrue(cleared)
+    }
+
+    @Test
     fun theHeaderKeepsItsNavigationReadableInFrench() {
         // The French title is wider than the English one, so on a phone the
         // navigation cannot share its line: it must wrap below, not be squeezed
@@ -195,11 +266,14 @@ class LibraryScreenSemanticsTest {
         LibraryUiState(listing = LibraryListing(others = books.toList()))
 
     @Composable
+    @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.
     private fun Library(
         state: LibraryUiState,
         onOpen: (Book) -> Unit = {},
         onDelete: (Book) -> Unit = {},
         onDismissError: () -> Unit = {},
+        onSearch: (String) -> Unit = {},
+        onClearSearch: () -> Unit = {},
     ) {
         MaterialTheme {
             LibraryScreen(
@@ -208,6 +282,8 @@ class LibraryScreenSemanticsTest {
                     onOpen = onOpen,
                     onDelete = onDelete,
                     onDismissError = onDismissError,
+                    onSearch = onSearch,
+                    onClearSearch = onClearSearch,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )

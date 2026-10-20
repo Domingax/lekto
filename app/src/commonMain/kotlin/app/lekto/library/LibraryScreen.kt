@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,14 +39,21 @@ import app.lekto.ui.ConfirmationDialog
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
 
+/** The test tag on the Library's search field (issue #173). */
+internal const val LIBRARY_SEARCH_TAG: String = "library-search"
+
+/** The test tag on the action that empties the search field (issue #173). */
+internal const val LIBRARY_SEARCH_CLEAR_TAG: String = "library-search-clear"
+
 /** The lazy item key of the "Continue reading" heading, which is not a book. */
 private const val CONTINUE_READING_KEY: String = "continue-reading"
 
 /**
- * The library screen: the books in the vault, an Import action, a per-book delete
- * behind a destructive confirmation, and the import's progress and failure inline
- * so neither blocks the list (issues #15, #131; UX spec, "Import in progress —
- * inline progress bar", "AI/import error — inline message", "Dialog").
+ * The library screen: the books in the vault, a title search, an Import action, a
+ * per-book delete behind a destructive confirmation, and the import's progress
+ * and failure inline so neither blocks the list (issues #15, #131, #173; UX spec,
+ * "Import in progress — inline progress bar", "AI/import error — inline message",
+ * "Dialog").
  *
  * The screen renders [state] and raises the [actions]; the only state it owns is
  * the pending confirmation, which is view-local, so the vault is untouched until
@@ -60,15 +68,25 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
         LibraryHeader(actions)
 
+        // A field over an empty vault would search nothing; the empty state keeps
+        // its one sentence and its action (issue #173).
+        if (!state.vaultEmpty) LibrarySearch(state.query, actions.onSearch, actions.onClearSearch)
+
         state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
         if (state.importing) Importing(state.progress)
 
-        if (state.books.isEmpty() && !state.importing) {
-            Text(
-                text = texts[TextKey.LIBRARY_EMPTY],
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 24.dp),
-            )
+        if (state.vaultEmpty) {
+            // Importing the first book shows the progress bar as the state; the
+            // empty sentence would claim there is nothing to wait for.
+            if (!state.importing) {
+                Text(
+                    text = texts[TextKey.LIBRARY_EMPTY],
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+            }
+        } else if (state.visibleBooks.isEmpty()) {
+            LibraryNoMatches(state.query, actions.onClearSearch)
         } else {
             LibraryList(state, onOpen = actions.onOpen, onDelete = { target -> pendingDelete = target })
         }
@@ -93,14 +111,64 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
 }
 
 /**
+ * The title search (issue #173): a labelled field under the title, and a clear
+ * action once there is something to clear. The label is the field's accessible
+ * name, so no placeholder carries it.
+ */
+@Composable
+private fun LibrarySearch(query: String, onSearch: (String) -> Unit, onClearSearch: () -> Unit) {
+    val texts = LocalAppTexts.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onSearch,
+            label = { Text(texts[TextKey.SEARCH]) },
+            singleLine = true,
+            modifier = Modifier.weight(1f).testTag(LIBRARY_SEARCH_TAG),
+        )
+        if (query.isNotEmpty()) {
+            // A cross rather than the words, so the field keeps its width in
+            // French; the description is what a screen reader announces.
+            TextButton(
+                onClick = onClearSearch,
+                modifier = Modifier
+                    .testTag(LIBRARY_SEARCH_CLEAR_TAG)
+                    .semantics { contentDescription = texts[TextKey.CLEAR_SEARCH] },
+            ) { Text("×") }
+        }
+    }
+}
+
+/**
+ * Why the search found nothing: the query is named back, and the reader can
+ * clear it (issue #173). `Show all books` joins it with the reading-state filter
+ * (#200).
+ */
+@Composable
+private fun LibraryNoMatches(query: String, onClearSearch: () -> Unit) {
+    val texts = LocalAppTexts.current
+    Column(Modifier.fillMaxWidth().padding(top = 24.dp)) {
+        Text(
+            text = texts.message(AppMessage.of(TextKey.NO_BOOKS_MATCH_QUERY, query.trim())),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        TextButton(onClick = onClearSearch) { Text(texts[TextKey.CLEAR_SEARCH]) }
+    }
+}
+
+/**
  * The scrollable book list: the recently read books under their heading, then
- * the rest (issue #188). Its own composable so the screen's layout stays short.
+ * the rest (issue #188). A search flattens the two groups, so the heading only
+ * shows while the reader is browsing (issue #173).
  */
 @Composable
 private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
     val texts = LocalAppTexts.current
     LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
-        if (state.listing.lastRead.isNotEmpty()) {
+        if (!state.searching && state.listing.lastRead.isNotEmpty()) {
             item(key = CONTINUE_READING_KEY) {
                 Text(
                     text = texts[TextKey.CONTINUE_READING],
@@ -108,11 +176,8 @@ private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Uni
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
             }
-            items(state.listing.lastRead, key = { book -> book.id }) { book ->
-                BookRow(book, onOpen = onOpen, onDelete = onDelete)
-            }
         }
-        items(state.listing.others, key = { book -> book.id }) { book ->
+        items(state.visibleBooks, key = { book -> book.id }) { book ->
             BookRow(book, onOpen = onOpen, onDelete = onDelete)
         }
     }

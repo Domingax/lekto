@@ -22,6 +22,22 @@ part of the Vault, and your vocabulary and reading progress live in the same
 Vault beside them. For where that data lives and how to move it, see
 [Vault and sync](/vault-and-sync).
 
+## Finding a book
+
+When the Library holds at least one book, a **Search** field sits under the
+title. Type part of a title and the list narrows to the books that contain it:
+matching ignores capitals and accents, so *emile* finds *Émile*. Only titles are
+searched, not file names.
+
+While you are searching, the **Continue reading** section disappears and the
+matches are listed by title. An empty field shows the Library as usual. If
+nothing matches, Lekto names what you typed and offers **Clear search**; the
+cross beside the field clears it too.
+
+The search is a view of your Library, not a setting: leaving the Library — to
+read a book, or to open Vocabulary, Languages or Settings — clears it, and it is
+never saved to your **Vault**.
+
 ## Opening a book
 
 Tap a book to open a [reading session](/reading). Lekto restores your **Reading

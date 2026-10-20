@@ -23,6 +23,8 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.CLOSE to "Fermer",
     TextKey.SHOW to "Afficher",
     TextKey.HIDE to "Masquer",
+    TextKey.SEARCH to "Rechercher",
+    TextKey.CLEAR_SEARCH to "Effacer la recherche",
 
     // Platform file dialogs.
     TextKey.PICK_BOOK_TITLE to "Importer un livre",
@@ -40,10 +42,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.DELETE_BOOK_TITLE to "Supprimer « {0} » ?",
     TextKey.DELETE_BOOK_MESSAGE to "Cette action est irréversible.",
     TextKey.ERROR_DETAIL to "Erreur : {0}",
+    TextKey.NO_BOOKS_MATCH_QUERY to "Aucun livre ne correspond à « {0} ».",
 
     // Vocabulary.
     TextKey.VOCABULARY_EMPTY to "Aucun mot enregistré — touchez un mot pendant la lecture pour l'enregistrer",
-    TextKey.SEARCH to "Rechercher",
     TextKey.ALL_LEVELS to "Tous les niveaux",
     TextKey.MASTERY_UNKNOWN to "Inconnu",
     TextKey.MASTERY_RECOGNIZED to "Reconnu",
