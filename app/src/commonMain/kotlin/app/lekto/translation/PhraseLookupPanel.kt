@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,7 +67,7 @@ fun PhraseLookupPanel(
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
+    OutlinedCard(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
         Column(
             Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),

@@ -152,10 +152,10 @@ The goldens are Roborazzi images recorded from `app/desktopTest` and committed
 under `app/src/desktopTest/goldens/`. The desktop target renders with the host's
 Skia, so the goldens are deliberately text-free: a golden that renders text would
 depend on the fonts installed where it was recorded and would not verify on
-another machine. The theme golden records the colour scheme as swatches; the
-reader adds `mastery-palette.png`, the mastery palette and the reader page's
-word layer as coloured blocks — the same layout a page of text produces, without
-the glyphs. A text-bearing reader golden waits on pinned reading typography (a
+another machine. The theme goldens record each **App theme**'s colour scheme as
+swatches, one sheet per paper; the reader adds `mastery-palette.png`, the mastery
+palette and the reader page's word layer as coloured blocks — the same layout a
+page of text produces, without the glyphs. A text-bearing reader golden waits on pinned reading typography (a
 bundled font); until then, typography is pinned by `ReaderStyles` and the word
 layer by `ReaderTextTest`. Record or update with
 

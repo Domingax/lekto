@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -97,7 +97,7 @@ fun WordLookupPanel(
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
+    OutlinedCard(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
         val texts = LocalAppTexts.current
         Column(
             Modifier.padding(16.dp).verticalScroll(rememberScrollState()),

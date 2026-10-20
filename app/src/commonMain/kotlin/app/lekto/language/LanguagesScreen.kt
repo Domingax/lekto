@@ -193,7 +193,7 @@ private fun LanguageRow(
         ) {
             Text(
                 text = offered.displayName,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
             LevelPicker(offered.language, level, actions)
@@ -214,7 +214,7 @@ private fun TranslationLanguagePicker(selected: String?, languages: List<String>
     val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(texts[TextKey.TRANSLATION_LANGUAGE], style = MaterialTheme.typography.titleMedium)
+        Text(texts[TextKey.TRANSLATION_LANGUAGE], style = MaterialTheme.typography.titleSmall)
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
