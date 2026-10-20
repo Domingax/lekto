@@ -1,5 +1,6 @@
 package app.lekto.reader
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,5 +59,14 @@ class ReaderStylesTest {
     fun theMarginFollowsThePreference() {
         assertEquals(16.dp, ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.NARROW)).horizontalMargin)
         assertEquals(32.dp, ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.WIDE)).horizontalMargin)
+    }
+
+    @Test
+    fun theInkComesFromTheAppTheme() {
+        val ink = Color(0xFFE8E2D8)
+        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, ink)
+
+        assertEquals(ink, styles.body.color)
+        assertEquals(ink, styles.heading.color)
     }
 }

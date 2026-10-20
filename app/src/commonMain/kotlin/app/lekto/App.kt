@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -89,6 +89,8 @@ import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
+import app.lekto.theme.LektoTheme
+import app.lekto.theme.Light
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
@@ -237,12 +239,18 @@ private sealed interface Destination {
  * it is a deterministic seam a test drives with a known inset, which on Android
  * a host test cannot otherwise supply. It defaults to [WindowInsets.safeDrawing]
  * so a platform entry point passes nothing.
+ *
+ * [theme] is the **App theme**'s colour scheme, with the identity's Light paper
+ * as the default (docs/design.md §2.1; ADR-0036). The **App theme** preference
+ * and its Appearance screen are issue #182's; until they land, the default is
+ * the whole input, so wiring them changes this parameter and nothing else.
  */
 @Suppress("LongMethod", "CyclomaticComplexMethod") // The composition root wires each independent seam once.
 @Composable
 fun App(
     environment: AppEnvironment,
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
+    theme: ColorScheme = Light,
 ) {
     // The one signal the local writers raise and sync subscribes to (issue #121):
     // a book imported, a word saved or deleted, a reading position moved.
@@ -379,26 +387,28 @@ fun App(
     // cutout — is kept out of every screen. An app targeting Android 15+ draws
     // edge to edge whether it asks to or not, so without this the chrome sits
     // under the status bar and the system, which owns that strip, eats its taps.
-    Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-        CompositionLocalProvider(LocalAppTexts provides appTextsFor(languageSettings?.appLanguage)) {
-            AppScreens(
-                environment,
-                controller,
-                changes,
-                state,
-                scope,
-                progress,
-                settings,
-                vocabulary,
-                mastery,
-                language,
-                languageSettings,
-                readingPreferences,
-                lemmas,
-                difficulty,
-                difficultyStates,
-                dictionaryStates,
-            )
+    LektoTheme(theme = theme) {
+        Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
+            CompositionLocalProvider(LocalAppTexts provides appTextsFor(languageSettings?.appLanguage)) {
+                AppScreens(
+                    environment,
+                    controller,
+                    changes,
+                    state,
+                    scope,
+                    progress,
+                    settings,
+                    vocabulary,
+                    mastery,
+                    language,
+                    languageSettings,
+                    readingPreferences,
+                    lemmas,
+                    difficulty,
+                    difficultyStates,
+                    dictionaryStates,
+                )
+            }
         }
     }
 }
@@ -437,64 +447,62 @@ private fun AppScreens(
         changes.progress.collect { if (destination is Destination.Library) controller.refresh() }
     }
 
-    MaterialTheme {
-        when (val current = destination) {
-            is Destination.Reading -> ReaderDestination(
-                current.session,
-                environment,
-                settings.dictionary,
-                scope,
-                progress,
-                mastery,
-                languageSettings,
-                readingPreferences,
-                lemmas,
-                onBack = { destination = Destination.Library },
-                onOpenSettings = { destination = Destination.Settings },
-            )
+    when (val current = destination) {
+        is Destination.Reading -> ReaderDestination(
+            current.session,
+            environment,
+            settings.dictionary,
+            scope,
+            progress,
+            mastery,
+            languageSettings,
+            readingPreferences,
+            lemmas,
+            onBack = { destination = Destination.Library },
+            onOpenSettings = { destination = Destination.Settings },
+        )
 
-            is Destination.Attribution -> AttributionScreen(
-                metadata = dictionaryStates.values
-                    .firstNotNullOfOrNull { state -> (state.status as? DictionaryPackState.Ready)?.metadata },
-                difficulty = difficultyStates.toSortedMap().values.firstNotNullOfOrNull { state ->
-                    (state.status as? DifficultyState.Ready)?.metadata
-                },
-                onBack = { destination = current.returnTo },
-            )
+        is Destination.Attribution -> AttributionScreen(
+            metadata = dictionaryStates.values
+                .firstNotNullOfOrNull { state -> (state.status as? DictionaryPackState.Ready)?.metadata },
+            difficulty = difficultyStates.toSortedMap().values.firstNotNullOfOrNull { state ->
+                (state.status as? DifficultyState.Ready)?.metadata
+            },
+            onBack = { destination = current.returnTo },
+        )
 
-            Destination.Settings -> SettingsDestination(
-                settings,
-                onVaultImported = controller::refresh,
-                onOpenLanguages = { destination = Destination.Languages(Destination.Settings) },
-                onBack = { destination = Destination.Library },
-            )
+        Destination.Settings -> SettingsDestination(
+            settings,
+            onVaultImported = controller::refresh,
+            onOpenLanguages = { destination = Destination.Languages(Destination.Settings) },
+            onBack = { destination = Destination.Library },
+        )
 
-            is Destination.Languages -> LanguagesDestination(
-                language = language,
-                difficulty = difficulty,
-                dictionary = settings.dictionary,
-                mastery = mastery,
-                languageSettings = languageSettings,
-                systemLanguage = environment.systemLanguage,
-                onOpenAttribution = { destination = Destination.Attribution(current) },
-                onBack = { destination = current.returnTo },
-            )
+        is Destination.Languages -> LanguagesDestination(
+            language = language,
+            difficulty = difficulty,
+            dictionary = settings.dictionary,
+            mastery = mastery,
+            languageSettings = languageSettings,
+            systemLanguage = environment.systemLanguage,
+            onOpenAttribution = { destination = Destination.Attribution(current) },
+            onBack = { destination = current.returnTo },
+        )
 
-            Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope) {
-                destination = Destination.Library
-            }
-
-            Destination.Library -> LibraryDestination(
-                environment,
-                controller,
-                scope,
-                libraryState,
-                onOpenVocabulary = { destination = Destination.Vocabulary },
-                onOpenSettings = { destination = Destination.Settings },
-                onOpenLanguages = { destination = Destination.Languages(Destination.Library) },
-                onOpen = { session -> destination = Destination.Reading(session) },
-            )
+        Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope) {
+            destination = Destination.Library
         }
+
+        Destination.Library -> LibraryDestination(
+            environment,
+            controller,
+            scope,
+            libraryState,
+            onOpenVocabulary = { destination = Destination.Vocabulary },
+            onOpenSettings = { destination = Destination.Settings },
+            onOpenLanguages = { destination = Destination.Languages(Destination.Library) },
+            onOpen = { session -> destination = Destination.Reading(session) },
+        )
     }
 }
 

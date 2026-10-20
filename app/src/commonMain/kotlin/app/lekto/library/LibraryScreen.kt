@@ -154,7 +154,7 @@ private fun BookRow(book: Book, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit
             modifier = Modifier.weight(1f).clickable { onOpen(book) },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text(book.title, style = MaterialTheme.typography.titleMedium)
+            Text(book.title, style = MaterialTheme.typography.titleSmall)
             Text(
                 text = "${book.format.name} · ${book.fileName}",
                 style = MaterialTheme.typography.bodySmall,

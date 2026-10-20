@@ -65,8 +65,8 @@ internal fun ReadingPreferencesPanel(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().swallowTaps(),
-        tonalElevation = 3.dp,
         color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),

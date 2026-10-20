@@ -4,24 +4,31 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import app.lekto.theme.Dark
+import app.lekto.theme.LektoTheme
+import app.lekto.theme.Light
+import app.lekto.theme.Sepia
 import io.github.takahirom.roborazzi.captureRoboImage
 import kotlin.test.Test
 
 /**
- * The first golden in the screenshot lane (ticket #7).
+ * One golden per **App theme**, recorded from the screenshot lane (ticket #7;
+ * issue #181).
  *
- * It records the Material colour scheme as a row of swatches — deliberately
- * text-free, so the image does not depend on the fonts installed on the machine
- * that recorded it and verify the same on a developer's laptop and CI. It fails
- * when a theme colour changes, which is what the lane exists to catch. The reader
- * adds text-bearing goldens of its own once its typography is pinned.
+ * Each sheet is text-free, so it does not depend on the fonts installed on the
+ * machine that recorded it, and verifies the same on a developer's laptop and in
+ * CI. The padding shows the theme's paper; the row shows the ink, the surface,
+ * the muted ink, the hairline and the red. It fails when a theme colour moves,
+ * which is what the lane exists to catch.
  *
  * Record or update a golden with `./gradlew :app:recordRoborazziDesktop`; verify
  * with `./gradlew :app:verifyRoborazziDesktop` — the task the golden CI job runs.
@@ -30,16 +37,25 @@ import kotlin.test.Test
 class ThemeGoldenTest {
 
     @Test
-    fun themeColours() = runComposeUiTest {
+    fun lightThemeColours() = themeColours("light", Light)
+
+    @Test
+    fun darkThemeColours() = themeColours("dark", Dark)
+
+    @Test
+    fun sepiaThemeColours() = themeColours("sepia", Sepia)
+
+    private fun themeColours(name: String, theme: ColorScheme) = runComposeUiTest {
         setContent {
-            MaterialTheme {
-                Row(modifier = Modifier.size(width = 240.dp, height = 40.dp)) {
+            LektoTheme(theme = theme) {
+                Row(modifier = Modifier.size(width = 240.dp, height = 40.dp).padding(4.dp)) {
+                    val scheme = MaterialTheme.colorScheme
                     val swatches = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.secondary,
-                        MaterialTheme.colorScheme.tertiary,
-                        MaterialTheme.colorScheme.error,
-                        MaterialTheme.colorScheme.surfaceVariant,
+                        scheme.primary,
+                        scheme.surface,
+                        scheme.onSurfaceVariant,
+                        scheme.outline,
+                        scheme.error,
                     )
                     swatches.forEach { colour ->
                         Box(modifier = Modifier.fillMaxHeight().weight(1f).background(colour))
@@ -48,6 +64,6 @@ class ThemeGoldenTest {
             }
         }
 
-        onRoot().captureRoboImage("theme-colours.png")
+        onRoot().captureRoboImage("theme-colours-$name.png")
     }
 }

@@ -92,7 +92,8 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
     // The reader builds its typography from the preference (ADR-0035), so a change
     // recomposes the text and repaginates at once, the way a Reader level change
     // recolours it.
-    val styles = remember(document.preferences) { ReaderStyles.of(document.preferences) }
+    val ink = MaterialTheme.colorScheme.onBackground
+    val styles = remember(document.preferences, ink) { ReaderStyles.of(document.preferences, ink) }
     val chapterText = remember(document.chapter, styles) {
         buildChapterText(document.chapter, styles)
     }
@@ -393,7 +394,7 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
         onBack?.let { back -> TextButton(onClick = back) { Text(texts[TextKey.LIBRARY]) } }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f).padding(start = if (onBack == null) 0.dp else 8.dp),
         )
         TextButton(onClick = onPreferences, modifier = Modifier.testTag(READING_PREFERENCES_TAG)) {
