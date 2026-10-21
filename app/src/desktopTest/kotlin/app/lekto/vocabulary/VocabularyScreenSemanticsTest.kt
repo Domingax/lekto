@@ -22,7 +22,6 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.testkit.testVocabularyEntry
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * The vocabulary list through semantics (issue #23): an empty vocabulary shows
@@ -90,16 +89,6 @@ class VocabularyScreenSemanticsTest {
     }
 
     @Test
-    fun theBackActionReturnsToTheLibrary() = runComposeUiTest {
-        var backed = false
-        setContent { Vocabulary(VocabularyUiState.Empty, onBack = { backed = true }) }
-
-        onNodeWithText("Library").performClick()
-
-        assertTrue(backed)
-    }
-
-    @Test
     fun theListIsKeyedByABundleSaveableValue() = runComposeUiTest {
         setContent {
             CompositionLocalProvider(LocalSaveableStateRegistry provides BundleStrictRegistry) {
@@ -149,7 +138,6 @@ class VocabularyScreenSemanticsTest {
         onSearch: (String) -> Unit = {},
         onFilter: (MasteryLevel?) -> Unit = {},
         onDelete: (VocabularyEntry) -> Unit = {},
-        onBack: () -> Unit = {},
     ) {
         MaterialTheme {
             VocabularyScreen(
@@ -158,7 +146,6 @@ class VocabularyScreenSemanticsTest {
                     onSearch = onSearch,
                     onFilter = onFilter,
                     onDelete = onDelete,
-                    onBack = onBack,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )

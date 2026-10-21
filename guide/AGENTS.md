@@ -43,6 +43,7 @@ behaviour updates the page(s) named below in the same pull request, the way
 | The reader, pagination or the Reading position | `reading.md` |
 | The Reader level, word difficulty or the difficulty download | `reading.md`, `settings-and-faq.md` |
 | The Languages surface and the offered languages | `settings-and-faq.md` |
+| The sections, the navigation bar or the way back | `getting-started.md`, `library.md`, `reading.md`, `settings-and-faq.md`, `vocabulary.md` |
 | The word lookup panel or Dictionary shortcuts | `word-lookup.md` |
 | Saving, searching, filtering or deleting vocabulary | `vocabulary.md` |
 | Pronunciation and its unavailable-language message | `pronunciation.md` |

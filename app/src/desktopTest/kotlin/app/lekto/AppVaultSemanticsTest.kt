@@ -4,6 +4,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -18,6 +19,8 @@ import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.VaultCodec
 import app.lekto.core.vault.VaultRecord
 import app.lekto.core.vault.VaultStore
+import app.lekto.navigation.ShellSection
+import app.lekto.navigation.shellSectionTag
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
@@ -57,7 +60,7 @@ class AppVaultSemanticsTest {
         }, open = { null })
         setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
-        onNodeWithText("Settings").performClick()
+        onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
         onNodeWithText("Export vault").performScrollTo().performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { exported != null }
@@ -77,14 +80,14 @@ class AppVaultSemanticsTest {
         )
         setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
-        onNodeWithText("Settings").performClick()
+        onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
         onNodeWithText("Import vault").performScrollTo().performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vault.get("restored") != null }
 
         onNodeWithText("Vault imported", substring = true).performScrollTo().assertIsDisplayed()
-        // The settings column is scrolled down to the vault actions, so the header's
-        // way back must be scrolled to before it can be clicked.
-        onNodeWithText("Library").performScrollTo().performClick()
+        // The shell's Library item is outside Settings' own scroll, so it is
+        // reachable however far down the reader scrolled (issue #185).
+        onNodeWithTag(shellSectionTag(ShellSection.LIBRARY)).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             onAllNodesWithText("The Restored Book").fetchSemanticsNodes().isNotEmpty()
@@ -96,7 +99,7 @@ class AppVaultSemanticsTest {
     fun settingsOfferNoVaultTransferWhenNoneIsWired() = runComposeUiTest {
         setContent { App(environment(libraryOver(InMemoryVaultStore()))) }
 
-        onNodeWithText("Settings").performClick()
+        onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
 
         onNodeWithText("Vault").performScrollTo().assertIsDisplayed()
         onNodeWithText("aren't available", substring = true).performScrollTo().assertIsDisplayed()

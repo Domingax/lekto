@@ -35,8 +35,8 @@ nothing matches, Lekto names what you typed and offers **Clear search**; the
 cross beside the field clears it too.
 
 The search is a view of your Library, not a setting: leaving the Library — to
-read a book, or to open Vocabulary, Languages or Settings — clears it, and it is
-never saved to your **Vault**.
+read a book, to open Vocabulary or Settings, or to open the Languages surface
+inside Settings — clears it, and it is never saved to your **Vault**.
 
 ## Opening a book
 

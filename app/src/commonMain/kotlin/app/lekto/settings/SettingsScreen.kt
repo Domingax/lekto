@@ -50,6 +50,9 @@ internal const val LANGUAGES_LINK_TAG: String = "settings-languages"
 /** The test tag on the way to the **Appearance** screen, so a UI test can click exactly it. */
 internal const val APPEARANCE_LINK_TAG: String = "settings-appearance"
 
+/** The test tag on the screen's title, so a test can tell the screen from the shell's bar (issue #185). */
+internal const val SETTINGS_TITLE_TAG: String = "settings-title"
+
 /**
  * The settings screen: the app's own appearance (ADR-0036), the app's own language
  * (ADR-0034), the way to the **Languages** surface (issue #146), the vault's
@@ -75,7 +78,7 @@ fun SettingsScreen(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        Header(actions.onBack)
+        Header()
         Section(texts[TextKey.SECTION_APPEARANCE]) { AppearanceSection(state.appTheme, actions) }
         Section(texts[TextKey.SECTION_APP_LANGUAGE]) {
             AppLanguageSection(state.appLanguage, actions.onSelectAppLanguage)
@@ -350,13 +353,14 @@ private fun ProviderActions(state: ProviderUiState, apiKey: String, actions: Set
     }
 }
 
+/** The screen's title alone: the shell's bar and the back stack replace its old way back (issue #185). */
 @Composable
-private fun Header(onBack: () -> Unit) {
-    val texts = LocalAppTexts.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text(texts[TextKey.LIBRARY]) }
-        Text(texts[TextKey.SETTINGS], style = MaterialTheme.typography.headlineMedium)
-    }
+private fun Header() {
+    Text(
+        text = LocalAppTexts.current[TextKey.SETTINGS],
+        style = MaterialTheme.typography.headlineMedium,
+        modifier = Modifier.testTag(SETTINGS_TITLE_TAG),
+    )
 }
 
 @Composable

@@ -160,12 +160,12 @@ class ReaderScreenSemanticsTest {
         // centre tap is a chrome toggle rather than a word lookup.
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
         compose.onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("Library").assertDoesNotExist()
+        compose.onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
         compose.onNodeWithText("Hello.").assertIsDisplayed()
 
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
         compose.onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Library").assertIsDisplayed()
+        compose.onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -252,14 +252,24 @@ class ReaderScreenSemanticsTest {
 @Suppress("MagicNumber") // The wait for the word layer is the test's parameter.
 private fun ComposeTestRule.firstWordCentre(): Offset {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+        onAllNodes(WORD_LINK)
             .fetchSemanticsNodes()
             .isNotEmpty()
     }
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+    val word = onAllNodes(WORD_LINK)
         .onFirst()
         .fetchSemanticsNode()
         .boundsInRoot
     return word.center - page.topLeft
 }
+
+/**
+ * A word link on the page: a clickable node that carries neither text nor a
+ * description. The reader's chrome has an icon since the navigation shell
+ * (issue #185) — clickable, described, and not a word — so a word is the one
+ * clickable node with nothing to read on it.
+ */
+private val WORD_LINK = hasClickAction() and
+    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)

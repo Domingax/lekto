@@ -1,7 +1,8 @@
 # Settings and FAQ
 
 Settings holds the app-wide choices the rest of the guide points at, and this page
-answers the common questions.
+answers the common questions. Open it from the third section of the bar — the left
+column on a desktop.
 
 ## Settings
 

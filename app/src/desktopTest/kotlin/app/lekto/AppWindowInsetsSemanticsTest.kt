@@ -4,10 +4,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.navigation.SHELL_NAV_TAG
+import app.lekto.reader.READER_BACK_TAG
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -33,12 +37,12 @@ class AppWindowInsetsSemanticsTest {
         }
 
         assertTrue(
-            onNodeWithText("Library").getUnclippedBoundsInRoot().top >= StatusBarHeight,
+            onNodeWithTag(LIBRARY_TITLE_TAG).getUnclippedBoundsInRoot().top >= StatusBarHeight,
             "the library title must sit below the status bar",
         )
         assertTrue(
-            onNodeWithText("Settings").getUnclippedBoundsInRoot().top >= StatusBarHeight,
-            "the library's header buttons must sit below the status bar",
+            onNodeWithTag(SHELL_NAV_TAG).getUnclippedBoundsInRoot().top >= StatusBarHeight,
+            "the shell's navigation must sit below the status bar",
         )
     }
 
@@ -55,7 +59,7 @@ class AppWindowInsetsSemanticsTest {
         }
 
         assertTrue(
-            onNodeWithText("Library").getUnclippedBoundsInRoot().top >= StatusBarHeight,
+            onNodeWithTag(READER_BACK_TAG).getUnclippedBoundsInRoot().top >= StatusBarHeight,
             "the reader's back button must sit below the status bar",
         )
     }

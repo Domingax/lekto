@@ -118,12 +118,12 @@ class ReaderScreenSemanticsTest {
         // centre tap is a chrome toggle rather than a word lookup.
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
         onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
-        onNodeWithText("Library").assertDoesNotExist()
+        onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
         onNodeWithText("Hello.").assertIsDisplayed()
 
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
         onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Library").assertIsDisplayed()
+        onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -204,9 +204,19 @@ class ReaderScreenSemanticsTest {
 @OptIn(ExperimentalTestApi::class)
 private fun ComposeUiTest.firstWordCentre(): Offset {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(hasClickAction() and SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+    val word = onAllNodes(WORD_LINK)
         .onFirst()
         .fetchSemanticsNode()
         .boundsInRoot
     return word.center - page.topLeft
 }
+
+/**
+ * A word link on the page: a clickable node that carries neither text nor a
+ * description. The reader's chrome has an icon since the navigation shell
+ * (issue #185) — clickable, described, and not a word — so a word is the one
+ * clickable node with nothing to read on it.
+ */
+private val WORD_LINK = hasClickAction() and
+    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)

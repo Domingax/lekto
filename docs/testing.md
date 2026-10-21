@@ -806,14 +806,13 @@ entry, and a word is found by its spelling, its lemma, its translation or its
 context sentence, case-insensitively. The list's surface is
 `VocabularyScreenSemanticsTest` in `app/desktopTest` — the instructional empty
 state, an entry's word, translation, context sentence and mastery, the search
-field raising the query, the no-match message, the delete action, and going back.
+field raising the query, the no-match message and the delete action.
 The whole loop runs through `AppSemanticsTest` against the in-memory vocabulary:
 a word saved from the reader appears in the list with its details, the list can
 be searched, and deleting the word returns it to unsaved in the reader — so the
 list and the text cannot disagree. The desktop wiring that deletes over a real
-directory is `DesktopLibraryTest`. The list is reached from the library's header,
-not the navigation pattern the UX spec draws; that shell is separate work. The
-list's `LazyColumn` key is a `String` projected from the word's identity, and
+directory is `DesktopLibraryTest`. The list is a section of the shell (issue #185).
+The list's `LazyColumn` key is a `String` projected from the word's identity, and
 `VocabularyScreenSemanticsTest` renders the list under a saveable-state registry
 as strict as Android's, so a key the platform cannot put in a `Bundle` fails on
 the desktop lane too (issue #69); `VocabularyRowKeyTest` pins the projection's
@@ -983,6 +982,26 @@ asks for, that a chosen paper wins in either setting, and that the window's colo
 resources are exactly the three schemes' papers — the two cannot drift. The launch
 window's paper is recorded as `launch-window-light.png` and `launch-window-dark.png`
 by `ThemeGoldenTest`, background only — the icon is issue #177's.
+
+The **navigation shell** and its back stack (issue #185; docs/design.md §6) are
+proved at their own levels. The history is a value with pure moves, so
+`BackStackTest` in `app/desktopTest` pins them: the app opens on the Library with
+nothing behind it, a bar item pushes its section, back from Settings returns to
+where it came from, a section already behind the current place unwinds to it
+rather than stacking a second copy, the reader is pushed over the shelf so Back
+returns to it, a Settings entry keeps Settings current while it is open, and back
+at the root changes nothing — so the platform, not the app, leaves from the
+Library. The shell's shape — the three sections and no fourth, the current one
+marked, and a fixed column beside the screen on desktop rather than a bar under it
+— is `ShellSemanticsTest` on both lanes. Android's own back gesture walking that
+stack is `AndroidBackTest` in `app/androidUnitTest`: it presses the activity's
+`OnBackPressedDispatcher` and pins that Back returns from Settings to the Library,
+from the **Languages** surface to Settings and from the reader to the shelf, that
+it closes the reader's lookup panel before leaving the page, and that it finishes
+the activity from the Library. The loop through the bar, and the reader covering
+it, run through `AppSemanticsTest` on both lanes. The shell has no golden: its
+labels are the host's fonts, so its shape is asserted by geometry — the
+navigation's bounds against the screen's — the way the goldens stay text-free.
 
 The app's own texts (issue #165; ADR-0034) are one per-language table selected by
 the **app language**. `AppTextsTest` in `app/desktopTest` pins that every

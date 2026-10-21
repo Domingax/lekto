@@ -229,22 +229,36 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theHeaderKeepsItsNavigationReadableInFrench() = runComposeUiTest {
-        // The French title is wider than the English one, so on a phone the
-        // navigation cannot share its line: it must wrap below, not be squeezed
-        // into a one-character column (ADR-0034).
+    fun theImportActionSitsBesideTheTitleAndTheSectionsDoNot() = runComposeUiTest {
+        // Import is the Library's action and never a section (issue #185): once
+        // there is a shelf it is a word beside the title, and the way to another
+        // section is the shell's bar, not this header.
+        var imported = false
+        setContent { Library(books(book), onImport = { imported = true }) }
+
+        onNodeWithText("Import").assertIsDisplayed().performClick()
+
+        assertTrue(imported, "the word beside the title imports")
+        onNodeWithText("Settings").assertDoesNotExist()
+        onNodeWithText("Vocabulary").assertDoesNotExist()
+    }
+
+    @Test
+    fun theHeaderKeepsItsTitleAndActionReadableInFrench() = runComposeUiTest {
+        // The French title is wider than the English one, so on a phone the action
+        // wraps below it rather than being squeezed into a one-character column
+        // (ADR-0034).
         setContent {
             CompositionLocalProvider(LocalAppTexts provides appTextsFor("fr")) {
-                Library(LibraryUiState())
+                Library(books(book))
             }
         }
 
         onNodeWithText("Bibliothèque").assertIsDisplayed()
-        onNodeWithText("Langues").assertIsDisplayed()
-        onNodeWithText("Vocabulaire").assertIsDisplayed()
-        val settings = onNodeWithText("Réglages").assertIsDisplayed().getBoundsInRoot()
-        val height = settings.bottom - settings.top
-        assertTrue(height < 80.dp, "the nav label must stay on one line: $height")
+        val importer = onNodeWithText("Importer").assertIsDisplayed().getBoundsInRoot()
+        assertTrue(importer.bottom - importer.top < 80.dp, "the action must stay on one line: $importer")
+        onNodeWithText("Langues").assertDoesNotExist()
+        onNodeWithText("Réglages").assertDoesNotExist()
     }
 
     /** A state whose books are all unread, so only the title list shows. */
@@ -255,6 +269,7 @@ class LibraryScreenSemanticsTest {
     @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.
     private fun Library(
         state: LibraryUiState,
+        onImport: () -> Unit = {},
         onOpen: (Book) -> Unit = {},
         onDelete: (Book) -> Unit = {},
         onDismissError: () -> Unit = {},
@@ -265,6 +280,7 @@ class LibraryScreenSemanticsTest {
             LibraryScreen(
                 state = state,
                 actions = app.lekto.library.LibraryActions(
+                    onImport = onImport,
                     onOpen = onOpen,
                     onDelete = onDelete,
                     onDismissError = onDismissError,
