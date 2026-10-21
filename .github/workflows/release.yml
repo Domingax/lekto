@@ -34,15 +34,21 @@ jobs:
           - label: linux-x64
             runner: ubuntu-latest
             extension: deb
+            # A Debian package's file name is lower-case by convention; the other
+            # platforms keep the product's capitalisation.
+            prefix: lekto
           - label: windows-x64
             runner: windows-latest
             extension: msi
+            prefix: Lekto
           - label: macos-arm64
             runner: macos-15
             extension: dmg
+            prefix: Lekto
           - label: macos-x64
             runner: macos-15-intel
             extension: dmg
+            prefix: Lekto
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -74,17 +80,17 @@ jobs:
             cat "$log"
             echo "::endgroup::"
           done
-      # Both macOS runners produce the same `Lekto-<version>.dmg` name, and a
-      # merge-multiple download would keep only one of them. The platform label
-      # makes each artefact distinct, which is also what the download page tells
-      # the reader to pick.
+      # jpackage names each artefact after the platform's own convention (the
+      # Debian file even repeats the architecture), and both macOS runners produce
+      # the same `Lekto-<version>.dmg`. One scheme makes each file distinct and
+      # matches what the guide tells the reader to download.
       - name: Name the installer for its platform
         shell: bash
         run: |
+          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
           mkdir -p dist
           for artifact in app/build/compose/binaries/main/*/*.${{ matrix.extension }}; do
-            name="$(basename "${artifact%.*}")"
-            cp "$artifact" "dist/${name}-${{ matrix.label }}.${{ matrix.extension }}"
+            cp "$artifact" "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.${{ matrix.extension }}"
           done
       - name: Upload the installer
         uses: actions/upload-artifact@v7
