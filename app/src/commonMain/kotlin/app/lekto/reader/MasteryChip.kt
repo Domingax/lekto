@@ -25,8 +25,8 @@ private val ChipPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
  *
  * [level] is `null` for the filter's all-levels chip, which takes the outline
  * colour instead of a palette one. The [label] carries the meaning and the
- * colour is supplementary — the palette's light levels have too little contrast
- * to be read as text — and the selected chip also carries `selected` semantics,
+ * colour is supplementary, taken from the active paper's measured ramp
+ * (`docs/design.md` §2.2); the selected chip also carries `selected` semantics,
  * so the active choice is announced, not shown by fill alone.
  */
 @Suppress("LongParameterList") // The chip's inputs are independent; a bundle would only hide that.
@@ -38,7 +38,9 @@ fun MasteryChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colour = level?.readerColorOr(MaterialTheme.colorScheme.outline) ?: MaterialTheme.colorScheme.outline
+    val theme = MaterialTheme.colorScheme
+    val ramp = MasteryPalette.of(theme)
+    val colour = level?.readerColorOr(theme.outline, ramp) ?: theme.outline
     val marked = modifier.semantics { this.selected = selected }
     if (selected) {
         Button(

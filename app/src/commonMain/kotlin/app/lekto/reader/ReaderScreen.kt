@@ -92,8 +92,11 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
     // The reader builds its typography from the preference (ADR-0035), so a change
     // recomposes the text and repaginates at once, the way a Reader level change
     // recolours it.
-    val ink = MaterialTheme.colorScheme.onBackground
-    val styles = remember(document.preferences, ink) { ReaderStyles.of(document.preferences, ink) }
+    val theme = MaterialTheme.colorScheme
+    val ink = theme.onBackground
+    val styles = remember(document.preferences, theme) {
+        ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink)
+    }
     val chapterText = remember(document.chapter, styles) {
         buildChapterText(document.chapter, styles)
     }

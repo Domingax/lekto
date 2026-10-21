@@ -43,7 +43,7 @@ class ReaderTextTest {
         },
     )
 
-    private val styles = ReaderStyles.of(ReadingPreferences.DEFAULT)
+    private val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
     private val chapter = ReaderChapter(
         title = "Chapter",
@@ -201,7 +201,7 @@ class ReaderTextTest {
             selected = lantern.start..lantern.end,
         )
 
-        assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
+        assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "lantern").background)
         assertEquals(Color.Unspecified, styleOf(tokens, "the").background)
     }
 
@@ -214,8 +214,8 @@ class ReaderTextTest {
 
         val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles, selected = phrase)
 
-        assertEquals(SelectionHighlight, styleOf(tokens, "the").background)
-        assertEquals(SelectionHighlight, styleOf(tokens, "lantern").background)
+        assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "the").background)
+        assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "lantern").background)
         assertEquals(Color.Unspecified, styleOf(tokens, "glows").background)
     }
 

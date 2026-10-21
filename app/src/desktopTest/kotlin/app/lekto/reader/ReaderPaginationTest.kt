@@ -28,6 +28,8 @@ class ReaderPaginationTest {
         repeat(80) { append("the quick brown fox jumps over the lazy dog and then keeps going. ") }
     }
 
+    private val defaultStyles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
+
     @Test
     fun aLongChapterSplitsIntoContiguousPages() = runComposeUiTest {
         lateinit var pages: List<ReaderPage>
@@ -39,7 +41,7 @@ class ReaderPaginationTest {
             val text = remember { AnnotatedString(passage) }
             pages = paginateChapter(
                 text = text,
-                layout = ReaderLayout(measurer, ReaderStyles.of(ReadingPreferences.DEFAULT).body, width, height),
+                layout = ReaderLayout(measurer, defaultStyles.body, width, height),
             ).toList()
         }
         waitForIdle()
@@ -61,7 +63,7 @@ class ReaderPaginationTest {
             val width = with(density) { 240.dp.roundToPx() }
             val height = with(density) { 160.dp.roundToPx() }
             val text = remember { AnnotatedString(passage) }
-            val layout = ReaderLayout(measurer, ReaderStyles.of(ReadingPreferences.DEFAULT).body, width, height)
+            val layout = ReaderLayout(measurer, defaultStyles.body, width, height)
             firstPage = paginateChapter(text, layout).first()
             allPages = paginateChapter(text, layout).toList()
         }
@@ -78,7 +80,7 @@ class ReaderPaginationTest {
             val measurer = rememberTextMeasurer()
             pages = paginateChapter(
                 text = AnnotatedString(""),
-                layout = ReaderLayout(measurer, ReaderStyles.of(ReadingPreferences.DEFAULT).body, 240, 160),
+                layout = ReaderLayout(measurer, defaultStyles.body, 240, 160),
             ).toList()
         }
         waitForIdle()
@@ -108,7 +110,7 @@ class ReaderPaginationTest {
             val height = with(density) { 160.dp.roundToPx() }
             val text = remember { AnnotatedString(passage) }
             fun pagesAt(size: Float): List<ReaderPage> {
-                val styles = ReaderStyles.of(ReadingPreferences(size = size))
+                val styles = ReaderStyles.of(ReadingPreferences(size = size), mastery = MasteryPalette.Light)
                 val width = with(density) { (240.dp - styles.horizontalMargin * 2).roundToPx() }
                 return paginateChapter(text, ReaderLayout(measurer, styles.body, width, height)).toList()
             }
