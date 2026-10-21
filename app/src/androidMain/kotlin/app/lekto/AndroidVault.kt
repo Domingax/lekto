@@ -10,6 +10,8 @@ import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
 import app.lekto.core.sync.JsonTombstoneStore
+import app.lekto.core.theme.AppThemeStore
+import app.lekto.core.theme.JsonAppThemeStore
 import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
@@ -54,6 +56,16 @@ fun androidReaderLevels(context: Context): ReaderLevels = VaultReaderLevels(
  */
 fun androidLanguageSettings(context: Context): LanguageSettingsStore =
     JsonLanguageSettingsStore(JvmVaultFileSystem(File(context.filesDir, "settings")))
+
+/**
+ * The Android **App theme** (ADR-0036) under `Context.filesDir`: the device's
+ * paper — Light, Dark, Sepia or System — in the same `settings` root as the app
+ * language and the reading preference. It is device-local app configuration
+ * (ADR-0023's pattern), not a vault record, so it never enters an export and does
+ * not move between devices.
+ */
+fun androidAppTheme(context: Context): AppThemeStore =
+    JsonAppThemeStore(JvmVaultFileSystem(File(context.filesDir, "settings")))
 
 /**
  * The Android reading preference (ADR-0035) under `Context.filesDir`: the device's

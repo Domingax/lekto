@@ -20,6 +20,7 @@ import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.sync.SyncSettings
+import app.lekto.core.theme.AppTheme
 import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
@@ -76,6 +77,20 @@ class SettingsScreenSemanticsTest {
         onNodeWithTag(appLanguageOptionTag("fr")).performClick()
 
         assertEquals("fr", chosen)
+    }
+
+    @Test
+    fun theAppearanceSectionNamesTheCurrentThemeAndOpensItsScreen() = runComposeUiTest {
+        var opened = false
+        settings(
+            appTheme = AppTheme.SEPIA,
+            actions = SettingsActions(onOpenAppearance = { opened = true }),
+        )
+
+        onNodeWithText("Sepia").performScrollTo().assertIsDisplayed()
+        onNodeWithTag(APPEARANCE_LINK_TAG).performScrollTo().performClick()
+
+        assertTrue(opened)
     }
 
     @Test
@@ -544,6 +559,7 @@ private fun configured(enabled: Boolean = false): SyncSettings =
 @OptIn(ExperimentalTestApi::class)
 private fun ComposeUiTest.settings(
     appLanguage: String = "en",
+    appTheme: AppTheme = AppTheme.SYSTEM,
     vault: VaultUiState = VaultUiState(),
     provider: ProviderUiState = ProviderUiState(),
     sync: SyncUiState = SyncUiState(),
@@ -552,7 +568,13 @@ private fun ComposeUiTest.settings(
 ) {
     val screen: @Composable () -> Unit = {
         SettingsScreen(
-            state = SettingsUiState(appLanguage = appLanguage, vault = vault, provider = provider, sync = sync),
+            state = SettingsUiState(
+                appLanguage = appLanguage,
+                appTheme = appTheme,
+                vault = vault,
+                provider = provider,
+                sync = sync,
+            ),
             actions = actions,
             modifier = Modifier.size(width = 360.dp, height = 720.dp),
         )

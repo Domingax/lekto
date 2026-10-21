@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
@@ -58,6 +59,8 @@ import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.core.text.WordKey
+import app.lekto.core.theme.AppTheme
+import app.lekto.core.theme.AppThemeStore
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vocabulary.VaultVocabulary
@@ -82,6 +85,7 @@ import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
 import app.lekto.reader.READING_PREFERENCES_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
+import app.lekto.settings.APPEARANCE_LINK_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
@@ -94,10 +98,12 @@ import app.lekto.settings.SyncServices
 import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.appLanguageOptionTag
+import app.lekto.settings.appearanceOptionTag
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
+import app.lekto.testkit.InMemoryAppThemeStore
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
@@ -301,6 +307,23 @@ class AppSemanticsTest {
         compose.onNodeWithTag(READING_LARGER_TAG).performClick()
 
         assertEquals(22f, preferences.load().size)
+    }
+
+    @Test
+    fun theAppThemeChoiceIsKeptAndMarkedAtOnce() {
+        val library = InMemoryLibrary()
+        val appTheme = InMemoryAppThemeStore()
+        compose.setContent { App(environment(library, appTheme = appTheme), systemInDarkTheme = false) }
+
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithTag(APPEARANCE_LINK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).performClick()
+
+        // The store is the truth and the screen is already repainted in the new
+        // paper: choosing one writes through and marks it, with no toast (ADR-0036).
+        assertEquals(AppTheme.DARK, appTheme.load())
+        compose.onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).assertIsSelected()
+        compose.onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -1268,6 +1291,7 @@ internal fun environment(
     languageSettings: LanguageSettingsStore? = null,
     systemLanguage: String? = null,
     readingPreferences: ReadingPreferencesStore? = null,
+    appTheme: AppThemeStore? = null,
     lemmas: LemmaLookup = LemmaLookup.None,
     secrets: SecretStore? = null,
     llm: LlmServices? = null,
@@ -1282,6 +1306,7 @@ internal fun environment(
     languageSettings = languageSettings,
     systemLanguage = systemLanguage,
     readingPreferences = readingPreferences,
+    appTheme = appTheme,
     pickFile = pickFile,
     dictionary = dictionary,
     languages = languages,

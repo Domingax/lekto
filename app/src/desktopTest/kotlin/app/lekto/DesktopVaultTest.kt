@@ -2,6 +2,7 @@ package app.lekto
 
 import app.lekto.core.CefrLevel
 import app.lekto.core.book.BookRecord
+import app.lekto.core.theme.AppTheme
 import app.lekto.core.vault.VaultCodec
 import app.lekto.testkit.testVaultRecord
 import kotlinx.coroutines.runBlocking
@@ -70,6 +71,19 @@ class DesktopVaultTest {
                 app.lekto.core.language.LanguageSettings(appLanguage = "fr", translationLanguage = "es"),
                 desktopLanguageSettings(root).load(),
             )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theAppThemeRoundTripsToDisk() {
+        val root = Files.createTempDirectory("lekto-desktop-theme").toFile()
+        try {
+            desktopAppTheme(root).save(AppTheme.SEPIA)
+
+            // A fresh store over the same root reads the chosen paper back.
+            assertEquals(AppTheme.SEPIA, desktopAppTheme(root).load())
         } finally {
             root.deleteRecursively()
         }

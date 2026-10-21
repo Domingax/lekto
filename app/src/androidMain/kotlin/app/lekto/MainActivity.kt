@@ -8,7 +8,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.ColorUtils
+import androidx.core.view.WindowCompat
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.secret.AndroidSecretStore
 import app.lekto.core.speech.AndroidPronouncer
@@ -24,7 +28,15 @@ class MainActivity : ComponentActivity() {
 
     private var pronouncer: AndroidPronouncer? = null
 
+    /** The paper already painted on the window, so a recomposition is not a repaint. */
+    private var windowPaper: Int? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The App theme's paper becomes the window background (ADR-0036) before the
+        // first frame, so a dark or sepia choice never flashes a light window. The
+        // choice is read before super.onCreate because the window theme must be in
+        // place before the activity's content is created.
+        setTheme(androidWindowTheme(androidAppTheme(this).load(), resources.configuration))
         super.onCreate(savedInstanceState)
         val library = androidBookLibrary(this)
         val vocabulary = androidVocabulary(this)
@@ -32,7 +44,25 @@ class MainActivity : ComponentActivity() {
         // The device's language is read before composition and handed in, so the
         // first-launch default is a value rather than a locale read in a composable.
         val systemLanguage = Locale.getDefault().language
-        setContent { LektoApp(library, vocabulary, pronouncer, systemLanguage) }
+        setContent { LektoApp(library, vocabulary, pronouncer, systemLanguage, ::applyWindowPaper) }
+    }
+
+    /**
+     * The window's own background and bar icons follow the theme as it changes
+     * (ADR-0036): the Compose surface covers the paper, but the strip outside it
+     * and the status bar's icons are the platform's. Skipped when the paper has not
+     * moved, so a recomposition is not a repaint.
+     */
+    private fun applyWindowPaper(paper: Color) {
+        val argb = paper.toArgb()
+        if (argb == windowPaper) return
+        windowPaper = argb
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(argb))
+        val lightIcons = ColorUtils.calculateLuminance(argb) > LIGHT_PAPER_LUMINANCE
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = lightIcons
+            isAppearanceLightNavigationBars = lightIcons
+        }
     }
 
     override fun onDestroy() {
@@ -41,17 +71,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** The luminance above which a paper wants dark status-bar icons rather than light ones. */
+private const val LIGHT_PAPER_LUMINANCE: Double = 0.5
+
 /**
  * The Android composition root: the platform pieces the [MainActivity] supplies
  * to the shared [App], wired where the Activity's `Context` is in scope.
  */
-@Suppress("LongMethod") // The composition root wires each independent seam once; splitting scatters it.
+@Suppress("LongMethod", "LongParameterList") // The composition root wires each seam once; splitting scatters it.
 @Composable
 private fun LektoApp(
     library: BookLibrary,
     vocabulary: Vocabulary,
     speech: AndroidPronouncer?,
     systemLanguage: String,
+    onWindowBackgroundChange: (Color) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -63,6 +97,7 @@ private fun LektoApp(
     val readerLevels = remember { androidReaderLevels(context) }
     val languageSettings = remember { androidLanguageSettings(context) }
     val readingPreferences = remember { androidReadingPreferences(context) }
+    val appTheme = remember { androidAppTheme(context) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) {
             picker.resolve(null)
@@ -83,6 +118,7 @@ private fun LektoApp(
             languageSettings = languageSettings,
             systemLanguage = systemLanguage,
             readingPreferences = readingPreferences,
+            appTheme = appTheme,
             pickFile = {
                 // Arm the picker before launching, then park the import until
                 // it answers — the order closes the resolve-before-await race.
@@ -100,6 +136,7 @@ private fun LektoApp(
             llm = androidLlm(context),
             sync = sync,
         ),
+        onWindowBackgroundChange = onWindowBackgroundChange,
     )
 }
 

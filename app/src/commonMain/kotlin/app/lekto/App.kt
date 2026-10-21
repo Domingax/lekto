@@ -1,15 +1,16 @@
 package app.lekto
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
@@ -47,6 +49,8 @@ import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.TextSegmenter
 import app.lekto.core.text.WordKey
 import app.lekto.core.text.baseLanguage
+import app.lekto.core.theme.AppTheme
+import app.lekto.core.theme.AppThemeStore
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryController
@@ -75,6 +79,8 @@ import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
 import app.lekto.reader.ReadingPreferencesController
 import app.lekto.reader.WordTap
+import app.lekto.settings.AppearanceActions
+import app.lekto.settings.AppearanceScreen
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.ProviderController
 import app.lekto.settings.ProviderUiState
@@ -89,8 +95,9 @@ import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
+import app.lekto.theme.AppThemeController
 import app.lekto.theme.LektoTheme
-import app.lekto.theme.Light
+import app.lekto.theme.appThemeScheme
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
@@ -146,6 +153,13 @@ data class AppEnvironment(
      * `null` when the platform wires none, so the reader renders the defaults.
      */
     val readingPreferences: ReadingPreferencesStore? = null,
+    /**
+     * The app-private **App theme** store (ADR-0036): the device-local paper the
+     * whole app paints itself in — Light, Dark, Sepia, or System following the
+     * platform — never a **Vault** record. `null` when the platform wires none, so
+     * the app follows the platform.
+     */
+    val appTheme: AppThemeStore? = null,
     /**
      * The language the platform reports for this device (ADR-0034): the first-launch
      * suggestion for the **app language**. `null` when the platform reports none —
@@ -214,6 +228,12 @@ private sealed interface Destination {
      * one — the navigation rework will replace this with a real shell.
      */
     data class Languages(val returnTo: Destination) : Destination
+
+    /**
+     * The **Appearance** screen (ADR-0036). Like **Languages** it carries where to
+     * return to, so it lands back on the surface that offered it.
+     */
+    data class Appearance(val returnTo: Destination) : Destination
     data class Reading(val session: ReadingSession) : Destination
 }
 
@@ -240,17 +260,19 @@ private sealed interface Destination {
  * a host test cannot otherwise supply. It defaults to [WindowInsets.safeDrawing]
  * so a platform entry point passes nothing.
  *
- * [theme] is the **App theme**'s colour scheme, with the identity's Light paper
- * as the default (docs/design.md §2.1; ADR-0036). The **App theme** preference
- * and its Appearance screen are issue #182's; until they land, the default is
- * the whole input, so wiring them changes this parameter and nothing else.
+ * [systemInDarkTheme] is the platform's own light-or-dark report, injected so the
+ * **App theme** resolves **System** in one place ([appThemeScheme]) and a test can
+ * drive both answers (ADR-0036). [onWindowBackgroundChange] reports the active
+ * paper to the host, so the platform's own window — the strip before the first
+ * frame — is the theme's background rather than a white flash.
  */
 @Suppress("LongMethod", "CyclomaticComplexMethod") // The composition root wires each independent seam once.
 @Composable
 fun App(
     environment: AppEnvironment,
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
-    theme: ColorScheme = Light,
+    systemInDarkTheme: Boolean = isSystemInDarkTheme(),
+    onWindowBackgroundChange: (Color) -> Unit = {},
 ) {
     // The one signal the local writers raise and sync subscribes to (issue #121):
     // a book imported, a word saved or deleted, a reading position moved.
@@ -324,6 +346,16 @@ fun App(
     val readingPreferences = remember(environment.readingPreferences) {
         environment.readingPreferences?.let { store -> ReadingPreferencesController(store) }
     }
+    // The **App theme** (ADR-0036): the device-local paper, read once and observed
+    // as state, so choosing one repaints every screen at once. An unwired store
+    // still follows the platform rather than pinning a paper.
+    val appTheme = remember(environment.appTheme) {
+        environment.appTheme?.let { store -> AppThemeController(store) }
+    }
+    val theme = appThemeScheme(appTheme?.theme ?: AppTheme.DEFAULT, systemInDarkTheme)
+    // The window is the platform's, so it learns the paper from here: the strip
+    // Android paints before the first frame and the desktop's own background.
+    SideEffect { onWindowBackgroundChange(theme.background) }
     // The translation-language default needs the manifest, so it is filled from the
     // cached catalogue at launch and again when the Languages surface reads it; a
     // device whose language a pack serves needs no choice.
@@ -380,6 +412,7 @@ fun App(
             provider = providerState,
             sync = syncState,
             appLanguage = languageSettings?.appLanguage ?: AppLanguages.ENGLISH,
+            appTheme = appTheme?.theme ?: AppTheme.DEFAULT,
         ),
     )
 
@@ -403,6 +436,7 @@ fun App(
                     language,
                     languageSettings,
                     readingPreferences,
+                    appTheme,
                     lemmas,
                     difficulty,
                     difficultyStates,
@@ -414,7 +448,7 @@ fun App(
 }
 
 /** The app's destinations, so [App] stays a wiring function and each screen is small. */
-@Suppress("LongParameterList", "LongMethod") // The destinations' inputs, and the `when` that maps each to its screen.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod") // The destinations' inputs and their `when`.
 @Composable
 private fun AppScreens(
     environment: AppEnvironment,
@@ -429,6 +463,7 @@ private fun AppScreens(
     language: LanguageController?,
     languageSettings: LanguageSettingsController?,
     readingPreferences: ReadingPreferencesController?,
+    appTheme: AppThemeController?,
     lemmas: LemmaLookup,
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
@@ -477,8 +512,17 @@ private fun AppScreens(
         Destination.Settings -> SettingsDestination(
             settings,
             onVaultImported = controller::refresh,
+            onOpenAppearance = { destination = Destination.Appearance(Destination.Settings) },
             onOpenLanguages = { destination = Destination.Languages(Destination.Settings) },
             onBack = { destination = Destination.Library },
+        )
+
+        is Destination.Appearance -> AppearanceScreen(
+            current = appTheme?.theme ?: AppTheme.DEFAULT,
+            actions = AppearanceActions(
+                onSelect = { chosen -> appTheme?.choose(chosen) },
+                onBack = { destination = current.returnTo },
+            ),
         )
 
         is Destination.Languages -> LanguagesDestination(
@@ -657,6 +701,7 @@ private class Settings(
 private fun SettingsDestination(
     settings: Settings,
     onVaultImported: () -> Unit,
+    onOpenAppearance: () -> Unit,
     onOpenLanguages: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -664,6 +709,7 @@ private fun SettingsDestination(
         state = settings.state,
         actions = SettingsActions(
             onBack = onBack,
+            onOpenAppearance = onOpenAppearance,
             onOpenLanguages = onOpenLanguages,
             onSelectAppLanguage = { language -> settings.languageSettings?.chooseAppLanguage(language) },
             onExportVault = { settings.vaultTransfer?.export() },

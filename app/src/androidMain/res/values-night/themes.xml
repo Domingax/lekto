@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- On a dark platform, the default window theme (System) is the Dark paper
+         (ADR-0036): the system builds the starting window from the manifest's
+         theme before the app can read the stored choice, so this is what makes a
+         System device launch dark rather than flash white. The explicit Light,
+         Dark and Sepia themes in `values` override this for a chosen paper. -->
+    <style name="Theme.Lekto" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lekto_paper_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
