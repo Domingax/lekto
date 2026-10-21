@@ -989,19 +989,22 @@ proved at their own levels. The history is a value with pure moves, so
 nothing behind it, a bar item pushes its section, back from Settings returns to
 where it came from, a section already behind the current place unwinds to it
 rather than stacking a second copy, the reader is pushed over the shelf so Back
-returns to it, a Settings entry keeps Settings current while it is open, and back
-at the root changes nothing — so the platform, not the app, leaves from the
-Library. The shell's shape — the three sections and no fourth, the current one
-marked, and a fixed column beside the screen on desktop rather than a bar under it
-— is `ShellSemanticsTest` on both lanes. Android's own back gesture walking that
-stack is `AndroidBackTest` in `app/androidUnitTest`: it presses the activity's
-`OnBackPressedDispatcher` and pins that Back returns from Settings to the Library,
-from the **Languages** surface to Settings and from the reader to the shelf, that
-it closes the reader's lookup panel before leaving the page, and that it finishes
-the activity from the Library. The loop through the bar, and the reader covering
-it, run through `AppSemanticsTest` on both lanes. The shell has no golden: its
-labels are the host's fonts, so its shape is asserted by geometry — the
-navigation's bounds against the screen's — the way the goldens stay text-free.
+returns to it, a second tap on the current section closes the screen open over it,
+a Settings entry keeps Settings current while it is open, the reader's settings
+link leaves the book behind it, and back at the root changes nothing — so the
+platform, not the app, leaves from the Library. The shell's shape — the three
+sections and no fourth, the current one marked, and a fixed column beside the
+screen on desktop rather than a bar under it — is `ShellSemanticsTest` on both
+lanes, whose geometry also pins each item's 48 dp touch target. Android's own back
+gesture walking that stack is `AndroidBackTest` in `app/androidUnitTest`: it
+presses the activity's `OnBackPressedDispatcher` and pins that Back returns from
+Settings to the section it came from — Vocabulary, as well as the Library — from
+the **Languages** surface to Settings and from the reader to the shelf, that it
+closes the reader's lookup panel before leaving the page, and that it finishes the
+activity from the Library. The loop through the bar, and the reader covering it,
+run through `AppSemanticsTest` on both lanes. The shell has no golden: its labels
+are the host's fonts, so its shape is asserted by geometry — the navigation's
+bounds against the screen's, and its items' — the way the goldens stay text-free.
 
 The app's own texts (issue #165; ADR-0034) are one per-language table selected by
 the **app language**. `AppTextsTest` in `app/desktopTest` pins that every

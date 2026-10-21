@@ -165,9 +165,12 @@ Three sections, and no fourth:
 - **The back stack is real**, and Android's back button walks it (issue #185). Opening a section or
   a screen pushes it, and Back drops it: back from Settings returns to the section it came from, and
   a bar item already behind the current place unwinds to it rather than stacking a second copy.
-  Back from the Library is the platform's, and leaves the app. A screen with something open over it
-  — the reader's lookup and **Aa** panels — closes that first, as the chapter list does on Back
-  before the shell sees it (ADR-0037).
+  Tapping the section the reader is already in — marked current while one of its own screens is open
+  — returns to that section's first screen. Back from the Library is the platform's, and leaves the
+  app. A screen with something open over it — the reader's lookup and **Aa** panels — closes that
+  first, as the chapter list does on Back before the shell sees it (ADR-0037). The reader's settings
+  link leaves the book rather than keeping it behind, so Back from Settings lands on the shelf: a
+  book kept behind the link would reopen where it was opened, not where the reader had got to.
 - **Desktop**: the same three sections become a fixed left column. In the reader, the right side is
   a **context column** — the chapter list when nothing is touched, the word when something is. It
   is reserved rather than overlaid, so the page never moves. Below roughly **1100 dp** the column

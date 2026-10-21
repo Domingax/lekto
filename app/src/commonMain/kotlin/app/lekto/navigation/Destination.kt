@@ -17,6 +17,15 @@ enum class ShellSection(val label: TextKey) {
     LIBRARY(TextKey.LIBRARY),
     VOCABULARY(TextKey.VOCABULARY),
     SETTINGS(TextKey.SETTINGS),
+    ;
+
+    /** The section's first screen, which its bar item opens. */
+    val root: Destination
+        get() = when (this) {
+            LIBRARY -> Destination.Library
+            VOCABULARY -> Destination.Vocabulary
+            SETTINGS -> Destination.Settings
+        }
 }
 
 /**
@@ -72,11 +81,3 @@ sealed interface Destination {
         override val section: ShellSection? = null
     }
 }
-
-/** The destination a section's bar item leads to. */
-internal val ShellSection.root: Destination
-    get() = when (this) {
-        ShellSection.LIBRARY -> Destination.Library
-        ShellSection.VOCABULARY -> Destination.Vocabulary
-        ShellSection.SETTINGS -> Destination.Settings
-    }

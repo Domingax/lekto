@@ -20,14 +20,13 @@ import kotlin.test.assertTrue
  * composition: what the bar pushes, what it unwinds, what Back walks, and where
  * Back stops being the app's and becomes the platform's.
  */
-@Suppress("MagicNumber") // The depths are the assertions themselves: one place per step back.
+@Suppress("TooManyFunctions") // One test per move; the moves are the stack's whole surface.
 class BackStackTest {
 
     @Test
     fun opensOnTheLibraryWithNothingBehindIt() {
         assertEquals(Destination.Library, BackStack.Root.current)
         assertFalse(BackStack.Root.canGoBack, "the Library is the root: Back there belongs to the platform")
-        assertEquals(1, BackStack.Root.depth)
     }
 
     @Test
@@ -56,10 +55,23 @@ class BackStackTest {
     }
 
     @Test
-    fun tappingTheCurrentSectionChangesNothing() {
+    fun tappingTheCurrentSectionAgainChangesNothing() {
         val vocabulary = BackStack.Root.select(ShellSection.VOCABULARY)
 
         assertEquals(vocabulary, vocabulary.select(ShellSection.VOCABULARY))
+    }
+
+    @Test
+    fun tappingTheCurrentSectionClosesTheScreenOpenOverIt() {
+        // The item that reads as "here" is the section, so a second tap returns to
+        // the section's first screen rather than doing nothing — the way a tab bar
+        // pops what is open inside the tab.
+        val languages = BackStack.Root.select(ShellSection.SETTINGS).push(Destination.Languages)
+
+        val settings = languages.select(ShellSection.SETTINGS)
+
+        assertEquals(Destination.Settings, settings.current)
+        assertEquals(Destination.Library, settings.back().current)
     }
 
     @Test
@@ -69,8 +81,8 @@ class BackStackTest {
         val unwound = stack.select(ShellSection.VOCABULARY)
 
         assertEquals(Destination.Vocabulary, unwound.current)
-        assertEquals(listOf(Destination.Library), unwound.behind)
-        assertEquals(2, unwound.depth, "the bar cannot build a loop")
+        assertEquals(Destination.Library, unwound.back().current)
+        assertFalse(unwound.back().canGoBack, "the bar cannot build a loop")
     }
 
     @Test
@@ -89,7 +101,6 @@ class BackStackTest {
             .push(Destination.Languages)
             .push(Destination.Attribution)
 
-        assertEquals(4, stack.depth)
         assertEquals(ShellSection.SETTINGS, stack.current.section, "a Settings entry keeps Settings current")
         assertEquals(Destination.Languages, stack.back().current)
         assertEquals(Destination.Settings, stack.back().back().current)
@@ -113,8 +124,8 @@ class BackStackTest {
         val settings = reading.replace(Destination.Settings)
 
         assertEquals(Destination.Settings, settings.current)
-        assertEquals(listOf(Destination.Library), settings.behind)
         assertEquals(Destination.Library, settings.back().current)
+        assertFalse(settings.back().canGoBack, "the book is not behind the link")
     }
 
     @Test

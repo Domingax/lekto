@@ -24,6 +24,7 @@ import app.lekto.reader.READER_BACK_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.SETTINGS_TITLE_TAG
+import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -71,6 +72,22 @@ class AndroidBackTest {
         compose.onNodeWithTag(LIBRARY_TITLE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(shellSectionTag(ShellSection.LIBRARY)).assertIsDisplayed()
         assertTrue("back does not leave the app from a section", !compose.activity.isFinishing)
+    }
+
+    @Test
+    fun backFromSettingsReturnsToTheSectionItCameFrom() {
+        // The defect the ticket names: back used to leave the app from Settings.
+        // Here the reader came from Vocabulary, so back lands there.
+        compose.setContent { App(environment(InMemoryLibrary())) }
+        compose.onNodeWithTag(shellSectionTag(ShellSection.VOCABULARY)).performClick()
+        compose.onNodeWithTag(SETTINGS_TITLE_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        compose.onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
+
+        pressBack()
+
+        compose.onNodeWithTag(VOCABULARY_TITLE_TAG).assertIsDisplayed()
+        assertTrue("back does not leave the app from Settings", !compose.activity.isFinishing)
     }
 
     @Test

@@ -81,8 +81,11 @@ class ShellSemanticsTest {
             nav.right - nav.left >= root.right - root.left,
         )
         assertTrue("the screen ends where the bar starts: $screen vs $nav", screen.bottom <= nav.top)
-        // A touch target is never shorter than 48 dp (docs/design.md §9).
-        assertTrue("the bar is a finger high: $nav", nav.bottom - nav.top >= 48.dp)
+        // A touch target is never shorter than 48 dp (docs/design.md §9), measured
+        // on an item rather than on the bar that holds it.
+        val item = compose.onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).getUnclippedBoundsInRoot()
+        assertTrue("a section is a finger high: $item", item.bottom - item.top >= 48.dp)
+        assertTrue("a section is a finger wide: $item", item.right - item.left >= 48.dp)
     }
 }
 

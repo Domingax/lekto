@@ -23,19 +23,12 @@ data class BackStack private constructor(private val entries: List<Destination>)
     /** Where the app is now. */
     val current: Destination get() = entries.last()
 
-    /** The steps behind [current], oldest first — the places Back walks through. */
-    val behind: List<Destination> get() = entries.dropLast(1)
-
     /** Whether there is anywhere to go back to. At the root, Back is the platform's (it exits). */
     val canGoBack: Boolean get() = entries.size > 1
 
-    /** How deep the stack is: `1` at the root, one more for each place behind it. */
-    val depth: Int get() = entries.size
-
     /**
      * Opens [destination] above the current place. The reader is pushed, so Back
-     * returns to the shelf it was opened from, and a failure's settings link is
-     * pushed, so Back returns to the book.
+     * returns to the shelf it was opened from.
      *
      * Pushing the place already shown is a no-op, so a repeated tap cannot stack
      * the same screen twice.
@@ -44,9 +37,13 @@ data class BackStack private constructor(private val entries: List<Destination>)
         if (destination == current) this else BackStack(entries + destination)
 
     /**
-     * Taps [section] in the bar: it becomes the current place, and a section
-     * already behind it unwinds to the copy the reader has been to, rather than
-     * stacking a second one.
+     * Taps [section] in the bar.
+     *
+     * A section already behind the current place unwinds to the copy the reader
+     * has been to rather than stacking a second one. The section the reader is in
+     * — selected in the bar while one of its own screens is open — unwinds to its
+     * root, so a second tap on the current section closes the screen over it and
+     * returns to the section's first screen, the way a tab bar does.
      */
     fun select(section: ShellSection): BackStack {
         val known = entries.indexOfFirst { destination -> destination.section == section }
@@ -64,10 +61,12 @@ data class BackStack private constructor(private val entries: List<Destination>)
     fun back(): BackStack = if (canGoBack) BackStack(entries.dropLast(1)) else this
 
     /**
-     * Leaves the current place for [destination]: the reader's settings link takes
-     * the reader out of the book, so the book is not kept behind it. Returning to
-     * it would reopen a session captured before the reader turned a page, which
-     * would move them. At the root — nothing behind — this is a [push].
+     * Leaves the current place for [destination].
+     *
+     * Only the reader's settings link uses it: the link takes the reader out of
+     * the book, so the book is not kept behind it. Returning to it would reopen the
+     * session captured when the book was opened, before the reader turned a page,
+     * and move them. At the root — nothing behind — this is a [push].
      */
     fun replace(destination: Destination): BackStack =
         if (canGoBack) BackStack(entries.dropLast(1) + destination) else push(destination)

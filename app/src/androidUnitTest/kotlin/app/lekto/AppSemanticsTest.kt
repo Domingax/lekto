@@ -80,6 +80,8 @@ import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
+import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
@@ -129,6 +131,7 @@ import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
+import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
 import app.lekto.vocabulary.vocabularyMasteryTag
@@ -193,6 +196,34 @@ class AppSemanticsTest {
 
         compose.awaitPage(1)
         compose.onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun eachSectionIsReachedFromTheBar() {
+        compose.setContent { App(environment(InMemoryLibrary())) }
+
+        compose.tapSection(ShellSection.VOCABULARY)
+        compose.onNodeWithTag(VOCABULARY_TITLE_TAG).assertIsDisplayed()
+
+        compose.tapSection(ShellSection.SETTINGS)
+        compose.onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
+
+        compose.tapSection(ShellSection.LIBRARY)
+        compose.onNodeWithTag(LIBRARY_TITLE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theReaderCoversTheShell() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library)) }
+        compose.onNodeWithTag(SHELL_NAV_TAG).assertIsDisplayed()
+
+        compose.openBook()
+
+        // The reader leaves the shell and is full-screen over it (issue #185).
+        compose.onNodeWithTag(SHELL_NAV_TAG).assertDoesNotExist()
+        compose.leaveReader()
+        compose.onNodeWithTag(SHELL_NAV_TAG).assertIsDisplayed()
     }
 
     @Test

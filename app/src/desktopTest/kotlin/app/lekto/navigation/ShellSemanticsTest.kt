@@ -78,8 +78,11 @@ class ShellSemanticsTest {
             "the column runs the window's height: $nav vs $root",
         )
         assertTrue(screen.left >= nav.right, "the screen starts after the column: $screen vs $nav")
-        // A touch target is never shorter than 48 dp (docs/design.md §9).
-        assertTrue((nav.bottom - nav.top) / ShellSection.entries.size >= 48.dp, "each section is a finger high: $nav")
+        // A touch target is never shorter than 48 dp (docs/design.md §9), measured
+        // on an item rather than on the column that holds it.
+        val item = onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).getUnclippedBoundsInRoot()
+        assertTrue(item.bottom - item.top >= 48.dp, "a section is a finger high: $item")
+        assertTrue(item.right - item.left >= 48.dp, "a section is a finger wide: $item")
     }
 }
 

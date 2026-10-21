@@ -78,6 +78,8 @@ import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
+import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
@@ -128,6 +130,7 @@ import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
+import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
 import app.lekto.vocabulary.vocabularyMasteryTag
@@ -170,6 +173,34 @@ class AppSemanticsTest {
 
         awaitPage(1)
         onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun eachSectionIsReachedFromTheBar() = runComposeUiTest {
+        setContent { App(environment(InMemoryLibrary())) }
+
+        tapSection(ShellSection.VOCABULARY)
+        onNodeWithTag(VOCABULARY_TITLE_TAG).assertIsDisplayed()
+
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
+
+        tapSection(ShellSection.LIBRARY)
+        onNodeWithTag(LIBRARY_TITLE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theReaderCoversTheShell() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library)) }
+        onNodeWithTag(SHELL_NAV_TAG).assertIsDisplayed()
+
+        openBook()
+
+        // The reader leaves the shell and is full-screen over it (issue #185).
+        onNodeWithTag(SHELL_NAV_TAG).assertDoesNotExist()
+        leaveReader()
+        onNodeWithTag(SHELL_NAV_TAG).assertIsDisplayed()
     }
 
     @Test

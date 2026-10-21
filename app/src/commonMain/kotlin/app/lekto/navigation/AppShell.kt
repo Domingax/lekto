@@ -78,10 +78,11 @@ internal fun AppShell(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val navigation = ShellNavigation(current, onSelect)
     BoxWithConstraints(modifier.fillMaxSize()) {
         if (maxWidth >= ShellRailBreakpoint) {
             Row(Modifier.fillMaxSize()) {
-                ShellRail(current, onSelect)
+                ShellRail(navigation)
                 VerticalDivider(color = MaterialTheme.colorScheme.outline)
                 Box(Modifier.fillMaxHeight().weight(1f).testTag(SHELL_SCREEN_TAG)) { content() }
             }
@@ -89,15 +90,27 @@ internal fun AppShell(
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxWidth().weight(1f).testTag(SHELL_SCREEN_TAG)) { content() }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                ShellBar(current, onSelect)
+                ShellBar(navigation)
             }
         }
     }
 }
 
+/**
+ * The shell's live state and its one tap, bundled so both shapes and their items
+ * read one value rather than a pair of parameters.
+ */
+private class ShellNavigation(val current: ShellSection, val onSelect: (ShellSection) -> Unit) {
+
+    /** The section's colour: ink while it is the section the reader is in, muted ink otherwise. */
+    @Composable
+    fun colour(section: ShellSection): Color =
+        if (section == current) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+}
+
 /** The desktop shape: a fixed column at the left, its items stacked from the top. */
 @Composable
-private fun ShellRail(current: ShellSection, onSelect: (ShellSection) -> Unit) {
+private fun ShellRail(navigation: ShellNavigation) {
     Column(
         modifier = Modifier
             .fillMaxHeight()
@@ -107,20 +120,14 @@ private fun ShellRail(current: ShellSection, onSelect: (ShellSection) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
     ) {
         ShellSection.entries.forEach { section ->
-            ShellItem(
-                section = section,
-                current = section == current,
-                onSelect = onSelect,
-                stacked = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            ShellRailItem(navigation, section)
         }
     }
 }
 
 /** The phone shape: three items sharing one row at the bottom, each a finger wide. */
 @Composable
-private fun ShellBar(current: ShellSection, onSelect: (ShellSection) -> Unit) {
+private fun ShellBar(navigation: ShellNavigation) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -130,59 +137,53 @@ private fun ShellBar(current: ShellSection, onSelect: (ShellSection) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ShellSection.entries.forEach { section ->
-            ShellItem(
-                section = section,
-                current = section == current,
-                onSelect = onSelect,
-                stacked = true,
-                modifier = Modifier.weight(1f),
-            )
+            ShellBarItem(navigation, section, Modifier.weight(1f))
         }
     }
 }
 
-/**
- * One section's item: its icon and its word, the current one in ink and the rest
- * in muted ink, so the bar reads as a placeholder in a book rather than a row of
- * competing buttons.
- *
- * [stacked] is the phone's shape (icon over label, centred); the column lays them
- * side by side.
- */
+/** One item of the left column: its icon beside its word. */
 @Composable
-@Suppress("LongParameterList") // The item's own inputs: its section, whether it is current, the tap and its shape.
-private fun ShellItem(
-    section: ShellSection,
-    current: Boolean,
-    onSelect: (ShellSection) -> Unit,
-    stacked: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val colour = if (current) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
-    val item = modifier
-        .heightIn(min = LektoSpacing.TouchTarget)
-        .selectable(selected = current, role = Role.Tab, onClick = { onSelect(section) })
-        .testTag(shellSectionTag(section))
-    if (stacked) {
-        Column(
-            modifier = item.padding(vertical = LektoSpacing.BetweenRelatedLines),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
-        ) {
-            ShellIcon(section, colour)
-            ShellLabel(section, current, colour)
-        }
-    } else {
-        Row(
-            modifier = item.padding(horizontal = LektoSpacing.ScreenEdge),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
-        ) {
-            ShellIcon(section, colour)
-            ShellLabel(section, current, colour)
-        }
+private fun ShellRailItem(navigation: ShellNavigation, section: ShellSection) {
+    val colour = navigation.colour(section)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shellItem(navigation, section)
+            .padding(horizontal = LektoSpacing.ScreenEdge),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        ShellIcon(section, colour)
+        ShellLabel(section, current = navigation.current == section, colour = colour)
     }
 }
+
+/** One item of the bottom bar: its icon over its word, centred. */
+@Composable
+private fun ShellBarItem(navigation: ShellNavigation, section: ShellSection, modifier: Modifier = Modifier) {
+    val colour = navigation.colour(section)
+    Column(
+        modifier = modifier
+            .shellItem(navigation, section)
+            .padding(vertical = LektoSpacing.BetweenRelatedLines),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
+    ) {
+        ShellIcon(section, colour)
+        ShellLabel(section, current = navigation.current == section, colour = colour)
+    }
+}
+
+/** The item's shared shape: a full touch target, selectable, and findable by a test. */
+private fun Modifier.shellItem(navigation: ShellNavigation, section: ShellSection): Modifier = this
+    .heightIn(min = LektoSpacing.TouchTarget)
+    .selectable(
+        selected = navigation.current == section,
+        role = Role.Tab,
+        onClick = { navigation.onSelect(section) },
+    )
+    .testTag(shellSectionTag(section))
 
 /** A section's icon at 24 dp, decorative: the label beside it names it (docs/design.md §9). */
 @Composable
