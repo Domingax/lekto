@@ -1,7 +1,9 @@
 package app.lekto.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,17 +30,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
+import app.lekto.core.book.BookProgress
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
 import app.lekto.ui.ConfirmationDialog
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
+
+/** The test tag on a row's progress rule, so a UI test can read exactly one book's percentage. */
+internal fun libraryProgressTag(bookId: String): String = "library-progress-$bookId"
+
+/** The rule's thickness: 3 dp (docs/design.md §7.1). */
+private val PROGRESS_RULE_HEIGHT = 3.dp
 
 /** The test tag on the Library's search field (issue #173). */
 internal const val LIBRARY_SEARCH_TAG: String = "library-search"
@@ -108,7 +121,9 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
     pendingDelete?.let { target ->
         ConfirmationDialog(
             title = texts.message(AppMessage.of(TextKey.DELETE_BOOK_TITLE, target.title)),
-            message = texts[TextKey.DELETE_BOOK_MESSAGE],
+            // The file name identifies the imported file, which is not on the row
+            // any more (docs/design.md §7.1).
+            message = texts.message(AppMessage.of(TextKey.DELETE_BOOK_MESSAGE, target.fileName)),
             confirmLabel = texts[TextKey.DELETE],
             onConfirm = {
                 pendingDelete = null
@@ -187,7 +202,7 @@ private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Uni
             }
         }
         items(state.visibleBooks, key = { book -> book.id }) { book ->
-            BookRow(book, onOpen = onOpen, onDelete = onDelete)
+            BookRow(book, state.listing.progressOf(book), onOpen = onOpen, onDelete = onDelete)
         }
     }
 }
@@ -222,9 +237,15 @@ private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () 
     }
 }
 
-/** One library row: the title, the format, the tap that opens it and the delete action. */
+/**
+ * One library row: the title, its **Reading progress** line and rule, the tap that
+ * opens it and the delete action (docs/design.md §7.1; issue #196).
+ *
+ * The file name is deliberately gone from the row: it identifies a file, not a
+ * book, so it survives only in import errors and the delete confirmation.
+ */
 @Composable
-private fun BookRow(book: Book, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
+private fun BookRow(book: Book, progress: BookProgress, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
     val texts = LocalAppTexts.current
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -236,16 +257,72 @@ private fun BookRow(book: Book, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(book.title, style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = "${book.format.name} · ${book.fileName}",
-                style = MaterialTheme.typography.bodySmall,
-            )
+            ProgressLine(book, progress)
         }
         TextButton(
             onClick = { onDelete(book) },
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
             modifier = Modifier.testTag(libraryDeleteTag(book.id)),
         ) { Text(texts[TextKey.DELETE]) }
+    }
+}
+
+/** The row's second line: a measured percentage with its rule, or one of the two unmeasured states. */
+@Composable
+private fun ProgressLine(book: Book, progress: BookProgress) {
+    val texts = LocalAppTexts.current
+    val style = MaterialTheme.typography.bodySmall
+    when (progress) {
+        BookProgress.NotStarted -> Text(
+            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_NOT_STARTED, book.format.name)),
+            style = style,
+        )
+
+        BookProgress.Unmeasured -> Text(
+            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_MEASURING, book.format.name)),
+            style = style,
+            // `…` alone is not something a screen reader can read; the row says
+            // what the data is waiting for until the background measurement lands.
+            modifier = Modifier.semantics {
+                contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION]
+            },
+        )
+
+        is BookProgress.Measured -> {
+            Text(
+                text = texts.message(
+                    AppMessage.of(TextKey.LIBRARY_ROW_PROGRESS, book.format.name, progress.percent),
+                ),
+                style = style,
+            )
+            ProgressRule(book.id, progress.percent)
+        }
+    }
+}
+
+/**
+ * The 3 dp rule under a measured line: it fills to the same whole percentage as
+ * the text beside it (docs/design.md §7.1). It carries a [ProgressBarRangeInfo],
+ * so a screen reader announces the percentage and a semantics test can read it.
+ */
+@Composable
+private fun ProgressRule(bookId: String, percent: Int) {
+    val fraction = percent.coerceIn(0, 100) / 100f
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.InsideLabelPair)
+            .height(PROGRESS_RULE_HEIGHT)
+            .testTag(libraryProgressTag(bookId))
+            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f) }
+            .background(MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction)
+                .height(PROGRESS_RULE_HEIGHT)
+                .background(MaterialTheme.colorScheme.primary),
+        )
     }
 }
 

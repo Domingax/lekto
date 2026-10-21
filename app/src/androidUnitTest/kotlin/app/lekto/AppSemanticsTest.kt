@@ -32,9 +32,11 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
+import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
@@ -1474,7 +1476,21 @@ internal class InMemoryLibrary : BookLibrary {
     @Synchronized override fun listing(): LibraryListing = LibraryListing.of(
         books = stored,
         lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
+        progressByBook = stored.mapNotNull { book ->
+            positions[book.id]?.let { offset ->
+                book.id to BookProgress.forPosition(
+                    ReadingPosition(book.id, offset),
+                    longText(book).renderedLength(),
+                )
+            }
+        }.toMap(),
     )
+
+    @Synchronized override fun measure(bookId: String): ReadingProgress? {
+        val book = stored.firstOrNull { it.id == bookId }
+        val offset = positions[bookId]
+        return if (book != null && offset != null) ReadingProgress(offset, longText(book).renderedLength()) else null
+    }
 
     @Synchronized override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
         val book = Book(

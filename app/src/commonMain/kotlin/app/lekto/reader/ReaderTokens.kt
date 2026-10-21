@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import app.lekto.core.MasteryLevel
+import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
@@ -51,7 +52,7 @@ fun buildReaderTokens(
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, styles)
-    val text = chapter.blocks.joinToString(separator = "\n\n") { block -> block.text }
+    val text = chapter.blocks.joinToString(separator = BLOCK_SEPARATOR) { block -> block.text }
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected, onWordTap, offset = 0, text = text)
     chapter.blocks.forEachIndexed { index, block ->
@@ -117,8 +118,8 @@ private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderChapte
     var cursor = 0
     chapter.blocks.forEachIndexed { index, block ->
         if (index > 0) {
-            builder.append("\n\n")
-            cursor += 2
+            builder.append(BLOCK_SEPARATOR)
+            cursor += BLOCK_SEPARATOR.length
         }
         blockStarts += cursor
         appendBlock(builder, block, cursor, styles)

@@ -11,6 +11,7 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.core.text.WordKey
@@ -57,6 +58,25 @@ class ReaderTextTest {
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
+    }
+
+    @Test
+    fun theReadingProgressDenominatorIsExactlyTheRenderedChapterText() {
+        // Reading progress divides the position by the length of the text the
+        // reader lays out, so core's formula and this chapter text must agree on
+        // a multi-block book (issue #196).
+        val text = StructuredText(
+            title = "Lantern",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lantern glows"))),
+                TextBlock(BlockKind.HEADING, listOf(TextRun("A heading"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("and the keeper waits"))),
+            ),
+        )
+        val book = ReaderChapter(text.title.orEmpty(), text.language, text.blocks)
+
+        assertEquals(text.renderedLength(), buildChapterText(book, styles).length)
     }
 
     @Test

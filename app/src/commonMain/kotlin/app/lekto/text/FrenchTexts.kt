@@ -40,9 +40,13 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.IMPORTING to "Importation…",
     TextKey.IMPORT_PROGRESS to "Progression de l'importation",
     TextKey.DELETE_BOOK_TITLE to "Supprimer « {0} » ?",
-    TextKey.DELETE_BOOK_MESSAGE to "Cette action est irréversible.",
+    TextKey.DELETE_BOOK_MESSAGE to "Lekto supprimera « {0} ». Cette action est irréversible.",
     TextKey.ERROR_DETAIL to "Erreur : {0}",
     TextKey.NO_BOOKS_MATCH_QUERY to "Aucun livre ne correspond à « {0} ».",
+    TextKey.LIBRARY_ROW_PROGRESS to "{0} · {1} %",
+    TextKey.LIBRARY_ROW_NOT_STARTED to "{0} · Non commencé",
+    TextKey.LIBRARY_ROW_MEASURING to "{0} · …",
+    TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION to "La progression de lecture est en cours de calcul.",
 
     // Vocabulary.
     TextKey.VOCABULARY_EMPTY to "Aucun mot enregistré — touchez un mot pendant la lecture pour l'enregistrer",

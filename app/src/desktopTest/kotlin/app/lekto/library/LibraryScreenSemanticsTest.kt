@@ -5,10 +5,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -18,6 +21,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
+import app.lekto.core.book.BookProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
@@ -26,6 +30,11 @@ import app.lekto.ui.CONFIRM_DIALOG_CANCEL_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import kotlin.test.Test
 import kotlin.test.assertTrue
+
+/** The whole percentage the measured-row test uses; [FULL_PERCENT] is its denominator. */
+private const val MEASURED_PERCENT = 28
+private const val FULL_PERCENT = 100
+
 /**
  * The library screen's behaviour through semantics (issue #15): the empty state,
  * the book list and its open tap, the inline import progress, the inline failure
@@ -132,7 +141,10 @@ class LibraryScreenSemanticsTest {
         onNodeWithTag(libraryDeleteTag(book.id)).performClick()
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
-        onNodeWithText("This cannot be undone.").assertIsDisplayed()
+        // The file name left the row (issue #196), so the confirmation is where it
+        // still identifies the imported file.
+        onNodeWithText("lantern.epub", substring = true).assertIsDisplayed()
+        onNodeWithText("This cannot be undone.", substring = true).assertIsDisplayed()
         kotlin.test.assertNull(deleted, "the vault must be untouched until the user confirms")
     }
 
@@ -261,9 +273,47 @@ class LibraryScreenSemanticsTest {
         onNodeWithText("Réglages").assertDoesNotExist()
     }
 
+    @Test
+    fun aMeasuredReadingProgressShowsItsWholePercentageAndRule() = runComposeUiTest {
+        setContent { Library(stateWith(BookProgress.Measured(MEASURED_PERCENT))) }
+
+        onNodeWithText("EPUB · $MEASURED_PERCENT %").assertIsDisplayed()
+        // The rule fills to the same whole percentage the line says (issue #196).
+        // It is read from the unmerged tree: the row's clickable column merges its
+        // children, and the rule is a child with no text of its own.
+        onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true)
+            .assertRangeInfoEquals(
+                ProgressBarRangeInfo(current = MEASURED_PERCENT / FULL_PERCENT.toFloat(), range = 0f..1f),
+            )
+        onNodeWithText(book.fileName).assertDoesNotExist()
+    }
+
+    @Test
+    fun aBookWithNoReadingPositionSaysNotStartedWithoutARule() = runComposeUiTest {
+        setContent { Library(books(book)) }
+
+        onNodeWithText("EPUB · Not started").assertIsDisplayed()
+        onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithText(book.fileName).assertDoesNotExist()
+    }
+
+    @Test
+    fun aBookAwaitingMeasurementShowsTheUnknownStateWithoutARule() = runComposeUiTest {
+        setContent { Library(stateWith(BookProgress.Unmeasured)) }
+
+        onNodeWithText("EPUB · …")
+            .assertIsDisplayed()
+            .assertContentDescriptionEquals("Reading progress is being measured.")
+        onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true).assertDoesNotExist()
+    }
+
     /** A state whose books are all unread, so only the title list shows. */
     private fun books(vararg books: Book): LibraryUiState =
         LibraryUiState(listing = LibraryListing(others = books.toList()))
+
+    /** A state whose one book carries [progress], so a test can render each row state. */
+    private fun stateWith(progress: BookProgress): LibraryUiState =
+        LibraryUiState(listing = LibraryListing(others = listOf(book), progressByBook = mapOf(book.id to progress)))
 
     @Composable
     @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.

@@ -3,6 +3,7 @@ package app.lekto.library
 import app.lekto.LocalChanges
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.text.AppMessage
@@ -70,6 +71,12 @@ data class LibraryUiState(
  * in [LibraryUiState.error] rather than throwing. The [dispatcher] is injected
  * because a hard-coded one cannot be driven by virtual time (docs/testing.md,
  * "Deterministic seams").
+ *
+ * A book with a **Reading position** whose rendered length is still missing is
+ * measured on that same dispatcher, so constructing the controller never parses
+ * a book and the row moves from `…` to its percentage when the measurement lands
+ * (issue #196). A derived write is not a sync trigger, so no [LocalChanges]
+ * signal is raised.
  */
 class LibraryController(
     private val library: BookLibrary,
@@ -81,7 +88,17 @@ class LibraryController(
 
     private val _state = MutableStateFlow(LibraryUiState(listing = library.listing()))
     private val refreshMutex = Mutex()
+
+    /**
+     * Books whose length was already measured or whose measurement failed, so a
+     * book that cannot be parsed is not re-parsed on every return to the Library.
+     */
+    private val attempted = MutableStateFlow<Set<String>>(emptySet())
     val state: StateFlow<LibraryUiState> = _state.asStateFlow()
+
+    init {
+        measureMissingLengths(_state.value.listing)
+    }
 
     /** Imports [bytes] as [fileName], reporting progress and catching failure. */
     @Suppress("TooGenericExceptionCaught") // Any import failure becomes a message; the app stays usable.
@@ -92,8 +109,9 @@ class LibraryController(
             try {
                 library.import(fileName, bytes) { progress -> report(progress) }
                 changes.contentChanged()
+                val listing = loadListing()
                 _state.update { current ->
-                    current.copy(listing = library.listing(), importing = false, progress = 1f, error = null)
+                    current.copy(listing = listing, importing = false, progress = 1f, error = null)
                 }
             } catch (failure: Exception) { // Any import failure must surface as a message, not a crash.
                 _state.update { current ->
@@ -135,7 +153,8 @@ class LibraryController(
             try {
                 library.delete(bookId)
                 changes.contentChanged()
-                _state.update { current -> current.copy(listing = library.listing(), error = null) }
+                val listing = loadListing()
+                _state.update { current -> current.copy(listing = listing, error = null) }
             } catch (failure: Exception) { // Any delete failure must surface as a message, not a crash.
                 _state.update { current ->
                     current.copy(error = AppMessage.failure(failure, TextKey.MESSAGE_BOOK_DELETE_FAILED))
@@ -157,9 +176,41 @@ class LibraryController(
     fun refresh() {
         scope.launch {
             refreshMutex.withLock {
-                val listing = library.listing()
+                val listing = loadListing()
                 _state.update { current -> current.copy(listing = listing) }
             }
+        }
+    }
+
+    /**
+     * Lists the vault and repairs every **Reading progress** whose rendered
+     * length is missing (issue #196). The listing itself is cheap: it reads a
+     * position record and a tiny length entry per book, never the parsed text.
+     */
+    private fun loadListing(): LibraryListing {
+        val listing = library.listing()
+        measureMissingLengths(listing)
+        return listing
+    }
+
+    /**
+     * Measures each positioned book whose length is still unknown, off the
+     * caller's thread, and re-lists once so the rows move from `…` to their
+     * percentage. A book that cannot be parsed keeps `…`: no length is invented
+     * and the row never falls back to `Not started`. Each book is attempted once
+     * per controller, so a permanent failure does not re-parse on every refresh.
+     * Nothing is signalled to sync, because a **Derived asset** is not
+     * user-authored data.
+     */
+    private fun measureMissingLengths(listing: LibraryListing) {
+        val pending = (listing.lastRead + listing.others).filter { book ->
+            listing.progressOf(book) is BookProgress.Unmeasured && book.id !in attempted.value
+        }
+        if (pending.isEmpty()) return
+        scope.launch {
+            val measured = pending.mapNotNull { book -> runCatching { library.measure(book.id) }.getOrNull() }
+            attempted.update { ids -> ids + pending.map { book -> book.id } }
+            if (measured.isNotEmpty()) refresh()
         }
     }
 

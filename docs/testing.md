@@ -124,6 +124,29 @@ no-match state are `LibraryScreenSemanticsTest` on both lanes, and
 `AppSemanticsTest` proves the query is dropped when the reader leaves the Library
 for a book, Vocabulary, Settings or Languages.
 
+Reading progress in each row (issue #196) is proved at the same levels. The
+denominator — the reader's rendered text, the blocks joined by a blank line — is
+`StructuredText.renderedLength()`, pinned in `StructuredTextTest` in
+`core/commonTest` and, on a multi-block book, to `buildChapterText(...).length`
+in `ReaderTextTest`, so the share and the text the reader lays out cannot drift.
+The whole percentage is `ReadingProgress.percent`, pinned by `ReadingProgressTest`
+for the floor (`28.9 %` → `28 %`), a position at 0, an offset past the end
+clamped to 100, the absence of a 99 % cap, and a property over generated offsets
+and lengths. The length is a **Derived asset** written and removed beside the
+parsed text, so `VaultBookLibraryTest` proves the entry lands and goes with the
+text, a re-parse rewrites it, and a **derived store that refuses to read
+`book-text/<id>.json`** still lists progress — the list reads only the length
+entry. `JvmBookLibraryTest` proves the same entry on a real directory, outside
+the vault root. The controller's background repair is `LibraryControllerTest`:
+construction lists the row at `…` without parsing, the measurement runs on the
+injected dispatcher and moves the row to its percentage, a failed measurement
+leaves `…` rather than `Not started`, and neither the content nor the reading
+sync signal fires. The row's three states — a percentage with a rule that
+carries `ProgressBarRangeInfo`, `Not started` without one, and `…` with its
+localized description and no rule — are `LibraryScreenSemanticsTest` on both
+lanes, and the file name is absent from the row and present in the delete
+confirmation on both.
+
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
 record, its original, its derived text and its reading position and leaves a

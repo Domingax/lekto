@@ -56,6 +56,19 @@ interface BookLibrary {
     /** Where the user left off in the book with [bookId], or `null` when unread. */
     fun position(bookId: String): ReadingPosition?
 
+    /**
+     * Measures the rendered length of the book with [bookId] and caches it beside
+     * its parsed text, then returns the book's **Reading progress** (issue #196).
+     *
+     * It is the background repair for a length a cache does not hold: a caller
+     * that must not block (the Library) runs it off the main thread. It returns
+     * `null` — and changes nothing — when the book has no Reading position or
+     * its text cannot be parsed, so the row stays at `…` rather than claiming
+     * `Not started`. The write is a **Derived asset**, so it never raises the
+     * sync signal.
+     */
+    fun measure(bookId: String): ReadingProgress?
+
     /** Stores [position] as the book's reading position. */
     fun savePosition(position: ReadingPosition)
 }
