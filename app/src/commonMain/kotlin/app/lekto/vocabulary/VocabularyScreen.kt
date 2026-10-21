@@ -30,6 +30,7 @@ import app.lekto.core.MasteryLevel
 import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryChip
+import app.lekto.reader.MasteryPalette
 import app.lekto.reader.readerColorOr
 import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
@@ -237,10 +238,11 @@ private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit
 private fun Mastery(level: MasteryLevel, key: WordKey) {
     val texts = LocalAppTexts.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val theme = MaterialTheme.colorScheme
         Box(
             Modifier
                 .size(10.dp)
-                .background(level.readerColorOr(MaterialTheme.colorScheme.outline), CircleShape),
+                .background(level.readerColorOr(theme.outline, MasteryPalette.of(theme)), CircleShape),
         )
         Text(
             texts.masteryName(level),

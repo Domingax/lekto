@@ -21,7 +21,7 @@ class ReaderStylesTest {
 
     @Test
     fun theDefaultsReproduceTheFixedReadingStyle() {
-        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT)
+        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
         assertEquals(FontFamily.Serif, styles.body.fontFamily)
         assertEquals(18.sp, styles.body.fontSize)
@@ -32,7 +32,7 @@ class ReaderStylesTest {
 
     @Test
     fun aSansSerifPreferenceUsesThePlatformSansSerif() {
-        val styles = ReaderStyles.of(ReadingPreferences(face = ReadingFace.SANS_SERIF))
+        val styles = ReaderStyles.of(ReadingPreferences(face = ReadingFace.SANS_SERIF), mastery = MasteryPalette.Light)
 
         assertEquals(FontFamily.SansSerif, styles.body.fontFamily)
         assertEquals(FontFamily.SansSerif, styles.heading.fontFamily)
@@ -40,7 +40,7 @@ class ReaderStylesTest {
 
     @Test
     fun theSizeAndLeadingFollowThePreference() {
-        val styles = ReaderStyles.of(ReadingPreferences(size = 24f))
+        val styles = ReaderStyles.of(ReadingPreferences(size = 24f), mastery = MasteryPalette.Light)
 
         assertEquals(24.sp, styles.body.fontSize)
         assertEquals((24f * ReadingPreferences.LEADING_RATIO).sp, styles.body.lineHeight)
@@ -48,8 +48,8 @@ class ReaderStylesTest {
 
     @Test
     fun theHeadingScalesWithTheSize() {
-        val default = ReaderStyles.of(ReadingPreferences(size = 18f))
-        val larger = ReaderStyles.of(ReadingPreferences(size = 36f))
+        val default = ReaderStyles.of(ReadingPreferences(size = 18f), mastery = MasteryPalette.Light)
+        val larger = ReaderStyles.of(ReadingPreferences(size = 36f), mastery = MasteryPalette.Light)
 
         assertEquals((24f * 2).sp, larger.heading.fontSize, "the heading must double when the body doubles")
         assertEquals(default.heading.fontSize.value * 2, larger.heading.fontSize.value, "the ratio holds")
@@ -57,16 +57,26 @@ class ReaderStylesTest {
 
     @Test
     fun theMarginFollowsThePreference() {
-        assertEquals(16.dp, ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.NARROW)).horizontalMargin)
-        assertEquals(32.dp, ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.WIDE)).horizontalMargin)
+        val narrow = ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.NARROW), mastery = MasteryPalette.Light)
+        val wide = ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.WIDE), mastery = MasteryPalette.Light)
+
+        assertEquals(16.dp, narrow.horizontalMargin)
+        assertEquals(32.dp, wide.horizontalMargin)
     }
 
     @Test
     fun theInkComesFromTheAppTheme() {
         val ink = Color(0xFFE8E2D8)
-        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, ink)
+        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, MasteryPalette.Light, ink)
 
         assertEquals(ink, styles.body.color)
         assertEquals(ink, styles.heading.color)
+    }
+
+    @Test
+    fun theMasteryRampComesFromThePaper() {
+        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Dark)
+
+        assertEquals(MasteryPalette.Dark, styles.mastery)
     }
 }

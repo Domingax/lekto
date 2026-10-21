@@ -37,7 +37,7 @@ The domain gained one term the reader needs; the reader itself is presentation.
 | `core/src/commonMain/.../Mastery.kt` | `MasteryLevel` (the CONTEXT.md scale) and the `MasteryLookup` seam. |
 | `app/src/commonMain/.../reader/ReaderChapter.kt` | `ReaderChapter` (blocks + title + language) and `ReaderRenderer` (segmenter + mastery + styles). |
 | `app/src/commonMain/.../reader/ReaderTokens.kt` | The word-token layer: blocks → one `AnnotatedString`, one colour span and one link per word. |
-| `app/src/commonMain/.../reader/MasteryPalette.kt` | The five-level palette and the non-colour underline indicator. |
+| `app/src/commonMain/.../reader/MasteryPalette.kt` | The measured per-paper mastery ramps and the non-colour underline indicator. |
 | `app/src/commonMain/.../reader/ReaderStyles.kt` | The pinned reading typography (18px serif, 1.7 line height). |
 | `app/src/commonMain/.../reader/ReaderPage.kt` | `ReaderPage`/`ReaderLayout` and `paginateChapter`: whole-chapter measure, cut at lines. |
 | `app/src/commonMain/.../reader/ReaderScreen.kt` | The screen: title, selectable page, page bar with both navigation directions. |
@@ -57,9 +57,10 @@ Tests:
 - `app/desktopTest/.../ReaderScreenSemanticsTest` — the screen renders the sample,
   navigates forward and back through semantics, and exposes the words as
   clickable (focusable) nodes beyond the two chrome buttons.
-- `app/desktopTest/.../MasteryPaletteGoldenTest` — the palette and the page word
-  layer as a text-free golden (`goldens/desktop/mastery-palette.png`); its blocks
-  are the sample's real tokens, so it moves with tokenisation and colouring.
+- `app/desktopTest/.../MasteryPaletteGoldenTest` — each paper's ramp and the page
+  word layer as a text-free golden (`goldens/desktop/mastery-palette-<paper>.png`);
+  its blocks are the sample's real tokens, so it moves with tokenisation and
+  colouring.
 - `app/desktopTest/.../LongChapterPerformanceTest` — tokenises and paginates a
   ~58k-character chapter and prints the numbers below.
 

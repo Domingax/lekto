@@ -23,8 +23,16 @@ import app.lekto.core.reading.ReadingPreferences
  *
  * The [horizontalMargin] rides along, because the page's margin is the same
  * reading preference and the reader must paginate against the width it leaves.
+ * [mastery] is the active paper's measured ramp (`docs/design.md` §2.2), carried
+ * here so the word layer and the golden preview paint the same hues the screen
+ * does — a colour cannot change a glyph's width, so it cannot change a page.
  */
-data class ReaderStyles(val body: TextStyle, val heading: TextStyle, val horizontalMargin: Dp) {
+data class ReaderStyles(
+    val body: TextStyle,
+    val heading: TextStyle,
+    val horizontalMargin: Dp,
+    val mastery: MasteryRamp,
+) {
     companion object {
         /** The Light paper's ink, used when no theme supplies one. */
         private val DefaultInk = Color(0xFF1C1A17)
@@ -34,7 +42,7 @@ data class ReaderStyles(val body: TextStyle, val heading: TextStyle, val horizon
         private const val HEADING_LEADING_RATIO: Float = 34f / 18f
 
         /** [preferences] rendered as the styles the page and its pagination measure. */
-        fun of(preferences: ReadingPreferences, ink: Color = DefaultInk): ReaderStyles {
+        fun of(preferences: ReadingPreferences, mastery: MasteryRamp, ink: Color = DefaultInk): ReaderStyles {
             val family = when (preferences.face) {
                 ReadingFace.SERIF -> FontFamily.Serif
                 ReadingFace.SANS_SERIF -> FontFamily.SansSerif
@@ -54,6 +62,7 @@ data class ReaderStyles(val body: TextStyle, val heading: TextStyle, val horizon
                     color = ink,
                 ),
                 horizontalMargin = preferences.horizontalMargin.dp,
+                mastery = mastery,
             )
         }
     }
