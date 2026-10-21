@@ -2,11 +2,11 @@
 # Toolchain. These are pinned deliberately: every agent and every machine must
 # build against exactly these versions. See docs/build.md before changing them.
 agp = "8.13.2"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 gradle = "8.14.4"
 jdk = "21"
-compose-multiplatform = "1.11.1"
-compose-material3 = "1.11.0-alpha07"
+compose-multiplatform = "1.12.2"
+compose-material3 = "1.13.0-alpha02"
 
 # Android platform levels. The pinned SDK in CI provides platform 36.
 android-compileSdk = "36"
@@ -19,7 +19,7 @@ androidx-activity = "1.12.4"
 
 # Test harness (ticket #5). Every entry is test-scope and AGPL-compatible
 # (Apache-2.0); see docs/testing.md and docs/research/testing-harness.md.
-kotest = "6.2.5"
+kotest = "6.2.6"
 turbine = "1.2.1"
 kotlinx-coroutines = "1.11.0"
 
@@ -27,7 +27,7 @@ kotlinx-coroutines = "1.11.0"
 # a simulated Android runtime on the JVM, with no emulator. It is test-scope only
 # and never ships; 4.16.1 is the release whose built-with Gradle/AGP line matches
 # this repository's, and it covers API 36. See docs/testing.md#android-host-lane.
-robolectric = "4.16.1"
+robolectric = "4.17"
 # Robolectric's runner is JUnit 4; declared explicitly so the host test compiles
 # against it rather than borrowing a transitive. JUnit 4 is EPL-1.0, test-only
 # (ADR-0011; config/dependency-licences.txt).
@@ -47,8 +47,8 @@ androidx-test-ext-junit = "1.3.0"
 # 5 API drives the WebDAV integration test, and Testcontainers (MIT) starts the
 # server. JUnit is EPL-2.0 and therefore test-only — it is never linked into the
 # shipped app (ADR-0011); see config/dependency-licences.txt.
-junit-jupiter = "5.13.4"
-roborazzi = "1.75.0"
+junit-jupiter = "6.1.3"
+roborazzi = "1.76.0"
 testcontainers = "2.0.5"
 
 # Quality gates (ticket #6). ktlint formats and lints (MIT); detekt is the
@@ -70,7 +70,7 @@ jsoup = "1.23.2"
 # Vault (ticket #12). Records are one JSON file each (ADR-0003), so the domain
 # serialises with kotlinx.serialization (Apache-2.0, AGPL-compatible). The
 # Kotlin compiler plugin is versioned with Kotlin itself.
-kotlinx-serialization = "1.9.0"
+kotlinx-serialization = "1.11.0"
 
 # Secret storage (issue #24). KSafe (Apache-2.0) backs the desktop `SecretStore`
 # through the OS keychain — Windows DPAPI, macOS Keychain, Linux Secret Service
@@ -85,7 +85,7 @@ ksafe = "3.3.0"
 # JaCoCo-compatible XML report. SonarCloud is a hosted service, not a build
 # dependency, so it does not appear here. See ADR-0012 and
 # docs/build.md#coverage-and-the-quality-gate.
-kover = "0.9.9"
+kover = "0.9.11"
 
 # Dictionary-pack pipeline (ticket #17). xerial sqlite-jdbc (Apache-2.0,
 # AGPL-compatible) builds the read-only SQLite pack ADR-0017 opens by path. It is
@@ -100,7 +100,7 @@ sqlite-jdbc = "3.53.4.0"
 # Android transport is OkHttp, which performs any HTTP method (ADR-0026). It is
 # Apache-2.0 and therefore AGPL-compatible (ADR-0011); the desktop target keeps
 # the dependency-free JDK client and never carries OkHttp.
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
