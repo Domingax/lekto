@@ -362,8 +362,9 @@ same on every runner. Installers are written under
 `createDistributable` writes the unpacked application image beside them. The
 release lane (`.github/workflows/release.yml`) runs the command on Linux, Windows,
 Apple Silicon macOS and Intel macOS, uploads the four installers, and attaches
-them to the release when the commit carries a `v*` tag; a tag with a pre-release
-suffix (`v0.1.0-preview`) publishes a pre-release that never becomes the
+them to the release when the commit carries a `v*` tag, with the committed body
+`.github/release-notes/desktop.md`; a tag with a pre-release suffix
+(`v1.0.0-preview`) publishes a pre-release that never becomes the
 `/releases/latest` download, and a manual run builds the installers without
 publishing. The Debian package needs `dpkg-deb` (the `dpkg` package) and
 `fakeroot`; the MSI needs WiX, which the Windows runner carries.
