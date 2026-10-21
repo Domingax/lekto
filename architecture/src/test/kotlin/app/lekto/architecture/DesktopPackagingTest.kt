@@ -3,6 +3,7 @@ package app.lekto.architecture
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.io.File
@@ -122,9 +123,13 @@ class DesktopPackagingTest :
             val root = RepositoryScanner.repositoryRoot()
             val properties = File(root, "gradle.properties").readText()
             val buildScript = File(root, "app/build.gradle.kts").readText()
+            val sharedVersion = DesktopPackaging.version(properties)
 
             withClue("gradle.properties has no well-formed lekto.version") {
-                DesktopPackaging.version(properties) shouldNotBe null
+                sharedVersion shouldNotBe null
+            }
+            withClue("jpackage's macOS bundler rejects a version whose first number is zero") {
+                checkNotNull(sharedVersion).substringBefore('.').toInt() shouldBeGreaterThanOrEqual 1
             }
             withClue("the app no longer reads the shared version") {
                 buildScript.contains("""providers.gradleProperty("lekto.version")""") shouldBe true

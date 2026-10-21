@@ -370,13 +370,15 @@ publishing. The Debian package needs `dpkg-deb` (the `dpkg` package) and
 
 The application version lives in `gradle.properties` (`lekto.version`), read by
 Android's `versionName` and the installers' `packageVersion`, so one release's
-APK and installers cannot claim different versions. The packaging names its
-identity explicitly: package `lekto` (the lower-case Debian name) with a
-`debMaintainer`, bundle id `app.lekto` and dock name `Lekto` on macOS, and a stable
-`upgradeUuid` on Windows so an upgrade replaces the previous install rather than
-sitting beside it. The runtime image carries the modules jpackage needs and
-`:app:suggestRuntimeModules` reports — `java.sql` for sqlite-jdbc, `java.net.http`
-for the desktop WebDAV transport, `jdk.unsupported` for JNA — plus
+APK and installers cannot claim different versions. Its first number must be at
+least 1: jpackage's macOS bundler rejects an `app-version` that starts at zero,
+which is why the first packaged release is `1.0.0` rather than `0.1.0`. The
+packaging names its identity explicitly: package `lekto` (the lower-case Debian
+name) with a `debMaintainer`, bundle id `app.lekto` and dock name `Lekto` on macOS,
+and a stable `upgradeUuid` on Windows so an upgrade replaces the previous install
+rather than sitting beside it. The runtime image carries the modules jpackage
+needs and `:app:suggestRuntimeModules` reports — `java.sql` for sqlite-jdbc,
+`java.net.http` for the desktop WebDAV transport, `jdk.unsupported` for JNA — plus
 `jdk.accessibility`, which is what makes the Java Access Bridge reachable on
 Windows. The installer icons are generated from the guide's brand mark by
 `tools/icons/app-icons.sh` and committed under `app/icons/`.
