@@ -155,6 +155,11 @@ be reviewed); on a **test** classpath it warns, so the override list records
 decisions rather than gating every dependency bump. CI runs the task without the
 configuration cache; see below.
 
+The gate reads Gradle metadata, so it does not see a copy of third-party work
+checked into the tree. The icon set is such a copy: it adds no coordinate, and its
+ISC and Feather/MIT notices live in `THIRD-PARTY-NOTICES.md` at the root instead
+(see [Icon pipeline](#icon-pipeline)).
+
 ### Coverage and the quality gate
 
 Coverage is measured with **Kover** (Apache-2.0), JetBrains' Kotlin coverage
@@ -453,6 +458,17 @@ target only, so it is on the shipped app's classpath and held to the licence gat
 like any other. It is pinned at 5.4.0 because 5.5.0's Android artifact requires
 `compileSdk` 37 and this repository is pinned to 36.
 
+
+## Icon pipeline
+
+`tools/icons/fetch.sh` regenerates the icon set committed under
+`app/src/commonMain/kotlin/app/lekto/ui/icons/`. It fetches the twelve SVGs at the
+pinned Lucide tag, runs the pinned Valkyrie CLI with its zip digest checked, and
+writes the `ImageVector` Kotlin. Nothing is generated at build time and the app
+declares no icon dependency: the output is committed, and `LektoIconsTest` pins
+its geometry in `./gradlew check`. The licences are in `THIRD-PARTY-NOTICES.md`;
+the design rule is `docs/design.md` §5, and the reasoning is
+`docs/research/icones-compose.md`.
 
 ## Modules
 

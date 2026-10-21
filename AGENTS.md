@@ -84,6 +84,10 @@ core ─────────────► nothing     (no app module, no A
 - `tools/dictionaries` is standalone and never blocks application CI: its own
   workflow builds and publishes the pack, while its fast unit tests run in
   `check`.
+- `tools/icons` is not a module: it is the build-time scripts that fetch the
+  pinned Lucide SVGs and regenerate the committed icon set
+  ([`docs/build.md#icon-pipeline`](docs/build.md#icon-pipeline)). Nothing it
+  produces is generated at build time.
 
 `guide/` is not a module: it is the end-user guide's content root, a VitePress
 site built by its own npm toolchain and published to GitHub Pages (ADR-0024). It

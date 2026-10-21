@@ -13,3 +13,7 @@ local.properties
 guide/node_modules/
 guide/.vitepress/cache/
 guide/.vitepress/dist/
+# The icon pipeline (issue #184): the SVGs and the pinned Valkyrie CLI are
+# inputs fetched by tools/icons/fetch.sh; the generated Kotlin is committed.
+tools/icons/lucide/
+tools/icons/.cache/
