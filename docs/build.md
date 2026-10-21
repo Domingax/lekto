@@ -221,6 +221,7 @@ lanes; the emulator lane is nightly and never on the critical path (ticket #7).
 | `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
 | `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
 | `guide` | pull request; push to `main` when the guide changed | `npm ci`, `npm test`, `npm run check:licences` and `npm run build` in `guide/` |
+| `release` (`release.yml`) | version tag, manual | `./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false` on Linux, Windows and both macOS architectures, then `gh release create` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
 `fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
@@ -317,6 +318,13 @@ Node itself is pinned to 22 in `guide/package.json`'s `engines` and in the
 ./gradlew check -Plekto.android=false   # JVM/desktop only, no SDK needed
 ```
 
+- **The packaging tools — only to build an installer.** jpackage ships with the
+  pinned JDK, but each format adds one system tool: Debian packaging needs
+  `dpkg-deb` (the `dpkg` package) and `fakeroot`; a Windows MSI needs WiX; macOS
+  images use the tools the operating system already carries. `./gradlew check`
+  needs none of them, and jpackage cannot cross-compile, so a clean checkout
+  builds the installer of its own platform only.
+
 ## Android
 
 The app's `minSdk` is **27** (Android 8.1) — `android-minSdk` in
@@ -339,7 +347,45 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 ./gradlew :app:run                        # run the desktop app
 ```
 
-Native packaging for Windows, macOS and Linux is ticket #29.
+The desktop client is packaged as a native installer with jpackage, through the
+Compose Desktop plugin (issue #29): a `.deb` on Linux, an `.msi` on Windows and a
+`.dmg` on macOS. A distribution can only be built on its own operating system —
+jpackage does not cross-compile — so each runner builds its own artefact:
+
+```sh
+./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false
+```
+
+The Android variant is switched off so the lane needs no Android SDK and is the
+same on every runner. Installers are written under
+`app/build/compose/binaries/main/` (`deb/`, `msi/`, `dmg/`), and
+`createDistributable` writes the unpacked application image beside them. The
+release lane (`.github/workflows/release.yml`) runs the command on Linux, Windows,
+Apple Silicon macOS and Intel macOS, uploads the four installers, and attaches
+them to the release when the commit carries a `v*` tag; a manual run builds them
+without publishing. The Debian package needs `dpkg-deb` (the `dpkg` package) and
+`fakeroot`; the MSI needs WiX, which the Windows runner carries.
+
+The application version lives in `gradle.properties` (`lekto.version`), read by
+Android's `versionName` and the installers' `packageVersion`, so one release's
+APK and installers cannot claim different versions. The packaging names its
+identity explicitly: package `lekto` (the lower-case Debian name) with a
+`debMaintainer`, bundle id `app.lekto` and dock name `Lekto` on macOS, and a stable
+`upgradeUuid` on Windows so an upgrade replaces the previous install rather than
+sitting beside it. The runtime image carries the modules jpackage needs and
+`:app:suggestRuntimeModules` reports — `java.sql` for sqlite-jdbc, `java.net.http`
+for the desktop WebDAV transport, `jdk.unsupported` for JNA — plus
+`jdk.accessibility`, which is what makes the Java Access Bridge reachable on
+Windows. The installer icons are generated from the guide's brand mark by
+`tools/icons/app-icons.sh` and committed under `app/icons/`.
+
+The desktop's accessibility is limited by Compose Desktop, not by a Lekto
+setting: macOS is fully supported, Windows works through the Java Access Bridge
+(off by default; the user enables it with `jabswitch /enable`), and Linux is
+unsupported. ADR-0007 records the limitation; the end-user guide states it where
+a downloader meets it ([`guide/desktop.md`](../guide/desktop.md) and the download
+section of the home page), because it is a reason not to install the desktop
+client, not a footnote.
 
 ## Dictionary pipeline
 
@@ -469,6 +515,13 @@ declares no icon dependency: the output is committed, and `LektoIconsTest` pins
 its geometry in `./gradlew check`. The licences are in `THIRD-PARTY-NOTICES.md`;
 the design rule is `docs/design.md` §5, and the reasoning is
 `docs/research/icones-compose.md`.
+
+`tools/icons/app-icons.sh` is the installer-icon pipeline beside it (issue #29).
+It renders the guide's single brand mark, `guide/public/favicon.svg`, into the
+container each operating system's installer asks for — a 512px PNG for Linux, a
+multi-resolution ICO for Windows and an ICNS for macOS — and writes them under
+`app/icons/`. The three files are committed; re-run the script when the mark
+changes, never edit an icon by hand.
 
 ## Modules
 

@@ -85,7 +85,8 @@ core ─────────────► nothing     (no app module, no A
   workflow builds and publishes the pack, while its fast unit tests run in
   `check`.
 - `tools/icons` is not a module: it is the build-time scripts that fetch the
-  pinned Lucide SVGs and regenerate the committed icon set
+  pinned Lucide SVGs and regenerate the committed icon set, and that render the
+  brand mark into the desktop installers' PNG, ICO and ICNS
   ([`docs/build.md#icon-pipeline`](docs/build.md#icon-pipeline)). Nothing it
   produces is generated at build time.
 

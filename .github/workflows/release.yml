@@ -1,0 +1,108 @@
+# The desktop release lane (issue #29).
+#
+# jpackage can only build the installer of the operating system it runs on, so
+# one runner per platform produces its own artefact and the release job collects
+# them. A tag is what publishes; `workflow_dispatch` builds the installers
+# without publishing, so a packaging change can be exercised without cutting a
+# release. See docs/build.md#desktop.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # One installer per operating system. The two macOS runners cover Apple
+  # Silicon and Intel: a jpackage image is architecture-specific, and an
+  # arm64-only download would leave Intel Macs without a build.
+  package:
+    name: package (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x64
+            runner: ubuntu-latest
+            extension: deb
+          - label: windows-x64
+            runner: windows-latest
+            extension: msi
+          - label: macos-arm64
+            runner: macos-15
+            extension: dmg
+          - label: macos-x64
+            runner: macos-15-intel
+            extension: dmg
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      # jpackage shells out to dpkg-deb for a Debian package, and the toolchain
+      # is a documented prerequisite. The Ubuntu runner carries both already;
+      # installing them explicitly keeps the lane independent of the image's
+      # contents.
+      - name: Install the Debian packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes dpkg fakeroot
+      # The installer is the desktop client only, so the Android target stays
+      # off: no Android SDK is needed and the lane is the same on every runner.
+      - name: Build the installer
+        shell: bash
+        run: ./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false --no-daemon
+      # Both macOS runners produce the same `Lekto-<version>.dmg` name, and a
+      # merge-multiple download would keep only one of them. The platform label
+      # makes each artefact distinct, which is also what the download page tells
+      # the reader to pick.
+      - name: Name the installer for its platform
+        shell: bash
+        run: |
+          mkdir -p dist
+          for artifact in app/build/compose/binaries/main/*/*.${{ matrix.extension }}; do
+            name="$(basename "${artifact%.*}")"
+            cp "$artifact" "dist/${name}-${{ matrix.label }}.${{ matrix.extension }}"
+          done
+      - name: Upload the installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.label }}
+          path: dist/*.${{ matrix.extension }}
+          if-no-files-found: error
+
+  # Publish every installer on the tag's release, with the repository's
+  # generated notes. A manual run builds them and stops there.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # `gh release create` shells out to git; a job without a checkout has no
+      # repository to run that in, even though the release itself is remote.
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --repo "$GITHUB_REPOSITORY"
+          --title "Lekto $GITHUB_REF_NAME"
+          --generate-notes
+          --verify-tag

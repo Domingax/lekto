@@ -402,6 +402,23 @@ what a regeneration could silently change: the 24 dp grid, the 2-unit round
 stroke, the twelve-name set, and the back arrow as the only icon that mirrors in
 a right-to-left layout.
 
+The desktop installers (issue #29) are proved by the artefact, not by a unit
+test: `./gradlew :app:createDistributable` exercises the jlink module set on the
+host, where a missing module fails at launch rather than at compile time, and the
+`release` lane runs `packageDistributionForCurrentOS` on Linux, Windows and both
+macOS architectures, so each format is built by the operating system that owns
+jpackage's toolchain. What the configuration promises is a guard of its own:
+`DesktopPackagingTest` in `architecture` reads the declared formats, the
+platform-to-installer matrix and the shipped accessibility module, proves each
+reader and each deliberate break against hand-built values, then asserts the real
+tree — the level this repository gives a convention that spans artefacts rather
+than a behaviour. The identity the installers carry is configuration too: the
+version is one `gradle.properties` property read by Android's `versionName` and
+the installers' `packageVersion`, so the APK and the desktop build of a release
+cannot disagree. The accessibility limitation the packaging surfaces is a
+documented user-guide surface, held by the `guide` lane's build, which fails on a
+dead internal link.
+
 `VaultStore` is the first seam to use the pattern: `testkit` holds
 `VaultStoreContract` and the `InMemoryVaultStore` fake, `core/commonTest` runs the
 contract against the fake, and `core/jvmTest` runs the same contract against the

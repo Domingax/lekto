@@ -1,5 +1,6 @@
 @file:OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
 
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The Compose Multiplatform application. The same `App()` composable runs on
@@ -19,6 +20,11 @@ plugins {
 
 val androidEnabled: Boolean =
     gradle.extensions.extraProperties.get("lekto.androidEnabled") as Boolean
+
+// The version both artefacts of a release carry (issue #29): Android's
+// `versionName` and the desktop installers' `packageVersion` read the same
+// property, so they cannot drift. See gradle.properties.
+val appVersion: String = providers.gradleProperty("lekto.version").get()
 
 if (androidEnabled) {
     apply(plugin = libs.plugins.androidApplication.get().pluginId)
@@ -122,7 +128,7 @@ if (androidEnabled) {
             minSdk = libs.versions.android.minSdk.get().toInt()
             targetSdk = libs.versions.android.targetSdk.get().toInt()
             versionCode = 1
-            versionName = "0.1.0"
+            versionName = appVersion
             // Drives the instrumented tests the nightly lane runs on an emulator
             // (issue #71).
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -152,6 +158,56 @@ if (androidEnabled) {
 compose.desktop {
     application {
         mainClass = "app.lekto.MainKt"
+        // The desktop client as a shippable artefact (issue #29): jpackage turns
+        // the application into a native installer. A distribution can only be built
+        // on its own operating system, so the release lane runs this on Windows,
+        // macOS and Linux (`.github/workflows/release.yml`) and
+        // `packageDistributionForCurrentOS` picks the format that applies here.
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "Lekto"
+            packageVersion = appVersion
+            description = "An open-source, local-first immersive reading app for language learning."
+            copyright = "© 2026 Lekto contributors"
+            vendor = "Lekto"
+            // Java Access Bridge is how Compose Desktop reaches a screen reader on
+            // Windows (ADR-0007, "Desktop accessibility is limited and accepted").
+            // The module is part of every JDK, and shipping it is what makes that
+            // conditional support reachable at all. The rest is what
+            // `:app:suggestRuntimeModules` reports for this application: the
+            // desktop WebDAV transport (`java.net.http`), the desktop dictionary
+            // reader and JDBC (`java.sql`), and JNA's `sun.misc.Unsafe` use
+            // (`jdk.unsupported`) among the module graph's other references.
+            modules(
+                "jdk.accessibility",
+                "java.instrument",
+                "java.management",
+                "java.net.http",
+                "java.sql",
+                "jdk.javadoc",
+                "jdk.unsupported",
+            )
+            linux {
+                // A Debian package name is lower-case by policy, whatever the
+                // product is called.
+                packageName = "lekto"
+                debMaintainer = "Domingax <Domingax@users.noreply.github.com>"
+                appCategory = "Education"
+                iconFile.set(project.file("icons/lekto.png"))
+            }
+            windows {
+                menuGroup = "Lekto"
+                // A stable identity, so an upgrade replaces the previous install
+                // instead of sitting beside it. Generated once and pinned.
+                upgradeUuid = "6f1f3f9e-6d7a-4c1a-9c2e-8f0b5f3a7d21"
+                iconFile.set(project.file("icons/lekto.ico"))
+            }
+            macOS {
+                bundleID = "app.lekto"
+                dockName = "Lekto"
+                iconFile.set(project.file("icons/lekto.icns"))
+            }
+        }
     }
 }
 

@@ -24,6 +24,7 @@ behaviour updates the page(s) named below in the same pull request, the way
 | ---- | ---- |
 | Home and download | `index.md` |
 | Getting started | `getting-started.md` |
+| Lekto on the desktop | `desktop.md` |
 | Import | `import.md` |
 | Library | `library.md` |
 | Reading | `reading.md` |
@@ -39,6 +40,7 @@ behaviour updates the page(s) named below in the same pull request, the way
 | A change to… | Updates |
 | ------------ | ------- |
 | Importing a book, the supported formats or extraction | `import.md` |
+| Installing on a computer, the desktop Vault or its accessibility | `desktop.md`, `index.md` |
 | The Library list, ordering or opening a book | `library.md` |
 | The reader, pagination or the Reading position | `reading.md` |
 | The Reader level, word difficulty or the difficulty download | `reading.md`, `settings-and-faq.md` |
@@ -50,4 +52,4 @@ behaviour updates the page(s) named below in the same pull request, the way
 | The LLM provider, API key or Translation shortcut | `llm-provider.md` |
 | The Vault, export/import or syncing to a WebDAV server | `vault-and-sync.md` |
 | Settings, attribution or a common failure | `settings-and-faq.md` |
-| First launch or the download links | `getting-started.md`, `index.md` |
+| First launch or the download links | `getting-started.md`, `index.md`, `desktop.md` |
