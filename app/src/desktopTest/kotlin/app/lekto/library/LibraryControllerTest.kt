@@ -4,11 +4,13 @@ import app.lekto.LocalChanges
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ImportException
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ImportStage
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
+import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -239,6 +241,92 @@ class LibraryControllerTest {
 
         assertTrue(received.isNotEmpty(), "a delete must notify the local-change signal")
     }
+
+    @Test
+    fun aKnownLengthIsListedAsAPercentageWithoutMeasuring() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1"))
+            readAt("b1", offset = KNOWN_OFFSET, length = MEASURED_LENGTH)
+        }
+
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        advanceUntilIdle()
+
+        assertEquals(BookProgress.Measured(KNOWN_PERCENT), controller.state.value.listing.progressOf(book("b1")))
+        assertEquals(emptyList(), library.measured, "a known length needs no measurement")
+    }
+
+    @Test
+    fun aMissingLengthIsMeasuredOffTheCallersThread() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1"))
+            readAt("b1", offset = MEASURED_OFFSET)
+        }
+
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        // Construction listed the vault and scheduled the measurement in the
+        // background; it did not parse anything on the calling thread (issue #196).
+        assertEquals(BookProgress.Unmeasured, controller.state.value.listing.progressOf(book("b1")))
+        assertEquals(emptyList(), library.measured)
+
+        advanceUntilIdle()
+
+        assertEquals(BookProgress.Measured(MEASURED_PERCENT), controller.state.value.listing.progressOf(book("b1")))
+        assertEquals(listOf("b1"), library.measured)
+    }
+
+    @Test
+    fun aFailedMeasurementLeavesTheRowUnmeasured() = runTest {
+        val library = FakeLibrary(measureFailure = true).apply {
+            recognize(book("b1"))
+            readAt("b1", offset = MEASURED_OFFSET)
+        }
+
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        advanceUntilIdle()
+
+        assertEquals(BookProgress.Unmeasured, controller.state.value.listing.progressOf(book("b1")))
+    }
+
+    @Test
+    fun aFailedMeasurementIsNotRetriedOnEveryRefresh() = runTest {
+        // A parse that fails will not heal by itself, so a return to the Library
+        // must not re-parse the whole book every time (issue #196).
+        val library = FakeLibrary(measureFailure = true).apply {
+            recognize(book("b1"))
+            readAt("b1", offset = MEASURED_OFFSET)
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        advanceUntilIdle()
+
+        controller.refresh()
+        advanceUntilIdle()
+
+        assertEquals(listOf("b1"), library.measured)
+    }
+
+    @Test
+    fun measuringALengthSignalsNothingToSync() = runTest {
+        // The length is a Derived asset: writing it is not a change the user made,
+        // so neither the content nor the reading signal may fire (ADR-0005).
+        val changes = LocalChanges()
+        val content = mutableListOf<Unit>()
+        val progress = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.content.collect { content += it } }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.progress.collect { progress += it } }
+        val library = FakeLibrary().apply {
+            recognize(book("b1"))
+            readAt("b1", offset = MEASURED_OFFSET)
+        }
+
+        LibraryController(library, changes, StandardTestDispatcher(testScheduler), this)
+        advanceUntilIdle()
+
+        assertTrue(library.measured.isNotEmpty(), "the length must have been measured")
+        assertTrue(content.isEmpty(), "a derived write is not a content change")
+        assertTrue(progress.isEmpty(), "a derived write is not a reading change")
+    }
 }
 
 /** A book with [id] and [title], so a controller test has something to list and delete. */
@@ -248,14 +336,29 @@ private fun book(id: String, title: String = "Lantern"): Book =
 /** The progress the fake import reports mid-way, below the final 1.0. */
 private const val REPORTED_PROGRESS = 0.4f
 
+/** The rendered length the fake measures. */
+private const val MEASURED_LENGTH = 1000
+
+/** A position in the fake's 1000-character book, and the percentage it should read. */
+private const val KNOWN_OFFSET = 250
+private const val KNOWN_PERCENT = 25
+private const val MEASURED_OFFSET = 280
+private const val MEASURED_PERCENT = 28
+
 private class FakeLibrary(
     private val progress: Float = 0f,
     private val failure: Exception? = null,
     private val deleteFailure: Exception? = null,
+    private val measureFailure: Boolean = false,
 ) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val lastRead = mutableMapOf<String, Long>()
+    private val positions = mutableMapOf<String, Int>()
+    private val lengths = mutableMapOf<String, Int>()
+
+    /** The books whose length the controller asked to measure, so a test can pin the background work. */
+    val measured: MutableList<String> = mutableListOf()
     private var reads = 0L
 
     override fun books(): List<Book> = stored
@@ -263,6 +366,9 @@ private class FakeLibrary(
     override fun listing(): LibraryListing = LibraryListing.of(
         books = stored,
         lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
+        progressByBook = positions.mapValues { (id, offset) ->
+            BookProgress.forPosition(ReadingPosition(id, offset), lengths[id])
+        },
     )
 
     /** Test hook: pretend the book's reading position last moved after the others. */
@@ -270,9 +376,22 @@ private class FakeLibrary(
         lastRead[bookId] = ++reads
     }
 
+    /** Test hook: the book has a position, and optionally an already-cached length. */
+    fun readAt(bookId: String, offset: Int, length: Int? = null) {
+        positions[bookId] = offset
+        if (length != null) lengths[bookId] = length
+    }
+
     /** Test hook: pretend the vault now holds [book], as a restored import would. */
     fun recognize(book: Book) {
         stored = stored + book
+    }
+
+    override fun measure(bookId: String): ReadingProgress? {
+        measured += bookId
+        val offset = positions[bookId]
+        if (measureFailure || offset == null) return null
+        return ReadingProgress(offset, lengths.getOrPut(bookId) { MEASURED_LENGTH })
     }
 
     override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {

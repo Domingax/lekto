@@ -49,7 +49,16 @@ class VaultBookLibrary(
 
     override fun listing(): LibraryListing {
         val records = vault.all()
-        return LibraryListing.of(books = booksIn(records), lastReadByBook = lastReadIn(records))
+        // Only the position record and the tiny length entry are read here: the
+        // parsed text is never decoded to list a shelf (issue #196).
+        val progress = positionsIn(records).mapValues { (bookId, position) ->
+            BookProgress.forPosition(position, cache.lengthOf(bookId))
+        }
+        return LibraryListing.of(
+            books = booksIn(records),
+            lastReadByBook = lastReadIn(records),
+            progressByBook = progress,
+        )
     }
 
     override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
@@ -88,6 +97,28 @@ class VaultBookLibrary(
     }
 
     /**
+     * A missing rendered length is repaired from the cached text when that
+     * survives, and from the original otherwise — the re-parse re-caches both
+     * ([BookTextCache.put]). A read or write that fails leaves the length
+     * absent, so the row keeps `…`; it never becomes `Not started`.
+     */
+    override fun measure(bookId: String): ReadingProgress? {
+        /** The cached text's length, or the original's when the cache is gone. */
+        fun renderedLength(book: Book): Int? =
+            cache.textOf(book.id)?.renderedLength() ?: reparse(book)?.renderedLength()
+
+        /** The entry when it survives, a repaired one otherwise; `null` when it cannot be stored. */
+        fun cachedLength(book: Book): Int? = runCatching {
+            cache.lengthOf(book.id) ?: renderedLength(book)?.also { length -> cache.putLength(book.id, length) }
+        }.getOrNull()
+
+        val book = vault.get(bookId)?.let { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
+        return position(bookId)?.let { position ->
+            book?.let(::cachedLength)?.let { length -> ReadingProgress(position.offset, length) }
+        }
+    }
+
+    /**
      * Removes the book's original, cached text and reading position, then the
      * book record itself, leaving a tombstone for the book and for its position
      * (issue #131; ADR-0015).
@@ -116,21 +147,20 @@ class VaultBookLibrary(
     /** Writes the record, its original attachment and the parsed-text cache. */
     @Suppress("TooGenericExceptionCaught") // Any storage failure must become an ImportException.
     private fun store(book: Book, bytes: ByteArray, text: StructuredText) {
+        // A failure part-way must leave the vault unchanged.
+        fun rollback() {
+            runCatching { vault.removeAttachment(book.id) }
+            runCatching { vault.remove(book.id) }
+            runCatching { cache.remove(book.id) }
+        }
         try {
             vault.put(BookRecord.of(book, seams.clock.now(), deviceId))
             vault.putAttachment(book.id, bytes)
             cache.put(book.id, text)
         } catch (failure: RuntimeException) {
-            rollback(book.id)
+            rollback()
             throw ImportException("Could not save '${book.title}'.", failure)
         }
-    }
-
-    /** Undoes a partial [store] so a failed import leaves the vault unchanged. */
-    private fun rollback(id: String) {
-        runCatching { vault.removeAttachment(id) }
-        runCatching { vault.remove(id) }
-        runCatching { cache.remove(id) }
     }
 
     /** Re-parses [book]'s stored original and re-caches it, or `null` when it cannot be read. */
@@ -165,6 +195,16 @@ private fun booksIn(records: List<VaultRecord>): List<Book> = records
     .filter { record -> record.kind == BookRecord.KIND }
     .mapNotNull { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
     .inTitleOrder()
+
+/**
+ * Where each book was left off: the position record's body, keyed by its book id
+ * (issue #196). A record this build cannot read names no book, so it is skipped,
+ * exactly as [lastReadIn] skips it.
+ */
+private fun positionsIn(records: List<VaultRecord>): Map<String, ReadingPosition> = records
+    .filter { record -> record.kind == ReadingPositionRecord.KIND }
+    .mapNotNull { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }
+    .associate { position -> position.bookId to position }
 
 /**
  * When each book's position last moved: the position record's `updatedAt`

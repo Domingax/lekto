@@ -51,6 +51,12 @@ enum class TextKey {
     ERROR_DETAIL,
     NO_BOOKS_MATCH_QUERY,
 
+    // The row's Reading progress line (issue #196).
+    LIBRARY_ROW_PROGRESS,
+    LIBRARY_ROW_NOT_STARTED,
+    LIBRARY_ROW_MEASURING,
+    LIBRARY_ROW_MEASURING_DESCRIPTION,
+
     // Vocabulary.
     VOCABULARY_EMPTY,
     ALL_LEVELS,

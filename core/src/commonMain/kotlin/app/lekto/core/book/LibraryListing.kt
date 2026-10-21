@@ -17,7 +17,22 @@ data class LibraryListing(
     val lastRead: List<Book> = emptyList(),
     /** Every other book, in title order. */
     val others: List<Book> = emptyList(),
+    /**
+     * Each book's **Reading progress** as its row shows it, keyed by book id
+     * (issue #196). Only books with a **Reading position** have an entry; one
+     * whose rendered length is not known yet maps to [BookProgress.Unmeasured],
+     * so the row can show `…` without falling back to `Not started`.
+     *
+     * It is a map beside the books rather than a field on [Book] because it is
+     * derived per device: the position is in the vault, the length is a
+     * **Derived asset** (ADR-0005).
+     */
+    val progressByBook: Map<String, BookProgress> = emptyMap(),
 ) {
+
+    /** What [book]'s row says about its **Reading progress**, defaulting to `Not started`. */
+    fun progressOf(book: Book): BookProgress = progressByBook[book.id] ?: BookProgress.NotStarted
+
     /**
      * The books whose title matches [query] (issue #173), in the order the screen
      * shows them.
@@ -51,8 +66,16 @@ data class LibraryListing(
          * depend on the order [books] arrives in; the last-read group is then
          * ordered by [lastReadByBook], most recent first. Equal last-read
          * instants keep the title order, including the tie at [LAST_READ_LIMIT].
+         *
+         * [progressByBook] carries each book's **Reading progress** (issue #196);
+         * an empty map leaves every row at `Not started`, which is what a vault
+         * with no positions holds.
          */
-        fun of(books: List<Book>, lastReadByBook: Map<String, Instant>): LibraryListing {
+        fun of(
+            books: List<Book>,
+            lastReadByBook: Map<String, Instant>,
+            progressByBook: Map<String, BookProgress> = emptyMap(),
+        ): LibraryListing {
             val byTitle = books.inTitleOrder()
             val lastRead = byTitle
                 .filter { book -> lastReadByBook.containsKey(book.id) }
@@ -62,7 +85,11 @@ data class LibraryListing(
                 )
                 .take(LAST_READ_LIMIT)
             val lastReadIds = lastRead.mapTo(mutableSetOf()) { book -> book.id }
-            return LibraryListing(lastRead = lastRead, others = byTitle.filterNot { book -> book.id in lastReadIds })
+            return LibraryListing(
+                lastRead = lastRead,
+                others = byTitle.filterNot { book -> book.id in lastReadIds },
+                progressByBook = progressByBook,
+            )
         }
     }
 }

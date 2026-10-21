@@ -13,14 +13,26 @@ every other book — including one you have not opened yet — is listed by titl
 When you have not read anything yet, there is no section: the list is just your
 books, by title.
 
-Each row is one book, showing its title, its format and its file name. A Library
-with no books yet says so and points you at **Import**, the button at the bottom
-of the screen.
+Each row is one book: its title, then a line with its format and its **Reading
+progress**, like `EPUB · 28 %`. A thin rule under the line fills to the same
+whole percentage. There is no file name on the row — the book is what you see,
+and its file is named only when an import fails or when you delete the book.
+
+The percentage is how far you are now, not the furthest you have read: paging
+back lowers it. It is the share of the book's text that lies before your
+**Reading position**, rounded down, so the last page reads a little under 100 %.
+
+A book with no Reading position reads `EPUB · Not started`, with no rule. That
+describes the data, not your history: opening a book without turning a page
+writes no position. A book whose text Lekto is still measuring on this device
+reads `EPUB · …` until the measurement lands, then shows its percentage.
 
 The Library is a view of the Vault, not the storage itself: the books are one
-part of the Vault, and your vocabulary and reading progress live in the same
-Vault beside them. For where that data lives and how to move it, see
-[Vault and sync](/vault-and-sync).
+part of the Vault, and your vocabulary and your **Reading positions** live in
+the same Vault beside them. The row's **Reading progress** is worked out from
+your Reading position and the book's text; the text itself is measured on this
+device and is never part of the Vault. For where that data lives and how to move
+it, see [Vault and sync](/vault-and-sync).
 
 ## Finding a book
 
@@ -47,8 +59,9 @@ position** automatically, so you continue where you left off; see
 ## Deleting a book
 
 Each row has a **Delete** action. Lekto asks you to confirm first — *Delete
-« title »? This cannot be undone.* — and only then removes the **Book**: its
-original file, the text derived from it and your **Reading position** for it. If
+« title »?* — and names the imported file, so you can tell which file is about to
+go. Only then does it remove the **Book**: its original file, the text derived
+from it and your **Reading position** for it. If
 sync is on, the deletion travels to your other devices instead of the book coming
 back; see [Vault and sync](/vault-and-sync) for how a deletion is remembered.
 

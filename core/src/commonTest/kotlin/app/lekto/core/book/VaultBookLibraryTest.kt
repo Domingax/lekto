@@ -10,6 +10,7 @@ import app.lekto.core.text.TxtParser
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
+import app.lekto.core.vault.VaultFileSystem
 import app.lekto.core.vault.VaultStore
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
@@ -209,7 +210,79 @@ class VaultBookLibraryTest :
             derived.clear()
 
             library.open(book.id)?.text shouldBe epubText
-            derived.paths() shouldContainExactly listOf("book-text/${book.id}.json")
+            derived.paths() shouldContainExactly listOf(
+                "book-text/${book.id}.json",
+                "book-text/${book.id}.length",
+            )
+        }
+
+        test("the parsed-text cache writes and removes the rendered length with the text") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val library = newLibrary(derived = derived)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            derived.get("book-text/${book.id}.length")?.decodeToString()?.toInt() shouldBe
+                epubText.renderedLength()
+
+            library.delete(book.id)
+
+            derived.paths() shouldBe emptyList()
+        }
+
+        test("the listing reports a positioned book's progress without decoding its text") {
+            // A derived store that would fail if listing read the parsed text: only
+            // the tiny length entry may be opened (issue #196).
+            val derived = DerivedAssetStore(TextBlindFileSystem(InMemoryVaultFileSystem()))
+            val library = newLibrary(derived = derived)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            library.savePosition(ReadingPosition(book.id, offset = 5))
+
+            library.listing().progressOf(book) shouldBe
+                BookProgress.Measured(ReadingProgress(offset = 5, length = epubText.renderedLength()).percent)
+        }
+
+        test("a positioned book with no length entry is unmeasured until it is measured") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val library = newLibrary(derived = derived)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            library.savePosition(ReadingPosition(book.id, offset = 6))
+            derived.remove("book-text/${book.id}.length")
+
+            library.listing().progressOf(book) shouldBe BookProgress.Unmeasured
+
+            library.measure(book.id) shouldBe ReadingProgress(offset = 6, length = epubText.renderedLength())
+            derived.get("book-text/${book.id}.length")?.decodeToString()?.toInt() shouldBe epubText.renderedLength()
+            library.listing().progressOf(book) shouldBe BookProgress.Measured(
+                ReadingProgress(offset = 6, length = epubText.renderedLength()).percent,
+            )
+        }
+
+        test("measuring a book with no reading position changes nothing") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val library = newLibrary(derived = derived)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            library.measure(book.id) shouldBe null
+            library.listing().progressOf(book) shouldBe BookProgress.NotStarted
+        }
+
+        test("a book whose text cannot be parsed stays unmeasured, never Not started") {
+            val vault = InMemoryVaultStore()
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val book = newLibrary(vault = vault, derived = derived).import("Lantern.epub", byteArrayOf(1))
+            newLibrary(vault = vault, derived = derived).savePosition(ReadingPosition(book.id, offset = 3))
+            derived.clear()
+            val broken = VaultBookLibrary(
+                vault = vault,
+                derived = derived,
+                parsers = mapOf(BookFormat.EPUB to BookTextParser { error("not an epub") }),
+                tombstones = InMemoryTombstoneStore(),
+                seams = deterministicSeams(),
+                deviceId = DeviceId("device-a"),
+            )
+
+            broken.measure(book.id) shouldBe null
+            broken.listing().progressOf(book) shouldBe BookProgress.Unmeasured
         }
 
         test("import reports progress from zero to one, never backwards") {
@@ -400,6 +473,17 @@ class VaultBookLibraryTest :
             tombstones.get(book.id) shouldNotBe null
         }
     })
+
+/**
+ * A derived store that refuses to read the parsed text, so a test can prove the
+ * Library's listing reads only the length entry (issue #196).
+ */
+private class TextBlindFileSystem(private val backing: VaultFileSystem) : VaultFileSystem by backing {
+    override fun read(path: String): ByteArray? {
+        check(!path.endsWith(".json")) { "listing decoded the parsed text: $path" }
+        return backing.read(path)
+    }
+}
 
 /** A vault whose [remove] fails for one id, so a delete can be made to fail part-way. */
 private class FailingRemoval(private val backing: VaultStore, private val failingId: String) : VaultStore by backing {

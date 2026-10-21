@@ -93,6 +93,21 @@ class JvmBookLibraryTest :
             root.resolve("_attachments/${book.id}").isFile shouldBe true
         }
 
+        test("the rendered length lands beside the parsed text, outside the vault, and goes with it") {
+            val root = newRoot()
+            val library = libraryOver(root)
+            val book = library.import("awkward.epub", EpubFixtures.awkward())
+            val lengthFile = File(root.parentFile, "${root.name}-derived/book-text/${book.id}.length")
+
+            lengthFile.isFile shouldBe true
+            lengthFile.readText().toInt() shouldBe library.open(book.id)?.text?.renderedLength()
+            root.resolve("book-text/${book.id}.length").exists() shouldBe false
+
+            library.delete(book.id)
+
+            lengthFile.isFile shouldBe false
+        }
+
         test("the reading position round-trips through the directory vault") {
             val root = newRoot()
             val library = libraryOver(root)

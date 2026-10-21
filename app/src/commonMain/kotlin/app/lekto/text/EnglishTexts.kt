@@ -41,9 +41,13 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.IMPORTING to "Importing…",
     TextKey.IMPORT_PROGRESS to "Import progress",
     TextKey.DELETE_BOOK_TITLE to "Delete « {0} »?",
-    TextKey.DELETE_BOOK_MESSAGE to "This cannot be undone.",
+    TextKey.DELETE_BOOK_MESSAGE to "Lekto will remove « {0} ». This cannot be undone.",
     TextKey.ERROR_DETAIL to "Error: {0}",
     TextKey.NO_BOOKS_MATCH_QUERY to "No books match \"{0}\".",
+    TextKey.LIBRARY_ROW_PROGRESS to "{0} · {1} %",
+    TextKey.LIBRARY_ROW_NOT_STARTED to "{0} · Not started",
+    TextKey.LIBRARY_ROW_MEASURING to "{0} · …",
+    TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION to "Reading progress is being measured.",
 
     // Vocabulary.
     TextKey.VOCABULARY_EMPTY to "No words saved yet — tap a word while reading to save it",
