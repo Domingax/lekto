@@ -62,6 +62,18 @@ jobs:
       - name: Build the installer
         shell: bash
         run: ./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false --no-daemon
+      # jpackage writes its own diagnosis to per-task log files and Gradle only
+      # names them. Without this step a macOS-only failure shows an exit code and
+      # nothing else, which is how the first tagged preview failed.
+      - name: Show the packaging log on failure
+        if: failure()
+        shell: bash
+        run: |
+          for log in app/build/compose/logs/*/*.txt; do
+            echo "::group::$log"
+            cat "$log"
+            echo "::endgroup::"
+          done
       # Both macOS runners produce the same `Lekto-<version>.dmg` name, and a
       # merge-multiple download would keep only one of them. The platform label
       # makes each artefact distinct, which is also what the download page tells
