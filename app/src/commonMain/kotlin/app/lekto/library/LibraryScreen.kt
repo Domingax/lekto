@@ -48,6 +48,9 @@ internal const val LIBRARY_SEARCH_CLEAR_TAG: String = "library-search-clear"
 /** The lazy item key of the "Continue reading" heading, which is not a book. */
 private const val CONTINUE_READING_KEY: String = "continue-reading"
 
+/** The test tag on the Library's title, so a layout test can find it apart from the shell's bar. */
+internal const val LIBRARY_TITLE_TAG: String = "library-title"
+
 /**
  * The library screen: the books in the vault, a title search, an Import action, a
  * per-book delete behind a destructive confirmation, and the import's progress
@@ -59,6 +62,11 @@ private const val CONTINUE_READING_KEY: String = "continue-reading"
  * the pending confirmation, which is view-local, so the vault is untouched until
  * the user confirms. The composition root (App) owns the rest and the file
  * picker, which keeps every behaviour testable through semantics alone.
+ *
+ * **Import** is the Library's action and never a section (issue #185;
+ * docs/design.md §6, §7.1): a word beside the title once there is a shelf to add
+ * to, and the filled action in the empty state, where it is the one thing to do.
+ * The way to another section is the shell's bar, not this screen's header.
  */
 @Composable
 fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryActions(), modifier: Modifier = Modifier) {
@@ -66,7 +74,7 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
     val texts = LocalAppTexts.current
 
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-        LibraryHeader(actions)
+        LibraryHeader(vaultEmpty = state.vaultEmpty, importing = state.importing, onImport = actions.onImport)
 
         // A field over an empty vault would search nothing; the empty state keeps
         // its one sentence and its action (issue #173).
@@ -85,14 +93,15 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
                     modifier = Modifier.padding(top = 24.dp),
                 )
             }
+            Button(
+                onClick = actions.onImport,
+                enabled = !state.importing,
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            ) { Text(texts[TextKey.IMPORT]) }
         } else if (state.visibleBooks.isEmpty()) {
             LibraryNoMatches(state.query, actions.onClearSearch)
         } else {
             LibraryList(state, onOpen = actions.onOpen, onDelete = { target -> pendingDelete = target })
-        }
-
-        Button(onClick = actions.onImport, enabled = !state.importing, modifier = Modifier.fillMaxWidth()) {
-            Text(texts[TextKey.IMPORT])
         }
     }
 
@@ -183,25 +192,32 @@ private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Uni
     }
 }
 
-/** The library's chrome: its title and the way to the vocabulary list and settings. */
-@OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps the navigation below a title too wide to share the line.
+/**
+ * The library's chrome: its title, and Import as a word beside it once there is a
+ * shelf to add to (docs/design.md §6, §7.1). A **FlowRow**, not a **Row**: the
+ * French title ("Bibliothèque") is wider than the English one, so on a phone the
+ * action wraps to its own line rather than being squeezed.
+ */
+@OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps an action below a title too wide to share the line.
 @Composable
-private fun LibraryHeader(actions: LibraryActions) {
+private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () -> Unit) {
     val texts = LocalAppTexts.current
-    // A **FlowRow**, not a **Row**: the French title ("Bibliothèque") is wider than
-    // the English one, so on a phone the navigation cannot share its line. It wraps
-    // to its own line rather than being squeezed into a one-character column.
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(texts[TextKey.LIBRARY], style = MaterialTheme.typography.headlineMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = actions.onOpenLanguages) { Text(texts[TextKey.LANGUAGES]) }
-            TextButton(onClick = actions.onOpenVocabulary) { Text(texts[TextKey.VOCABULARY]) }
-            TextButton(onClick = actions.onOpenSettings) { Text(texts[TextKey.SETTINGS]) }
+        Text(
+            text = texts[TextKey.LIBRARY],
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.testTag(LIBRARY_TITLE_TAG),
+        )
+        // An empty shelf's action is the filled button in the empty state, so the
+        // header does not repeat it; while a transfer runs, the word is disabled
+        // rather than making a second one.
+        if (!vaultEmpty) {
+            TextButton(onClick = onImport, enabled = !importing) { Text(texts[TextKey.IMPORT]) }
         }
     }
 }

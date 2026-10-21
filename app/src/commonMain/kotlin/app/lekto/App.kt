@@ -70,6 +70,10 @@ import app.lekto.library.LibraryActions
 import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
+import app.lekto.navigation.AppShell
+import app.lekto.navigation.BackStack
+import app.lekto.navigation.Destination
+import app.lekto.navigation.PlatformBackHandler
 import app.lekto.reader.MasteryController
 import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
@@ -208,34 +212,6 @@ data class LlmServices(
      */
     val providers: List<LlmProvider> = LlmProvider.entries,
 )
-
-/** Where the app currently is, so one state replaces the reader/settings/attribution flags. */
-private sealed interface Destination {
-    data object Library : Destination
-    data object Settings : Destination
-    data object Vocabulary : Destination
-
-    /**
-     * The attribution screen, reachable from the **Languages** surface (issue
-     * #149). It carries where to return to, so leaving lands back on the surface
-     * that offered the data.
-     */
-    data class Attribution(val returnTo: Destination) : Destination
-
-    /**
-     * The **Languages** surface (issue #146). It is reached from the library and
-     * from Settings, so it carries where to return to rather than hard-coding
-     * one — the navigation rework will replace this with a real shell.
-     */
-    data class Languages(val returnTo: Destination) : Destination
-
-    /**
-     * The **Appearance** screen (ADR-0036). Like **Languages** it carries where to
-     * return to, so it lands back on the surface that offered it.
-     */
-    data class Appearance(val returnTo: Destination) : Destination
-    data class Reading(val session: ReadingSession) : Destination
-}
 
 /**
  * The application root and the composition root for the reading loop: it shows
@@ -469,7 +445,11 @@ private fun AppScreens(
     difficultyStates: Map<String, DifficultyUiState>,
     dictionaryStates: Map<String, DictionaryUiState>,
 ) {
-    var destination by remember { mutableStateOf<Destination>(Destination.Library) }
+    // The real back stack (issue #185; docs/design.md §6): the bar and every
+    // push move it, and Back walks it. It is a value in state, so a move is a
+    // recomposition and not a history kept somewhere else.
+    var stack by remember { mutableStateOf(BackStack.Root) }
+    val destination = stack.current
 
     // The Library is re-read whenever it is shown, and again when a reading
     // position lands while it is shown: a page turned just before leaving must
@@ -482,11 +462,17 @@ private fun AppScreens(
         if (destination is Destination.Library) controller.refresh() else controller.clearSearch()
     }
     LaunchedEffect(controller, changes) {
-        changes.progress.collect { if (destination is Destination.Library) controller.refresh() }
+        changes.progress.collect { if (stack.current is Destination.Library) controller.refresh() }
     }
+    // Android's back button walks the stack; at its root it is disabled, so the
+    // platform leaves the app from the Library and only from there. A screen with
+    // something open over it — the reader's panels — installs its own handler
+    // deeper in the composition and closes that first.
+    PlatformBackHandler(enabled = stack.canGoBack) { stack = stack.back() }
 
-    when (val current = destination) {
-        is Destination.Reading -> ReaderDestination(
+    val current = destination
+    if (current is Destination.Reading) {
+        ReaderDestination(
             current.session,
             environment,
             settings.dictionary,
@@ -496,60 +482,64 @@ private fun AppScreens(
             languageSettings,
             readingPreferences,
             lemmas,
-            onBack = { destination = Destination.Library },
-            onOpenSettings = { destination = Destination.Settings },
+            onBack = { stack = stack.back() },
+            onOpenSettings = { stack = stack.replace(Destination.Settings) },
         )
+    } else {
+        AppShell(
+            current = checkNotNull(current.section) { "$current covers the shell; it is rendered above it" },
+            onSelect = { section -> stack = stack.select(section) },
+        ) {
+            when (current) {
+                is Destination.Attribution -> AttributionScreen(
+                    metadata = dictionaryStates.values
+                        .firstNotNullOfOrNull { state -> (state.status as? DictionaryPackState.Ready)?.metadata },
+                    difficulty = difficultyStates.toSortedMap().values.firstNotNullOfOrNull { state ->
+                        (state.status as? DifficultyState.Ready)?.metadata
+                    },
+                    onBack = { stack = stack.back() },
+                )
 
-        is Destination.Attribution -> AttributionScreen(
-            metadata = dictionaryStates.values
-                .firstNotNullOfOrNull { state -> (state.status as? DictionaryPackState.Ready)?.metadata },
-            difficulty = difficultyStates.toSortedMap().values.firstNotNullOfOrNull { state ->
-                (state.status as? DifficultyState.Ready)?.metadata
-            },
-            onBack = { destination = current.returnTo },
-        )
+                Destination.Settings -> SettingsDestination(
+                    settings,
+                    onVaultImported = controller::refresh,
+                    onOpenAppearance = { stack = stack.push(Destination.Appearance) },
+                    onOpenLanguages = { stack = stack.push(Destination.Languages) },
+                )
 
-        Destination.Settings -> SettingsDestination(
-            settings,
-            onVaultImported = controller::refresh,
-            onOpenAppearance = { destination = Destination.Appearance(Destination.Settings) },
-            onOpenLanguages = { destination = Destination.Languages(Destination.Settings) },
-            onBack = { destination = Destination.Library },
-        )
+                Destination.Appearance -> AppearanceScreen(
+                    current = appTheme?.theme ?: AppTheme.DEFAULT,
+                    actions = AppearanceActions(
+                        onSelect = { chosen -> appTheme?.choose(chosen) },
+                        onBack = { stack = stack.back() },
+                    ),
+                )
 
-        is Destination.Appearance -> AppearanceScreen(
-            current = appTheme?.theme ?: AppTheme.DEFAULT,
-            actions = AppearanceActions(
-                onSelect = { chosen -> appTheme?.choose(chosen) },
-                onBack = { destination = current.returnTo },
-            ),
-        )
+                Destination.Languages -> LanguagesDestination(
+                    language = language,
+                    difficulty = difficulty,
+                    dictionary = settings.dictionary,
+                    mastery = mastery,
+                    languageSettings = languageSettings,
+                    systemLanguage = environment.systemLanguage,
+                    onOpenAttribution = { stack = stack.push(Destination.Attribution) },
+                    onBack = { stack = stack.back() },
+                )
 
-        is Destination.Languages -> LanguagesDestination(
-            language = language,
-            difficulty = difficulty,
-            dictionary = settings.dictionary,
-            mastery = mastery,
-            languageSettings = languageSettings,
-            systemLanguage = environment.systemLanguage,
-            onOpenAttribution = { destination = Destination.Attribution(current) },
-            onBack = { destination = current.returnTo },
-        )
+                Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope)
 
-        Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope) {
-            destination = Destination.Library
+                Destination.Library -> LibraryDestination(
+                    environment,
+                    controller,
+                    scope,
+                    libraryState,
+                    onOpen = { session -> stack = stack.push(Destination.Reading(session)) },
+                )
+
+                // Handled above: the reader is the one destination that leaves the shell.
+                is Destination.Reading -> Unit
+            }
         }
-
-        Destination.Library -> LibraryDestination(
-            environment,
-            controller,
-            scope,
-            libraryState,
-            onOpenVocabulary = { destination = Destination.Vocabulary },
-            onOpenSettings = { destination = Destination.Settings },
-            onOpenLanguages = { destination = Destination.Languages(Destination.Library) },
-            onOpen = { session -> destination = Destination.Reading(session) },
-        )
     }
 }
 
@@ -609,6 +599,9 @@ private fun ReaderDestination(
             translation.dismiss()
         },
     )
+    // Back closes the panel the reader raised before the shell sees it, so a
+    // lookup never costs the reader their page (issue #185).
+    PlatformBackHandler(enabled = lookup.hasPanel) { lookup.onDismiss() }
     ReaderSession(
         session = session,
         environment = environment,
@@ -695,7 +688,11 @@ private class Settings(
     val state: SettingsUiState,
 )
 
-/** The settings destination wrapped so its action bundle stays out of [AppScreens]. */
+/**
+ * The settings destination wrapped so its action bundle stays out of [AppScreens].
+ * It is a section of the shell now, so it has no back action of its own: the bar
+ * and the back stack replace it (issue #185).
+ */
 @Suppress("LongParameterList") // The settings controllers and the ways it navigates, each independent.
 @Composable
 private fun SettingsDestination(
@@ -703,12 +700,10 @@ private fun SettingsDestination(
     onVaultImported: () -> Unit,
     onOpenAppearance: () -> Unit,
     onOpenLanguages: () -> Unit,
-    onBack: () -> Unit,
 ) {
     SettingsScreen(
         state = settings.state,
         actions = SettingsActions(
-            onBack = onBack,
             onOpenAppearance = onOpenAppearance,
             onOpenLanguages = onOpenLanguages,
             onSelectAppLanguage = { language -> settings.languageSettings?.chooseAppLanguage(language) },
@@ -744,19 +739,11 @@ private fun LibraryDestination(
     controller: LibraryController,
     scope: CoroutineScope,
     state: LibraryUiState,
-    onOpenVocabulary: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenLanguages: () -> Unit,
     onOpen: (ReadingSession) -> Unit,
 ) {
     LibraryScreen(
         state = state,
-        actions = libraryActions(
-            environment,
-            controller,
-            scope,
-            LibraryNavigation(onOpenVocabulary, onOpenSettings, onOpenLanguages, onOpen),
-        ),
+        actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
     )
 }
 
@@ -782,7 +769,6 @@ private fun VocabularyDestination(
     environment: AppEnvironment,
     languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
-    onBack: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
@@ -818,7 +804,6 @@ private fun VocabularyDestination(
             onDelete = { entry ->
                 scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
             },
-            onBack = onBack,
         ),
     )
 }
@@ -888,18 +873,10 @@ private fun libraryActions(
     onDismissError = controller::dismissError,
     onSearch = controller::search,
     onClearSearch = controller::clearSearch,
-    onOpenSettings = navigation.onOpenSettings,
-    onOpenVocabulary = navigation.onOpenVocabulary,
-    onOpenLanguages = navigation.onOpenLanguages,
 )
 
 /** Where the library's taps lead, bundled so [libraryActions] stays within the parameter bound. */
-private class LibraryNavigation(
-    val onOpenVocabulary: () -> Unit,
-    val onOpenSettings: () -> Unit,
-    val onOpenLanguages: () -> Unit,
-    val onOpen: (ReadingSession) -> Unit,
-)
+private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
 
 /** The reader over an opened [session], with a way back to the library and the lookup panel. */
 @Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.

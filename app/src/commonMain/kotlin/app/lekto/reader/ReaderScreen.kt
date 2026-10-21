@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,10 +38,13 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingPreferences
+import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.ui.DismissScrim
+import app.lekto.ui.icons.ArrowLeft
+import app.lekto.ui.icons.LektoIcons
 import kotlinx.coroutines.yield
 
 private val ChromeHeight = 48.dp
@@ -50,6 +55,9 @@ private const val PAGE_YIELD_EVERY = 8
 
 /** The test tag on the page, so the UI tests can inject a tap at a zone's coordinates. */
 internal const val READER_PAGE_TAG = "reader-page"
+
+/** The test tag on the reader's way back to the shelf, an icon in its left band (docs/design.md §7.2). */
+internal const val READER_BACK_TAG = "reader-back"
 
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
@@ -147,6 +155,9 @@ private fun BoxWithConstraintsScope.ReaderContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+    // Back closes the **Aa** panel before the shell sees it (issue #185), the way a
+    // tap outside the panel does.
+    PlatformBackHandler(enabled = state.preferencesVisible) { state.dismissPreferences() }
 }
 
 /** The dismiss a tap on the page runs: the **Aa** panel's, or the lookup panel's, or none. */
@@ -394,7 +405,14 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
         modifier = Modifier.fillMaxWidth().height(ChromeHeight).padding(horizontal = horizontalMargin),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        onBack?.let { back -> TextButton(onClick = back) { Text(texts[TextKey.LIBRARY]) } }
+        // `arrow-left`, not a word: the reader's band is an icon, a title and the
+        // **Aa** control (docs/design.md §7.2), and the icon mirrors in a
+        // right-to-left layout. Its description names it, since no label does.
+        onBack?.let { back ->
+            IconButton(onClick = back, modifier = Modifier.testTag(READER_BACK_TAG)) {
+                Icon(imageVector = LektoIcons.ArrowLeft, contentDescription = texts[TextKey.BACK])
+            }
+        }
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,

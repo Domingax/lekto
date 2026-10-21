@@ -20,6 +20,10 @@ the offset names the same place whether you change the font size, resize the
 window, or open the book on another device. You return to a book from the
 [Library](/library).
 
+The reader fills the screen: the arrow at its top left returns to the Library, and
+so does the system back gesture on Android. Back closes a lookup panel or the
+**Aa** panel first, so it never costs you your page.
+
 ## Changing how the text looks
 
 Tap **Aa** in the reader's top bar to open the reading controls. There you choose

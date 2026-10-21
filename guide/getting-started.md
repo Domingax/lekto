@@ -23,12 +23,23 @@ bring your books, reading progress and vocabulary here. See
 
 ## The shape of the app
 
-- The **Library** lists the books you have imported. It is where the app opens and
-  where you return to from a reading session.
-- **Import** brings a book original into the Vault so it appears in the Library.
-- A reading session opens a book and colours its Word tokens by your **Mastery
-  level**.
-- A tap on a word opens the lookup panel, so you can see a translation, hear its
-  **Pronunciation**, and save it.
+Lekto has three sections, and you move between them from the bar at the bottom of
+the screen — a column at the left on a desktop:
+
+- The **Library** lists the books you have imported. It is where the app opens.
+- **Vocabulary** holds the words you have saved.
+- **Settings** holds everything else: appearance, languages, the provider, the Vault.
+
+**Import** is an action in the Library, not a fourth section: it brings a book
+original into the Vault so it appears in the Library.
+
+A reading session opens a book and colours its Word tokens by your **Mastery
+level**. It leaves the three sections and fills the screen; the arrow at its top
+left brings you back to the Library. **Back** — the system back gesture on Android
+— walks the way you came: it returns from Settings to the section you were in, and
+only leaves the app from the Library.
+
+A tap on a word opens the lookup panel, so you can see a translation, hear its
+**Pronunciation**, and save it.
 
 Ready to begin? [Import your first book](/import).

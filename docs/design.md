@@ -162,10 +162,15 @@ Three sections, and no fourth:
 - **The reader leaves the shell** and is full-screen. Its chrome is two bands, 48 dp and 64 dp,
   and a tap on the middle third hides both.
 - **Languages and Appearance are entries inside Settings**, not sections (ADR-0034, ADR-0036).
-- **The back stack is real**, and Android's back button walks it. Today it is a single `when` over
-  a sealed destination with no history, and back leaves the app from anywhere: that is a defect,
-  not a choice. The reader's chapter list closes on Back before the shell sees it (ADR-0037); the
-  shell's history is #185.
+- **The back stack is real**, and Android's back button walks it (issue #185). Opening a section or
+  a screen pushes it, and Back drops it: back from Settings returns to the section it came from, and
+  a bar item already behind the current place unwinds to it rather than stacking a second copy.
+  Tapping the section the reader is already in — marked current while one of its own screens is open
+  — returns to that section's first screen. Back from the Library is the platform's, and leaves the
+  app. A screen with something open over it — the reader's lookup and **Aa** panels — closes that
+  first, as the chapter list does on Back before the shell sees it (ADR-0037). The reader's settings
+  link leaves the book rather than keeping it behind, so Back from Settings lands on the shelf: a
+  book kept behind the link would reopen where it was opened, not where the reader had got to.
 - **Desktop**: the same three sections become a fixed left column. In the reader, the right side is
   a **context column** — the chapter list when nothing is touched, the word when something is. It
   is reserved rather than overlaid, so the page never moves. Below roughly **1100 dp** the column
@@ -373,6 +378,10 @@ the page behind it.
   `tools/icons/fetch.sh`, which pins the Lucide tag and the generator; `THIRD-PARTY-NOTICES.md`
   carries the licences.
 - The screens — one file per screen, as today. A new screen follows §7's shape and §4's spacing.
+- The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
+  `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,
+  each naming the section it belongs to) and `BackStack` (the history as a value). The platform's own
+  back is a seam there too: Android walks the stack, and a platform with no system back does nothing.
 
 When a screen changes, this document changes with it, in the same pull request. When the change
 reverses something an ADR decided, the ADR wins and this document is wrong until it is fixed.

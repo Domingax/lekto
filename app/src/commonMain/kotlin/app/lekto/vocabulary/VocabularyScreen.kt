@@ -40,6 +40,9 @@ import app.lekto.text.TextKey
 /** The test tag on the search field, so a UI test can type into it unambiguously. */
 internal const val VOCABULARY_SEARCH_TAG: String = "vocabulary-search"
 
+/** The test tag on the screen's title, so a test can tell the screen from the shell's bar (issue #185). */
+internal const val VOCABULARY_TITLE_TAG: String = "vocabulary-title"
+
 /** The test tag on an entry's delete button, so a UI test can click exactly one. */
 internal fun vocabularyDeleteTag(key: WordKey): String = "vocabulary-delete-${key.language.orEmpty()}-${key.key}"
 
@@ -70,14 +73,14 @@ sealed interface VocabularyUiState {
 
 /**
  * The vocabulary list's actions (issue #23, filter #66): change the search
- * query, change the mastery level filter (`null` is every level), delete an
- * entry, and go back to the library.
+ * query, change the mastery level filter (`null` is every level) and delete an
+ * entry. It is a section of the shell now, so the bar replaces its back action
+ * (issue #185).
  */
 data class VocabularyActions(
     val onSearch: (String) -> Unit = {},
     val onFilter: (MasteryLevel?) -> Unit = {},
     val onDelete: (VocabularyEntry) -> Unit = {},
-    val onBack: () -> Unit = {},
 )
 
 /**
@@ -98,7 +101,7 @@ fun VocabularyScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Header(actions.onBack)
+        Header()
         when (state) {
             VocabularyUiState.Empty -> Text(
                 text = LocalAppTexts.current[TextKey.VOCABULARY_EMPTY],
@@ -111,13 +114,14 @@ fun VocabularyScreen(
     }
 }
 
+/** The screen's title alone: the shell's bar and the back stack replace its old way back (issue #185). */
 @Composable
-private fun Header(onBack: () -> Unit) {
-    val texts = LocalAppTexts.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text(texts[TextKey.LIBRARY]) }
-        Text(texts[TextKey.VOCABULARY], style = MaterialTheme.typography.headlineMedium)
-    }
+private fun Header() {
+    Text(
+        text = LocalAppTexts.current[TextKey.VOCABULARY],
+        style = MaterialTheme.typography.headlineMedium,
+        modifier = Modifier.testTag(VOCABULARY_TITLE_TAG),
+    )
 }
 
 @Composable

@@ -243,22 +243,36 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theHeaderKeepsItsNavigationReadableInFrench() {
-        // The French title is wider than the English one, so on a phone the
-        // navigation cannot share its line: it must wrap below, not be squeezed
-        // into a one-character column (ADR-0034).
+    fun theImportActionSitsBesideTheTitleAndTheSectionsDoNot() {
+        // Import is the Library's action and never a section (issue #185): once
+        // there is a shelf it is a word beside the title, and the way to another
+        // section is the shell's bar, not this header.
+        var imported = false
+        compose.setContent { Library(books(book), onImport = { imported = true }) }
+
+        compose.onNodeWithText("Import").assertIsDisplayed().performClick()
+
+        assertTrue("the word beside the title imports", imported)
+        compose.onNodeWithText("Settings").assertDoesNotExist()
+        compose.onNodeWithText("Vocabulary").assertDoesNotExist()
+    }
+
+    @Test
+    fun theHeaderKeepsItsTitleAndActionReadableInFrench() {
+        // The French title is wider than the English one, so on a phone the action
+        // wraps below it rather than being squeezed into a one-character column
+        // (ADR-0034).
         compose.setContent {
             CompositionLocalProvider(LocalAppTexts provides appTextsFor("fr")) {
-                Library(LibraryUiState())
+                Library(books(book))
             }
         }
 
         compose.onNodeWithText("Bibliothèque").assertIsDisplayed()
-        compose.onNodeWithText("Langues").assertIsDisplayed()
-        compose.onNodeWithText("Vocabulaire").assertIsDisplayed()
-        val settings = compose.onNodeWithText("Réglages").assertIsDisplayed().getBoundsInRoot()
-        val height = settings.bottom - settings.top
-        assertTrue("the nav label must stay on one line: $height", height < 80.dp)
+        val importer = compose.onNodeWithText("Importer").assertIsDisplayed().getBoundsInRoot()
+        assertTrue("the action must stay on one line: $importer", importer.bottom - importer.top < 80.dp)
+        compose.onNodeWithText("Langues").assertDoesNotExist()
+        compose.onNodeWithText("Réglages").assertDoesNotExist()
     }
 
     /** A state whose books are all unread, so only the title list shows. */
@@ -269,6 +283,7 @@ class LibraryScreenSemanticsTest {
     @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.
     private fun Library(
         state: LibraryUiState,
+        onImport: () -> Unit = {},
         onOpen: (Book) -> Unit = {},
         onDelete: (Book) -> Unit = {},
         onDismissError: () -> Unit = {},
@@ -279,6 +294,7 @@ class LibraryScreenSemanticsTest {
             LibraryScreen(
                 state = state,
                 actions = LibraryActions(
+                    onImport = onImport,
                     onOpen = onOpen,
                     onDelete = onDelete,
                     onDismissError = onDismissError,

@@ -14,8 +14,8 @@ creating a second one.
 
 ## Managing your vocabulary
 
-The Vocabulary list shows every saved word with its translation, context sentence
-and mastery. The translation is read from the **Dictionary pack** installed for the
+The Vocabulary list — the second section — shows every saved word with its
+translation, context sentence and mastery. The translation is read from the **Dictionary pack** installed for the
 word's language and your **Translation language**, so installing or updating a pack
 refreshes what you see. When no pack answers — none is installed, or the pack does
 not know the word — the list falls back to the translation saved with the word.
