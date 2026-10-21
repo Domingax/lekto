@@ -82,6 +82,19 @@ allprojects {
         failOnSeverity.set(FailOnSeverity.Error)
     }
 
+    // The icon set is generated Kotlin (issue #184): Valkyrie emits one
+    // `_Name!!` cache lookup per icon, which `UnsafeCallOnNullableType` flags on
+    // every file. The generated files are not hand-written, so they are excluded
+    // rather than edited; the hand-written `LektoIcons.kt` beside them stays
+    // analysed, and `LektoIconsTest` pins the geometry.
+    tasks.withType<Detekt>().configureEach {
+        exclude { element ->
+            val path = element.file.invariantSeparatorsPath
+            path.contains("/commonMain/kotlin/app/lekto/ui/icons/") &&
+                !path.endsWith("/LektoIcons.kt")
+        }
+    }
+
     // Measurement is a task of its own (ticket #8): no Kover verification rule
     // exists, so `koverVerify` must not ride along on `check`. The plugin still
     // instruments the test runs — that is the price of coverage — but writes a
