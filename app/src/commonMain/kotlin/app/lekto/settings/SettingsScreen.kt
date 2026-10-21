@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.llm.LlmProvider
+import app.lekto.core.theme.AppTheme
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 
@@ -46,17 +47,22 @@ internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
 /** The test tag on the way to the **Languages** surface, so a UI test can click exactly it. */
 internal const val LANGUAGES_LINK_TAG: String = "settings-languages"
 
+/** The test tag on the way to the **Appearance** screen, so a UI test can click exactly it. */
+internal const val APPEARANCE_LINK_TAG: String = "settings-appearance"
+
 /**
- * The settings screen: the app's own language (ADR-0034), the way to the
- * **Languages** surface (issue #146), the vault's export/import (issue #20), sync
- * (issue #28) and the LLM provider (issue #88). Each is its own section so later
- * settings land without disturbing the ones already here, and nothing on the
- * screen gates the reader — the vault actions exist only where a file picker is
- * wired, sync only where a driver is, and the model only where a provider is.
+ * The settings screen: the app's own appearance (ADR-0036), the app's own language
+ * (ADR-0034), the way to the **Languages** surface (issue #146), the vault's
+ * export/import (issue #20), sync (issue #28) and the LLM provider (issue #88).
+ * Each is its own section so later settings land without disturbing the ones
+ * already here, and nothing on the screen gates the reader — the vault actions
+ * exist only where a file picker is wired, sync only where a driver is, and the
+ * model only where a provider is.
  *
  * The data the reader manages per language — the **Reader level**, the
  * **Difficulty table** and the **Dictionary pack** — lives on the **Languages**
- * surface, not here (issues #147, #148, #149).
+ * surface, not here (issues #147, #148, #149), and the theme's four papers live on
+ * the **Appearance** screen, so this screen names the current one and nothing more.
  */
 @Composable
 fun SettingsScreen(
@@ -70,6 +76,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Header(actions.onBack)
+        Section(texts[TextKey.SECTION_APPEARANCE]) { AppearanceSection(state.appTheme, actions) }
         Section(texts[TextKey.SECTION_APP_LANGUAGE]) {
             AppLanguageSection(state.appLanguage, actions.onSelectAppLanguage)
         }
@@ -86,6 +93,24 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(title, style = MaterialTheme.typography.titleLarge)
         content()
+    }
+}
+
+/**
+ * The **Appearance** doorway (ADR-0036; docs/design.md §7.6): Settings names the
+ * app's current paper and offers the screen that changes it. The four entries are
+ * each shown on their own paper there, so a theme is chosen by looking at it.
+ */
+@Composable
+private fun AppearanceSection(theme: AppTheme, actions: SettingsActions) {
+    val texts = LocalAppTexts.current
+    Text(
+        texts[TextKey.APPEARANCE_DESCRIPTION],
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(texts.themeName(theme), style = MaterialTheme.typography.bodyMedium)
+    TextButton(onClick = actions.onOpenAppearance, modifier = Modifier.testTag(APPEARANCE_LINK_TAG)) {
+        Text(texts[TextKey.SECTION_APPEARANCE])
     }
 }
 

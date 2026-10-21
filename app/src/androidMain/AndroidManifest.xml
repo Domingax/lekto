@@ -12,10 +12,14 @@
         </intent>
     </queries>
 
+    <!-- The window theme of the App theme (ADR-0036): no fixed Light paper, so the
+         window background is the active theme's. The night variant is the Dark
+         paper for a System device; MainActivity picks the explicit paper for a
+         chosen Light, Dark or Sepia before the first frame. -->
     <application
         android:label="Lekto"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.Lekto">
         <activity
             android:name=".MainActivity"
             android:exported="true">

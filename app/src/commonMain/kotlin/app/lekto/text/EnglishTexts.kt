@@ -95,6 +95,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.NO_TRANSLATION_SERVICE to "No translation service is available for this phrase.",
 
     // Settings.
+    TextKey.SECTION_APPEARANCE to "Appearance",
     TextKey.SECTION_APP_LANGUAGE to "App language",
     TextKey.SECTION_LANGUAGES to "Languages",
     TextKey.SECTION_VAULT to "Vault",
@@ -122,6 +123,19 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.REMOVE_KEY to "Remove key",
     TextKey.TEST_CONNECTION to "Test connection",
     TextKey.APP_LANGUAGE_DESCRIPTION to "The language Lekto uses for its own texts.",
+    TextKey.APPEARANCE_DESCRIPTION to
+        "Choose how Lekto looks on this device. The theme recolours the whole app — never a book's " +
+        "text, which keeps its face, size and margins. Your choice stays on this device and never " +
+        "travels with your vault.",
+    TextKey.THEME_SYSTEM to "System",
+    TextKey.THEME_SYSTEM_DESCRIPTION to "Follows the device setting",
+    TextKey.THEME_LIGHT to "Light",
+    TextKey.THEME_LIGHT_DESCRIPTION to "Warm paper, black ink",
+    TextKey.THEME_DARK to "Dark",
+    TextKey.THEME_DARK_DESCRIPTION to "Warm night, light ink",
+    TextKey.THEME_SEPIA to "Sepia",
+    TextKey.THEME_SEPIA_DESCRIPTION to "Rag paper",
+    TextKey.CURRENT_THEME to "Current",
 
     // Sync.
     TextKey.SYNC_SECTION_DESCRIPTION to

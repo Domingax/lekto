@@ -952,6 +952,29 @@ size disabled at its bounds — and the whole loop, changing the size in the rea
 and finding it kept after leaving and reopening the book, runs through
 `AppSemanticsTest` on both lanes.
 
+The app's own **App theme** (issue #182; ADR-0036) — Light, Dark, Sepia, or System
+following the platform — is proved at its own levels too. `AppTheme.resolve` is
+the one resolution function, so `AppThemeTest` in `core/commonTest` pins that
+System on a dark platform yields Dark, on a light one Light, and never Sepia,
+while a chosen paper ignores the platform. The `AppThemeStore` seam runs the
+shared `AppThemeStoreContract` against the in-memory fake and the JSON document
+store over an in-memory filesystem in `core/commonTest`, and against a real
+directory in `core/jvmTest`; `JsonAppThemeStoreTest` adds what the contract does
+not — a corrupt document and a paper this build does not know both read as System
+— and pins that the theme lives under the settings root and never lands in the
+vault or its export. `AppThemeControllerTest` pins that the store is the truth,
+and `AppThemeColorsTest` that the choice maps onto the identity's three schemes.
+The **Appearance** screen is `AppearanceScreenSemanticsTest` on both lanes — the
+four entries named and shown on their own paper, the current choice selected, a
+choice raising its action, the way back, and the whole screen in French — and the
+whole loop, choosing a paper and finding it stored and marked at once, runs
+through `AppSemanticsTest` on both lanes. The window background is Android glue, so
+`AndroidThemeTest` in `app/androidUnitTest` pins the window theme a dark platform
+asks for, that a chosen paper wins in either setting, and that the window's colour
+resources are exactly the three schemes' papers — the two cannot drift. The launch
+window's paper is recorded as `launch-window-light.png` and `launch-window-dark.png`
+by `ThemeGoldenTest`, background only — the icon is issue #177's.
+
 The app's own texts (issue #165; ADR-0034) are one per-language table selected by
 the **app language**. `AppTextsTest` in `app/desktopTest` pins that every
 `TextKey` resolves in both languages the app ships, that a parameterised message

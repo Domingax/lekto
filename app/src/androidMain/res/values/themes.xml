@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Android window themes of the App theme (ADR-0036). The manifest names
+         Theme.Lekto, whose windowBackground is the paper of the platform's own
+         light-or-dark setting, because that is the starting window the system
+         draws before the app runs. MainActivity then picks the explicit variant
+         below from the stored choice before super.onCreate, so a chosen Dark or
+         Sepia device never flashes the wrong paper.
+
+         Each Light and Sepia theme keeps the platform's Light base, so anything
+         Android draws outside Compose (a text cursor, a selection) is inked for a
+         light surface; Dark uses the dark base. -->
+    <style name="Theme.Lekto" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/lekto_paper_light</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- An explicitly chosen Light paper, on a platform of either setting. -->
+    <style name="Theme.Lekto.Light" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/lekto_paper_light</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- An explicitly chosen Dark paper, on a platform of either setting. -->
+    <style name="Theme.Lekto.Dark" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lekto_paper_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- An explicitly chosen Sepia paper, which no platform setting selects. -->
+    <style name="Theme.Lekto.Sepia" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/lekto_paper_sepia</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

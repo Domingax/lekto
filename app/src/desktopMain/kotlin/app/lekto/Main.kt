@@ -26,6 +26,7 @@ fun main() {
         val readerLevels = remember { desktopReaderLevels() }
         val languageSettings = remember { desktopLanguageSettings() }
         val readingPreferences = remember { desktopReadingPreferences() }
+        val appTheme = remember { desktopAppTheme() }
         val dictionary = remember { desktopDictionary() }
         val difficulty = remember { desktopDifficulty() }
         val languages = remember { desktopLanguage() }
@@ -72,6 +73,7 @@ fun main() {
                     languageSettings = languageSettings,
                     systemLanguage = systemLanguage,
                     readingPreferences = readingPreferences,
+                    appTheme = appTheme,
                     pickFile = {
                         withContext(dialogDispatcher()) {
                             pickFileToImport(appTextsFor(languageSettings.load().appLanguage))
@@ -88,6 +90,9 @@ fun main() {
                     sync = sync,
                     onResume = resumes,
                 ),
+                onWindowBackgroundChange = { paper ->
+                    window.background = java.awt.Color(paper.red, paper.green, paper.blue)
+                },
             )
         }
     }

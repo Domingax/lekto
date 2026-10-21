@@ -12,6 +12,7 @@ import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.text.baseLanguage
+import app.lekto.core.theme.AppTheme
 
 /**
  * The app's own texts, in one language (ADR-0034): the per-language table a
@@ -60,6 +61,12 @@ class AppTexts internal constructor(
 
     /** A **Mastery level**'s readable name, so the list and filter name it, not only its colour. */
     fun masteryName(level: MasteryLevel): String = this[MASTERY_KEYS.getValue(level)]
+
+    /** An **App theme**'s readable name, so the Appearance screen and Settings name the current one. */
+    fun themeName(theme: AppTheme): String = this[THEME_KEYS.getValue(theme)]
+
+    /** The one-line description of what an **App theme** looks like, shown beside its preview. */
+    fun themeDescription(theme: AppTheme): String = this[THEME_DESCRIPTION_KEYS.getValue(theme)]
 
     /** An honest one-line summary of a **Dictionary pack**'s state. */
     fun dictionaryStatus(state: DictionaryPackState): String = when (state) {
@@ -131,6 +138,20 @@ class AppTexts internal constructor(
             MasteryLevel.FAMILIAR to TextKey.MASTERY_FAMILIAR,
             MasteryLevel.LEARNED to TextKey.MASTERY_LEARNED,
             MasteryLevel.KNOWN to TextKey.MASTERY_KNOWN,
+        )
+
+        val THEME_KEYS: Map<AppTheme, TextKey> = mapOf(
+            AppTheme.SYSTEM to TextKey.THEME_SYSTEM,
+            AppTheme.LIGHT to TextKey.THEME_LIGHT,
+            AppTheme.DARK to TextKey.THEME_DARK,
+            AppTheme.SEPIA to TextKey.THEME_SEPIA,
+        )
+
+        val THEME_DESCRIPTION_KEYS: Map<AppTheme, TextKey> = mapOf(
+            AppTheme.SYSTEM to TextKey.THEME_SYSTEM_DESCRIPTION,
+            AppTheme.LIGHT to TextKey.THEME_LIGHT_DESCRIPTION,
+            AppTheme.DARK to TextKey.THEME_DARK_DESCRIPTION,
+            AppTheme.SEPIA to TextKey.THEME_SEPIA_DESCRIPTION,
         )
 
         val CORE_KEYS: Map<String, TextKey> = mapOf(

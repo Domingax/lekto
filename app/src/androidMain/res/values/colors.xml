@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The three papers of the App theme (ADR-0036; docs/design.md §2.1), used by
+         the window themes so the strip Android paints before the first Compose
+         frame is the active paper. -->
+    <color name="lekto_paper_light">#FAF7F2</color>
+    <color name="lekto_paper_dark">#15130F</color>
+    <color name="lekto_paper_sepia">#F6ECD8</color>
+</resources>

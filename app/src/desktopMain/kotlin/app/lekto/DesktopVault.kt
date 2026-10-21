@@ -8,6 +8,8 @@ import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.readinglevel.VaultReaderLevels
 import app.lekto.core.sync.JsonTombstoneStore
+import app.lekto.core.theme.AppThemeStore
+import app.lekto.core.theme.JsonAppThemeStore
 import app.lekto.core.vault.DeviceIdFile
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
@@ -59,6 +61,18 @@ fun desktopReaderLevels(root: File = desktopVaultRoot()): ReaderLevels = VaultRe
  */
 fun desktopLanguageSettings(root: File = File(appDataDirectory("lekto"), "settings")): LanguageSettingsStore =
     JsonLanguageSettingsStore(JvmVaultFileSystem(root))
+
+/**
+ * The desktop **App theme** (ADR-0036) over [root], defaulting to an app-private
+ * folder beside the vault: the device's paper — Light, Dark, Sepia or System. It is
+ * device-local app configuration (ADR-0023's pattern), not a vault record, so it
+ * never enters an export.
+ *
+ * @param root the settings root, defaulting to the app-data directory; the
+ *   parameter is the test seam, so production never passes one.
+ */
+fun desktopAppTheme(root: File = File(appDataDirectory("lekto"), "settings")): AppThemeStore =
+    JsonAppThemeStore(JvmVaultFileSystem(root))
 
 /**
  * The desktop reading preference (ADR-0035) over [root], defaulting to an

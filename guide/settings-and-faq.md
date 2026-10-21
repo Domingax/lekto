@@ -5,6 +5,12 @@ answers the common questions.
 
 ## Settings
 
+- **Appearance** — how Lekto looks: **System** (follow the device's light or dark
+  setting), **Light**, **Dark** or **Sepia**. Each entry is shown on its own paper,
+  so you choose by looking. Your choice is kept on this device, recolours the whole
+  app at once — never the text of a book, which keeps its own face, size and margins
+  — and never travels with your Vault. A dark or sepia choice also colours the window
+  behind the app, so it does not flash white while it starts.
 - **App language** — the language you want Lekto's own texts in. Only the languages
   Lekto ships are offered (English and French). Your choice is kept on this device,
   so it does not travel with your Vault between devices, and the whole interface
