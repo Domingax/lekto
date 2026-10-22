@@ -134,14 +134,36 @@ internal fun preloadSystemFreeType() {
     runCatching { System.load(library.absolutePath) }
 }
 
-private val FREE_TYPE_ROOTS = listOf(File("/usr/lib"), File("/lib"), File("/usr/lib64"), File("/lib64"))
+/**
+ * The library's usual homes, the multiarch one first. A fixed list rather than a
+ * directory walk: on the development machine, listing `/usr/lib` and its children
+ * cost 44 ms before the window could appear, and the file sits in one of a
+ * handful of directories on every mainstream Linux layout.
+ */
+private fun findSystemFreeType(): File? = freeTypeDirectories()
+    .asSequence()
+    .map { File(it, "libfreetype.so.6") }
+    .firstOrNull { it.isFile }
 
-/** The loader's directories, then one level of multiarch subdirectories. */
-private fun findSystemFreeType(): File? = FREE_TYPE_ROOTS.asSequence()
-    .flatMap { root -> sequenceOf(root) + root.subdirectories() }
-    .flatMap { it.children() }
-    .firstOrNull { it.name.startsWith("libfreetype.so.6") }
+private fun freeTypeDirectories(): List<String> = buildList {
+    multiarchDirectory(System.getProperty("os.arch").lowercase())?.let { architecture ->
+        add("/usr/lib/$architecture")
+        add("/lib/$architecture")
+    }
+    add("/usr/lib")
+    add("/lib")
+    add("/usr/lib64")
+    add("/lib64")
+}
 
-private fun File.subdirectories(): Sequence<File> = children().filter { it.isDirectory }
-
-private fun File.children(): Sequence<File> = listFiles()?.asSequence().orEmpty()
+/** Debian's architecture tuple, which is how a multiarch system names its library directory. */
+private fun multiarchDirectory(architecture: String): String? = when (architecture) {
+    "amd64", "x86_64" -> "x86_64-linux-gnu"
+    "aarch64" -> "aarch64-linux-gnu"
+    "arm", "armv7l" -> "arm-linux-gnueabihf"
+    "x86", "i386", "i686" -> "i386-linux-gnu"
+    "riscv64" -> "riscv64-linux-gnu"
+    "ppc64le" -> "powerpc64le-linux-gnu"
+    "s390x" -> "s390x-linux-gnu"
+    else -> null
+}
