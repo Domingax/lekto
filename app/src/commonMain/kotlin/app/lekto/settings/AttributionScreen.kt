@@ -16,6 +16,7 @@ import app.lekto.core.dictionary.PackMetadata
 import app.lekto.core.difficulty.DifficultyMetadata
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 /**
  * The mandatory attribution screen (issues #18, #64 and #149; ADR-0011,
@@ -40,7 +41,9 @@ fun AttributionScreen(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        TextButton(onClick = onBack) { Text(LocalAppTexts.current[TextKey.BACK]) }
+        TextButton(onClick = onBack, modifier = Modifier.handCursor()) {
+            Text(LocalAppTexts.current[TextKey.BACK])
+        }
         Text(LocalAppTexts.current[TextKey.ATTRIBUTION], style = MaterialTheme.typography.headlineMedium)
         DictionaryAttribution(metadata)
         DifficultyAttribution(difficulty)

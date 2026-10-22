@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.testTag
 import app.lekto.core.language.AppLanguages
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 // The app's own language section of the settings screen (ADR-0034), split from
 // the screen itself so each stays within the rules.
@@ -41,7 +42,10 @@ internal fun AppLanguageSection(language: String, onSelect: (String) -> Unit) {
     )
     var expanded by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(APP_LANGUAGE_PICKER_TAG)) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.handCursor().testTag(APP_LANGUAGE_PICKER_TAG),
+        ) {
             Text(texts.languageName(language))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -52,7 +56,7 @@ internal fun AppLanguageSection(language: String, onSelect: (String) -> Unit) {
                         expanded = false
                         onSelect(option)
                     },
-                    modifier = Modifier.testTag(appLanguageOptionTag(option)),
+                    modifier = Modifier.handCursor().testTag(appLanguageOptionTag(option)),
                 )
             }
         }

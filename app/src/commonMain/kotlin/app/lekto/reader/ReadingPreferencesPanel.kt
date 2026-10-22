@@ -24,6 +24,7 @@ import app.lekto.core.reading.ReadingMargin
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 import app.lekto.ui.swallowTaps
 
 /** The test tag on the reader's **Aa** control, so a UI test can open the panel exactly. */
@@ -84,7 +85,10 @@ internal fun ReadingPreferencesPanel(
 @Composable
 private fun CloseRow(onDismiss: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = onDismiss, modifier = Modifier.testTag(READING_PREFERENCES_CLOSE_TAG)) {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.handCursor().testTag(READING_PREFERENCES_CLOSE_TAG),
+        ) {
             Text(LocalAppTexts.current[TextKey.CLOSE])
         }
     }
@@ -124,13 +128,15 @@ private fun SizeRow(preferences: ReadingPreferences, onChange: (ReadingPreferenc
         TextButton(
             onClick = { onChange(preferences.smaller()) },
             enabled = preferences.size > ReadingPreferences.MIN_SIZE,
-            modifier = Modifier.testTag(READING_SMALLER_TAG),
+            modifier = Modifier.handCursor(preferences.size > ReadingPreferences.MIN_SIZE)
+                .testTag(READING_SMALLER_TAG),
         ) { Text(texts[TextKey.READING_SMALLER]) }
         Text(preferences.size.toInt().toString())
         TextButton(
             onClick = { onChange(preferences.larger()) },
             enabled = preferences.size < ReadingPreferences.MAX_SIZE,
-            modifier = Modifier.testTag(READING_LARGER_TAG),
+            modifier = Modifier.handCursor(preferences.size < ReadingPreferences.MAX_SIZE)
+                .testTag(READING_LARGER_TAG),
         ) { Text(texts[TextKey.READING_LARGER]) }
     }
 }
@@ -177,12 +183,12 @@ private fun ReadingMargin.label(): TextKey = when (this) {
 private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val marked = modifier.semantics { this.selected = selected }
     if (selected) {
-        Button(onClick = onClick, modifier = marked) { Text(label) }
+        Button(onClick = onClick, modifier = marked.handCursor()) { Text(label) }
     } else {
         OutlinedButton(
             onClick = onClick,
             border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
-            modifier = marked,
+            modifier = marked.handCursor(),
         ) { Text(label) }
     }
 }

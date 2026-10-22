@@ -35,6 +35,7 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.theme.AppTheme
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 /** The test tags the LLM provider section's controls carry, so a UI test can click exactly one. */
 internal const val PROVIDER_PICKER_TAG: String = "settings-provider-picker"
@@ -112,7 +113,10 @@ private fun AppearanceSection(theme: AppTheme, actions: SettingsActions) {
         style = MaterialTheme.typography.bodyMedium,
     )
     Text(texts.themeName(theme), style = MaterialTheme.typography.bodyMedium)
-    TextButton(onClick = actions.onOpenAppearance, modifier = Modifier.testTag(APPEARANCE_LINK_TAG)) {
+    TextButton(
+        onClick = actions.onOpenAppearance,
+        modifier = Modifier.handCursor().testTag(APPEARANCE_LINK_TAG),
+    ) {
         Text(texts[TextKey.SECTION_APPEARANCE])
     }
 }
@@ -132,7 +136,10 @@ private fun LanguagesSection(actions: SettingsActions) {
         texts[TextKey.LANGUAGES_SECTION_DESCRIPTION],
         style = MaterialTheme.typography.bodyMedium,
     )
-    TextButton(onClick = actions.onOpenLanguages, modifier = Modifier.testTag(LANGUAGES_LINK_TAG)) {
+    TextButton(
+        onClick = actions.onOpenLanguages,
+        modifier = Modifier.handCursor().testTag(LANGUAGES_LINK_TAG),
+    ) {
         Text(texts[TextKey.LANGUAGES])
     }
 }
@@ -156,12 +163,12 @@ private fun VaultSection(state: VaultUiState, actions: SettingsActions) {
     Button(
         onClick = actions.onExportVault,
         enabled = state.available && !state.transferring,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().handCursor(state.available && !state.transferring),
     ) { Text(texts[TextKey.EXPORT_VAULT]) }
     Button(
         onClick = actions.onImportVault,
         enabled = state.available && !state.transferring,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().handCursor(state.available && !state.transferring),
     ) { Text(texts[TextKey.IMPORT_VAULT]) }
 }
 
@@ -257,6 +264,7 @@ private fun ModelField(state: ProviderUiState, apiKey: String, actions: Settings
                             expanded = false
                             actions.onModelChange(option)
                         },
+                        modifier = Modifier.handCursor(),
                     )
                 }
             }
@@ -280,7 +288,10 @@ private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider?,
     val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag(PROVIDER_PICKER_TAG)) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.handCursor().testTag(PROVIDER_PICKER_TAG),
+        ) {
             Text(provider?.label ?: texts[TextKey.CHOOSE_A_PROVIDER])
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -291,6 +302,7 @@ private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider?,
                         expanded = false
                         onSelect(option)
                     },
+                    modifier = Modifier.handCursor(),
                 )
             }
         }
@@ -315,7 +327,9 @@ private fun StoredKey(state: ProviderUiState, actions: SettingsActions) {
     if (!state.hasStoredKey) return
     val texts = LocalAppTexts.current
     Text(texts[TextKey.KEY_STORED], style = MaterialTheme.typography.bodyMedium)
-    TextButton(onClick = actions.onRemoveProviderKey) { Text(texts[TextKey.REMOVE_KEY]) }
+    TextButton(onClick = actions.onRemoveProviderKey, modifier = Modifier.handCursor()) {
+        Text(texts[TextKey.REMOVE_KEY])
+    }
 }
 
 /** The in-progress indicator and the last inline result, success or failure. */
@@ -333,7 +347,10 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
             },
             style = MaterialTheme.typography.bodyMedium,
         )
-        TextButton(onClick = actions.onDismissProviderResult, modifier = Modifier.testTag(PROVIDER_DISMISS_TAG)) {
+        TextButton(
+            onClick = actions.onDismissProviderResult,
+            modifier = Modifier.handCursor().testTag(PROVIDER_DISMISS_TAG),
+        ) {
             Text(texts[TextKey.DISMISS])
         }
     }
@@ -344,11 +361,15 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
 private fun ProviderActions(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
     val texts = LocalAppTexts.current
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(onClick = { actions.onSaveProvider(apiKey) }, enabled = !state.testing) { Text(texts[TextKey.SAVE]) }
+        Button(
+            onClick = { actions.onSaveProvider(apiKey) },
+            enabled = !state.testing,
+            modifier = Modifier.handCursor(!state.testing),
+        ) { Text(texts[TextKey.SAVE]) }
         Button(
             onClick = { actions.onTestProvider(apiKey) },
             enabled = !state.testing,
-            modifier = Modifier.testTag(TEST_CONNECTION_TAG),
+            modifier = Modifier.handCursor(!state.testing).testTag(TEST_CONNECTION_TAG),
         ) { Text(texts[TextKey.TEST_CONNECTION]) }
     }
 }
@@ -367,7 +388,9 @@ private fun Header() {
 private fun Error(message: String, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss) { Text(LocalAppTexts.current[TextKey.DISMISS]) }
+        TextButton(onClick = onDismiss, modifier = Modifier.handCursor()) {
+            Text(LocalAppTexts.current[TextKey.DISMISS])
+        }
     }
 }
 
@@ -375,6 +398,8 @@ private fun Error(message: String, onDismiss: () -> Unit) {
 private fun Notice(message: String, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(message, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss) { Text(LocalAppTexts.current[TextKey.DISMISS]) }
+        TextButton(onClick = onDismiss, modifier = Modifier.handCursor()) {
+            Text(LocalAppTexts.current[TextKey.DISMISS])
+        }
     }
 }

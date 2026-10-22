@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 /**
  * A secret input (issue #24, acceptance criterion 4; ADR-0021): the value is
@@ -40,7 +41,7 @@ fun SecretField(value: String, onValueChange: (String) -> Unit, label: String, m
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
-            TextButton(onClick = { revealed = !revealed }) {
+            TextButton(onClick = { revealed = !revealed }, modifier = Modifier.handCursor()) {
                 Text(LocalAppTexts.current[if (revealed) TextKey.HIDE else TextKey.SHOW])
             }
         },

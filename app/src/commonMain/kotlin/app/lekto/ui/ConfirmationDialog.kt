@@ -45,11 +45,14 @@ fun ConfirmationDialog(
             TextButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.testTag(CONFIRM_DIALOG_CONFIRM_TAG),
+                modifier = Modifier.handCursor().testTag(CONFIRM_DIALOG_CONFIRM_TAG),
             ) { Text(confirmLabel) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.testTag(CONFIRM_DIALOG_CANCEL_TAG)) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.handCursor().testTag(CONFIRM_DIALOG_CANCEL_TAG),
+            ) {
                 Text(LocalAppTexts.current[TextKey.CANCEL])
             }
         },

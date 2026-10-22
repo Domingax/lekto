@@ -26,6 +26,7 @@ import app.lekto.reader.MasteryChip
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 import app.lekto.ui.swallowTaps
 
 /** The test tag on a source's shortcut, so a UI test can click exactly one. */
@@ -130,16 +131,19 @@ private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPane
     Column(Modifier.fillMaxWidth()) {
         Text(term, style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) {
+            TextButton(
+                onClick = onSpeak,
+                modifier = Modifier.handCursor().testTag(PRONOUNCE_TAG),
+            ) {
                 Text(texts[TextKey.LISTEN])
             }
             TextButton(
                 onClick = { vocabulary.onSave(vocabulary.level) },
-                modifier = Modifier.testTag(SAVE_TAG),
+                modifier = Modifier.handCursor().testTag(SAVE_TAG),
             ) {
                 Text(texts[if (vocabulary.entry == null) TextKey.SAVE else TextKey.SAVED])
             }
-            TextButton(onClick = onDismiss) { Text(texts[TextKey.CLOSE]) }
+            TextButton(onClick = onDismiss, modifier = Modifier.handCursor()) { Text(texts[TextKey.CLOSE]) }
         }
     }
 }
@@ -218,7 +222,7 @@ private fun Shortcuts(shortcuts: List<DictionaryShortcut>, onOpenShortcut: (Dict
     shortcuts.forEach { shortcut ->
         TextButton(
             onClick = { onOpenShortcut(shortcut) },
-            modifier = Modifier.testTag(sourceShortcutTag(shortcut.source)),
+            modifier = Modifier.handCursor().testTag(sourceShortcutTag(shortcut.source)),
         ) {
             Text(shortcut.source.label)
         }

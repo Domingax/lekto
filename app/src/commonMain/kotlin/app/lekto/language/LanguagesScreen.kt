@@ -33,6 +33,7 @@ import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 /** The test tag on the **Reload list** action, so a UI test can click exactly it. */
 const val LANGUAGES_RELOAD_TAG: String = "languages-reload"
@@ -144,9 +145,12 @@ fun LanguagesScreen(
 private fun Header(onBack: () -> Unit, onOpenAttribution: () -> Unit) {
     val texts = LocalAppTexts.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text(texts[TextKey.BACK]) }
+        TextButton(onClick = onBack, modifier = Modifier.handCursor()) { Text(texts[TextKey.BACK]) }
         Text(texts[TextKey.LANGUAGES], style = MaterialTheme.typography.headlineMedium)
-        TextButton(onClick = onOpenAttribution, modifier = Modifier.testTag(LANGUAGES_ATTRIBUTION_TAG)) {
+        TextButton(
+            onClick = onOpenAttribution,
+            modifier = Modifier.handCursor().testTag(LANGUAGES_ATTRIBUTION_TAG),
+        ) {
             Text(texts[TextKey.ATTRIBUTION])
         }
     }
@@ -161,7 +165,7 @@ private fun ReloadAction(onReload: () -> Unit, reloading: Boolean) {
     Button(
         onClick = onReload,
         enabled = !reloading,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag(LANGUAGES_RELOAD_TAG),
+        modifier = Modifier.fillMaxWidth().handCursor(!reloading).padding(top = 8.dp).testTag(LANGUAGES_RELOAD_TAG),
     ) { Text(LocalAppTexts.current[TextKey.RELOAD_LIST]) }
 }
 
@@ -218,7 +222,7 @@ private fun TranslationLanguagePicker(selected: String?, languages: List<String>
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
-                modifier = Modifier.testTag(TRANSLATION_LANGUAGE_PICKER_TAG),
+                modifier = Modifier.handCursor().testTag(TRANSLATION_LANGUAGE_PICKER_TAG),
             ) {
                 Text(selected?.let(texts::languageName) ?: texts[TextKey.NOT_SET])
             }
@@ -230,7 +234,7 @@ private fun TranslationLanguagePicker(selected: String?, languages: List<String>
                             expanded = false
                             actions.onSetTranslationLanguage(language)
                         },
-                        modifier = Modifier.testTag(translationLanguageOptionTag(language)),
+                        modifier = Modifier.handCursor().testTag(translationLanguageOptionTag(language)),
                     )
                 }
             }
@@ -249,7 +253,7 @@ private fun LevelPicker(language: String, level: CefrLevel?, actions: LanguagesA
     Box {
         OutlinedButton(
             onClick = { expanded = true },
-            modifier = Modifier.testTag(languageLevelPickerTag(language)),
+            modifier = Modifier.handCursor().testTag(languageLevelPickerTag(language)),
         ) {
             Text(level?.name ?: texts[TextKey.NOT_SET])
         }
@@ -260,7 +264,7 @@ private fun LevelPicker(language: String, level: CefrLevel?, actions: LanguagesA
                     expanded = false
                     actions.onClearLevel(language)
                 },
-                modifier = Modifier.testTag(languageLevelClearTag(language)),
+                modifier = Modifier.handCursor().testTag(languageLevelClearTag(language)),
             )
             CefrLevel.entries.forEach { option ->
                 DropdownMenuItem(
@@ -269,7 +273,7 @@ private fun LevelPicker(language: String, level: CefrLevel?, actions: LanguagesA
                         expanded = false
                         actions.onSetLevel(language, option)
                     },
-                    modifier = Modifier.testTag(languageLevelOptionTag(language, option)),
+                    modifier = Modifier.handCursor().testTag(languageLevelOptionTag(language, option)),
                 )
             }
         }

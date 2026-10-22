@@ -20,6 +20,7 @@ import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 // The per-language **Derived asset** controls of the **Languages** surface: the
 // **Difficulty table** (issue #148) and the **Dictionary pack** (issue #149).
@@ -70,7 +71,8 @@ internal fun DifficultyControl(offered: OfferedLanguage, difficulty: DifficultyU
     Button(
         onClick = { actions.onDownloadDifficulty(offered.language, artifact) },
         enabled = !state.installing,
-        modifier = Modifier.fillMaxWidth().testTag(languageDifficultyDownloadTag(offered.language)),
+        modifier = Modifier.fillMaxWidth().handCursor(!state.installing)
+            .testTag(languageDifficultyDownloadTag(offered.language)),
     ) {
         Text(
             if (state.status is DifficultyState.Ready) {
@@ -141,7 +143,8 @@ private fun DictionaryControl(
             actions.onDownloadDictionary(readingLanguage, dictionary.translationLanguage, dictionary.name)
         },
         enabled = !current.installing,
-        modifier = Modifier.fillMaxWidth().testTag(languageDictionaryDownloadTag(dictionary.name)),
+        modifier = Modifier.fillMaxWidth().handCursor(!current.installing)
+            .testTag(languageDictionaryDownloadTag(dictionary.name)),
     ) {
         Text(
             if (current.status is DictionaryPackState.Ready) {
@@ -158,7 +161,7 @@ private fun DictionaryControl(
 private fun ArtifactError(message: String, tag: String, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss, modifier = Modifier.testTag(tag)) {
+        TextButton(onClick = onDismiss, modifier = Modifier.handCursor().testTag(tag)) {
             Text(LocalAppTexts.current[TextKey.DISMISS])
         }
     }

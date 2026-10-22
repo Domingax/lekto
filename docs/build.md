@@ -126,7 +126,8 @@ Android — its `androidMain` platform set may name the Android API it backs; th
 testkit never reaches production), naming and placement (a package matches its
 directory, a source sits under its module's package root, a test class is `*Test.kt`
 in a test source set, and a desktop `*SemanticsTest` has a same-named Android
-host-lane twin — issue #73), and that every manifest has a `.github/dependabot.yml`
+host-lane twin — issue #73), that every clickable control carries the hand cursor
+(issue #217), and that every manifest has a `.github/dependabot.yml`
 entry ([Alert triage](#alert-triage); issue #153).
 
 The rules are hand-rolled rather than Konsist or ArchUnit, so the suite adds no

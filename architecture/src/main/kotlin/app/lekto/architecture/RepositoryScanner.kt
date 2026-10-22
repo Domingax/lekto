@@ -86,6 +86,7 @@ object RepositoryScanner {
             sourceSet = sourceSetOf(path),
             packageName = PACKAGE_PATTERN.find(text)?.groupValues?.get(1).orEmpty(),
             imports = IMPORT_PATTERN.findAll(text).map { match -> match.groupValues[1] }.toList(),
+            text = text,
         )
     }
 
