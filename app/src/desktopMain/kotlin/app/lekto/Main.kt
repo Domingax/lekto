@@ -31,20 +31,6 @@ fun main() {
         val difficulty = remember { desktopDifficulty() }
         val languages = remember { desktopLanguage() }
         val pronouncer = remember { JvmPronouncer() }
-        val vaultTransfer = remember {
-            desktopVaultTransfer(
-                save = { name, bytes ->
-                    withContext(dialogDispatcher()) {
-                        saveVaultToFile(appTextsFor(languageSettings.load().appLanguage), name, bytes)
-                    }
-                },
-                open = {
-                    withContext(dialogDispatcher()) {
-                        pickVaultFileToImport(appTextsFor(languageSettings.load().appLanguage))
-                    }
-                },
-            )
-        }
         val secrets = remember { desktopSecretStore() }
         val llm = remember { desktopLlm() }
         val sync = remember { desktopSync() }
@@ -53,6 +39,22 @@ fun main() {
         // app rather than only on its bounded timer.
         val resumes = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         Window(onCloseRequest = ::exitApplication, title = "Lekto") {
+            // The dialogs are owned by this window (issue #219), so they are modal
+            // to the app, centred on it and cannot open behind it.
+            val vaultTransfer = remember {
+                desktopVaultTransfer(
+                    save = { name, bytes ->
+                        withContext(dialogDispatcher()) {
+                            saveVaultToFile(window, appTextsFor(languageSettings.load().appLanguage), name, bytes)
+                        }
+                    },
+                    open = {
+                        withContext(dialogDispatcher()) {
+                            pickVaultFileToImport(window, appTextsFor(languageSettings.load().appLanguage))
+                        }
+                    },
+                )
+            }
             DisposableEffect(window, resumes) {
                 val listener = object : WindowFocusListener {
                     override fun windowGainedFocus(event: WindowEvent?) {
@@ -76,7 +78,7 @@ fun main() {
                     appTheme = appTheme,
                     pickFile = {
                         withContext(dialogDispatcher()) {
-                            pickFileToImport(appTextsFor(languageSettings.load().appLanguage))
+                            pickFileToImport(window, appTextsFor(languageSettings.load().appLanguage))
                         }
                     },
                     dictionary = dictionary,

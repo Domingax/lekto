@@ -774,7 +774,8 @@ real vault-backed `VaultBookLibrary`, so the test proves what the user then sees
 its same-named `app/androidUnitTest` twin (issue #79) re-proves the loop on the
 runtime Android uses.
 The desktop wiring that roots the transfer at the same directory as the library
-is `DesktopVaultTest`; the modal Swing dialogs and the Android `CreateDocument`
+is `DesktopVaultTest`; the modal system dialogs — the AWT `FileDialog`, with the
+Swing chooser only as its fallback (issue #219) — and the Android `CreateDocument`
 and `OpenDocument` glue sit behind the coverage exclusion, like the rest of the
 platform entry points. A modal dialog pumps a nested event loop, so the desktop
 root runs each dialog on a dispatcher of its own rather than the composition's:
@@ -1028,7 +1029,9 @@ the **app language**. `AppTextsTest` in `app/desktopTest` pins that every
 `TextKey` resolves in both languages the app ships, that a parameterised message
 fills its values, that a known domain constant reads in the chosen language, that
 an unknown domain text passes through unchanged, and that a stored message
-round-trips so a kept sync outcome still reads after a restart. The whole
+round-trips so a kept sync outcome still reads after a restart. It also pins that
+the platform file dialogs keep only their titles, with no filter text the system
+dialog would never display (issue #219). The whole
 **Settings** screen re-rendered in French is `SettingsScreenSemanticsTest` on both
 lanes, and the picker's re-render without a relaunch is `AppSemanticsTest` on both
 lanes.

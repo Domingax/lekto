@@ -29,9 +29,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
 
     // Platform file dialogs.
     TextKey.PICK_BOOK_TITLE to "Import a book",
-    TextKey.BOOKS_FILTER to "Books (EPUB, TXT)",
     TextKey.EXPORT_VAULT_TITLE to "Export vault",
-    TextKey.VAULT_FILTER to "Lekto vault (JSON)",
     TextKey.IMPORT_VAULT_TITLE to "Import a vault",
 
     // Library.
