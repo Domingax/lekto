@@ -180,8 +180,12 @@ class AppSemanticsTest {
         val library = InMemoryLibrary()
         compose.setContent { App(environment(library, pickFile = { PickedFile("lantern.epub", byteArrayOf(1)) })) }
 
-        compose.onNodeWithText("No books yet", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Import").performClick()
+        // The first frame is the shelf in skeleton (docs/design.md §7.7); the
+        // empty state lands once the local vault read returns (issue #208).
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("No books yet").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Import a book").performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("The Lantern Keeper").fetchSemanticsNodes().isNotEmpty()

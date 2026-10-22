@@ -41,8 +41,24 @@ enum class TextKey {
     IMPORT_VAULT_TITLE,
 
     // Library.
+
+    /** The empty shelf's heading, in the screen title's serif. */
+    LIBRARY_EMPTY_TITLE,
+
+    /** The sentence under the empty heading: what to do about it. */
     LIBRARY_EMPTY,
+
+    /** The filled action in the empty state; the header's [IMPORT] is a word, this one carries the action. */
+    IMPORT_BOOK,
+
+    /** What the skeleton rows say to a screen reader while the shelf is being read. */
+    LIBRARY_LOADING,
+
     CONTINUE_READING,
+
+    /** The heading over the books that did not lead: what is left to read. */
+    OTHER_BOOKS,
+
     IMPORT,
     IMPORTING,
     IMPORT_PROGRESS,

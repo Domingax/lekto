@@ -22,15 +22,19 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * What the library screen shows. The screen renders this and nothing else, so
- * every state — empty, importing, failed, searching — is directly testable.
+ * every state — empty, loading, importing, failed, searching — is directly
+ * testable.
  *
  * [listing] is the split the vault hands over: the recently read books first,
  * then the rest by title (issue #188). [query] is the reader's title search, view
- * state that never reaches the vault (issue #173).
+ * state that never reaches the vault (issue #173). [loading] is true while a
+ * re-read of the vault is in flight, so an empty shelf shows skeleton rows
+ * rather than the empty message it would claim (issue #208; docs/design.md §8).
  */
 data class LibraryUiState(
     val listing: LibraryListing = LibraryListing(),
     val query: String = "",
+    val loading: Boolean = false,
     val importing: Boolean = false,
     val progress: Float = 0f,
     val error: AppMessage? = null,
@@ -169,6 +173,10 @@ class LibraryController(
      * listed before, and when the reader returns (issue #188) so the book just
      * read leads the list.
      *
+     * The read runs off the caller's thread, so the screen is told a list is
+     * coming ([LibraryUiState.loading]) and shows skeleton rows rather than the
+     * empty message it would otherwise claim (issue #208).
+     *
      * Refreshes are serialised: a read that started earlier must not land after
      * a later one, or a page turn still being written would reorder the list
      * from a stale snapshot (issue #188).
@@ -176,8 +184,13 @@ class LibraryController(
     fun refresh() {
         scope.launch {
             refreshMutex.withLock {
-                val listing = loadListing()
-                _state.update { current -> current.copy(listing = listing) }
+                _state.update { current -> current.copy(loading = true) }
+                try {
+                    val listing = loadListing()
+                    _state.update { current -> current.copy(listing = listing) }
+                } finally {
+                    _state.update { current -> current.copy(loading = false) }
+                }
             }
         }
     }

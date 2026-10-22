@@ -147,6 +147,23 @@ localized description and no rule — are `LibraryScreenSemanticsTest` on both
 lanes, and the file name is absent from the row and present in the delete
 confirmation on both.
 
+The Library's visual anatomy (issue #208) is proved at the same levels. The
+language hues are a theme token, so `LanguageHuesTest` pins the five daylight
+hues, the third a dark paper lifts each by, Sepia's unchanged ones, the base tag
+a regional language resolves to, and the muted ink a language the identity does
+not name takes. The row's frame — the vignette's two-letter code, the title, and
+the 48 dp floor a row never shrinks below — and the three states — the empty
+shelf with its one filled action, the skeleton rows that are distinguishable
+from the empty message, and the no-match state — are `LibraryScreenSemanticsTest`
+on both lanes, together with the two named groups (`Other books` parts the unread
+books from the recently read ones) and the delete idiom of each: the Android twin
+swipes the row and finds the confirmation, and the desktop twin proves the trash
+appears on hover, that a drag on a pointer platform does nothing, and that the
+confirmation guards the vault either way. The shelf's loading state is the controller's: `LibraryControllerTest`
+pins that a refresh reports it while the vault is read, so the skeleton is real
+state and not a still. The golden lane records the frame on four books across
+three languages, one sheet per paper.
+
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
 record, its original, its derived text and its reading position and leaves a
@@ -189,9 +206,14 @@ swatches, one sheet per paper; the reader adds one `mastery-palette-<paper>.png`
 per paper (issue #183), its mastery ramp and the reader page's word layer as
 coloured blocks — the same layout a page of text produces, without the glyphs.
 The ramps' 4.5:1 floor is `MasteryPaletteContrastTest`'s, measured against each
-paper, because a golden can pin a colour but not its readability. A text-bearing reader golden waits on pinned reading typography (a
-bundled font); until then, typography is pinned by `ReaderStyles` and the word
-layer by `ReaderTextTest`. Record or update with
+paper, because a golden can pin a colour but not its readability. The Library
+adds one `library-<paper>.png` per paper (issue #208): the shelf's frame — the
+search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
+rule and the hairline that parts two rows — on four books across three languages.
+Its geometry comes from the screen's own constants and its rule from the screen's
+own composable; only the words are bars, because glyphs would not verify. A text-bearing golden waits on
+pinned reading typography (a bundled font); until then, typography is pinned by
+`ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 
 ```sh
 ./gradlew :app:recordRoborazziDesktop

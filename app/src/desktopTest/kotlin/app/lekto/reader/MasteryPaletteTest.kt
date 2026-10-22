@@ -4,8 +4,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.Dark
+import app.lekto.theme.InkOnLightFill
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
+import app.lekto.theme.contentColorOn
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -74,7 +76,8 @@ class MasteryPaletteTest {
         }
         listOf(MasteryLevel.UNKNOWN, MasteryLevel.RECOGNIZED, MasteryLevel.FAMILIAR, MasteryLevel.LEARNED)
             .forEach { level ->
-                assertEquals(MasteryInk, contentColorOn(level.readerColor(MasteryPalette.Dark)), "Dark ${level.name}")
+                val colour = contentColorOn(level.readerColor(MasteryPalette.Dark))
+                assertEquals(InkOnLightFill, colour, "Dark ${level.name}")
             }
     }
 

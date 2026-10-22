@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionEquals
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -34,6 +36,9 @@ import kotlin.test.assertTrue
 /** The whole percentage the measured-row test uses; [FULL_PERCENT] is its denominator. */
 private const val MEASURED_PERCENT = 28
 private const val FULL_PERCENT = 100
+
+/** How far the desktop drag test pulls a row, in pixels: most of a phone-wide row. */
+private const val DRAG_DISTANCE = 200f
 
 /**
  * The library screen's behaviour through semantics (issue #15): the empty state,
@@ -82,14 +87,55 @@ class LibraryScreenSemanticsTest {
         setContent { Library(books(book)) }
 
         onNodeWithText("Continue reading").assertDoesNotExist()
+        onNodeWithText("Other books").assertDoesNotExist()
         onNodeWithText(book.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun theUnreadBooksAreSetApartFromTheRecentlyReadOnes() = runComposeUiTest {
+        // Two named groups, so the shelf says where "read recently" ends instead
+        // of leaving one heading floating over every book (issue #208 review).
+        setContent {
+            Library(LibraryUiState(listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook))))
+        }
+
+        val recent = onNodeWithText(book.title).getBoundsInRoot()
+        val heading = onNodeWithText("Other books").assertIsDisplayed().getBoundsInRoot()
+        val other = onNodeWithText(otherBook.title).getBoundsInRoot()
+
+        assertTrue(recent.bottom < heading.top, "the heading parts the two groups: $recent vs $heading")
+        assertTrue(heading.bottom < other.top, "the second group follows its heading: $heading vs $other")
     }
 
     @Test
     fun showsTheEmptyStateUntilABookExists() = runComposeUiTest {
         setContent { Library(LibraryUiState()) }
 
-        onNodeWithText("No books yet", substring = true).assertIsDisplayed()
+        onNodeWithText("No books yet").assertIsDisplayed()
+        onNodeWithText("An EPUB or a text file", substring = true).assertIsDisplayed()
+        onNodeWithTag(LIBRARY_SKELETONS_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theEmptyStateCarriesTheImportAction() = runComposeUiTest {
+        // The filled button is the empty state's, and the header keeps its word
+        // to itself so the action is not offered twice (issue #208).
+        var imported = false
+        setContent { Library(LibraryUiState(), onImport = { imported = true }) }
+
+        onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertIsDisplayed().performClick()
+
+        assertTrue(imported, "the empty state's one action imports")
+    }
+
+    @Test
+    fun aShelfBeingReadShowsSkeletonRowsAndNotTheEmptyMessage() = runComposeUiTest {
+        setContent { Library(LibraryUiState(loading = true)) }
+
+        onNodeWithTag(LIBRARY_SKELETONS_TAG)
+            .assertIsDisplayed()
+            .assertContentDescriptionEquals("Loading your books")
+        onNodeWithText("No books yet").assertDoesNotExist()
     }
 
     @Test
@@ -108,6 +154,12 @@ class LibraryScreenSemanticsTest {
         setContent { Library(LibraryUiState(importing = true, progress = 0.4f)) }
 
         onNodeWithText("Importing", substring = true).assertIsDisplayed()
+        // A first import is not an empty shelf, and not a list being read: its
+        // progress is the state, so neither the empty words nor a second action
+        // stands under it (issue #208).
+        onNodeWithText("No books yet").assertDoesNotExist()
+        onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertDoesNotExist()
+        onNodeWithTag(LIBRARY_SKELETONS_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -127,18 +179,25 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theImportButtonIsDisabledWhileImporting() = runComposeUiTest {
-        setContent { Library(LibraryUiState(importing = true)) }
+    fun theHeaderImportIsDisabledWhileImporting() = runComposeUiTest {
+        setContent {
+            Library(LibraryUiState(listing = LibraryListing(others = listOf(book)), importing = true))
+        }
 
         onNodeWithText("Import").assertIsNotEnabled()
     }
 
     @Test
     fun theDeleteActionAsksForConfirmationBeforeDeleting() = runComposeUiTest {
+        // The mouse idiom on desktop: the trash is not on the shelf until the
+        // reader points at the row, and it only ever asks — the vault is
+        // untouched until the dialog is confirmed (issue #208).
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        onNodeWithTag(libraryDeleteTag(book.id)).assertDoesNotExist()
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryDeleteTag(book.id)).assertIsDisplayed().performClick()
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
         // The file name left the row (issue #196), so the confirmation is where it
@@ -149,10 +208,28 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
+    fun aDragDoesNotDeleteOnDesktop() = runComposeUiTest {
+        // The swipe is the touch idiom and only that: on a pointer platform a
+        // dragged row must not open the confirmation (issue #208 review).
+        var deleted: Book? = null
+        setContent { Library(books(book), onDelete = { deleted = it }) }
+
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput {
+            press()
+            moveBy(Offset(x = -DRAG_DISTANCE, y = 0f))
+            release()
+        }
+
+        onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
+        kotlin.test.assertNull(deleted)
+    }
+
+    @Test
     fun confirmingTheDialogDeletesTheBook() = runComposeUiTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
         onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
 
@@ -164,6 +241,7 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
         onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
 
@@ -226,21 +304,6 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theFieldClearActionEmptiesTheQuery() = runComposeUiTest {
-        var cleared = false
-        setContent {
-            Library(
-                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "lan"),
-                onClearSearch = { cleared = true },
-            )
-        }
-
-        onNodeWithTag(LIBRARY_SEARCH_CLEAR_TAG).performClick()
-
-        kotlin.test.assertTrue(cleared)
-    }
-
-    @Test
     fun theImportActionSitsBesideTheTitleAndTheSectionsDoNot() = runComposeUiTest {
         // Import is the Library's action and never a section (issue #185): once
         // there is a shelf it is a word beside the title, and the way to another
@@ -271,6 +334,32 @@ class LibraryScreenSemanticsTest {
         assertTrue(importer.bottom - importer.top < 80.dp, "the action must stay on one line: $importer")
         onNodeWithText("Langues").assertDoesNotExist()
         onNodeWithText("Réglages").assertDoesNotExist()
+    }
+
+    @Test
+    fun aRowShowsItsLanguageVignetteAndItsTitle() = runComposeUiTest {
+        // The vignette's hue is decoration; its two letters are the signal, and
+        // there are no covers because a Book carries none (issue #208).
+        val french = Book(
+            id = "b3",
+            title = "Le Petit Prince",
+            language = "fr",
+            format = BookFormat.EPUB,
+            fileName = "petit-prince.epub",
+        )
+        setContent { Library(books(french)) }
+
+        onNodeWithText("FR").assertIsDisplayed()
+        onNodeWithText(french.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun aRowIsAtLeastTheMinimumTouchTargetTall() = runComposeUiTest {
+        setContent { Library(books(book)) }
+
+        val row = onNodeWithTag(libraryRowTag(book.id)).getBoundsInRoot()
+
+        assertTrue(row.bottom - row.top >= 48.dp, "a row is never shorter than 48 dp: $row")
     }
 
     @Test

@@ -2,9 +2,9 @@ package app.lekto.reader
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
+import app.lekto.theme.isDarkPaper
 import app.lekto.theme.Sepia as SepiaScheme
 
 /**
@@ -54,13 +54,10 @@ object MasteryPalette {
      */
     internal fun ofPaper(paper: Color): MasteryRamp = when {
         paper == SepiaScheme.background -> Sepia
-        paper.luminance() < DARK_PAPER_LUMINANCE -> Dark
+        isDarkPaper(paper) -> Dark
         else -> Light
     }
 }
-
-/** The luminance below which a paper is dark enough to need the lifted ramp. */
-private const val DARK_PAPER_LUMINANCE = 0.18f
 
 /**
  * The wash the tapped word carries while its lookup panel is open — the
@@ -88,21 +85,6 @@ fun MasteryLevel.readerColor(ramp: MasteryRamp): Color = when (this) {
  */
 fun MasteryLevel.readerColorOr(normal: Color, ramp: MasteryRamp): Color =
     readerColor(ramp).takeIf { colour -> colour != Color.Unspecified } ?: normal
-
-/** The relative luminance above which a palette level is light enough to need dark ink. */
-private const val LIGHT_LUMINANCE = 0.4f
-
-/** The ink a lifted palette level uses on a filled control: near-black, WCAG AA on each. */
-val MasteryInk: Color = Color(0xFF1A1A1A)
-
-/**
- * The foreground that reads on a filled [background] at WCAG AA: white on the
- * light papers' darker hues, [MasteryInk] on the dark paper's lifted ones. Used
- * where a level is a **filled control** rather than text — the lookup panel's
- * selector — so its chip carries the same colour as the word it will paint in
- * the reader.
- */
-fun contentColorOn(background: Color): Color = if (background.luminance() > LIGHT_LUMINANCE) MasteryInk else Color.White
 
 /**
  * The non-colour indicator for [this] level, for colour-blind readers (UX spec

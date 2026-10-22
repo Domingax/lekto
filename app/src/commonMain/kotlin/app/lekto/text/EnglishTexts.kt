@@ -35,8 +35,12 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.IMPORT_VAULT_TITLE to "Import a vault",
 
     // Library.
-    TextKey.LIBRARY_EMPTY to "No books yet — tap Import to add your first book",
+    TextKey.LIBRARY_EMPTY_TITLE to "No books yet",
+    TextKey.LIBRARY_EMPTY to "An EPUB or a text file, and the first word is a minute away.",
+    TextKey.IMPORT_BOOK to "Import a book",
+    TextKey.LIBRARY_LOADING to "Loading your books",
     TextKey.CONTINUE_READING to "Continue reading",
+    TextKey.OTHER_BOOKS to "Other books",
     TextKey.IMPORT to "Import",
     TextKey.IMPORTING to "Importing…",
     TextKey.IMPORT_PROGRESS to "Import progress",

@@ -2,6 +2,7 @@ package app.lekto.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 /**
  * The five colours an **App theme** names (`docs/design.md` §2.1, §2.4): a
@@ -63,6 +64,17 @@ val Dark: ColorScheme = lektoColorScheme(DarkPaper)
 
 /** Rag paper: the identity's warmth in daylight, chosen by hand. */
 val Sepia: ColorScheme = lektoColorScheme(SepiaPaper)
+
+/**
+ * The relative luminance below which a paper is the dark one, so a hue that
+ * reads on a daylight paper is lifted before it is put on night's
+ * (`docs/design.md` §2.2, §2.4; ADR-0036). Sepia is above it: it is a daylight
+ * paper, and its hues are the light ones.
+ */
+internal const val DARK_PAPER_LUMINANCE: Float = 0.18f
+
+/** Whether [paper] is dark enough to need lifted hues. */
+internal fun isDarkPaper(paper: Color): Boolean = paper.luminance() < DARK_PAPER_LUMINANCE
 
 /**
  * One scheme from the five colours the identity names. Every Material slot is

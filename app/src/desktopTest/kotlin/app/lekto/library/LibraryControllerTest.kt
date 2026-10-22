@@ -95,6 +95,23 @@ class LibraryControllerTest {
     }
 
     @Test
+    fun aRefreshReportsALoadingShelfWhileItReadsTheVault() = runTest {
+        // The vault read runs off the caller's thread, so an empty shelf shows
+        // skeleton rows rather than claiming it holds no book (issue #208). The
+        // state is observed from inside the read: that is the moment a real
+        // dispatcher leaves it visible.
+        val library = FakeLibrary()
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        library.isLoading = { controller.state.value.loading }
+
+        controller.refresh()
+        advanceUntilIdle()
+
+        assertTrue(library.readWhileLoading, "the shelf must say it is loading while it reads")
+        assertFalse(controller.state.value.loading, "the list landed")
+    }
+
+    @Test
     fun aRefreshPicksUpBooksStoredOutsideTheController() = runTest {
         val library = FakeLibrary()
         val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
@@ -361,15 +378,25 @@ private class FakeLibrary(
     val measured: MutableList<String> = mutableListOf()
     private var reads = 0L
 
+    /** A test hook: the caller's loading flag, read at the moment the vault is listed. */
+    var isLoading: () -> Boolean = { false }
+
+    /** Whether the vault was read while the caller's state said a list was loading. */
+    var readWhileLoading: Boolean = false
+        private set
+
     override fun books(): List<Book> = stored
 
-    override fun listing(): LibraryListing = LibraryListing.of(
-        books = stored,
-        lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
-        progressByBook = positions.mapValues { (id, offset) ->
-            BookProgress.forPosition(ReadingPosition(id, offset), lengths[id])
-        },
-    )
+    override fun listing(): LibraryListing {
+        readWhileLoading = isLoading()
+        return LibraryListing.of(
+            books = stored,
+            lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
+            progressByBook = positions.mapValues { (id, offset) ->
+                BookProgress.forPosition(ReadingPosition(id, offset), lengths[id])
+            },
+        )
+    }
 
     /** Test hook: pretend the book's reading position last moved after the others. */
     fun markRead(bookId: String) {
