@@ -405,6 +405,11 @@ the page behind it.
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,
   each naming the section it belongs to) and `BackStack` (the history as a value). The platform's own
   back is a seam there too: Android walks the stack, and a platform with no system back does nothing.
+- Where the desktop opens files — `app/src/desktopMain/kotlin/app/lekto/DesktopFilePicker.kt`: the
+  system dialog (AWT `FileDialog`) owned by the Compose window — GTK's chooser on Linux, the native
+  panel on macOS and the common dialog on Windows — with the Swing chooser only as a fallback.
+  Importing a book, importing a **Vault** and exporting one all pass through it, and its title is the
+  one part of its chrome that follows the **app language**.
 
 When a screen changes, this document changes with it, in the same pull request. When the change
 reverses something an ADR decided, the ADR wins and this document is wrong until it is fixed.

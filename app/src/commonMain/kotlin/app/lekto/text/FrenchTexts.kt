@@ -28,9 +28,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
 
     // Platform file dialogs.
     TextKey.PICK_BOOK_TITLE to "Importer un livre",
-    TextKey.BOOKS_FILTER to "Livres (EPUB, TXT)",
     TextKey.EXPORT_VAULT_TITLE to "Exporter le coffre",
-    TextKey.VAULT_FILTER to "Coffre Lekto (JSON)",
     TextKey.IMPORT_VAULT_TITLE to "Importer un coffre",
 
     // Library.

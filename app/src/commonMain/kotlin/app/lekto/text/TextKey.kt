@@ -33,11 +33,10 @@ enum class TextKey {
     /** The action that empties a search field. */
     CLEAR_SEARCH,
 
-    // Platform file dialogs (the native chrome a reader sees on desktop).
+    // Platform file dialogs (the native chrome a reader sees on desktop). The
+    // system dialog draws its own filter and buttons, so only a title is ours.
     PICK_BOOK_TITLE,
-    BOOKS_FILTER,
     EXPORT_VAULT_TITLE,
-    VAULT_FILTER,
     IMPORT_VAULT_TITLE,
 
     // Library.
