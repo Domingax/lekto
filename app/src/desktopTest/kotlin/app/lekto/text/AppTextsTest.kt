@@ -26,6 +26,25 @@ class AppTextsTest {
         }
     }
 
+    /**
+     * The desktop's system dialog displays its own filter, so the app keeps no
+     * filter text (issue #219): three titles, and no filter description that
+     * would never be shown.
+     */
+    @Test
+    fun `the platform file dialogs keep their titles and no filter text`() {
+        val names = TextKey.entries.map { it.name }
+
+        assertTrue("BOOKS_FILTER" !in names, "BOOKS_FILTER is dead text: the system dialog shows no filter")
+        assertTrue("VAULT_FILTER" !in names, "VAULT_FILTER is dead text: the system dialog shows no filter")
+        assertEquals("Import a book", appTextsFor("en")[TextKey.PICK_BOOK_TITLE])
+        assertEquals("Importer un livre", appTextsFor("fr")[TextKey.PICK_BOOK_TITLE])
+        assertEquals("Export vault", appTextsFor("en")[TextKey.EXPORT_VAULT_TITLE])
+        assertEquals("Exporter le coffre", appTextsFor("fr")[TextKey.EXPORT_VAULT_TITLE])
+        assertEquals("Import a vault", appTextsFor("en")[TextKey.IMPORT_VAULT_TITLE])
+        assertEquals("Importer un coffre", appTextsFor("fr")[TextKey.IMPORT_VAULT_TITLE])
+    }
+
     @Test
     fun `the two tables differ, so a language is a real choice`() {
         assertNotEquals(appTextsFor("en")[TextKey.LIBRARY], appTextsFor("fr")[TextKey.LIBRARY])
