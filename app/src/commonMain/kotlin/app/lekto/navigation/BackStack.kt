@@ -14,6 +14,7 @@ package app.lekto.navigation
  * current place: the bar cannot build a loop, so Back always retraces a route the
  * reader has seen, and the Library — the root — always exits the app.
  */
+@ConsistentCopyVisibility
 data class BackStack private constructor(private val entries: List<Destination>) {
 
     init {
