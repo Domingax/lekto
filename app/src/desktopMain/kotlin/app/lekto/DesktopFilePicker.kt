@@ -113,3 +113,35 @@ private fun showSwingFileChooser(owner: Frame, request: DialogRequest): File? {
     val choice = if (request.mode == FileDialog.SAVE) chooser.showSaveDialog(owner) else chooser.showOpenDialog(owner)
     return if (choice == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
 }
+
+/**
+ * Loads the system FreeType before Skiko does, on Linux (issue #219).
+ *
+ * Skiko statically links FreeType and exports its symbols. When GTK — which AWT's
+ * [FileDialog] uses on Linux — initialises after Skiko, cairo can bind its font
+ * calls to Skiko's copy instead of the system one, and every GTK widget fails to
+ * draw: the chooser opens black, with `drawing failure for widget ...: error
+ * occurred in libfreetype` on stderr (CMP-6022). Loading the system library first
+ * makes GTK's calls resolve to the copy it was built against.
+ *
+ * Best effort: with no discoverable library the dialogs still open, exactly as
+ * they did before. Called once by the composition root, before Compose starts
+ * Skiko. It is a no-op off Linux.
+ */
+internal fun preloadSystemFreeType() {
+    if (!System.getProperty("os.name").lowercase().contains("linux")) return
+    val library = findSystemFreeType() ?: return
+    runCatching { System.load(library.absolutePath) }
+}
+
+private val FREE_TYPE_ROOTS = listOf(File("/usr/lib"), File("/lib"), File("/usr/lib64"), File("/lib64"))
+
+/** The loader's directories, then one level of multiarch subdirectories. */
+private fun findSystemFreeType(): File? = FREE_TYPE_ROOTS.asSequence()
+    .flatMap { root -> sequenceOf(root) + root.subdirectories() }
+    .flatMap { it.children() }
+    .firstOrNull { it.name.startsWith("libfreetype.so.6") }
+
+private fun File.subdirectories(): Sequence<File> = children().filter { it.isDirectory }
+
+private fun File.children(): Sequence<File> = listFiles()?.asSequence().orEmpty()

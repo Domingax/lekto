@@ -386,7 +386,8 @@ the page behind it.
   system dialog (AWT `FileDialog`) owned by the Compose window — GTK's chooser on Linux, the native
   panel on macOS and the common dialog on Windows — with the Swing chooser only as a fallback.
   Importing a book, importing a **Vault** and exporting one all pass through it, and its title is the
-  one part of its chrome that follows the **app language**.
+  one part of its chrome that follows the **app language**. On Linux the app loads the system
+  FreeType before Compose starts, so GTK's chooser does not bind its fonts to Skiko's bundled copy.
 
 When a screen changes, this document changes with it, in the same pull request. When the change
 reverses something an ADR decided, the ADR wins and this document is wrong until it is fixed.
