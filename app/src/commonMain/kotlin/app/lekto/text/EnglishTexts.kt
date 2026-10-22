@@ -40,6 +40,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.IMPORT_BOOK to "Import a book",
     TextKey.LIBRARY_LOADING to "Loading your books",
     TextKey.CONTINUE_READING to "Continue reading",
+    TextKey.OTHER_BOOKS to "Other books",
     TextKey.IMPORT to "Import",
     TextKey.IMPORTING to "Importing…",
     TextKey.IMPORT_PROGRESS to "Import progress",

@@ -9,9 +9,9 @@ desktop alike.
 The three books you read most recently lead the list, under **Continue
 reading**, the most recent first. A book joins that section as soon as you turn
 a page in it, and turning back to its first page does not remove it. Below them,
-every other book — including one you have not opened yet — is listed by title.
-When you have not read anything yet, there is no section: the list is just your
-books, by title.
+under **Other books**, every other book — including one you have not opened yet
+— is listed by title. When you have not read anything yet, there are no
+headings: the list is just your books, by title.
 
 Each row is one book: a small coloured tile carrying its **Reading language** —
 `EN`, `FR`, `ES`, `DE` or `IT` — then its title, then a line with its
@@ -51,8 +51,8 @@ searched, not file names.
 
 While you are searching, the **Continue reading** section disappears and the
 matches are listed by title. An empty field shows the Library as usual. If
-nothing matches, Lekto names what you typed and offers **Clear search**; the
-cross inside the field clears it too.
+nothing matches, Lekto names what you typed and offers **Clear search**. Editing
+the field also widens the list again as you go.
 
 The search is a view of your Library, not a setting: leaving the Library — to
 read a book, to open Vocabulary or Settings, or to open the Languages surface
@@ -66,7 +66,9 @@ position** automatically, so you continue where you left off; see
 
 ## Deleting a book
 
-Each row has a **Delete** action. Lekto asks you to confirm first — *Delete
+There is no Delete on the shelf itself. On a phone or a tablet, swipe a row from
+the right and the action appears; with a mouse, point at the row and a small
+trash appears at its end. Either way Lekto asks you to confirm first — *Delete
 « title »?* — and names the imported file, so you can tell which file is about to
 go. Only then does it remove the **Book**: its original file, the text derived
 from it and your **Reading position** for it. If

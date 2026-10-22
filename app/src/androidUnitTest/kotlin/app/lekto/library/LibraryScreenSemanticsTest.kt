@@ -18,6 +18,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
@@ -95,7 +97,24 @@ class LibraryScreenSemanticsTest {
         compose.setContent { Library(books(book)) }
 
         compose.onNodeWithText("Continue reading").assertDoesNotExist()
+        compose.onNodeWithText("Other books").assertDoesNotExist()
         compose.onNodeWithText(book.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun theUnreadBooksAreSetApartFromTheRecentlyReadOnes() {
+        // Two named groups, so the shelf says where "read recently" ends instead
+        // of leaving one heading floating over every book (issue #208 review).
+        compose.setContent {
+            Library(LibraryUiState(listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook))))
+        }
+
+        val recent = compose.onNodeWithText(book.title).getBoundsInRoot()
+        val heading = compose.onNodeWithText("Other books").assertIsDisplayed().getBoundsInRoot()
+        val other = compose.onNodeWithText(otherBook.title).getBoundsInRoot()
+
+        assertTrue("the heading parts the two groups: $recent vs $heading", recent.bottom < heading.top)
+        assertTrue("the second group follows its heading: $heading vs $other", heading.bottom < other.top)
     }
 
     @Test
@@ -183,7 +202,9 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         compose.setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        // The touch idiom: a swipe uncovers the action, and the gesture only ever
+        // asks — nothing is deleted until the dialog is confirmed (issue #208).
+        compose.onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
 
         compose.onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
         // The file name left the row (issue #196), so the confirmation is where it
@@ -198,7 +219,7 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         compose.setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        compose.onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
         compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
 
         assertEquals(book, deleted)
@@ -209,7 +230,7 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         compose.setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        compose.onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        compose.onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
         compose.onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
 
         compose.onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
@@ -266,21 +287,6 @@ class LibraryScreenSemanticsTest {
 
         compose.onNodeWithText("No books match \"zzz\".").assertIsDisplayed()
         compose.onNodeWithText("Clear search").performClick()
-
-        assertTrue(cleared)
-    }
-
-    @Test
-    fun theFieldClearActionEmptiesTheQuery() {
-        var cleared = false
-        compose.setContent {
-            Library(
-                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "lan"),
-                onClearSearch = { cleared = true },
-            )
-        }
-
-        compose.onNodeWithTag(LIBRARY_SEARCH_CLEAR_TAG).performClick()
 
         assertTrue(cleared)
     }

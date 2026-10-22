@@ -16,7 +16,10 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
@@ -82,7 +85,24 @@ class LibraryScreenSemanticsTest {
         setContent { Library(books(book)) }
 
         onNodeWithText("Continue reading").assertDoesNotExist()
+        onNodeWithText("Other books").assertDoesNotExist()
         onNodeWithText(book.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun theUnreadBooksAreSetApartFromTheRecentlyReadOnes() = runComposeUiTest {
+        // Two named groups, so the shelf says where "read recently" ends instead
+        // of leaving one heading floating over every book (issue #208 review).
+        setContent {
+            Library(LibraryUiState(listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook))))
+        }
+
+        val recent = onNodeWithText(book.title).getBoundsInRoot()
+        val heading = onNodeWithText("Other books").assertIsDisplayed().getBoundsInRoot()
+        val other = onNodeWithText(otherBook.title).getBoundsInRoot()
+
+        assertTrue(recent.bottom < heading.top, "the heading parts the two groups: $recent vs $heading")
+        assertTrue(heading.bottom < other.top, "the second group follows its heading: $heading vs $other")
     }
 
     @Test
@@ -166,11 +186,13 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theDeleteActionAsksForConfirmationBeforeDeleting() = runComposeUiTest {
+    fun swipingARowAsksForConfirmationBeforeDeleting() = runComposeUiTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        // The touch idiom: a swipe uncovers the action, and the gesture only ever
+        // asks — nothing is deleted until the dialog is confirmed (issue #208).
+        onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
         // The file name left the row (issue #196), so the confirmation is where it
@@ -181,11 +203,26 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
+    fun theDeleteActionAppearsWhenTheRowIsHovered() = runComposeUiTest {
+        // The mouse idiom on desktop: the trash is not on the shelf until the
+        // reader points at the row, and the confirmation guards it all the same.
+        var deleted: Book? = null
+        setContent { Library(books(book), onDelete = { deleted = it }) }
+
+        onNodeWithTag(libraryDeleteTag(book.id)).assertDoesNotExist()
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryDeleteTag(book.id)).assertIsDisplayed().performClick()
+
+        onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
+        kotlin.test.assertNull(deleted)
+    }
+
+    @Test
     fun confirmingTheDialogDeletesTheBook() = runComposeUiTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
         onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
 
         kotlin.test.assertEquals(book, deleted)
@@ -196,7 +233,7 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryDeleteTag(book.id)).performClick()
+        onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
         onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
@@ -253,21 +290,6 @@ class LibraryScreenSemanticsTest {
 
         onNodeWithText("No books match \"zzz\".").assertIsDisplayed()
         onNodeWithText("Clear search").performClick()
-
-        kotlin.test.assertTrue(cleared)
-    }
-
-    @Test
-    fun theFieldClearActionEmptiesTheQuery() = runComposeUiTest {
-        var cleared = false
-        setContent {
-            Library(
-                LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "lan"),
-                onClearSearch = { cleared = true },
-            )
-        }
-
-        onNodeWithTag(LIBRARY_SEARCH_CLEAR_TAG).performClick()
 
         kotlin.test.assertTrue(cleared)
     }

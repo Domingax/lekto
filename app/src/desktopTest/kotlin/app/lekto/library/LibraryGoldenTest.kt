@@ -76,18 +76,18 @@ class LibraryGoldenTest {
     }
 }
 
-/** A book the preview draws: its language, and the share of its progress rule that is filled. */
-private data class PreviewBook(val language: String, val percent: Int)
+/** A book the preview draws: its language, the share of its rule that is filled, and whether it recently led. */
+private data class PreviewBook(val language: String, val percent: Int, val recentlyRead: Boolean)
 
 /** A bar where a line of text would be: its height, and the share of the width it takes. */
 private data class LineBar(val height: Dp, val share: Float)
 
-/** Four books across three languages, in the order the shelf lists them. */
+/** Four books across three languages, two of them in the leading group. */
 private val PREVIEW_BOOKS = listOf(
-    PreviewBook(language = "en", percent = 32),
-    PreviewBook(language = "fr", percent = 4),
-    PreviewBook(language = "es", percent = 0),
-    PreviewBook(language = "en", percent = 61),
+    PreviewBook(language = "en", percent = 32, recentlyRead = true),
+    PreviewBook(language = "fr", percent = 4, recentlyRead = true),
+    PreviewBook(language = "es", percent = 0, recentlyRead = false),
+    PreviewBook(language = "en", percent = 61, recentlyRead = false),
 )
 
 /** The preview's window, the size the planche draws a phone at. */
@@ -99,6 +99,7 @@ private val TITLE_BAR = LineBar(height = 16.dp, share = 0.6f)
 private val LINE_BAR = LineBar(height = 12.dp, share = 0.35f)
 private val SCREEN_TITLE_BAR = LineBar(height = 24.dp, share = 0.4f)
 private val IMPORT_WORD_BAR = LineBar(height = 14.dp, share = 0.18f)
+private val SECTION_HEADING_BAR = LineBar(height = 20.dp, share = 0.3f)
 private val SEARCH_PLACEHOLDER_BAR = LineBar(height = 12.dp, share = 0.35f)
 
 /** The vignette's two-letter code, drawn as a bar. */
@@ -126,9 +127,10 @@ private fun ShelfPreview() {
             Line(theme.onBackground, IMPORT_WORD_BAR)
         }
         SearchSurface()
-        PREVIEW_BOOKS.forEachIndexed { index, book ->
-            PreviewRow(book, separators = index < PREVIEW_BOOKS.lastIndex)
-        }
+        SectionHeading(top = LektoSpacing.BetweenRelatedLines)
+        PREVIEW_BOOKS.filter { book -> book.recentlyRead }.forEach { book -> PreviewRow(book) }
+        SectionHeading(top = LektoSpacing.BetweenBlocks)
+        PREVIEW_BOOKS.filterNot { book -> book.recentlyRead }.forEach { book -> PreviewRow(book) }
     }
 }
 
@@ -157,24 +159,29 @@ private fun SearchSurface() {
     }
 }
 
-/** One row's frame: the vignette, the title and second line, the rule, and the parting hairline. */
+/** A group's heading: the serif section title, drawn as a bar, with the gap that parts the groups. */
 @Composable
-private fun PreviewRow(book: PreviewBook, separators: Boolean) {
+private fun SectionHeading(top: Dp) {
+    Column(Modifier.padding(top = top, bottom = LektoSpacing.BetweenRelatedLines)) {
+        Line(colour = MaterialTheme.colorScheme.onBackground, bar = SECTION_HEADING_BAR)
+    }
+}
+
+/** One row's frame: the vignette, the title and second line, and the rule. Rows part by rhythm alone. */
+@Composable
+private fun PreviewRow(book: PreviewBook) {
     val theme = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LanguageVignette(book.language)
-            Spacer(Modifier.width(LektoSpacing.BetweenRows))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
-                Line(theme.onBackground, TITLE_BAR)
-                Line(theme.onSurfaceVariant, LINE_BAR)
-                ProgressRule(bookId = "preview", percent = book.percent)
-            }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LanguageVignette(book.language)
+        Spacer(Modifier.width(LektoSpacing.BetweenRows))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
+            Line(theme.onBackground, TITLE_BAR)
+            Line(theme.onSurfaceVariant, LINE_BAR)
+            ProgressRule(bookId = "preview", percent = book.percent)
         }
-        if (separators) Box(Modifier.fillMaxWidth().height(HAIRLINE_THICKNESS).background(theme.outlineVariant))
     }
 }
 

@@ -55,6 +55,10 @@ enum class TextKey {
     LIBRARY_LOADING,
 
     CONTINUE_READING,
+
+    /** The heading over the books that did not lead: what is left to read. */
+    OTHER_BOOKS,
+
     IMPORT,
     IMPORTING,
     IMPORT_PROGRESS,

@@ -185,11 +185,17 @@ Each screen below is one row of what it shows, and one note on what it must not 
 `Library` (serif) · `Import` (word) · `Search` · filter chips · rows · bottom navigation.
 
 A row is a **language vignette** (44 × 60), the title, a line of `FORMAT · 28 %`, and a **3 dp
-progress rule**. There are **no covers**: a `Book` carries a title, a language, a format and a
+progress rule**. Rows are parted by **rhythm alone** — no rule between two books: the vignettes are
+the shelf's columns, and a divider saws through them. There are **no covers**: a `Book` carries a title, a language, a format and a
 file name, and only the EPUB format has a cover image at all — a shelf with covers for some books
 and none for others reads as broken. The vignette is where a cover would go if one ever exists.
 The file name is not on the row: it survives in import errors and the delete confirmation, where
 it identifies a file rather than a book.
+
+A book is deleted **from its row**, and never from a red word that sits on every book: on a touch
+screen a swipe from the trailing edge uncovers `Delete`, and with a mouse a trash appears when the
+row is hovered. Neither deletes anything by itself — both open the confirmation (§8), because there
+is no undo — and the row exposes the same action to a screen reader as an accessibility action.
 
 **Reading progress** is where the reader is now, not the furthest point reached: the share of the
 book's rendered text before the **Reading position**, rounded down, so a book on its last page
@@ -216,7 +222,10 @@ no counts. The filter is **view state**: it survives leaving the Library and com
 resets to Unread and In progress when the app restarts. It is never written to the **Vault**.
 
 The three most recently read unfinished books lead under the `Continue reading` heading, most
-recent first; then every other listed book by title. A finished book is never in the leading group,
+recent first; then, under `Other books`, every other listed book by title. Both headings are the
+serif section title, and the gap between the groups is wider than between two rows, so the shelf
+says where "read recently" ends. A shelf with no reading history is one list by title, and carries
+neither heading. A finished book is never in the leading group,
 even if it was the last book read, because that group is for books the reader can continue
 (ADR-0038). The leading group is hidden when it is empty. A query narrows the shelf in one more
 step, not instead of the filter: the two apply together, so a book the filter hides stays hidden by

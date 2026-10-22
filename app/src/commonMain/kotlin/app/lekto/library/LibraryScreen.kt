@@ -2,7 +2,6 @@ package app.lekto.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,13 +12,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.text.AppMessage
+import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
@@ -52,16 +52,9 @@ import app.lekto.ui.ConfirmationDialog
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Search
-import app.lekto.ui.icons.X
 
 /** The test tag on the Library's search field (issue #173). */
 internal const val LIBRARY_SEARCH_TAG: String = "library-search"
-
-/** The test tag on the action that empties the search field (issue #173). */
-internal const val LIBRARY_SEARCH_CLEAR_TAG: String = "library-search-clear"
-
-/** The test tag on the rows a loading shelf shows instead of the empty message (issue #208). */
-internal const val LIBRARY_SKELETONS_TAG: String = "library-skeletons"
 
 /** The test tag on the empty shelf's filled import action (issue #208). */
 internal const val LIBRARY_EMPTY_IMPORT_TAG: String = "library-empty-import"
@@ -69,20 +62,17 @@ internal const val LIBRARY_EMPTY_IMPORT_TAG: String = "library-empty-import"
 /** The lazy item key of the "Continue reading" heading, which is not a book. */
 private const val CONTINUE_READING_KEY: String = "continue-reading"
 
+/** The lazy item key of the "Other books" heading, which is not a book either. */
+private const val OTHER_BOOKS_KEY: String = "other-books"
+
+/** The 1 dp hairline a surface draws around itself (§4: no shadows). */
+internal val HAIRLINE_THICKNESS = 1.dp
+
 /** The test tag on the Library's title, so a layout test can find it apart from the shell's bar. */
 internal const val LIBRARY_TITLE_TAG: String = "library-title"
 
-/** How many skeleton rows a loading shelf shows: a shelf's worth, not its inventory (issue #208). */
-internal const val SKELETON_ROW_COUNT: Int = 4
-
 /** The `Search` icon's size in the field: 18 dp, the size the identity uses inside a control (§5). */
 internal val SEARCH_ICON_SIZE = 18.dp
-
-/** The skeleton's two bars: a title's share of the width and a second line's, and their heights. */
-private const val SKELETON_TITLE_SHARE = 0.7f
-private const val SKELETON_LINE_SHARE = 0.4f
-private val TITLE_BAR_HEIGHT = 16.dp
-private val LINE_BAR_HEIGHT = 12.dp
 
 /**
  * The library screen: the books in the vault, a title search, an Import action, a
@@ -120,7 +110,7 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
 
         // A field over an empty vault would search nothing; the empty state keeps
         // its one sentence and its action (issue #173).
-        if (!state.vaultEmpty) LibrarySearch(state.query, actions.onSearch, actions.onClearSearch)
+        if (!state.vaultEmpty) LibrarySearch(state.query, actions.onSearch)
 
         state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
         if (state.importing) Importing(state.progress)
@@ -178,7 +168,7 @@ private fun ColumnScope.LibraryBody(state: LibraryUiState, actions: LibraryActio
  * accessible name both say `Search`, as the Material label used to.
  */
 @Composable
-private fun LibrarySearch(query: String, onSearch: (String) -> Unit, onClearSearch: () -> Unit) {
+private fun LibrarySearch(query: String, onSearch: (String) -> Unit) {
     val texts = LocalAppTexts.current
     BasicTextField(
         value = query,
@@ -194,21 +184,14 @@ private fun LibrarySearch(query: String, onSearch: (String) -> Unit, onClearSear
             // reader must hear what the field is for, not only what it says.
             .semantics { contentDescription = texts[TextKey.SEARCH] },
         decorationBox = { field ->
-            SearchSurface(query = query, placeholder = texts[TextKey.SEARCH], onClearSearch = onClearSearch) {
-                field()
-            }
+            SearchSurface(query = query, placeholder = texts[TextKey.SEARCH]) { field() }
         },
     )
 }
 
-/** The search field's frame: the surface, the hairline, the icon and, when there is a query, the cross. */
+/** The search field's frame: the surface, the hairline and the icon, with the placeholder while it is empty. */
 @Composable
-private fun SearchSurface(
-    query: String,
-    placeholder: String,
-    onClearSearch: () -> Unit,
-    field: @Composable () -> Unit,
-) {
+private fun SearchSurface(query: String, placeholder: String, field: @Composable () -> Unit) {
     val theme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
@@ -232,33 +215,6 @@ private fun SearchSurface(
             }
             field()
         }
-        if (query.isNotEmpty()) SearchClear(onClearSearch)
-    }
-}
-
-/**
- * The field's cross, inside its frame once there is something to clear. It is a
- * full touch target, so the field's height never changes with the query, and its
- * description is the words a screen reader announces.
- */
-@Composable
-private fun SearchClear(onClearSearch: () -> Unit) {
-    val description = LocalAppTexts.current[TextKey.CLEAR_SEARCH]
-    Box(
-        modifier = Modifier
-            .size(LektoSpacing.TouchTarget)
-            .handCursor()
-            .testTag(LIBRARY_SEARCH_CLEAR_TAG)
-            .clickable(role = Role.Button, onClick = onClearSearch)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = LektoIcons.X,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(SEARCH_ICON_SIZE),
-        )
     }
 }
 
@@ -295,63 +251,6 @@ private fun LibraryEmpty(onImport: () -> Unit) {
 }
 
 /**
- * The shelf while it is being read (docs/design.md §7.1, §8; issue #208):
- * skeleton rows in place of both the list and the empty message. A screen shown
- * for 40 ms is a flicker, so the wait has a shape rather than a flash of "No
- * books yet".
- *
- * The bars carry no text, so the column names itself once for a screen reader
- * instead of reading four silent rows.
- */
-@Composable
-private fun LibrarySkeletons() {
-    val texts = LocalAppTexts.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = LektoSpacing.BetweenRelatedLines)
-            .testTag(LIBRARY_SKELETONS_TAG)
-            .semantics { contentDescription = texts[TextKey.LIBRARY_LOADING] },
-        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
-    ) {
-        repeat(SKELETON_ROW_COUNT) { SkeletonRow() }
-    }
-}
-
-/** One skeleton row: the vignette's frame and the two lines a real row would carry. */
-@Composable
-private fun SkeletonRow() {
-    val skeleton = MaterialTheme.colorScheme.outlineVariant
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = LektoSpacing.TouchTarget),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier
-                .width(LANGUAGE_VIGNETTE_WIDTH)
-                .height(LANGUAGE_VIGNETTE_HEIGHT)
-                .background(skeleton, LektoRadii.Control),
-        )
-        Spacer(Modifier.width(LektoSpacing.BetweenRows))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
-            SkeletonBar(SKELETON_TITLE_SHARE, TITLE_BAR_HEIGHT)
-            SkeletonBar(SKELETON_LINE_SHARE, LINE_BAR_HEIGHT)
-        }
-    }
-}
-
-/** One skeleton bar: [share] of the column wide, [height] tall, in the theme's separator tone. */
-@Composable
-private fun SkeletonBar(share: Float, height: Dp) {
-    Box(
-        Modifier
-            .fillMaxWidth(share)
-            .height(height)
-            .background(MaterialTheme.colorScheme.outlineVariant, LektoRadii.Control),
-    )
-}
-
-/**
  * Why the search found nothing: the query is named back, and the reader can
  * clear it (issue #173). `Show all books` joins it with the reading-state filter
  * (#200).
@@ -371,30 +270,76 @@ private fun LibraryNoMatches(query: String, onClearSearch: () -> Unit) {
 }
 
 /**
- * The scrollable book list: the recently read books under their heading, then
- * the rest (issue #188). A search flattens the two groups, so the heading only
- * shows while the reader is browsing (issue #173).
+ * The scrollable book list (issue #188; docs/design.md §7.1): the recently read
+ * books under `Continue reading`, then the rest under `Other books`, every group
+ * by title. A search flattens them, so neither heading shows while the reader is
+ * browsing a query (issue #173).
+ *
+ * Two named groups, not one heading over everything: a single heading left the
+ * reader unable to see where "read recently" ended, which was the first note on
+ * issue #208's review.
  */
 @Composable
 private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
     val texts = LocalAppTexts.current
     LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.BetweenRelatedLines)) {
-        if (!state.searching && state.listing.lastRead.isNotEmpty()) {
-            item(key = CONTINUE_READING_KEY) {
-                Text(
-                    text = texts[TextKey.CONTINUE_READING],
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-                )
-            }
-        }
-        itemsIndexed(state.visibleBooks, key = { _, book -> book.id }) { index, book ->
-            BookRow(book, state.listing.progressOf(book), onOpen = onOpen, onDelete = onDelete)
-            // Rhythm parts the rows; the last one lands on the shelf's own edge
-            // rather than on a rule that separates nothing.
-            if (index < state.visibleBooks.lastIndex) RowHairline()
+        if (state.searching) {
+            bookItems(state.visibleBooks, state, onOpen, onDelete)
+        } else {
+            shelfGroups(state, texts, onOpen, onDelete)
         }
     }
+}
+
+/** The two groups of a shelf the reader is browsing: the recent books, then the rest, each named. */
+private fun LazyListScope.shelfGroups(
+    state: LibraryUiState,
+    texts: AppTexts,
+    onOpen: (Book) -> Unit,
+    onDelete: (Book) -> Unit,
+) {
+    val recent = state.listing.lastRead
+    val rest = state.listing.others
+    if (recent.isNotEmpty()) {
+        headingItem(CONTINUE_READING_KEY, texts[TextKey.CONTINUE_READING], top = LektoSpacing.BetweenRelatedLines)
+        bookItems(recent, state, onOpen, onDelete)
+    }
+    if (rest.isNotEmpty()) {
+        // A shelf with no reading history is one list by title, so only a shelf
+        // that has a leading group needs the second heading.
+        if (recent.isNotEmpty()) {
+            headingItem(OTHER_BOOKS_KEY, texts[TextKey.OTHER_BOOKS], top = LektoSpacing.BetweenBlocks)
+        }
+        bookItems(rest, state, onOpen, onDelete)
+    }
+}
+
+/** A group's heading item, keyed so a lazy list keeps its place when the shelf moves. */
+private fun LazyListScope.headingItem(key: String, text: String, top: Dp) {
+    item(key = key) { SectionHeading(text, top) }
+}
+
+/** A group's rows, each keyed by its book so the lazy list can reuse them. */
+private fun LazyListScope.bookItems(
+    books: List<Book>,
+    state: LibraryUiState,
+    onOpen: (Book) -> Unit,
+    onDelete: (Book) -> Unit,
+) {
+    val actions = BookRowActions(onOpen = onOpen, onDelete = onDelete)
+    items(books, key = { book -> book.id }) { book ->
+        BookRow(book, state.listing.progressOf(book), actions)
+    }
+}
+
+/** A group's heading: the design's serif section title, so the two groups read as sections (§3). */
+@Composable
+private fun SectionHeading(text: String, top: Dp) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(top = top, bottom = LektoSpacing.BetweenRelatedLines),
+    )
 }
 
 /**
@@ -426,7 +371,7 @@ private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () 
                 modifier = Modifier
                     .heightIn(min = LektoSpacing.TouchTarget)
                     .handCursor(!importing)
-                    .clickable(enabled = !importing, role = Role.Button, onClick = onImport),
+                    .plainClickable(enabled = !importing, role = Role.Button, onClick = onImport),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(texts[TextKey.IMPORT], style = MaterialTheme.typography.bodyLarge)
