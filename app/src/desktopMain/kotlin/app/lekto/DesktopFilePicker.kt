@@ -89,7 +89,11 @@ private class DialogRequest(
 
 private fun chooseFile(owner: Frame, request: DialogRequest): File? = runCatching {
     showSystemFileDialog(owner, request)
-}.getOrElse {
+}.getOrElse { error ->
+    runCatching {
+        File(appDataDirectory("lekto"), "file-dialog-error.txt")
+            .appendText(error.stackTraceToString() + "\n")
+    }
     showSwingFileChooser(owner, request)
 }
 

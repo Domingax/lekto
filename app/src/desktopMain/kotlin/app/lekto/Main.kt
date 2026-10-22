@@ -40,7 +40,7 @@ fun main() {
         // window's focus listener raises, so sync runs when the user returns to the
         // app rather than only on its bounded timer.
         val resumes = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
-        Window(onCloseRequest = ::exitApplication, title = "Lekto") {
+        Window(onCloseRequest = ::exitApplication, title = "Lekto 1.0.2 test") {
             // The dialogs are owned by this window (issue #219), so they are modal
             // to the app, centred on it and cannot open behind it.
             val vaultTransfer = remember {
