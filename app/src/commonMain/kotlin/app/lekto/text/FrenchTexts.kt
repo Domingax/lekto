@@ -34,7 +34,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.IMPORT_VAULT_TITLE to "Importer un coffre",
 
     // Library.
-    TextKey.LIBRARY_EMPTY to "Aucun livre pour l'instant — touchez Importer pour ajouter votre premier livre",
+    TextKey.LIBRARY_EMPTY_TITLE to "Aucun livre pour l'instant",
+    TextKey.LIBRARY_EMPTY to "Un EPUB ou un fichier texte, et le premier mot est à une minute.",
+    TextKey.IMPORT_BOOK to "Importer un livre",
+    TextKey.LIBRARY_LOADING to "Chargement de vos livres",
     TextKey.CONTINUE_READING to "Continuer la lecture",
     TextKey.IMPORT to "Importer",
     TextKey.IMPORTING to "Importation…",

@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
+import app.lekto.theme.contentColorOn
 import app.lekto.ui.handCursor
 
 /** The padding every mastery chip shares, so the lookup selector and the list filter stay identical. */

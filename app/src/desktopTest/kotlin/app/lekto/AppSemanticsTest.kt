@@ -160,8 +160,12 @@ class AppSemanticsTest {
         val library = InMemoryLibrary()
         setContent { App(environment(library, pickFile = { PickedFile("lantern.epub", byteArrayOf(1)) })) }
 
-        onNodeWithText("No books yet", substring = true).assertIsDisplayed()
-        onNodeWithText("Import").performClick()
+        // The first frame is the shelf in skeleton (docs/design.md §7.7); the
+        // empty state lands once the local vault read returns (issue #208).
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText("No books yet").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("Import a book").performClick()
 
         onNodeWithText("The Lantern Keeper").assertIsDisplayed()
     }

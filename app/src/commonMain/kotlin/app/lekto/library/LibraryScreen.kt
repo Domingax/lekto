@@ -1,6 +1,7 @@
 package app.lekto.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,17 +10,21 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,29 +34,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
-import app.lekto.core.book.BookProgress
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.ConfirmationDialog
 import app.lekto.ui.handCursor
-
-/** The test tag on a book's delete action, so a UI test can click exactly one. */
-internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
-
-/** The test tag on a row's progress rule, so a UI test can read exactly one book's percentage. */
-internal fun libraryProgressTag(bookId: String): String = "library-progress-$bookId"
-
-/** The rule's thickness: 3 dp (docs/design.md §7.1). */
-private val PROGRESS_RULE_HEIGHT = 3.dp
+import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.icons.Search
+import app.lekto.ui.icons.X
 
 /** The test tag on the Library's search field (issue #173). */
 internal const val LIBRARY_SEARCH_TAG: String = "library-search"
@@ -59,18 +60,36 @@ internal const val LIBRARY_SEARCH_TAG: String = "library-search"
 /** The test tag on the action that empties the search field (issue #173). */
 internal const val LIBRARY_SEARCH_CLEAR_TAG: String = "library-search-clear"
 
+/** The test tag on the rows a loading shelf shows instead of the empty message (issue #208). */
+internal const val LIBRARY_SKELETONS_TAG: String = "library-skeletons"
+
+/** The test tag on the empty shelf's filled import action (issue #208). */
+internal const val LIBRARY_EMPTY_IMPORT_TAG: String = "library-empty-import"
+
 /** The lazy item key of the "Continue reading" heading, which is not a book. */
 private const val CONTINUE_READING_KEY: String = "continue-reading"
 
 /** The test tag on the Library's title, so a layout test can find it apart from the shell's bar. */
 internal const val LIBRARY_TITLE_TAG: String = "library-title"
 
+/** How many skeleton rows a loading shelf shows: a shelf's worth, not its inventory (issue #208). */
+internal const val SKELETON_ROW_COUNT: Int = 4
+
+/** The `Search` icon's size in the field: 18 dp, the size the identity uses inside a control (§5). */
+internal val SEARCH_ICON_SIZE = 18.dp
+
+/** The skeleton's two bars: a title's share of the width and a second line's, and their heights. */
+private const val SKELETON_TITLE_SHARE = 0.7f
+private const val SKELETON_LINE_SHARE = 0.4f
+private val TITLE_BAR_HEIGHT = 16.dp
+private val LINE_BAR_HEIGHT = 12.dp
+
 /**
  * The library screen: the books in the vault, a title search, an Import action, a
  * per-book delete behind a destructive confirmation, and the import's progress
- * and failure inline so neither blocks the list (issues #15, #131, #173; UX spec,
- * "Import in progress — inline progress bar", "AI/import error — inline message",
- * "Dialog").
+ * and failure inline so neither blocks the list (issues #15, #131, #173, #208;
+ * UX spec, "Import in progress — inline progress bar", "AI/import error — inline
+ * message", "Dialog").
  *
  * The screen renders [state] and raises the [actions]; the only state it owns is
  * the pending confirmation, which is view-local, so the vault is untouched until
@@ -81,13 +100,22 @@ internal const val LIBRARY_TITLE_TAG: String = "library-title"
  * docs/design.md §6, §7.1): a word beside the title once there is a shelf to add
  * to, and the filled action in the empty state, where it is the one thing to do.
  * The way to another section is the shell's bar, not this screen's header.
+ *
+ * Its anatomy is the identity's (docs/design.md §7.1): the title is the theme's
+ * screen title, the search is a surface with a hairline rather than a Material
+ * field, and a row opens with its **Reading language**'s vignette. The states
+ * stay distinct (§8): an empty vault says what to do, a shelf being read shows
+ * skeleton rows rather than the empty message, and a query that matches nothing
+ * names itself back.
  */
 @Composable
 fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryActions(), modifier: Modifier = Modifier) {
     var pendingDelete by remember { mutableStateOf<Book?>(null) }
     val texts = LocalAppTexts.current
 
-    Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
+    Column(
+        modifier.fillMaxSize().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+    ) {
         LibraryHeader(vaultEmpty = state.vaultEmpty, importing = state.importing, onImport = actions.onImport)
 
         // A field over an empty vault would search nothing; the empty state keeps
@@ -97,26 +125,7 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
         state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
         if (state.importing) Importing(state.progress)
 
-        if (state.vaultEmpty) {
-            // Importing the first book shows the progress bar as the state; the
-            // empty sentence would claim there is nothing to wait for.
-            if (!state.importing) {
-                Text(
-                    text = texts[TextKey.LIBRARY_EMPTY],
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = 24.dp),
-                )
-            }
-            Button(
-                onClick = actions.onImport,
-                enabled = !state.importing,
-                modifier = Modifier.fillMaxWidth().handCursor(!state.importing).padding(top = 16.dp),
-            ) { Text(texts[TextKey.IMPORT]) }
-        } else if (state.visibleBooks.isEmpty()) {
-            LibraryNoMatches(state.query, actions.onClearSearch)
-        } else {
-            LibraryList(state, onOpen = actions.onOpen, onDelete = { target -> pendingDelete = target })
-        }
+        LibraryBody(state, actions, onDelete = { target -> pendingDelete = target })
     }
 
     pendingDelete?.let { target ->
@@ -136,36 +145,210 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
 }
 
 /**
- * The title search (issue #173): a labelled field under the title, and a clear
- * action once there is something to clear. The label is the field's accessible
- * name, so no placeholder carries it.
+ * What fills the shelf under the chrome, one branch per case (docs/design.md §8):
+ * the skeleton rows of a shelf being read, the empty state, the no-match state,
+ * or the list. Keeping them apart means the empty message can never stand in for
+ * a list that is on its way (issue #208).
+ */
+@Composable
+private fun ColumnScope.LibraryBody(state: LibraryUiState, actions: LibraryActions, onDelete: (Book) -> Unit) {
+    when {
+        // A shelf being read is not an empty one: skeleton rows say what is
+        // coming, and the empty message would claim there is nothing to wait for.
+        state.vaultEmpty && state.loading -> LibrarySkeletons()
+
+        // A first import is not an empty shelf either, but its own inline
+        // progress, above, is the state: neither the empty words nor an action
+        // that would start a second transfer belongs under it.
+        state.vaultEmpty && state.importing -> Unit
+
+        state.vaultEmpty -> LibraryEmpty(onImport = actions.onImport)
+
+        state.visibleBooks.isEmpty() -> LibraryNoMatches(state.query, actions.onClearSearch)
+
+        else -> LibraryList(state, onOpen = actions.onOpen, onDelete = onDelete)
+    }
+}
+
+/**
+ * The title search (issue #173; docs/design.md §7.1): a surface with a hairline
+ * and the `Search` icon, not a Material field. The placeholder is the theme's
+ * muted ink, and a clear action appears once there is something to clear — a
+ * cross, so the field keeps its width in French. The placeholder and the field's
+ * accessible name both say `Search`, as the Material label used to.
  */
 @Composable
 private fun LibrarySearch(query: String, onSearch: (String) -> Unit, onClearSearch: () -> Unit) {
     val texts = LocalAppTexts.current
+    BasicTextField(
+        value = query,
+        onValueChange = onSearch,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.InsidePanel)
+            .testTag(LIBRARY_SEARCH_TAG)
+            // The placeholder is a sibling node, so the field names itself: a
+            // reader must hear what the field is for, not only what it says.
+            .semantics { contentDescription = texts[TextKey.SEARCH] },
+        decorationBox = { field ->
+            SearchSurface(query = query, placeholder = texts[TextKey.SEARCH], onClearSearch = onClearSearch) {
+                field()
+            }
+        },
+    )
+}
+
+/** The search field's frame: the surface, the hairline, the icon and, when there is a query, the cross. */
+@Composable
+private fun SearchSurface(
+    query: String,
+    placeholder: String,
+    onClearSearch: () -> Unit,
+    field: @Composable () -> Unit,
+) {
+    val theme = MaterialTheme.colorScheme
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = LektoSpacing.TouchTarget)
+            .background(theme.surface, LektoRadii.Control)
+            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Control)
+            .padding(start = LektoSpacing.InsidePanel, end = LektoSpacing.InsideLabelPair),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onSearch,
-            label = { Text(texts[TextKey.SEARCH]) },
-            singleLine = true,
-            modifier = Modifier.weight(1f).testTag(LIBRARY_SEARCH_TAG),
+        Icon(
+            imageVector = LektoIcons.Search,
+            contentDescription = null,
+            tint = theme.onSurfaceVariant,
+            modifier = Modifier.size(SEARCH_ICON_SIZE),
         )
-        if (query.isNotEmpty()) {
-            // A cross rather than the words, so the field keeps its width in
-            // French; the description is what a screen reader announces.
-            TextButton(
-                onClick = onClearSearch,
-                modifier = Modifier
-                    .handCursor()
-                    .testTag(LIBRARY_SEARCH_CLEAR_TAG)
-                    .semantics { contentDescription = texts[TextKey.CLEAR_SEARCH] },
-            ) { Text("×") }
+        Spacer(Modifier.width(LektoSpacing.BetweenRows))
+        Box(Modifier.weight(1f)) {
+            if (query.isEmpty()) {
+                Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = theme.onSurfaceVariant)
+            }
+            field()
+        }
+        if (query.isNotEmpty()) SearchClear(onClearSearch)
+    }
+}
+
+/**
+ * The field's cross, inside its frame once there is something to clear. It is a
+ * full touch target, so the field's height never changes with the query, and its
+ * description is the words a screen reader announces.
+ */
+@Composable
+private fun SearchClear(onClearSearch: () -> Unit) {
+    val description = LocalAppTexts.current[TextKey.CLEAR_SEARCH]
+    Box(
+        modifier = Modifier
+            .size(LektoSpacing.TouchTarget)
+            .handCursor()
+            .testTag(LIBRARY_SEARCH_CLEAR_TAG)
+            .clickable(role = Role.Button, onClick = onClearSearch)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = LektoIcons.X,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(SEARCH_ICON_SIZE),
+        )
+    }
+}
+
+/**
+ * The empty shelf (docs/design.md §7.1, §8; issue #208): what to do, and the one
+ * action — the filled button. The header keeps its word to itself here, so the
+ * import is not offered twice.
+ */
+@Composable
+private fun LibraryEmpty(onImport: () -> Unit) {
+    val texts = LocalAppTexts.current
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenSections),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = texts[TextKey.LIBRARY_EMPTY_TITLE],
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = texts[TextKey.LIBRARY_EMPTY],
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+        )
+        Button(
+            onClick = onImport,
+            modifier = Modifier
+                .handCursor()
+                .testTag(LIBRARY_EMPTY_IMPORT_TAG)
+                .padding(top = LektoSpacing.InsidePanel),
+        ) { Text(texts[TextKey.IMPORT_BOOK]) }
+    }
+}
+
+/**
+ * The shelf while it is being read (docs/design.md §7.1, §8; issue #208):
+ * skeleton rows in place of both the list and the empty message. A screen shown
+ * for 40 ms is a flicker, so the wait has a shape rather than a flash of "No
+ * books yet".
+ *
+ * The bars carry no text, so the column names itself once for a screen reader
+ * instead of reading four silent rows.
+ */
+@Composable
+private fun LibrarySkeletons() {
+    val texts = LocalAppTexts.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.BetweenRelatedLines)
+            .testTag(LIBRARY_SKELETONS_TAG)
+            .semantics { contentDescription = texts[TextKey.LIBRARY_LOADING] },
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
+    ) {
+        repeat(SKELETON_ROW_COUNT) { SkeletonRow() }
+    }
+}
+
+/** One skeleton row: the vignette's frame and the two lines a real row would carry. */
+@Composable
+private fun SkeletonRow() {
+    val skeleton = MaterialTheme.colorScheme.outlineVariant
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = LektoSpacing.TouchTarget),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .width(LANGUAGE_VIGNETTE_WIDTH)
+                .height(LANGUAGE_VIGNETTE_HEIGHT)
+                .background(skeleton, LektoRadii.Control),
+        )
+        Spacer(Modifier.width(LektoSpacing.BetweenRows))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+            SkeletonBar(SKELETON_TITLE_SHARE, TITLE_BAR_HEIGHT)
+            SkeletonBar(SKELETON_LINE_SHARE, LINE_BAR_HEIGHT)
         }
     }
+}
+
+/** One skeleton bar: [share] of the column wide, [height] tall, in the theme's separator tone. */
+@Composable
+private fun SkeletonBar(share: Float, height: Dp) {
+    Box(
+        Modifier
+            .fillMaxWidth(share)
+            .height(height)
+            .background(MaterialTheme.colorScheme.outlineVariant, LektoRadii.Control),
+    )
 }
 
 /**
@@ -176,7 +359,7 @@ private fun LibrarySearch(query: String, onSearch: (String) -> Unit, onClearSear
 @Composable
 private fun LibraryNoMatches(query: String, onClearSearch: () -> Unit) {
     val texts = LocalAppTexts.current
-    Column(Modifier.fillMaxWidth().padding(top = 24.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenSections)) {
         Text(
             text = texts.message(AppMessage.of(TextKey.NO_BOOKS_MATCH_QUERY, query.trim())),
             style = MaterialTheme.typography.bodyLarge,
@@ -195,18 +378,21 @@ private fun LibraryNoMatches(query: String, onClearSearch: () -> Unit) {
 @Composable
 private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
     val texts = LocalAppTexts.current
-    LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
+    LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.BetweenRelatedLines)) {
         if (!state.searching && state.listing.lastRead.isNotEmpty()) {
             item(key = CONTINUE_READING_KEY) {
                 Text(
                     text = texts[TextKey.CONTINUE_READING],
                     style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
                 )
             }
         }
-        items(state.visibleBooks, key = { book -> book.id }) { book ->
+        itemsIndexed(state.visibleBooks, key = { _, book -> book.id }) { index, book ->
             BookRow(book, state.listing.progressOf(book), onOpen = onOpen, onDelete = onDelete)
+            // Rhythm parts the rows; the last one lands on the shelf's own edge
+            // rather than on a rule that separates nothing.
+            if (index < state.visibleBooks.lastIndex) RowHairline()
         }
     }
 }
@@ -224,7 +410,7 @@ private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () 
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -236,111 +422,40 @@ private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () 
         // header does not repeat it; while a transfer runs, the word is disabled
         // rather than making a second one.
         if (!vaultEmpty) {
-            TextButton(onClick = onImport, enabled = !importing, modifier = Modifier.handCursor(!importing)) {
-                Text(texts[TextKey.IMPORT])
+            Box(
+                modifier = Modifier
+                    .heightIn(min = LektoSpacing.TouchTarget)
+                    .handCursor(!importing)
+                    .clickable(enabled = !importing, role = Role.Button, onClick = onImport),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(texts[TextKey.IMPORT], style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
 }
 
 /**
- * One library row: the title, its **Reading progress** line and rule, the tap that
- * opens it and the delete action (docs/design.md §7.1; issue #196).
- *
- * The file name is deliberately gone from the row: it identifies a file, not a
- * book, so it survives only in import errors and the delete confirmation.
+ * The inline library failure — an import or a delete — as a bordered block where
+ * the action was, with a way to dismiss it (docs/design.md §7.1, §8): not a
+ * full-screen alert, and never something that blocks the reading.
  */
-@Composable
-private fun BookRow(book: Book, progress: BookProgress, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
-    val texts = LocalAppTexts.current
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f).handCursor().clickable { onOpen(book) },
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(book.title, style = MaterialTheme.typography.titleSmall)
-            ProgressLine(book, progress)
-        }
-        TextButton(
-            onClick = { onDelete(book) },
-            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier.handCursor().testTag(libraryDeleteTag(book.id)),
-        ) { Text(texts[TextKey.DELETE]) }
-    }
-}
-
-/** The row's second line: a measured percentage with its rule, or one of the two unmeasured states. */
-@Composable
-private fun ProgressLine(book: Book, progress: BookProgress) {
-    val texts = LocalAppTexts.current
-    val style = MaterialTheme.typography.bodySmall
-    when (progress) {
-        BookProgress.NotStarted -> Text(
-            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_NOT_STARTED, book.format.name)),
-            style = style,
-        )
-
-        BookProgress.Unmeasured -> Text(
-            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_MEASURING, book.format.name)),
-            style = style,
-            // `…` alone is not something a screen reader can read; the row says
-            // what the data is waiting for until the background measurement lands.
-            modifier = Modifier.semantics {
-                contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION]
-            },
-        )
-
-        is BookProgress.Measured -> {
-            Text(
-                text = texts.message(
-                    AppMessage.of(TextKey.LIBRARY_ROW_PROGRESS, book.format.name, progress.percent),
-                ),
-                style = style,
-            )
-            ProgressRule(book.id, progress.percent)
-        }
-    }
-}
-
-/**
- * The 3 dp rule under a measured line: it fills to the same whole percentage as
- * the text beside it (docs/design.md §7.1). It carries a [ProgressBarRangeInfo],
- * so a screen reader announces the percentage and a semantics test can read it.
- */
-@Composable
-private fun ProgressRule(bookId: String, percent: Int) {
-    val fraction = percent.coerceIn(0, 100) / 100f
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = LektoSpacing.InsideLabelPair)
-            .height(PROGRESS_RULE_HEIGHT)
-            .testTag(libraryProgressTag(bookId))
-            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f) }
-            .background(MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(fraction)
-                .height(PROGRESS_RULE_HEIGHT)
-                .background(MaterialTheme.colorScheme.primary),
-        )
-    }
-}
-
-/** The inline library failure — an import or a delete — with a way to dismiss it. */
 @Composable
 private fun LibraryError(message: String, onDismiss: () -> Unit) {
     val texts = LocalAppTexts.current
+    val theme = MaterialTheme.colorScheme
     val described = texts.message(AppMessage.of(TextKey.ERROR_DETAIL, message))
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.InsidePanel)
+            .background(theme.surface, LektoRadii.Surface)
+            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface)
+            .padding(LektoSpacing.InsidePanel),
+    ) {
         Text(
             text = message,
-            color = MaterialTheme.colorScheme.error,
+            color = theme.error,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.semantics { contentDescription = described },
         )
@@ -352,7 +467,7 @@ private fun LibraryError(message: String, onDismiss: () -> Unit) {
 @Composable
 private fun Importing(fraction: Float) {
     val texts = LocalAppTexts.current
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel)) {
         Text(
             text = texts[TextKey.IMPORTING],
             style = MaterialTheme.typography.bodyMedium,
@@ -361,7 +476,7 @@ private fun Importing(fraction: Float) {
             progress = { fraction },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 4.dp)
+                .padding(top = LektoSpacing.InsideLabelPair)
                 .semantics { contentDescription = texts[TextKey.IMPORT_PROGRESS] },
         )
     }

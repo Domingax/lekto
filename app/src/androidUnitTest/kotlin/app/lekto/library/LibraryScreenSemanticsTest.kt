@@ -102,7 +102,31 @@ class LibraryScreenSemanticsTest {
     fun showsTheEmptyStateUntilABookExists() {
         compose.setContent { Library(LibraryUiState()) }
 
-        compose.onNodeWithText("No books yet", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("No books yet").assertIsDisplayed()
+        compose.onNodeWithText("An EPUB or a text file", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(LIBRARY_SKELETONS_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theEmptyStateCarriesTheImportAction() {
+        // The filled button is the empty state's, and the header keeps its word
+        // to itself so the action is not offered twice (issue #208).
+        var imported = false
+        compose.setContent { Library(LibraryUiState(), onImport = { imported = true }) }
+
+        compose.onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertIsDisplayed().performClick()
+
+        assertTrue("the empty state's one action imports", imported)
+    }
+
+    @Test
+    fun aShelfBeingReadShowsSkeletonRowsAndNotTheEmptyMessage() {
+        compose.setContent { Library(LibraryUiState(loading = true)) }
+
+        compose.onNodeWithTag(LIBRARY_SKELETONS_TAG)
+            .assertIsDisplayed()
+            .assertContentDescriptionEquals("Loading your books")
+        compose.onNodeWithText("No books yet").assertDoesNotExist()
     }
 
     @Test
@@ -121,6 +145,12 @@ class LibraryScreenSemanticsTest {
         compose.setContent { Library(LibraryUiState(importing = true, progress = 0.4f)) }
 
         compose.onNodeWithText("Importing", substring = true).assertIsDisplayed()
+        // A first import is not an empty shelf, and not a list being read: its
+        // progress is the state, so neither the empty words nor a second action
+        // stands under it (issue #208).
+        compose.onNodeWithText("No books yet").assertDoesNotExist()
+        compose.onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(LIBRARY_SKELETONS_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -140,8 +170,10 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theImportButtonIsDisabledWhileImporting() {
-        compose.setContent { Library(LibraryUiState(importing = true)) }
+    fun theHeaderImportIsDisabledWhileImporting() {
+        compose.setContent {
+            Library(LibraryUiState(listing = LibraryListing(others = listOf(book)), importing = true))
+        }
 
         compose.onNodeWithText("Import").assertIsNotEnabled()
     }
@@ -284,6 +316,32 @@ class LibraryScreenSemanticsTest {
         assertTrue("the action must stay on one line: $importer", importer.bottom - importer.top < 80.dp)
         compose.onNodeWithText("Langues").assertDoesNotExist()
         compose.onNodeWithText("Réglages").assertDoesNotExist()
+    }
+
+    @Test
+    fun aRowShowsItsLanguageVignetteAndItsTitle() {
+        // The vignette's hue is decoration; its two letters are the signal, and
+        // there are no covers because a Book carries none (issue #208).
+        val french = Book(
+            id = "b3",
+            title = "Le Petit Prince",
+            language = "fr",
+            format = BookFormat.EPUB,
+            fileName = "petit-prince.epub",
+        )
+        compose.setContent { Library(books(french)) }
+
+        compose.onNodeWithText("FR").assertIsDisplayed()
+        compose.onNodeWithText(french.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun aRowIsAtLeastTheMinimumTouchTargetTall() {
+        compose.setContent { Library(books(book)) }
+
+        val row = compose.onNodeWithTag(libraryRowTag(book.id)).getBoundsInRoot()
+
+        assertTrue("a row is never shorter than 48 dp: $row", row.bottom - row.top >= 48.dp)
     }
 
     @Test

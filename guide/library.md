@@ -13,10 +13,18 @@ every other book — including one you have not opened yet — is listed by titl
 When you have not read anything yet, there is no section: the list is just your
 books, by title.
 
-Each row is one book: its title, then a line with its format and its **Reading
-progress**, like `EPUB · 28 %`. A thin rule under the line fills to the same
-whole percentage. There is no file name on the row — the book is what you see,
-and its file is named only when an import fails or when you delete the book.
+Each row is one book: a small coloured tile carrying its **Reading language** —
+`EN`, `FR`, `ES`, `DE` or `IT` — then its title, then a line with its
+format and its **Reading progress**, like `EPUB · 28 %`. A thin rule under the
+line fills to the same whole percentage. The tile's colour is decoration: the
+two letters are what tells you the language, so it reads the same if you cannot
+tell the colours apart. There is no file name on the row — the book is what you
+see, and its file is named only when an import fails or when you delete the
+book.
+
+When the Library is empty, it says so and offers one action: **Import a book**.
+While it is being read, the list shows skeleton rows instead of claiming there
+are no books.
 
 The percentage is how far you are now, not the furthest you have read: paging
 back lowers it. It is the share of the book's text that lies before your
@@ -44,7 +52,7 @@ searched, not file names.
 While you are searching, the **Continue reading** section disappears and the
 matches are listed by title. An empty field shows the Library as usual. If
 nothing matches, Lekto names what you typed and offers **Clear search**; the
-cross beside the field clears it too.
+cross inside the field clears it too.
 
 The search is a view of your Library, not a setting: leaving the Library — to
 read a book, to open Vocabulary or Settings, or to open the Languages surface
@@ -70,8 +78,9 @@ from inside a [reading session](/reading).
 
 ## Bringing books in
 
-**Import** brings a book into the Library. See [Import](/import) for the formats
-and what each supports.
+**Import** brings a book into the Library: a word beside the title once there is
+a shelf, and the filled button in an empty Library. See [Import](/import) for the
+formats and what each supports.
 
 ## Screenshots
 
