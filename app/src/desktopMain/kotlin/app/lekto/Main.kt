@@ -20,6 +20,8 @@ fun main() {
     // The device's language is read before composition and handed in, so the
     // first-launch default is a value rather than a locale read in a composable.
     val systemLanguage = Locale.getDefault().language
+    // GTK's chooser must not bind its fonts to Skiko's bundled FreeType (issue #219).
+    preloadSystemFreeType()
     application {
         val library = remember { desktopBookLibrary() }
         val vocabulary = remember { desktopVocabulary() }
