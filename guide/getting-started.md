@@ -2,7 +2,8 @@
 
 Lekto is an immersive reader for language learners. It runs on Android and on the
 desktop, and it works entirely offline: there is no account to create and no Lekto
-server to reach.
+server to reach. The desktop installers, and the one accessibility limitation that
+comes with the desktop, are on [Lekto on the desktop](/desktop).
 
 ## First launch
 

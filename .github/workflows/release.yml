@@ -1,0 +1,163 @@
+# The desktop release lane (issue #29).
+#
+# jpackage can only build the installer of the operating system it runs on, so
+# one runner per platform produces its own artefacts and the release job collects
+# them. A tag is what publishes; `workflow_dispatch` builds the installers
+# without publishing, so a packaging change can be exercised without cutting a
+# release. See docs/build.md#desktop.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # One platform per job. Linux has no jpackage format that is both single-file
+  # and distribution-independent, so it builds the application image and wraps it
+  # in an AppImage; Windows builds its MSI and the double-click EXE; the two macOS
+  # runners cover Apple Silicon and Intel, because a jpackage image is
+  # architecture-specific.
+  package:
+    name: package (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x64
+            runner: ubuntu-latest
+            formats: AppImage
+            prefix: lekto
+          - label: windows-x64
+            runner: windows-latest
+            formats: Msi Exe
+            prefix: Lekto
+          - label: macos-arm64
+            runner: macos-15
+            formats: Dmg
+            prefix: Lekto
+          - label: macos-x64
+            runner: macos-15-intel
+            formats: Dmg
+            prefix: Lekto
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      # The installer is the desktop client only, so the Android target stays
+      # off: no Android SDK is needed and the lane is the same on every runner.
+      - name: Build the application image
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./gradlew :app:createDistributable -Plekto.android=false --no-daemon
+      - name: Build the installers
+        if: runner.os != 'Linux'
+        shell: bash
+        run: ./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false --no-daemon
+      # appimagetool turns the jpackage image into the one portable file. It is
+      # pinned by version and digest, then extracted: the AppImage runtime would
+      # otherwise need FUSE just to run the tool in CI.
+      - name: Fetch appimagetool
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          tool="$RUNNER_TEMP/appimagetool.AppImage"
+          curl -fsSL -o "$tool" \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  $tool" | sha256sum -c -
+          chmod +x "$tool"
+          (cd "$RUNNER_TEMP" && ./appimagetool.AppImage --appimage-extract >/dev/null)
+          echo "APPIMAGETOOL=$RUNNER_TEMP/squashfs-root/AppRun" >> "$GITHUB_ENV"
+      - name: Build the AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
+          mkdir -p dist
+          tools/packaging/appimage.sh \
+            app/build/compose/binaries/main/app/Lekto \
+            app/icons/lekto.png \
+            "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.AppImage"
+      # One naming scheme for every platform, so the guide and the release body
+      # name exactly what the reader downloads. Windows contributes two files.
+      - name: Name the installers
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
+          mkdir -p dist
+          # A `*/*` glob would also match the unpacked `app/Lekto.app` directory
+          # on macOS, which `cp` refuses; only the installer files are named here.
+          while IFS= read -r artifact; do
+            extension="${artifact##*.}"
+            cp "$artifact" "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.${extension}"
+          done < <(find app/build/compose/binaries/main -mindepth 2 -maxdepth 2 -type f)
+      - name: Upload the installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+      # jpackage writes its own diagnosis to per-task log files and Gradle only
+      # names them. Without this step a macOS-only failure shows an exit code and
+      # nothing else, which is how the first tagged preview failed.
+      - name: Show the packaging log on failure
+        if: failure()
+        shell: bash
+        run: |
+          for log in app/build/compose/logs/*/*.txt; do
+            echo "::group::$log"
+            cat "$log"
+            echo "::endgroup::"
+          done
+
+  # Publish every installer on the tag's release, with the committed desktop
+  # notes. A manual run builds them and stops there, and a tag with a pre-release
+  # suffix (`v1.0.0-preview`) publishes a pre-release, so a preview never becomes
+  # the `/releases/latest` download the guide points at.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # `gh release create` shells out to git; a job without a checkout has no
+      # repository to run that in, even though the release itself is remote.
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+      # The body is committed and reviewed like code, so every desktop release
+      # states the platform's accessibility limit where a downloader meets it.
+      - name: Write the release notes
+        shell: bash
+        run: |
+          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
+          sed \
+            -e "s|{{REPOSITORY}}|$GITHUB_REPOSITORY|g" \
+            -e "s|{{VERSION}}|$version|g" \
+            .github/release-notes/desktop.md > "$RUNNER_TEMP/RELEASE_NOTES.md"
+          cat "$RUNNER_TEMP/RELEASE_NOTES.md"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--repo "$GITHUB_REPOSITORY" --title "Lekto $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" --verify-tag)
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" dist/* "${args[@]}"
