@@ -98,11 +98,12 @@ jobs:
         run: |
           version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
           mkdir -p dist
-          shopt -s nullglob
-          for artifact in app/build/compose/binaries/main/*/*; do
+          # A `*/*` glob would also match the unpacked `app/Lekto.app` directory
+          # on macOS, which `cp` refuses; only the installer files are named here.
+          while IFS= read -r artifact; do
             extension="${artifact##*.}"
             cp "$artifact" "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.${extension}"
-          done
+          done < <(find app/build/compose/binaries/main -mindepth 2 -maxdepth 2 -type f)
       - name: Upload the installers
         uses: actions/upload-artifact@v7
         with:
