@@ -8,6 +8,7 @@ import java.io.File
 import java.io.FilenameFilter
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
+import javax.swing.filechooser.FileSystemView
 
 /**
  * The desktop file dialogs: the one desktop surface that cannot run on the JVM
@@ -31,11 +32,11 @@ import javax.swing.filechooser.FileNameExtensionFilter
  * app language. That is the accepted price of the system dialog (issue #219).
  *
  * [FileDialog.setFilenameFilter] still narrows the listing to the extensions
- * asked for, through GTK's custom filter. The system chooser has no labelled
- * filter dropdown, so it never displays the filter's description — and the common
- * dialog on Windows may ignore the filter entirely. The Swing fallback does show
- * it, labelled with the dialog's title. The filter is advisory either way: a file
- * the app cannot read still lands in the existing import-error path.
+ * asked for: GTK applies it as its custom filter, and the Windows common dialog as
+ * an item-include hook, where its type dropdown keeps its own "All files" label
+ * because AWT cannot add a labelled type. The Swing fallback does show the
+ * description, labelled with the dialog's title. The filter is advisory either
+ * way: a file the app cannot read still lands in the existing import-error path.
  *
  * Should constructing or showing the system dialog fail — GTK init failure, a
  * headless JVM, an AWT error — the dialog falls back to the Swing chooser it used
@@ -99,7 +100,16 @@ private fun chooseFile(owner: Frame, request: DialogRequest): File? = runCatchin
 
 private fun showSystemFileDialog(owner: Frame, request: DialogRequest): File? {
     val dialog = FileDialog(owner, request.title, request.mode).apply {
-        filenameFilter = FilenameFilter { _, name -> request.filter.accept(File(name)) }
+        // The process's working directory is the install folder under jpackage,
+        // which the reader cannot browse or write. Start where the Swing chooser
+        // did: the platform's default document folder.
+        directory = FileSystemView.getFileSystemView().defaultDirectory.absolutePath
+        // Windows calls this with the item's parent directory; use it, so a folder
+        // stays navigable instead of being resolved against the working directory.
+        filenameFilter = FilenameFilter { parent, name ->
+            val candidate = File(parent, name)
+            candidate.isDirectory || request.filter.accept(candidate)
+        }
         request.initialName?.let { file = it }
         isVisible = true
     }
