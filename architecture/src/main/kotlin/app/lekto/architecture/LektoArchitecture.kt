@@ -26,6 +26,7 @@ object Rules {
     const val SOURCE_PLACEMENT = "source-placement"
     const val TEST_PLACEMENT = "test-placement"
     const val UI_TEST_PARITY = "ui-test-parity"
+    const val HAND_CURSOR = "hand-cursor"
     const val DEPENDABOT_WATCH = "dependabot-watch"
 }
 
@@ -121,6 +122,7 @@ object LektoArchitecture {
         addAll(PlacementRules.check(repository))
         addAll(ImportRules.check(repository))
         addAll(UiTestParityRules.check(repository))
+        addAll(HandCursorRules.check(repository))
     }
 
     private fun checkModulePolicies(repository: Repository): List<Violation> {

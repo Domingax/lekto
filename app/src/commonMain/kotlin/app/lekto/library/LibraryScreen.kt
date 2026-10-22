@@ -42,6 +42,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.ConfirmationDialog
+import app.lekto.ui.handCursor
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
@@ -109,7 +110,7 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
             Button(
                 onClick = actions.onImport,
                 enabled = !state.importing,
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                modifier = Modifier.fillMaxWidth().handCursor(!state.importing).padding(top = 16.dp),
             ) { Text(texts[TextKey.IMPORT]) }
         } else if (state.visibleBooks.isEmpty()) {
             LibraryNoMatches(state.query, actions.onClearSearch)
@@ -159,6 +160,7 @@ private fun LibrarySearch(query: String, onSearch: (String) -> Unit, onClearSear
             TextButton(
                 onClick = onClearSearch,
                 modifier = Modifier
+                    .handCursor()
                     .testTag(LIBRARY_SEARCH_CLEAR_TAG)
                     .semantics { contentDescription = texts[TextKey.CLEAR_SEARCH] },
             ) { Text("×") }
@@ -179,7 +181,9 @@ private fun LibraryNoMatches(query: String, onClearSearch: () -> Unit) {
             text = texts.message(AppMessage.of(TextKey.NO_BOOKS_MATCH_QUERY, query.trim())),
             style = MaterialTheme.typography.bodyLarge,
         )
-        TextButton(onClick = onClearSearch) { Text(texts[TextKey.CLEAR_SEARCH]) }
+        TextButton(onClick = onClearSearch, modifier = Modifier.handCursor()) {
+            Text(texts[TextKey.CLEAR_SEARCH])
+        }
     }
 }
 
@@ -232,7 +236,9 @@ private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () 
         // header does not repeat it; while a transfer runs, the word is disabled
         // rather than making a second one.
         if (!vaultEmpty) {
-            TextButton(onClick = onImport, enabled = !importing) { Text(texts[TextKey.IMPORT]) }
+            TextButton(onClick = onImport, enabled = !importing, modifier = Modifier.handCursor(!importing)) {
+                Text(texts[TextKey.IMPORT])
+            }
         }
     }
 }
@@ -253,7 +259,7 @@ private fun BookRow(book: Book, progress: BookProgress, onOpen: (Book) -> Unit, 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
-            modifier = Modifier.weight(1f).clickable { onOpen(book) },
+            modifier = Modifier.weight(1f).handCursor().clickable { onOpen(book) },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(book.title, style = MaterialTheme.typography.titleSmall)
@@ -262,7 +268,7 @@ private fun BookRow(book: Book, progress: BookProgress, onOpen: (Book) -> Unit, 
         TextButton(
             onClick = { onDelete(book) },
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier.testTag(libraryDeleteTag(book.id)),
+            modifier = Modifier.handCursor().testTag(libraryDeleteTag(book.id)),
         ) { Text(texts[TextKey.DELETE]) }
     }
 }
@@ -338,7 +344,7 @@ private fun LibraryError(message: String, onDismiss: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.semantics { contentDescription = described },
         )
-        TextButton(onClick = onDismiss) { Text(texts[TextKey.DISMISS]) }
+        TextButton(onClick = onDismiss, modifier = Modifier.handCursor()) { Text(texts[TextKey.DISMISS]) }
     }
 }
 

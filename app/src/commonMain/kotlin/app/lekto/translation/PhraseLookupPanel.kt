@@ -21,6 +21,7 @@ import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 import app.lekto.ui.swallowTaps
 
 /** The test tag on the translation shortcut, so a UI test can click exactly it. */
@@ -74,7 +75,9 @@ fun PhraseLookupPanel(
         ) {
             Text(phrase, style = MaterialTheme.typography.titleLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = actions.onDismiss) { Text(LocalAppTexts.current[TextKey.CLOSE]) }
+                TextButton(onClick = actions.onDismiss, modifier = Modifier.handCursor()) {
+                    Text(LocalAppTexts.current[TextKey.CLOSE])
+                }
             }
             TranslationSection(translation, onOpenSettings)
             ShortcutSection(shortcut, actions)
@@ -116,7 +119,7 @@ private fun NoProviderPrompt(onOpenSettings: () -> Unit) {
     )
     TextButton(
         onClick = onOpenSettings,
-        modifier = Modifier.testTag(TRANSLATION_SETTINGS_TAG),
+        modifier = Modifier.handCursor().testTag(TRANSLATION_SETTINGS_TAG),
     ) {
         Text(texts[TextKey.OPEN_SETTINGS])
     }
@@ -164,7 +167,7 @@ private fun TranslationDisclosure(translation: PhraseTranslationUiState) {
     var expanded by remember(translation.context) { mutableStateOf(false) }
     TextButton(
         onClick = { expanded = !expanded },
-        modifier = Modifier.testTag(TRANSLATION_DISCLOSURE_TAG),
+        modifier = Modifier.handCursor().testTag(TRANSLATION_DISCLOSURE_TAG),
     ) {
         Text(texts[if (expanded) TextKey.HIDE_WHAT_IS_SENT else TextKey.WHAT_IS_SENT])
     }
@@ -207,7 +210,7 @@ private fun ShortcutSection(shortcut: TranslationShortcut?, actions: PhraseLooku
         Text(texts[TextKey.TRANSLATE_ONLINE], style = MaterialTheme.typography.labelLarge)
         TextButton(
             onClick = { actions.onOpenShortcut(shortcut) },
-            modifier = Modifier.testTag(TRANSLATION_SHORTCUT_TAG),
+            modifier = Modifier.handCursor().testTag(TRANSLATION_SHORTCUT_TAG),
         ) {
             Text(shortcut.source.label)
         }

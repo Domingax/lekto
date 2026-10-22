@@ -298,6 +298,91 @@ class ArchitectureViolationTest :
                 "app/src/desktopTest/kotlin/app/lekto/desktopTest/NestedScreenSemanticsTest.kt",
             ) shouldBe "app/src/androidUnitTest/kotlin/app/lekto/desktopTest/NestedScreenSemanticsTest.kt"
         }
+
+        test("a button without the hand cursor is a violation") {
+            val repository = repository(sources = listOf(appSource("Button(onClick = {}) { Text(\"Save\") }")))
+
+            rules(repository) shouldContain Rules.HAND_CURSOR
+        }
+
+        test("a button carrying the hand cursor conforms") {
+            val repository = repository(
+                sources = listOf(
+                    appSource("Button(onClick = {}, modifier = Modifier.handCursor(enabled)) { Text(\"Save\") }"),
+                ),
+            )
+
+            rules(repository) shouldNotContain Rules.HAND_CURSOR
+        }
+
+        test("a clickable surface without the hand cursor is a violation") {
+            val repository = repository(sources = listOf(appSource("Modifier.fillMaxWidth().clickable { open() }")))
+
+            rules(repository) shouldContain Rules.HAND_CURSOR
+        }
+
+        test("a clickable chain carrying the hand cursor conforms") {
+            val repository = repository(
+                sources = listOf(appSource("Modifier.fillMaxWidth().handCursor().clickable { open() }")),
+            )
+
+            rules(repository) shouldNotContain Rules.HAND_CURSOR
+        }
+
+        test("a hand cursor after the clickable call still conforms") {
+            val repository = repository(
+                sources = listOf(appSource("Modifier.clickable { open() }.handCursor()")),
+            )
+
+            rules(repository) shouldNotContain Rules.HAND_CURSOR
+        }
+
+        test("a selectable control without the hand cursor is a violation") {
+            val repository = repository(
+                sources = listOf(
+                    appSource("Modifier.selectable(selected = true, onClick = { choose() })"),
+                ),
+            )
+
+            rules(repository) shouldContain Rules.HAND_CURSOR
+        }
+
+        test("a toggleable chain carrying the hand cursor conforms") {
+            val repository = repository(
+                sources = listOf(
+                    appSource("Modifier.handCursor().toggleable(value = on, onValueChange = { it })"),
+                ),
+            )
+
+            rules(repository) shouldNotContain Rules.HAND_CURSOR
+        }
+
+        test("a clickable menu item without the hand cursor is a violation") {
+            val repository = repository(
+                sources = listOf(
+                    appSource("DropdownMenuItem(text = { Text(\"One\") }, onClick = { choose() })"),
+                ),
+            )
+
+            rules(repository) shouldContain Rules.HAND_CURSOR
+        }
+
+        test("only the app's commonMain sources must carry the hand cursor") {
+            val repository = repository(
+                sources = listOf(
+                    KotlinSource(
+                        path = "core/src/commonMain/kotlin/app/lekto/core/Preview.kt",
+                        module = Modules.CORE,
+                        sourceSet = "commonMain",
+                        packageName = "app.lekto.core",
+                        imports = emptyList(),
+                        text = "Button(onClick = {}) { Text(\"Save\") }",
+                    ),
+                ),
+            )
+
+            rules(repository) shouldNotContain Rules.HAND_CURSOR
+        }
     })
 
 private fun repository(
@@ -318,6 +403,15 @@ private fun domainSource(vararg imports: String): KotlinSource =
 
 private fun source(path: String, sourceSet: String, packageName: String, vararg imports: String): KotlinSource =
     KotlinSource(path, moduleOf(path), sourceSet, packageName, imports.toList())
+
+private fun appSource(text: String): KotlinSource = KotlinSource(
+    path = "app/src/commonMain/kotlin/app/lekto/Preview.kt",
+    module = Modules.APP,
+    sourceSet = "commonMain",
+    packageName = "app.lekto",
+    imports = emptyList(),
+    text = text,
+)
 
 /** The module a synthetic source path belongs to, for building a violation fixture. */
 private fun moduleOf(path: String): String = when {

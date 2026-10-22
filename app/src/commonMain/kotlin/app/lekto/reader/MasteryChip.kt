@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
+import app.lekto.ui.handCursor
 
 /** The padding every mastery chip shares, so the lookup selector and the list filter stay identical. */
 private val ChipPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
@@ -47,14 +48,14 @@ fun MasteryChip(
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = contentColorOn(colour)),
             contentPadding = ChipPadding,
-            modifier = marked,
+            modifier = marked.handCursor(),
         ) { Text(label) }
     } else {
         OutlinedButton(
             onClick = onClick,
             border = BorderStroke(2.dp, colour),
             contentPadding = ChipPadding,
-            modifier = marked,
+            modifier = marked.handCursor(),
         ) { Text(label) }
     }
 }

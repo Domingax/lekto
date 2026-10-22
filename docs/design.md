@@ -352,6 +352,9 @@ animation, no tagline, no artificial delay.
 | Failure | a block where the action was, with a way to dismiss it |
 | Deleting anything | a confirmation, because there is no undo |
 
+Every clickable surface shows the pointing hand on desktop; a disabled control keeps the
+arrow, and hover changes nothing else. `HandCursor.kt` (§10) is the one modifier that asks for it.
+
 Nothing blocks the reading: an error never becomes a full-screen alert, and no state ever hides
 the page behind it.
 
@@ -378,6 +381,10 @@ the page behind it.
   `tools/icons/fetch.sh`, which pins the Lucide tag and the generator; `THIRD-PARTY-NOTICES.md`
   carries the licences.
 - The screens — one file per screen, as today. A new screen follows §7's shape and §4's spacing.
+- The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
+  (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
+  makes a missing one fail `./gradlew check` (§8). The reader page overrides descendants with
+  `pointerHoverIcon` directly, because its `SelectionContainer` would otherwise keep the text cursor.
 - The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,
   each naming the section it belongs to) and `BackStack` (the history as a value). The platform's own

@@ -30,6 +30,8 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -43,6 +45,7 @@ import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.ui.DismissScrim
+import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ArrowLeft
 import app.lekto.ui.icons.LektoIcons
 import kotlinx.coroutines.yield
@@ -262,6 +265,7 @@ private fun ColumnScope.ReaderPage(
             .fillMaxWidth()
             .weight(1f)
             .testTag(READER_PAGE_TAG)
+            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .readerTapInput(latestTap)
             .phraseSelectionInput(
                 words = { latestTokens.value?.words.orEmpty() },
@@ -409,7 +413,10 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
         // **Aa** control (docs/design.md §7.2), and the icon mirrors in a
         // right-to-left layout. Its description names it, since no label does.
         onBack?.let { back ->
-            IconButton(onClick = back, modifier = Modifier.testTag(READER_BACK_TAG)) {
+            IconButton(
+                onClick = back,
+                modifier = Modifier.handCursor().testTag(READER_BACK_TAG),
+            ) {
                 Icon(imageVector = LektoIcons.ArrowLeft, contentDescription = texts[TextKey.BACK])
             }
         }
@@ -418,7 +425,10 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f).padding(start = if (onBack == null) 0.dp else 8.dp),
         )
-        TextButton(onClick = onPreferences, modifier = Modifier.testTag(READING_PREFERENCES_TAG)) {
+        TextButton(
+            onClick = onPreferences,
+            modifier = Modifier.handCursor().testTag(READING_PREFERENCES_TAG),
+        ) {
             Text(texts[TextKey.READING_PREFERENCES])
         }
     }
@@ -434,8 +444,12 @@ private fun ReaderPageBar(page: Int, total: Int, horizontalMargin: Dp, onPreviou
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onPrevious, enabled = page > 0) { Text(texts[TextKey.PREVIOUS_PAGE]) }
+        TextButton(onClick = onPrevious, enabled = page > 0, modifier = Modifier.handCursor(page > 0)) {
+            Text(texts[TextKey.PREVIOUS_PAGE])
+        }
         Text(texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)))
-        TextButton(onClick = onNext, enabled = page < total - 1) { Text(texts[TextKey.NEXT_PAGE]) }
+        TextButton(onClick = onNext, enabled = page < total - 1, modifier = Modifier.handCursor(page < total - 1)) {
+            Text(texts[TextKey.NEXT_PAGE])
+        }
     }
 }

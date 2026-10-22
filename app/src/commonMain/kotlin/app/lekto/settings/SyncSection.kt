@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 /** The test tags the sync section's controls carry, so a UI test can click exactly one. */
 internal const val SYNC_HOST_FIELD_TAG: String = "settings-sync-host"
@@ -98,12 +99,12 @@ private fun SyncActions(state: SyncUiState, password: String, actions: SettingsA
         Button(
             onClick = { actions.onSaveSync(password) },
             enabled = !busy,
-            modifier = Modifier.testTag(SYNC_SAVE_TAG),
+            modifier = Modifier.handCursor(!busy).testTag(SYNC_SAVE_TAG),
         ) { Text(texts[TextKey.SAVE]) }
         Button(
             onClick = { actions.onTestSync(password) },
             enabled = !busy,
-            modifier = Modifier.testTag(SYNC_TEST_TAG),
+            modifier = Modifier.handCursor(!busy).testTag(SYNC_TEST_TAG),
         ) { Text(texts[TextKey.TEST_CONNECTION]) }
     }
 }
@@ -117,19 +118,19 @@ private fun SyncToggle(state: SyncUiState, actions: SettingsActions) {
         Button(
             onClick = actions.onDisableSync,
             enabled = !busy,
-            modifier = Modifier.testTag(SYNC_DISABLE_TAG),
+            modifier = Modifier.handCursor(!busy).testTag(SYNC_DISABLE_TAG),
         ) { Text(texts[TextKey.TURN_OFF_SYNC]) }
     } else {
         Button(
             onClick = actions.onEnableSync,
             enabled = !busy,
-            modifier = Modifier.testTag(SYNC_ENABLE_TAG),
+            modifier = Modifier.handCursor(!busy).testTag(SYNC_ENABLE_TAG),
         ) { Text(texts[TextKey.ENABLE_SYNC]) }
     }
     Button(
         onClick = actions.onSyncNow,
         enabled = state.config.enabled && !busy,
-        modifier = Modifier.testTag(SYNC_NOW_TAG),
+        modifier = Modifier.handCursor(state.config.enabled && !busy).testTag(SYNC_NOW_TAG),
     ) { Text(texts[TextKey.SYNC_NOW]) }
 }
 
@@ -139,7 +140,7 @@ private fun Disconnect(state: SyncUiState, actions: SettingsActions) {
     TextButton(
         onClick = actions.onDisconnectSync,
         enabled = !state.testing && !state.syncing,
-        modifier = Modifier.testTag(SYNC_DISCONNECT_TAG),
+        modifier = Modifier.handCursor(!state.testing && !state.syncing).testTag(SYNC_DISCONNECT_TAG),
     ) { Text(LocalAppTexts.current[TextKey.DISCONNECT]) }
 }
 
@@ -171,7 +172,9 @@ private fun SyncResultLine(result: SyncResult, onDismiss: () -> Unit) {
     val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(texts.message(result.message), color = syncColor(result), style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onDismiss, modifier = Modifier.testTag(SYNC_DISMISS_TAG)) { Text(texts[TextKey.DISMISS]) }
+        TextButton(onClick = onDismiss, modifier = Modifier.handCursor().testTag(SYNC_DISMISS_TAG)) {
+            Text(texts[TextKey.DISMISS])
+        }
     }
 }
 

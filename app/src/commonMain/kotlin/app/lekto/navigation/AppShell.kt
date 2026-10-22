@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.lekto.text.LocalAppTexts
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.handCursor
 import app.lekto.ui.icons.BookOpen
 import app.lekto.ui.icons.Bookmark
 import app.lekto.ui.icons.LektoIcons
@@ -178,6 +179,7 @@ private fun ShellBarItem(navigation: ShellNavigation, section: ShellSection, mod
 /** The item's shared shape: a full touch target, selectable, and findable by a test. */
 private fun Modifier.shellItem(navigation: ShellNavigation, section: ShellSection): Modifier = this
     .heightIn(min = LektoSpacing.TouchTarget)
+    .handCursor()
     .selectable(
         selected = navigation.current == section,
         role = Role.Tab,

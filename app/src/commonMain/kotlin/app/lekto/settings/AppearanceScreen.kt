@@ -30,6 +30,7 @@ import app.lekto.core.theme.AppTheme
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.appThemeScheme
+import app.lekto.ui.handCursor
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
 internal const val APPEARANCE_BACK_TAG: String = "appearance-back"
@@ -84,7 +85,10 @@ fun AppearanceScreen(
 private fun Header(onBack: () -> Unit) {
     val texts = LocalAppTexts.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack, modifier = Modifier.testTag(APPEARANCE_BACK_TAG)) {
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier.handCursor().testTag(APPEARANCE_BACK_TAG),
+        ) {
             Text(texts[TextKey.SETTINGS])
         }
         Text(texts[TextKey.SECTION_APPEARANCE], style = MaterialTheme.typography.headlineMedium)
@@ -98,6 +102,7 @@ private fun ThemeEntry(theme: AppTheme, selected: Boolean, onClick: () -> Unit) 
     Row(
         Modifier
             .fillMaxWidth()
+            .handCursor()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(vertical = 12.dp)
             .testTag(appearanceOptionTag(theme)),

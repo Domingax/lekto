@@ -36,6 +36,7 @@ import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.ui.handCursor
 
 /** The test tag on the search field, so a UI test can type into it unambiguously. */
 internal const val VOCABULARY_SEARCH_TAG: String = "vocabulary-search"
@@ -218,7 +219,7 @@ private fun EntryRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit
             TextButton(
                 onClick = { onDelete(entry) },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.testTag(vocabularyDeleteTag(entry.key)),
+                modifier = Modifier.handCursor().testTag(vocabularyDeleteTag(entry.key)),
             ) { Text(texts[TextKey.DELETE]) }
         }
         Mastery(entry.mastery, entry.key)
