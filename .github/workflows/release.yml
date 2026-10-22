@@ -104,12 +104,6 @@ jobs:
             extension="${artifact##*.}"
             cp "$artifact" "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.${extension}"
           done < <(find app/build/compose/binaries/main -mindepth 2 -maxdepth 2 -type f)
-          # A portable image as well, so a Windows tester can run the build without
-          # touching an already-installed 1.0.0 (the MSI would be a same-version repair).
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            (cd app/build/compose/binaries/main/app \
-              && 7z a -tzip "$GITHUB_WORKSPACE/dist/${{ matrix.prefix }}-${version}-windows-x64-portable.zip" Lekto >/dev/null)
-          fi
       - name: Upload the installers
         uses: actions/upload-artifact@v7
         with:
