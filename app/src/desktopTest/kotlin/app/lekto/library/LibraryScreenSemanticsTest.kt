@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionEquals
@@ -18,8 +19,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
@@ -37,6 +36,9 @@ import kotlin.test.assertTrue
 /** The whole percentage the measured-row test uses; [FULL_PERCENT] is its denominator. */
 private const val MEASURED_PERCENT = 28
 private const val FULL_PERCENT = 100
+
+/** How far the desktop drag test pulls a row, in pixels: most of a phone-wide row. */
+private const val DRAG_DISTANCE = 200f
 
 /**
  * The library screen's behaviour through semantics (issue #15): the empty state,
@@ -186,13 +188,16 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun swipingARowAsksForConfirmationBeforeDeleting() = runComposeUiTest {
+    fun theDeleteActionAsksForConfirmationBeforeDeleting() = runComposeUiTest {
+        // The mouse idiom on desktop: the trash is not on the shelf until the
+        // reader points at the row, and it only ever asks — the vault is
+        // untouched until the dialog is confirmed (issue #208).
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        // The touch idiom: a swipe uncovers the action, and the gesture only ever
-        // asks — nothing is deleted until the dialog is confirmed (issue #208).
-        onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
+        onNodeWithTag(libraryDeleteTag(book.id)).assertDoesNotExist()
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryDeleteTag(book.id)).assertIsDisplayed().performClick()
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
         // The file name left the row (issue #196), so the confirmation is where it
@@ -203,17 +208,19 @@ class LibraryScreenSemanticsTest {
     }
 
     @Test
-    fun theDeleteActionAppearsWhenTheRowIsHovered() = runComposeUiTest {
-        // The mouse idiom on desktop: the trash is not on the shelf until the
-        // reader points at the row, and the confirmation guards it all the same.
+    fun aDragDoesNotDeleteOnDesktop() = runComposeUiTest {
+        // The swipe is the touch idiom and only that: on a pointer platform a
+        // dragged row must not open the confirmation (issue #208 review).
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryDeleteTag(book.id)).assertDoesNotExist()
-        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
-        onNodeWithTag(libraryDeleteTag(book.id)).assertIsDisplayed().performClick()
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput {
+            press()
+            moveBy(Offset(x = -DRAG_DISTANCE, y = 0f))
+            release()
+        }
 
-        onNodeWithText("Delete « The Lantern Keeper »?").assertIsDisplayed()
+        onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()
         kotlin.test.assertNull(deleted)
     }
 
@@ -222,7 +229,8 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
 
         kotlin.test.assertEquals(book, deleted)
@@ -233,7 +241,8 @@ class LibraryScreenSemanticsTest {
         var deleted: Book? = null
         setContent { Library(books(book), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryRowTag(book.id)).performTouchInput { swipeLeft() }
+        onNodeWithTag(libraryRowTag(book.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryDeleteTag(book.id)).performClick()
         onNodeWithTag(CONFIRM_DIALOG_CANCEL_TAG).performClick()
 
         onNodeWithText("Delete « The Lantern Keeper »?").assertDoesNotExist()

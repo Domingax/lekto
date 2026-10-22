@@ -67,8 +67,8 @@ position** automatically, so you continue where you left off; see
 ## Deleting a book
 
 There is no Delete on the shelf itself. On a phone or a tablet, swipe a row from
-the right and the action appears; with a mouse, point at the row and a small
-trash appears at its end. Either way Lekto asks you to confirm first — *Delete
+the right and the action appears; with a mouse, point at the row — it picks up a
+faint tint and a small trash appears at its end. Either way Lekto asks you to confirm first — *Delete
 « title »?* — and names the imported file, so you can tell which file is about to
 go. Only then does it remove the **Book**: its original file, the text derived
 from it and your **Reading position** for it. If

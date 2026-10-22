@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -46,6 +48,7 @@ import app.lekto.theme.LanguageHues
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
+import app.lekto.theme.hoverWash
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Trash
@@ -106,6 +109,12 @@ internal fun Modifier.plainClickable(enabled: Boolean = true, role: Role? = null
  */
 @Composable
 internal fun BookRow(book: Book, progress: BookProgress, actions: BookRowActions) {
+    // A drag is the touch idiom and only that: with a pointer, the delete waits
+    // for the row's hover instead (issue #208 review).
+    if (!swipeToDelete) {
+        BookRowFrame(book, progress, actions)
+        return
+    }
     val dismiss = rememberSwipeToDismissBoxState()
     val scope = rememberCoroutineScope()
     SwipeToDismissBox(
@@ -131,9 +140,8 @@ private fun SwipeDeleteBackground() {
     val texts = LocalAppTexts.current
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = LektoSpacing.TouchTarget)
-            .background(theme.error)
+            .fillMaxSize()
+            .background(theme.error, LektoRadii.Control)
             .padding(horizontal = LektoSpacing.InsidePanel),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
@@ -154,12 +162,18 @@ private fun SwipeDeleteBackground() {
 private fun BookRowFrame(book: Book, progress: BookProgress, actions: BookRowActions) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
+    val theme = MaterialTheme.colorScheme
     // The row paints the paper over the swipe's red, so the action stays hidden
-    // until the reader uncovers it.
+    // until the reader uncovers it. The hover wash is drawn over the paper, not
+    // under it, so its rounded corners cannot reveal that red.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .background(theme.background)
+            .background(
+                if (hovered) hoverWash(theme.onBackground) else Color.Transparent,
+                LektoRadii.Control,
+            )
             .padding(vertical = LektoSpacing.BetweenRows)
             .hoverable(interaction),
         verticalAlignment = Alignment.CenterVertically,

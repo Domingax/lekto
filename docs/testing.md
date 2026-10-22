@@ -156,8 +156,10 @@ the 48 dp floor a row never shrinks below — and the three states — the empty
 shelf with its one filled action, the skeleton rows that are distinguishable
 from the empty message, and the no-match state — are `LibraryScreenSemanticsTest`
 on both lanes, together with the two named groups (`Other books` parts the unread
-books from the recently read ones) and both delete idioms: the swipe asks for the
-confirmation on both lanes, and desktop's hovered trash is its own case. The shelf's loading state is the controller's: `LibraryControllerTest`
+books from the recently read ones) and the delete idiom of each: the Android twin
+swipes the row and finds the confirmation, and the desktop twin proves the trash
+appears on hover, that a drag on a pointer platform does nothing, and that the
+confirmation guards the vault either way. The shelf's loading state is the controller's: `LibraryControllerTest`
 pins that a refresh reports it while the vault is read, so the skeleton is real
 state and not a still. The golden lane records the frame on four books across
 three languages, one sheet per paper.

@@ -19,3 +19,14 @@ val InkOnLightFill: Color = Color(0xFF1A1A1A)
  */
 fun contentColorOn(background: Color): Color =
     if (background.luminance() > LIGHT_FILL_LUMINANCE) InkOnLightFill else Color.White
+
+/** The share of the theme's ink a surface carries while the pointer rests on it (`docs/design.md` §8). */
+const val HOVER_WASH_ALPHA: Float = 0.05f
+
+/**
+ * The wash a row carries while the pointer is over it: the theme's own ink at
+ * [HOVER_WASH_ALPHA], so the surface under the mouse is the one it is about,
+ * with nothing new on screen and nothing moving (§2.3's rule, one step lighter
+ * than the selected word's 14 %).
+ */
+fun hoverWash(ink: Color): Color = ink.copy(alpha = HOVER_WASH_ALPHA)

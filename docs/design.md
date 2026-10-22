@@ -192,10 +192,11 @@ and none for others reads as broken. The vignette is where a cover would go if o
 The file name is not on the row: it survives in import errors and the delete confirmation, where
 it identifies a file rather than a book.
 
-A book is deleted **from its row**, and never from a red word that sits on every book: on a touch
-screen a swipe from the trailing edge uncovers `Delete`, and with a mouse a trash appears when the
-row is hovered. Neither deletes anything by itself — both open the confirmation (§8), because there
-is no undo — and the row exposes the same action to a screen reader as an accessibility action.
+A book is deleted **from its row**, and never from a red word that sits on every book. On a touch
+screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's wash and a trash
+appear when it is hovered, and a drag does nothing — the gesture is the thumb's idiom, not the
+pointer's. Neither path deletes anything by itself: both open the confirmation (§8), because there
+is no undo. The row exposes the same action to a screen reader as an accessibility action.
 
 **Reading progress** is where the reader is now, not the furthest point reached: the share of the
 book's rendered text before the **Reading position**, rounded down, so a book on its last page
@@ -362,7 +363,10 @@ animation, no tagline, no artificial delay.
 | Deleting anything | a confirmation, because there is no undo |
 
 Every clickable surface shows the pointing hand on desktop; a disabled control keeps the
-arrow, and hover changes nothing else. `HandCursor.kt` (§10) is the one modifier that asks for it.
+arrow. A list row also carries a wash of the theme's ink at **5 %** while the pointer rests on it —
+the surface under the mouse is the one it is about — and its row action appears there (§7.1).
+Nothing moves and nothing else changes: hover is a hint, not an animation. `HandCursor.kt` (§10) is
+the one modifier that asks for the hand.
 
 Nothing blocks the reading: an error never becomes a full-screen alert, and no state ever hides
 the page behind it.
