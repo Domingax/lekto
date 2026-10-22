@@ -1,7 +1,7 @@
 # The desktop release lane (issue #29).
 #
 # jpackage can only build the installer of the operating system it runs on, so
-# one runner per platform produces its own artefact and the release job collects
+# one runner per platform produces its own artefacts and the release job collects
 # them. A tag is what publishes; `workflow_dispatch` builds the installers
 # without publishing, so a packaging change can be exercised without cutting a
 # release. See docs/build.md#desktop.
@@ -21,9 +21,11 @@ permissions:
   contents: read
 
 jobs:
-  # One installer per operating system. The two macOS runners cover Apple
-  # Silicon and Intel: a jpackage image is architecture-specific, and an
-  # arm64-only download would leave Intel Macs without a build.
+  # One platform per job. Linux has no jpackage format that is both single-file
+  # and distribution-independent, so it builds the application image and wraps it
+  # in an AppImage; Windows builds its MSI and the double-click EXE; the two macOS
+  # runners cover Apple Silicon and Intel, because a jpackage image is
+  # architecture-specific.
   package:
     name: package (${{ matrix.label }})
     runs-on: ${{ matrix.runner }}
@@ -33,21 +35,19 @@ jobs:
         include:
           - label: linux-x64
             runner: ubuntu-latest
-            extension: deb
-            # A Debian package's file name is lower-case by convention; the other
-            # platforms keep the product's capitalisation.
+            formats: AppImage
             prefix: lekto
           - label: windows-x64
             runner: windows-latest
-            extension: msi
+            formats: Msi Exe
             prefix: Lekto
           - label: macos-arm64
             runner: macos-15
-            extension: dmg
+            formats: Dmg
             prefix: Lekto
           - label: macos-x64
             runner: macos-15-intel
-            extension: dmg
+            formats: Dmg
             prefix: Lekto
     steps:
       - uses: actions/checkout@v7
@@ -56,18 +56,59 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v6
-      # jpackage shells out to dpkg-deb for a Debian package, and the toolchain
-      # is a documented prerequisite. The Ubuntu runner carries both already;
-      # installing them explicitly keeps the lane independent of the image's
-      # contents.
-      - name: Install the Debian packaging tools
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes dpkg fakeroot
       # The installer is the desktop client only, so the Android target stays
       # off: no Android SDK is needed and the lane is the same on every runner.
-      - name: Build the installer
+      - name: Build the application image
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./gradlew :app:createDistributable -Plekto.android=false --no-daemon
+      - name: Build the installers
+        if: runner.os != 'Linux'
         shell: bash
         run: ./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false --no-daemon
+      # appimagetool turns the jpackage image into the one portable file. It is
+      # pinned by version and digest, then extracted: the AppImage runtime would
+      # otherwise need FUSE just to run the tool in CI.
+      - name: Fetch appimagetool
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          tool="$RUNNER_TEMP/appimagetool.AppImage"
+          curl -fsSL -o "$tool" \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  $tool" | sha256sum -c -
+          chmod +x "$tool"
+          (cd "$RUNNER_TEMP" && ./appimagetool.AppImage --appimage-extract >/dev/null)
+          echo "APPIMAGETOOL=$RUNNER_TEMP/squashfs-root/AppRun" >> "$GITHUB_ENV"
+      - name: Build the AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
+          mkdir -p dist
+          tools/packaging/appimage.sh \
+            app/build/compose/binaries/main/app/Lekto \
+            app/icons/lekto.png \
+            "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.AppImage"
+      # One naming scheme for every platform, so the guide and the release body
+      # name exactly what the reader downloads. Windows contributes two files.
+      - name: Name the installers
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
+          mkdir -p dist
+          shopt -s nullglob
+          for artifact in app/build/compose/binaries/main/*/*; do
+            extension="${artifact##*.}"
+            cp "$artifact" "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.${extension}"
+          done
+      - name: Upload the installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
       # jpackage writes its own diagnosis to per-task log files and Gradle only
       # names them. Without this step a macOS-only failure shows an exit code and
       # nothing else, which is how the first tagged preview failed.
@@ -80,24 +121,6 @@ jobs:
             cat "$log"
             echo "::endgroup::"
           done
-      # jpackage names each artefact after the platform's own convention (the
-      # Debian file even repeats the architecture), and both macOS runners produce
-      # the same `Lekto-<version>.dmg`. One scheme makes each file distinct and
-      # matches what the guide tells the reader to download.
-      - name: Name the installer for its platform
-        shell: bash
-        run: |
-          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
-          mkdir -p dist
-          for artifact in app/build/compose/binaries/main/*/*.${{ matrix.extension }}; do
-            cp "$artifact" "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.${{ matrix.extension }}"
-          done
-      - name: Upload the installer
-        uses: actions/upload-artifact@v7
-        with:
-          name: desktop-${{ matrix.label }}
-          path: dist/*.${{ matrix.extension }}
-          if-no-files-found: error
 
   # Publish every installer on the tag's release, with the committed desktop
   # notes. A manual run builds them and stops there, and a tag with a pre-release

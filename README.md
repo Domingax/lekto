@@ -24,12 +24,13 @@ Android SDK; without one the project builds as a desktop/JVM project. See
 commands.
 
 Run the desktop client with `./gradlew :app:run`, build the Android debug
-APK with `./gradlew :app:assembleDebug`, and build the desktop installer for the
-machine you are on with
-`./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false` (a `.deb`,
-`.msi` or `.dmg`; jpackage does not cross-compile, and the tagged release lane
-builds all three). The desktop's screen-reader limitation is documented in
-[the user guide](guide/desktop.md).
+APK with `./gradlew :app:assembleDebug`, and package the desktop client for the
+machine you are on: `./gradlew :app:packageDistributionForCurrentOS
+-Plekto.android=false` produces the Windows MSI and EXE or the macOS DMG; on
+Linux, `./gradlew :app:createDistributable -Plekto.android=false` then
+`tools/packaging/appimage.sh` builds the portable AppImage. jpackage does not
+cross-compile, and the tagged release lane builds every artefact. The desktop's
+screen-reader limitation is documented in [the user guide](guide/desktop.md).
 
 ## Where things live
 

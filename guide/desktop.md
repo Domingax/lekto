@@ -9,13 +9,23 @@ a book and its words can move between the two by export and import.
 Download the file for your computer from the
 [latest release](https://github.com/Domingax/lekto/releases/latest):
 
-- **Windows** — the `.msi` installer. Run it as you would any other Windows
-  installer; an upgrade replaces the previous version.
+- **Windows** — the `.msi` installer, or the `.exe` if you prefer a simple
+  double-click. Both install the same application; the MSI is the one to use if
+  you manage machines or want an upgrade to replace the previous version
+  cleanly.
 - **macOS** — the `.dmg` disk image. Open it, drag Lekto to **Applications**, and
   start it from there. Releases are provided for Apple Silicon (`macos-arm64`) and
   for Intel Macs (`macos-x64`); take the one your Mac needs.
-- **Linux** — the `.deb` package. Install it with your software centre or with
-  `sudo apt install ./lekto-<version>-linux-x64.deb`.
+- **Linux** — the `.AppImage`. It is one file, needs no installation and runs on
+  any x86-64 distribution, Arch included:
+
+  ```sh
+  chmod +x lekto-<version>-linux-x64.AppImage
+  ./lekto-<version>-linux-x64.AppImage
+  ```
+
+  If your system has no FUSE 2, run it with
+  `./lekto-<version>-linux-x64.AppImage --appimage-extract-and-run`.
 
 The desktop build is not signed with a paid operating-system certificate. Windows
 SmartScreen or macOS Gatekeeper may therefore ask you to confirm the first

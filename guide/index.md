@@ -33,9 +33,9 @@ Lekto runs on Android and on the desktop (Linux, macOS and Windows).
 
 - **Android** — [download the latest APK](https://github.com/Domingax/lekto/releases/latest).
 - **Desktop** — [download the latest release](https://github.com/Domingax/lekto/releases/latest):
-  an `.msi` for Windows, a `.dmg` for macOS (Apple Silicon and Intel) and a
-  `.deb` for Linux. See [Lekto on the desktop](/desktop) for installation, and for
-  where your data lives.
+  an `.msi` or `.exe` for Windows, a `.dmg` for macOS (Apple Silicon and Intel)
+  and a portable `.AppImage` for Linux. See [Lekto on the desktop](/desktop) for
+  installation, and for where your data lives.
 
 ::: warning Screen readers on the desktop
 The desktop client supports a screen reader on macOS, supports it on Windows once

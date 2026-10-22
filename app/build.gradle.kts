@@ -160,11 +160,15 @@ compose.desktop {
         mainClass = "app.lekto.MainKt"
         // The desktop client as a shippable artefact (issue #29): jpackage turns
         // the application into a native installer. A distribution can only be built
-        // on its own operating system, so the release lane runs this on Windows,
-        // macOS and Linux (`.github/workflows/release.yml`) and
-        // `packageDistributionForCurrentOS` picks the format that applies here.
+        // on its own operating system, so the release lane runs this on Windows and
+        // macOS (`.github/workflows/release.yml`) and
+        // `packageDistributionForCurrentOS` picks the format that applies here. On
+        // Linux the lane builds the jpackage application image and wraps it in an
+        // AppImage (`tools/packaging/appimage.sh`), because jpackage has no
+        // single-file Linux format and a distribution package would not run on
+        // every distribution.
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Lekto"
             packageVersion = appVersion
             description = "An open-source, local-first immersive reading app for language learning."
@@ -187,14 +191,6 @@ compose.desktop {
                 "jdk.javadoc",
                 "jdk.unsupported",
             )
-            linux {
-                // A Debian package name is lower-case by policy, whatever the
-                // product is called.
-                packageName = "lekto"
-                debMaintainer = "Domingax <Domingax@users.noreply.github.com>"
-                appCategory = "Education"
-                iconFile.set(project.file("icons/lekto.png"))
-            }
             windows {
                 menuGroup = "Lekto"
                 // A stable identity, so an upgrade replaces the previous install

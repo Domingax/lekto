@@ -4,10 +4,13 @@ Installers for the desktop client, whose reader, library and vocabulary are the
 same as Android and whose **Vault** is the same format: a Vault moves between
 them by export and import.
 
-- **Windows** — `Lekto-{{VERSION}}-windows-x64.msi`
+- **Windows** — `Lekto-{{VERSION}}-windows-x64.msi` or
+  `Lekto-{{VERSION}}-windows-x64.exe`: the MSI is the managed Windows Installer
+  package, the EXE is the double-click installer.
 - **macOS, Apple Silicon** — `Lekto-{{VERSION}}-macos-arm64.dmg`
 - **macOS, Intel** — `Lekto-{{VERSION}}-macos-x64.dmg`
-- **Linux** — `lekto-{{VERSION}}-linux-x64.deb`
+- **Linux** — `lekto-{{VERSION}}-linux-x64.AppImage`: one portable file, no
+  installation, any x86-64 distribution.
 
 ## Accessibility on the desktop
 

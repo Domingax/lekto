@@ -17,19 +17,20 @@ package app.lekto.architecture
 object DesktopPackaging {
 
     /** Every installer a release promises, as the extension users download. */
-    val REQUIRED_FORMATS: Set<String> = setOf("deb", "msi", "dmg")
+    val REQUIRED_FORMATS: Set<String> = setOf("dmg", "msi", "exe")
 
     /**
-     * The platform each installer is built on: jpackage does not cross-compile, so
-     * a `.dmg` only exists if a macOS runner produces it. Both macOS architectures
+     * What each platform's job produces. jpackage does not cross-compile, so a
+     * `.dmg` only exists if a macOS runner produces it; both macOS architectures
      * are separate entries because the application image is architecture-specific.
+     * Linux has no jpackage format and produces the portable AppImage instead.
      */
     val REQUIRED_PACKAGES: Set<PackageJob> =
         setOf(
-            PackageJob(runner = "ubuntu-latest", format = "deb"),
-            PackageJob(runner = "windows-latest", format = "msi"),
-            PackageJob(runner = "macos-15", format = "dmg"),
-            PackageJob(runner = "macos-15-intel", format = "dmg"),
+            PackageJob(runner = "ubuntu-latest", formats = setOf("appimage")),
+            PackageJob(runner = "windows-latest", formats = setOf("msi", "exe")),
+            PackageJob(runner = "macos-15", formats = setOf("dmg")),
+            PackageJob(runner = "macos-15-intel", formats = setOf("dmg")),
         )
 
     /** The JDK module that lets a Windows screen reader reach Compose (ADR-0007). */
@@ -45,9 +46,14 @@ object DesktopPackaging {
         .filter { name -> name.isNotEmpty() }
         .toSet()
 
-    /** The runner and installer extension of each packaging job in [workflow]. */
+    /** The runner and the installer formats of each packaging job in [workflow]. */
     fun packages(workflow: String): Set<PackageJob> = PACKAGE_JOB.findAll(workflow)
-        .map { job -> PackageJob(job.groupValues[1], job.groupValues[2]) }
+        .map { job ->
+            PackageJob(
+                runner = job.groupValues[1],
+                formats = job.groupValues[2].lowercase().split(' ', '\t').filter { it.isNotBlank() }.toSet(),
+            )
+        }
         .toSet()
 
     /** Whether the distribution declares [ACCESSIBILITY_MODULE] inside its `modules(...)` call. */
@@ -83,11 +89,11 @@ object DesktopPackaging {
         return code.toString()
     }
 
-    /** One platform's packaging job: the runner and the installer extension it produces. */
-    data class PackageJob(val runner: String, val format: String)
+    /** One platform's packaging job: the runner and the installer formats it produces. */
+    data class PackageJob(val runner: String, val formats: Set<String>)
 
     private val TARGET_FORMATS = Regex("""targetFormats\s*\(([^)]*)\)""")
-    private val PACKAGE_JOB = Regex("""runner:\s*(\S+)\s*\n\s*extension:\s*(\S+)""")
+    private val PACKAGE_JOB = Regex("""runner:\s*(\S+)\s*\n\s*formats:\s*(.+)""")
     private val MODULES = Regex("""modules\s*\(([^)]*)\)""")
     private val VERSION = Regex("""(?m)^lekto\.version\s*=\s*(\d+\.\d+\.\d+)\s*$""")
 }

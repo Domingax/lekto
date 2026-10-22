@@ -23,32 +23,32 @@ class DesktopPackagingTest :
             DesktopPackaging.formats(
                 """
                 nativeDistributions {
-                    targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+                    targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe)
                 }
                 """.trimIndent(),
-            ) shouldBe setOf("dmg", "msi", "deb")
+            ) shouldBe setOf("dmg", "msi", "exe")
         }
 
         test("a commented-out format is not a declaration") {
             DesktopPackaging.formats(
                 """
                 nativeDistributions {
-                    // targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-                    targetFormats(TargetFormat.Dmg, TargetFormat.Deb)
+                    // targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe)
+                    targetFormats(TargetFormat.Dmg, TargetFormat.Msi)
                 }
                 """.trimIndent(),
-            ) shouldBe setOf("dmg", "deb")
+            ) shouldBe setOf("dmg", "msi")
         }
 
         test("a dropped format leaves the promise incomplete") {
             val declared = DesktopPackaging.formats(
-                "nativeDistributions { targetFormats(TargetFormat.Dmg, TargetFormat.Deb) }",
+                "nativeDistributions { targetFormats(TargetFormat.Dmg, TargetFormat.Msi) }",
             )
 
-            (DesktopPackaging.REQUIRED_FORMATS - declared) shouldBe setOf("msi")
+            (DesktopPackaging.REQUIRED_FORMATS - declared) shouldBe setOf("exe")
         }
 
-        test("reads the runner and installer of every packaging job") {
+        test("reads the runner and installers of every packaging job") {
             DesktopPackaging.packages(
                 """
                 strategy:
@@ -56,14 +56,14 @@ class DesktopPackagingTest :
                     include:
                       - label: macos-arm64
                         runner: macos-15
-                        extension: dmg
-                      - label: linux-x64
-                        runner: ubuntu-latest
-                        extension: deb
+                        formats: Dmg
+                      - label: windows-x64
+                        runner: windows-latest
+                        formats: Msi Exe
                 """.trimIndent(),
             ) shouldBe setOf(
-                DesktopPackaging.PackageJob(runner = "macos-15", format = "dmg"),
-                DesktopPackaging.PackageJob(runner = "ubuntu-latest", format = "deb"),
+                DesktopPackaging.PackageJob(runner = "macos-15", formats = setOf("dmg")),
+                DesktopPackaging.PackageJob(runner = "windows-latest", formats = setOf("msi", "exe")),
             )
         }
 
@@ -72,7 +72,7 @@ class DesktopPackagingTest :
                 """
                 - label: linux-x64
                   runner: ubuntu-latest
-                  extension: dmg
+                  formats: Dmg
                 """.trimIndent(),
             )
 
@@ -117,6 +117,20 @@ class DesktopPackagingTest :
                 workflow.isFile shouldBe true
             }
             DesktopPackaging.packages(workflow.readText()) shouldContainAll DesktopPackaging.REQUIRED_PACKAGES
+        }
+
+        test("the Linux job wraps the application image in the AppImage") {
+            val root = RepositoryScanner.repositoryRoot()
+            val workflow = File(root, ".github/workflows/release.yml").readText()
+            val script = File(root, "tools/packaging/appimage.sh")
+
+            withClue("no AppImage script turns the application image into the portable file") {
+                script.isFile shouldBe true
+                script.canExecute() shouldBe true
+            }
+            withClue("the Linux packaging job no longer calls the AppImage script") {
+                workflow.contains("tools/packaging/appimage.sh") shouldBe true
+            }
         }
 
         test("the APK and the installers read one version") {
