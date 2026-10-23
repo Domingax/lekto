@@ -19,7 +19,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -55,11 +54,12 @@ internal fun readerMarginTag(margin: ReadingMargin): String = "reader-margin-${m
 private val Hairline = 1.dp
 
 /**
- * The reader's **Aa** panel (ADR-0035; docs/design.md §7.2): a bottom sheet of
- * printed-form rows — `Text face`, `Text size`, `Margins` — whose values are
- * chips. It owns no state: it renders [preferences] and raises the whole next
- * value through [onChange], so the page above re-typesets and repaginates as each
- * chip moves. **There is no button to confirm**: the page above is the preview.
+ * The reader's **Aa** panel (ADR-0035; docs/design.md §7.2): a square sheet
+ * anchored to the bottom edge, of printed-form rows — `Text face`, `Text size`,
+ * `Margins` — whose values are chips. It owns no state: it renders [preferences]
+ * and raises the whole next value through [onChange], so the page above
+ * re-typesets and repaginates as each chip moves. **There is no button to
+ * confirm**: the page above is the preview.
  *
  * The App theme is not here — it recolours the app, not the book, and lives in
  * Settings ▸ Appearance (ADR-0035, ADR-0036). [onDismiss] is the sheet's own
@@ -81,7 +81,6 @@ internal fun ReadingPreferencesPanel(
     Surface(
         modifier = modifier.fillMaxWidth().swallowTaps(),
         color = theme.surface,
-        shape = LektoRadii.SheetTop,
         border = BorderStroke(Hairline, theme.outline),
     ) {
         Column(
@@ -269,13 +268,17 @@ private fun StepChip(
     }
 }
 
-/** A chip's visible shape inside its 48 dp touch target: ink when selected, ringed otherwise. */
+/**
+ * A chip's visible shape inside its 48 dp touch target: ink when selected, and
+ * otherwise the theme's paper lifted against the sheet — a chip has to read as a
+ * field on the panel, not as a hole in it (the sepia paper makes this plainest).
+ */
 @Composable
 private fun ChipFrame(selected: Boolean, content: @Composable () -> Unit) {
     val theme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
-            .background(if (selected) theme.primary else Color.Transparent, LektoRadii.Control)
+            .background(if (selected) theme.primary else theme.background, LektoRadii.Control)
             .border(Hairline, if (selected) theme.primary else theme.outline, LektoRadii.Control)
             .padding(horizontal = LektoSpacing.BetweenRows, vertical = LektoSpacing.InsideLabelPair),
         contentAlignment = Alignment.Center,

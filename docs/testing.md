@@ -215,9 +215,10 @@ Its geometry comes from the screen's own constants and its rule from the screen'
 own composable; only the words are bars, because glyphs would not verify. The
 reader adds `reader-<paper>.png` per paper (issue #209): the 48 dp top band with
 its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
-chevrons that mark the tap zones and the position, and one
-`reader-text-panel-light.png` of the **Aa** sheet open — its 16 dp free corners,
-its hairline and its printed-form rows of chip frames. A text-bearing golden waits on
+chevrons that mark the tap zones and turn the page, and the position, and one
+`reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
+hairline and its printed-form rows of chip frames, each unselected chip on the
+paper behind it. A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 

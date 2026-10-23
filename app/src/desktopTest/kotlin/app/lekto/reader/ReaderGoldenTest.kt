@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -137,10 +138,10 @@ private fun ChromeBand() {
             .padding(horizontal = LektoSpacing.ScreenEdge),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(imageVector = LektoIcons.ArrowLeft, contentDescription = null, tint = theme.onBackground)
+        BandIcon(LektoIcons.ArrowLeft, theme.onBackground)
         Spacer(Modifier.width(LektoSpacing.BetweenRelatedLines))
         Box(Modifier.weight(1f)) { Line(theme.onSurfaceVariant, TITLE_BAR) }
-        Icon(imageVector = LektoIcons.ALargeSmall, contentDescription = null, tint = theme.onBackground)
+        BandIcon(LektoIcons.ALargeSmall, theme.onBackground)
     }
 }
 
@@ -161,7 +162,11 @@ private fun ColumnScope.PageLines() {
     }
 }
 
-/** The 64 dp bottom band: the two chevrons marking the thirds, and the position in muted ink. */
+/**
+ * The 64 dp bottom band: the two chevrons marking the thirds and turning the
+ * page, and the position in muted ink. The preview opens on page one, so the left
+ * chevron is faded as its disabled control would be.
+ */
 @Composable
 private fun PageBarBand() {
     val theme = MaterialTheme.colorScheme
@@ -173,15 +178,24 @@ private fun PageBarBand() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(imageVector = LektoIcons.ChevronLeft, contentDescription = null, tint = theme.onSurfaceVariant)
+        BandIcon(LektoIcons.ChevronLeft, theme.onSurfaceVariant.copy(alpha = 0.38f))
         Line(theme.onSurfaceVariant, POSITION_BAR)
-        Icon(imageVector = LektoIcons.ChevronRight, contentDescription = null, tint = theme.onSurfaceVariant)
+        BandIcon(LektoIcons.ChevronRight, theme.onSurfaceVariant)
+    }
+}
+
+/** An icon in its 48 dp control, centred as the band's icon buttons centre theirs. */
+@Composable
+private fun BandIcon(imageVector: ImageVector, tint: Color) {
+    Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+        Icon(imageVector = imageVector, contentDescription = null, tint = tint)
     }
 }
 
 /**
- * The **Aa** sheet: the surface tone, the 16 dp free corners and the hairline,
- * then a name and **Close**, and the three printed-form rows of chips.
+ * The **Aa** sheet: the surface tone and the hairline, square because it meets
+ * the bottom edge, then a name and **Close**, and the three printed-form rows of
+ * chips.
  */
 @Composable
 private fun TextPanel(modifier: Modifier) {
@@ -189,8 +203,8 @@ private fun TextPanel(modifier: Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(theme.surface, LektoRadii.SheetTop)
-            .border(1.dp, theme.outline, LektoRadii.SheetTop)
+            .background(theme.surface)
+            .border(1.dp, theme.outline)
             .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
@@ -237,7 +251,7 @@ private fun PanelRow(chips: @Composable () -> Unit) {
     }
 }
 
-/** A chip's visible frame: filled with ink when selected, ringed otherwise. */
+/** A chip's visible frame: filled with ink when selected, paper against the sheet otherwise. */
 @Composable
 private fun Chip(width: Dp, selected: Boolean) {
     val theme = MaterialTheme.colorScheme
@@ -245,7 +259,7 @@ private fun Chip(width: Dp, selected: Boolean) {
         modifier = Modifier
             .height(CHIP_HEIGHT)
             .width(width)
-            .background(if (selected) theme.primary else Color.Transparent, LektoRadii.Control)
+            .background(if (selected) theme.primary else theme.background, LektoRadii.Control)
             .border(1.dp, if (selected) theme.primary else theme.outline, LektoRadii.Control),
         contentAlignment = Alignment.Center,
     ) {

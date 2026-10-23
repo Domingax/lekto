@@ -61,7 +61,7 @@ import kotlinx.coroutines.yield
 /** The top band's height: the icon, the title and the **Aa** control (docs/design.md §6, §7.2). */
 internal val CHROME_HEIGHT = 48.dp
 
-/** The bottom band's height: the two tap-zone indicators and the position (docs/design.md §6, §7.2). */
+/** The bottom band's height: the two chevron controls and the position (docs/design.md §6, §7.2). */
 internal val PAGE_BAR_HEIGHT = 64.dp
 
 /** How many pages to lay out between yields, so the first page is shown at once. */
@@ -79,11 +79,11 @@ internal const val READER_TITLE_TAG = "reader-title"
 /** The test tag on the position line in the bottom band. */
 internal const val READER_POSITION_TAG = "reader-position"
 
-/** The test tag on the left chevron, which marks the previous third of the page rather than acting. */
-internal const val READER_PREVIOUS_INDICATOR_TAG = "reader-previous-indicator"
+/** The test tag on the left chevron, which marks the previous third and turns the page. */
+internal const val READER_PREVIOUS_PAGE_TAG = "reader-previous-page"
 
-/** The test tag on the right chevron, which marks the next third of the page rather than acting. */
-internal const val READER_NEXT_INDICATOR_TAG = "reader-next-indicator"
+/** The test tag on the right chevron, which marks the next third and turns the page. */
+internal const val READER_NEXT_PAGE_TAG = "reader-next-page"
 
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
@@ -170,7 +170,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
             actions.onPhraseSelected,
         )
         if (state.chromeVisible && state.page != null) {
-            ReaderPageBar(state.index, state.total)
+            ReaderPageBar(state.index, state.total, state::previous, state::next)
         }
     }
     if (state.chromeVisible && state.preferencesVisible) {
@@ -319,9 +319,8 @@ private fun ColumnScope.ReaderPage(
 /**
  * The page's text, inset by the reading margin; a slice built for this page,
  * styled and selectable. The text also carries the two page turns as
- * accessibility actions, so a reader who cannot tap a third of the screen —
- * a screen reader, a switch — keeps the way through the book that the visible
- * buttons used to give them. The chevrons stay decorative indicators.
+ * accessibility actions beside the two chevron controls, so a screen-reader or
+ * switch user has a way through the book without hunting for the bottom band.
  */
 @Suppress("LongParameterList") // The page's inputs are independent; a bundle would only hide that.
 @Composable
@@ -499,37 +498,68 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
 }
 
 /**
- * The bottom band (docs/design.md §6, §7.2): two chevrons that show where the
- * page's tap zones are, and the position in the theme's muted ink. The chevrons
- * are **indicators, not buttons** — the thirds of the page turn it — so they
- * carry no click action and nothing to announce.
+ * The bottom band (docs/design.md §6, §7.2): two chevrons that mark where the
+ * page's tap zones are **and** turn the page when tapped, and the position in the
+ * theme's muted ink. A chevron disabled at a bound stays visible but faded, so the
+ * band keeps its shape as the reader moves.
  */
 @Composable
-private fun ReaderPageBar(page: Int, total: Int) {
+private fun ReaderPageBar(page: Int, total: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
     val texts = LocalAppTexts.current
     Row(
         modifier = Modifier.fillMaxWidth().height(PAGE_BAR_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TapZoneIndicator(LektoIcons.ChevronLeft, READER_PREVIOUS_INDICATOR_TAG)
+        TapZoneButton(
+            imageVector = LektoIcons.ChevronLeft,
+            contentDescription = texts[TextKey.PREVIOUS_PAGE],
+            enabled = page > 0,
+            onClick = onPrevious,
+            tag = READER_PREVIOUS_PAGE_TAG,
+        )
         Text(
             text = texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.testTag(READER_POSITION_TAG),
         )
-        TapZoneIndicator(LektoIcons.ChevronRight, READER_NEXT_INDICATOR_TAG)
+        TapZoneButton(
+            imageVector = LektoIcons.ChevronRight,
+            contentDescription = texts[TextKey.NEXT_PAGE],
+            enabled = page < total - 1,
+            onClick = onNext,
+            tag = READER_NEXT_PAGE_TAG,
+        )
     }
 }
 
-/** One chevron marking a tap zone: drawn as the identity's muted ink, with no action of its own. */
+/**
+ * One chevron marking a tap zone and turning the page: muted ink, and faded while
+ * it is disabled at a bound. Its description names the turn, so a screen reader
+ * meets a control rather than a decorative glyph.
+ */
+@Suppress("LongParameterList") // The icon, its spoken name, its state and its tap are independent.
 @Composable
-private fun TapZoneIndicator(imageVector: ImageVector, tag: String) {
-    Icon(
-        imageVector = imageVector,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(tag),
-    )
+private fun TapZoneButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    tag: String,
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.handCursor(enabled).testTag(tag),
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else DISABLED_ALPHA),
+        )
+    }
 }
+
+/** The opacity of a disabled control, matching Material's own content alphas. */
+private const val DISABLED_ALPHA = 0.38f

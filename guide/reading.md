@@ -5,11 +5,11 @@ one page at a time.
 
 ## Moving through a book
 
-Turn pages by tapping the left and right thirds of the page. The two chevrons in
-the bottom bar mark where those zones are. Tapping the middle of the page hides
-both bars so the text fills the screen; tapping again brings them back. With a
-screen reader, the page offers **Previous page** and **Next page** as actions, so
-you can still move through the book.
+Turn pages by tapping the left and right thirds of the page, or the two chevrons
+in the bottom bar. The chevrons also show where those zones are. Tapping the
+middle of the page hides both bars so the text fills the screen; tapping again
+brings them back. With a screen reader, the page offers **Previous page** and
+**Next page** as actions, so you can move through the book from the page itself.
 
 ## Resuming where you left off
 
