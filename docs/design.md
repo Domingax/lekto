@@ -257,10 +257,11 @@ The lookup panel and the chapter list are never open together.
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
 at once, and the page number and total update as pagination counts them.
 
-The **`Aa` panel** (`Text face`, `Text size`, `Margins`: `Serif`/`Sans-serif`,
-`Narrow`/`Comfortable`/`Wide`) sets the face, the size and the margins, and previews live: there
-is no button to confirm a reading preference. The App theme is **not** here — it recolours the
-app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
+The **`Aa` panel** is a sheet anchored to the bottom edge, of printed-form rows (`Text face`,
+`Text size`, `Margins`: `Serif`/`Sans-serif`, `Narrow`/`Comfortable`/`Wide`) whose values are
+chips. It sets the face, the size and the margins, and previews live: there is no button to
+confirm a reading preference. The App theme is **not** here — it recolours the app, not the
+book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
 
 **The end of the book** is a full-screen reader state, not a page. Tapping the next zone on the
 last page raises it; reaching the last page does not. Reaching the panel never declares the book

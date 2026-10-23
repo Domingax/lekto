@@ -163,6 +163,34 @@ class ReadingPreferencesPanelSemanticsTest {
         assertTrue("a tap that dismisses the panel must not tap a word", !tappedWord)
     }
 
+    /**
+     * The page above the sheet is the preview (ADR-0035): a face or margin choice
+     * reaches the reader the moment it is tapped, the sheet stays open, and there
+     * is no separate step to confirm it.
+     */
+    @Test
+    fun aFaceOrMarginChangeAppliesAtOnceWithNoConfirmationStep() {
+        var changed: ReadingPreferences? = null
+        compose.setContent { PreferencesReader(renderer) { next -> changed = next } }
+
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).performClick()
+
+        val face = changed
+        assertNotNull("the panel must raise a change", face)
+        assertEquals(ReadingFace.SANS_SERIF, face!!.face)
+        compose.onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).assertIsSelected()
+
+        compose.onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).performClick()
+
+        val margin = changed
+        assertNotNull("the panel must raise a change", margin)
+        assertEquals(ReadingMargin.WIDE, margin!!.margin)
+        compose.onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).assertIsSelected()
+        // The sheet is still the one open surface: the change applied above it.
+        compose.onNodeWithText("Text face").assertIsDisplayed()
+    }
+
     @Test
     fun aSizeChangeRepaginatesTheOpenBook() {
         var changed: ReadingPreferences? = null

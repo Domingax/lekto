@@ -17,4 +17,10 @@ object LektoRadii {
 
     /** Sheets and dialogues. */
     val Sheet = RoundedCornerShape(16.dp)
+
+    /**
+     * A sheet anchored to the bottom edge of the screen: the same 16 dp as [Sheet]
+     * on the two corners that are free, and square where it meets the edge.
+     */
+    val SheetTop = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
 }

@@ -65,10 +65,9 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.NO_WORDS_AT_LEVEL to "No words at the {0} level.",
 
     // Reader.
-    TextKey.PREVIOUS_PAGE to "Previous page",
-    TextKey.NEXT_PAGE to "Next page",
     TextKey.PAGE_OF to "Page {0} of {1}",
     TextKey.READING_PREFERENCES to "Aa",
+    TextKey.READING_TEXT to "Text",
     TextKey.READING_FACE to "Text face",
     TextKey.READING_FACE_SERIF to "Serif",
     TextKey.READING_FACE_SANS_SERIF to "Sans-serif",

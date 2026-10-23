@@ -8,9 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -18,7 +19,6 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -74,11 +74,10 @@ class ReaderScreenSemanticsTest {
 
     private companion object {
         /**
-         * Library, Previous page, Next page and the **Aa** control: the clickable
-         * nodes the chrome adds itself, so a count above this needs at least one
-         * word link.
+         * The back arrow and the **Aa** control: the clickable nodes the chrome
+         * adds itself, so a count above this needs at least one word link.
          */
-        const val CHROME_BUTTONS = 4
+        const val CHROME_BUTTONS = 2
 
         /** One short line, so the page has blank space below it for a centre tap. */
         val SHORT_CHAPTER = ReaderChapter(
@@ -111,7 +110,7 @@ class ReaderScreenSemanticsTest {
     fun eachWordIsAFocusableLink() {
         compose.setContent { Reader(renderer) }
 
-        // The chrome contributes Library, Previous page and Next page; every word
+        // The chrome contributes the back arrow and the **Aa** control; every word
         // adds another clickable node, so a count above the chrome proves the word
         // layer is tappable and reachable on Android, not just painted.
         val clickables = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
@@ -119,20 +118,22 @@ class ReaderScreenSemanticsTest {
         assertTrue("expected word links beyond the chrome, found ${clickables.size}", clickables.size > CHROME_BUTTONS)
     }
 
+    /**
+     * The reader's two bands (docs/design.md §7.2): the back arrow, the book's
+     * title and the **Aa** control above; the two tap-zone indicators and the
+     * position below. The chevrons show where the thirds are, so they carry no
+     * click action of their own.
+     */
     @Test
-    fun navigatesForwardAndBackWithTheButtons() {
+    fun theBandsCarryTheBackTitleAaAndThePosition() {
         compose.setContent { Reader(renderer) }
 
-        compose.onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Previous page").assertIsNotEnabled()
-
-        compose.onNodeWithText("Next page").performClick()
-        compose.onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Previous page").assertIsEnabled()
-
-        compose.onNodeWithText("Previous page").performClick()
-        compose.onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Previous page").assertIsNotEnabled()
+        compose.onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_TITLE_TAG).assertTextEquals(LONG_CHAPTER.title)
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of", substring = true)
+        compose.onNodeWithTag(READER_PREVIOUS_INDICATOR_TAG).assertIsDisplayed().assertHasNoClickAction()
+        compose.onNodeWithTag(READER_NEXT_INDICATOR_TAG).assertIsDisplayed().assertHasNoClickAction()
     }
 
     @Test
@@ -175,16 +176,18 @@ class ReaderScreenSemanticsTest {
         compose.setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
 
         compose.onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("Previous page").assertIsEnabled()
-        compose.onNodeWithText("Next page").assertIsNotEnabled()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
     }
 
     @Test
     fun aPageTurnReportsItsPosition() {
         var reported = -1
         compose.setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
+        compose.onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
 
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+            click(Offset(visibleSize.width - 4f, center.y))
+        }
 
         assertTrue("turning to page two must report a non-zero character offset", reported > 0)
     }

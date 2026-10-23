@@ -16,7 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -30,6 +29,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingPreferences
@@ -44,14 +45,21 @@ import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
 import app.lekto.ui.DismissScrim
 import app.lekto.ui.handCursor
+import app.lekto.ui.icons.ALargeSmall
 import app.lekto.ui.icons.ArrowLeft
+import app.lekto.ui.icons.ChevronLeft
+import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
 import kotlinx.coroutines.yield
 
-private val ChromeHeight = 48.dp
-private val PageBarHeight = 64.dp
+/** The top band's height: the icon, the title and the **Aa** control (docs/design.md §6, §7.2). */
+internal val CHROME_HEIGHT = 48.dp
+
+/** The bottom band's height: the two tap-zone indicators and the position (docs/design.md §6, §7.2). */
+internal val PAGE_BAR_HEIGHT = 64.dp
 
 /** How many pages to lay out between yields, so the first page is shown at once. */
 private const val PAGE_YIELD_EVERY = 8
@@ -61,6 +69,18 @@ internal const val READER_PAGE_TAG = "reader-page"
 
 /** The test tag on the reader's way back to the shelf, an icon in its left band (docs/design.md §7.2). */
 internal const val READER_BACK_TAG = "reader-back"
+
+/** The test tag on the book's title in the top band. */
+internal const val READER_TITLE_TAG = "reader-title"
+
+/** The test tag on the position line in the bottom band. */
+internal const val READER_POSITION_TAG = "reader-position"
+
+/** The test tag on the left chevron, which marks the previous third of the page rather than acting. */
+internal const val READER_PREVIOUS_INDICATOR_TAG = "reader-previous-indicator"
+
+/** The test tag on the right chevron, which marks the next third of the page rather than acting. */
+internal const val READER_NEXT_INDICATOR_TAG = "reader-next-indicator"
 
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
@@ -135,7 +155,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
 ) {
     Column(Modifier.fillMaxSize()) {
         if (state.chromeVisible) {
-            ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences, styles.horizontalMargin)
+            ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences)
         }
         ReaderPage(
             document,
@@ -147,7 +167,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
             actions.onPhraseSelected,
         )
         if (state.chromeVisible && state.page != null) {
-            ReaderPageBar(state.index, state.total, styles.horizontalMargin, state::previous, state::next)
+            ReaderPageBar(state.index, state.total)
         }
     }
     if (state.chromeVisible && state.preferencesVisible) {
@@ -378,7 +398,7 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
     val contentWidth = with(density) {
         (maxWidth - styles.horizontalMargin * 2).roundToPx()
     }.coerceAtLeast(0)
-    val contentHeight = with(density) { (maxHeight - ChromeHeight - PageBarHeight).roundToPx() }.coerceAtLeast(0)
+    val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
     val pages = remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale) {
         mutableStateListOf<ReaderPage>()
     }
@@ -402,11 +422,15 @@ private suspend fun fillPages(text: AnnotatedString, layout: ReaderLayout, pages
     }
 }
 
+/**
+ * The reader's top band (docs/design.md §6, §7.2): the way back, the book's title
+ * in the theme's muted ink, and the **Aa** control. Nothing else.
+ */
 @Composable
-private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () -> Unit, horizontalMargin: Dp) {
+private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () -> Unit) {
     val texts = LocalAppTexts.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(ChromeHeight).padding(horizontal = horizontalMargin),
+        modifier = Modifier.fillMaxWidth().height(CHROME_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // `arrow-left`, not a word: the reader's band is an icon, a title and the
@@ -422,34 +446,58 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f).padding(start = if (onBack == null) 0.dp else 8.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = LektoSpacing.BetweenRelatedLines)
+                .testTag(READER_TITLE_TAG),
         )
-        TextButton(
+        // The `Aa` icon, not its two letters: the identity's set carries it, and
+        // its description names the control for a screen reader.
+        IconButton(
             onClick = onPreferences,
             modifier = Modifier.handCursor().testTag(READING_PREFERENCES_TAG),
         ) {
-            Text(texts[TextKey.READING_PREFERENCES])
+            Icon(imageVector = LektoIcons.ALargeSmall, contentDescription = texts[TextKey.READING_PREFERENCES])
         }
     }
 }
 
-/** The chrome: page position and the two navigation affordances. */
-@Suppress("LongParameterList") // The page, its count, the margin and the two turns; a bundle would only hide that.
+/**
+ * The bottom band (docs/design.md §6, §7.2): two chevrons that show where the
+ * page's tap zones are, and the position in the theme's muted ink. The chevrons
+ * are **indicators, not buttons** — the thirds of the page turn it — so they
+ * carry no click action and nothing to announce.
+ */
 @Composable
-private fun ReaderPageBar(page: Int, total: Int, horizontalMargin: Dp, onPrevious: () -> Unit, onNext: () -> Unit) {
+private fun ReaderPageBar(page: Int, total: Int) {
     val texts = LocalAppTexts.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(PageBarHeight).padding(horizontal = horizontalMargin),
+        modifier = Modifier.fillMaxWidth().height(PAGE_BAR_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onPrevious, enabled = page > 0, modifier = Modifier.handCursor(page > 0)) {
-            Text(texts[TextKey.PREVIOUS_PAGE])
-        }
-        Text(texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)))
-        TextButton(onClick = onNext, enabled = page < total - 1, modifier = Modifier.handCursor(page < total - 1)) {
-            Text(texts[TextKey.NEXT_PAGE])
-        }
+        TapZoneIndicator(LektoIcons.ChevronLeft, READER_PREVIOUS_INDICATOR_TAG)
+        Text(
+            text = texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(READER_POSITION_TAG),
+        )
+        TapZoneIndicator(LektoIcons.ChevronRight, READER_NEXT_INDICATOR_TAG)
     }
+}
+
+/** One chevron marking a tap zone: drawn as the identity's muted ink, with no action of its own. */
+@Composable
+private fun TapZoneIndicator(imageVector: ImageVector, tag: String) {
+    Icon(
+        imageVector = imageVector,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testTag(tag),
+    )
 }

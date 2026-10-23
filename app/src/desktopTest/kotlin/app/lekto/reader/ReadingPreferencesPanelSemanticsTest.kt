@@ -152,6 +152,30 @@ class ReadingPreferencesPanelSemanticsTest {
         onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
     }
 
+    /**
+     * The page above the sheet is the preview (ADR-0035): a face or margin choice
+     * reaches the reader the moment it is tapped, the sheet stays open, and there
+     * is no separate step to confirm it.
+     */
+    @Test
+    fun aFaceOrMarginChangeAppliesAtOnceWithNoConfirmationStep() = runComposeUiTest {
+        var changed: ReadingPreferences? = null
+        setContent { PreferencesReader(renderer) { next -> changed = next } }
+
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).performClick()
+
+        assertEquals(ReadingFace.SANS_SERIF, assertNotNull(changed).face)
+        onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).assertIsSelected()
+
+        onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).performClick()
+
+        assertEquals(ReadingMargin.WIDE, assertNotNull(changed).margin)
+        onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).assertIsSelected()
+        // The sheet is still the one open surface: the change applied above it.
+        onNodeWithText("Text face").assertIsDisplayed()
+    }
+
     @Test
     fun aSizeChangeRepaginatesTheOpenBook() = runComposeUiTest {
         var changed: ReadingPreferences? = null
