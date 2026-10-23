@@ -34,6 +34,9 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -300,28 +303,57 @@ private fun ColumnScope.ReaderPage(
                 },
             ),
     ) {
-        PageText(tokens, styles, styles.horizontalMargin) { result -> layout = result }
+        PageText(
+            tokens = tokens,
+            styles = styles,
+            horizontalMargin = styles.horizontalMargin,
+            onPrevious = state::previous,
+            onNext = state::next,
+        ) { result -> layout = result }
         // Drawn over the whole page, margins included, so an outside tap dismisses
         // the open panel rather than landing in a tap zone or on a word.
         dismissOverlay?.let { dismiss -> DismissScrim(onDismiss = dismiss) }
     }
 }
 
-/** The page's text, inset by the reading margin; a slice built for this page, styled and selectable. */
+/**
+ * The page's text, inset by the reading margin; a slice built for this page,
+ * styled and selectable. The text also carries the two page turns as
+ * accessibility actions, so a reader who cannot tap a third of the screen —
+ * a screen reader, a switch — keeps the way through the book that the visible
+ * buttons used to give them. The chevrons stay decorative indicators.
+ */
+@Suppress("LongParameterList") // The page's inputs are independent; a bundle would only hide that.
 @Composable
 private fun PageText(
     tokens: ReaderTokens?,
     styles: ReaderStyles,
     horizontalMargin: Dp,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onLayout: (TextLayoutResult) -> Unit,
 ) {
+    val texts = LocalAppTexts.current
     Box(Modifier.fillMaxSize().padding(horizontal = horizontalMargin)) {
         if (tokens != null) {
             SelectionContainer {
                 Text(
                     text = tokens.text,
                     style = styles.body,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics {
+                            customActions = listOf(
+                                CustomAccessibilityAction(texts[TextKey.PREVIOUS_PAGE]) {
+                                    onPrevious()
+                                    true
+                                },
+                                CustomAccessibilityAction(texts[TextKey.NEXT_PAGE]) {
+                                    onNext()
+                                    true
+                                },
+                            )
+                        },
                     onTextLayout = onLayout,
                 )
             }

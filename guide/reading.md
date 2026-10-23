@@ -7,7 +7,9 @@ one page at a time.
 
 Turn pages by tapping the left and right thirds of the page. The two chevrons in
 the bottom bar mark where those zones are. Tapping the middle of the page hides
-both bars so the text fills the screen; tapping again brings them back.
+both bars so the text fills the screen; tapping again brings them back. With a
+screen reader, the page offers **Previous page** and **Next page** as actions, so
+you can still move through the book.
 
 ## Resuming where you left off
 
@@ -26,12 +28,12 @@ so does the system back gesture on Android. Back closes a lookup panel or the
 
 ## Changing how the text looks
 
-Tap **Aa** in the reader's top bar to open the text sheet. Its chips set the text
-face (serif or sans-serif), the text size, and how wide the page margins are.
-There is nothing to confirm: the book repaginates as you tap a chip, so you see
-the effect straight away and stay on the same passage. Close the sheet with
+Tap **Aa** in the reader's top bar to open the **Aa** panel. Its chips set the
+text face (serif or sans-serif), the text size, and how wide the page margins
+are. There is nothing to confirm: the book repaginates as you tap a chip, so you
+see the effect straight away and stay on the same passage. Close the panel with
 **Close**, by tapping **Aa** again, or by tapping the page outside it — a tap
-outside the sheet closes it and does not look a word up.
+outside the panel closes it and does not look a word up.
 
 Your **Reading preference** is kept on this device only. It is not part of your
 vault, so it does not travel with an export or a sync — set it again on another

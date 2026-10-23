@@ -172,6 +172,10 @@ class ReadingPreferencesPanelSemanticsTest {
 
         assertEquals(ReadingMargin.WIDE, assertNotNull(changed).margin)
         onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).assertIsSelected()
+
+        onNodeWithTag(READING_SMALLER_TAG).performClick()
+
+        assertEquals(ReadingPreferences.DEFAULT_SIZE - ReadingPreferences.SIZE_STEP, assertNotNull(changed).size)
         // The sheet is still the one open surface: the change applied above it.
         onNodeWithText("Text face").assertIsDisplayed()
     }

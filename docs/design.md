@@ -117,8 +117,8 @@ The scale actually used, and nothing else:
 ## 4. Shape, elevation and spacing
 
 - **Radii**: 8 dp for controls (buttons, chips, fields, vignettes), 12 dp for surfaces (cards,
-  panels, sections), 16 dp for anything that is a sheet or a dialogue, and the app mark's tile at
-  22 % of its size.
+  panels, sections), 16 dp for anything that is a sheet or a dialogue — a sheet anchored to a
+  screen edge rounds only its free corners — and the app mark's tile at 22 % of its size.
 - **No shadows.** A card is separated by a surface tone and a hairline border; a panel by a
   surface tone and a 1 dp rule. Material's elevation, and the tonal lift that comes with it, is
   what makes an app look like a template.
@@ -378,6 +378,9 @@ the page behind it.
 - A **non-colour indicator** for every highlighted level: the underline.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.
+- The reader's page carries the two page turns as accessibility actions, because its chevrons
+  are indicators rather than buttons: a screen-reader or switch user keeps a way through the
+  book.
 - The language vignette's colour is decoration; its two letters are the information.
 - Every icon either carries a `contentDescription` or sits beside a label that names it.
 - The reading text honours the platform's font scale, and the **Reading preference**'s size stays

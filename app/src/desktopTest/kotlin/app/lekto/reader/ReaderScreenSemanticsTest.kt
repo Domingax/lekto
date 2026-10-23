@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -95,6 +96,22 @@ class ReaderScreenSemanticsTest {
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of", substring = true)
         onNodeWithTag(READER_PREVIOUS_INDICATOR_TAG).assertIsDisplayed().assertHasNoClickAction()
         onNodeWithTag(READER_NEXT_INDICATOR_TAG).assertIsDisplayed().assertHasNoClickAction()
+    }
+
+    /**
+     * The chevrons are indicators, not buttons (docs/design.md §7.2), so the
+     * page carries the two turns as accessibility actions: a reader who cannot
+     * tap a third of the screen keeps a way through the book.
+     */
+    @Test
+    fun thePageOffersTheTwoPageTurnsToAScreenReader() = runComposeUiTest {
+        setContent { Reader(renderer) }
+
+        val actions = onNodeWithText("On the quiet evening", substring = true)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.CustomActions]
+
+        assertEquals(listOf("Previous page", "Next page"), actions.map { action -> action.label })
     }
 
     @Test

@@ -182,8 +182,9 @@ domain behaviour over the in-memory vault in `core/commonTest` and the directory
 vault in `core/jvmTest`, so a book cannot lose its place on export, import or a
 re-parse; its serialise/parse is a property in
 `core/commonTest/.../ReadingPositionRecordPropertyTest`. The reader's UI
-semantics — opening at a saved offset, paging with the left/right tap zones, and
-a tap on the middle receding the two bands — live in
+semantics — opening at a saved offset, paging with the left/right tap zones, the
+page's two page-turn accessibility actions, and a tap on the middle receding the
+two bands — live in
 `app/desktopTest/.../ReaderScreenSemanticsTest`, injected with the Compose test
 API's pointer injection (`performTouchInput`), and the whole loop (open, turn,
 leave, reopen at the same page) in `AppSemanticsTest` against an in-memory

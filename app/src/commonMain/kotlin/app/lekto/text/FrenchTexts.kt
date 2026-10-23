@@ -64,6 +64,8 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.NO_WORDS_AT_LEVEL to "Aucun mot au niveau {0}.",
 
     // Reader.
+    TextKey.PREVIOUS_PAGE to "Page précédente",
+    TextKey.NEXT_PAGE to "Page suivante",
     TextKey.PAGE_OF to "Page {0} sur {1}",
     TextKey.READING_PREFERENCES to "Aa",
     TextKey.READING_TEXT to "Texte",

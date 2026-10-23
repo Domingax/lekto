@@ -86,6 +86,8 @@ enum class TextKey {
     NO_WORDS_AT_LEVEL,
 
     // Reader.
+    PREVIOUS_PAGE,
+    NEXT_PAGE,
     PAGE_OF,
     READING_PREFERENCES,
     READING_TEXT,

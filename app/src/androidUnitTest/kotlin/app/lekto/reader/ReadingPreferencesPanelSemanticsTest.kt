@@ -187,6 +187,12 @@ class ReadingPreferencesPanelSemanticsTest {
         assertNotNull("the panel must raise a change", margin)
         assertEquals(ReadingMargin.WIDE, margin!!.margin)
         compose.onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).assertIsSelected()
+
+        compose.onNodeWithTag(READING_SMALLER_TAG).performClick()
+
+        val size = changed
+        assertNotNull("the panel must raise a change", size)
+        assertEquals(ReadingPreferences.DEFAULT_SIZE - ReadingPreferences.SIZE_STEP, size!!.size)
         // The sheet is still the one open surface: the change applied above it.
         compose.onNodeWithText("Text face").assertIsDisplayed()
     }
