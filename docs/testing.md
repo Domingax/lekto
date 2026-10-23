@@ -182,8 +182,9 @@ domain behaviour over the in-memory vault in `core/commonTest` and the directory
 vault in `core/jvmTest`, so a book cannot lose its place on export, import or a
 re-parse; its serialise/parse is a property in
 `core/commonTest/.../ReadingPositionRecordPropertyTest`. The reader's UI
-semantics — opening at a saved offset, paging with the buttons and the
-left/right tap zones, and a tap on the middle receding the chrome — live in
+semantics — opening at a saved offset, paging with the left/right tap zones, the
+page's two page-turn accessibility actions, and a tap on the middle receding the
+two bands — live in
 `app/desktopTest/.../ReaderScreenSemanticsTest`, injected with the Compose test
 API's pointer injection (`performTouchInput`), and the whole loop (open, turn,
 leave, reopen at the same page) in `AppSemanticsTest` against an in-memory
@@ -211,7 +212,14 @@ adds one `library-<paper>.png` per paper (issue #208): the shelf's frame — the
 search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
 rule and the hairline that parts two rows — on four books across three languages.
 Its geometry comes from the screen's own constants and its rule from the screen's
-own composable; only the words are bars, because glyphs would not verify. A text-bearing golden waits on
+own composable; only the words are bars, because glyphs would not verify. The
+reader adds `reader-<paper>.png` per paper (issue #209): the 48 dp top band with
+its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
+chevrons that mark the tap zones and turn the page, and the position, and one
+`reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
+hairline and its printed-form rows of chip frames, each unselected chip on the
+paper behind it, with the page and the bottom band pushed up rather than covered.
+A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 
@@ -312,8 +320,8 @@ in `VocabularyScreenSemanticsTest` as its own guard.
 The reader's page — a `SelectionContainer` over an `AnnotatedString` whose
 words are clickable `LinkAnnotation`s, paginated by the platform text stack — is
 also proved on this lane (issue #75): `ReaderScreenSemanticsTest`
-opens at a saved offset, turns pages by button and by tap zone, and toggles the
-chrome on the runtime Android uses. Robolectric lays glyphs out far more tightly
+opens at a saved offset, turns pages by tapping the zones, and toggles the chrome
+on the runtime Android uses. Robolectric lays glyphs out far more tightly
 than a device font, so the twin uses a longer chapter than the desktop test's
 sample; the assertions are about behaviour, not a pinned page count.
 
