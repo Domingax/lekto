@@ -259,7 +259,8 @@ The lookup panel and the chapter list are never open together.
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
 at once, and the page number and total update as pagination counts them.
 
-The **`Aa` panel** is a square sheet anchored to the bottom edge, of printed-form rows (`Text
+The **`Aa` panel** sits under the bottom band, in the column: opening it shortens the page and
+lifts the band, so the text is never covered. It is a square panel of printed-form rows (`Text
 face`, `Text size`, `Margins`: `Serif`/`Sans-serif`, `Narrow`/`Comfortable`/`Wide`) whose values
 are chips. An unselected chip carries the paper behind it, so it reads as a field on the panel
 rather than a hole in it. The panel sets the face, the size and the margins, and previews live:

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -48,11 +47,11 @@ import kotlin.test.Test
  * The reader's chrome in the screenshot lane (issue #209; docs/design.md §6,
  * §7.2): the top band (back, book title, **Aa**) and the bottom band (the two
  * tap-zone chevrons and the position), one sheet per **App theme**, plus the
- * **Aa** sheet open on the light paper.
+ * **Aa** panel open on the light paper.
  *
  * It is deliberately text-free, like the other goldens: glyphs are rendered with
  * the host's fonts and would not verify on another machine. The bands, their
- * heights, their padding, the four real icons, the sheet's radius and its chip
+ * heights, their padding, the four real icons, the panel's square edge and its chip
  * frames are drawn by this preview; only the words are bars. The semantics suite
  * proves the text and the interactions. Record with
  * `./gradlew :app:recordRoborazziDesktop`; verify with
@@ -103,6 +102,9 @@ private val PAGE_LINE_SHARES = listOf(0.96f, 0.92f, 0.95f, 0.9f, 0.93f, 0.6f, 0.
 /** A chip's visible height inside its 48 dp touch target. */
 private val CHIP_HEIGHT = 28.dp
 
+/** How many page lines still fit above the open **Aa** panel in the preview. */
+private const val PANEL_PAGE_LINES = 5
+
 /** The three chip frames the size row draws: the step down, the value and the step up. */
 private val STEP_CHIP_WIDTH = 32.dp
 
@@ -112,18 +114,17 @@ private val MARGIN_CHIP_WIDTHS = listOf(58.dp, 92.dp, 48.dp)
 
 /**
  * The reader's frame: the top band, the page and the bottom band; the **Aa**
- * sheet sits over the page when [panelOpen] is set (docs/design.md §7.2).
+ * panel joins the column when [panelOpen] is set, so it pushes the page and the
+ * bottom band up instead of covering them (docs/design.md §7.2).
  */
 @Composable
 private fun ReaderPreview(panelOpen: Boolean) {
     val theme = MaterialTheme.colorScheme
-    Box(Modifier.size(width = READER_WIDTH, height = READER_HEIGHT).background(theme.background)) {
-        Column(Modifier.fillMaxSize()) {
-            ChromeBand()
-            PageLines()
-            PageBarBand()
-        }
-        if (panelOpen) TextPanel(Modifier.align(Alignment.BottomCenter))
+    Column(Modifier.size(width = READER_WIDTH, height = READER_HEIGHT).background(theme.background)) {
+        ChromeBand()
+        PageLines(panelOpen)
+        PageBarBand()
+        if (panelOpen) TextPanel()
     }
 }
 
@@ -145,10 +146,14 @@ private fun ChromeBand() {
     }
 }
 
-/** The book's page as bars: the reading margin on each side and the paragraph rhythm. */
+/**
+ * The book's page as bars: the reading margin on each side and the paragraph
+ * rhythm. The panel takes room from the page, so it shows fewer lines while open.
+ */
 @Composable
-private fun ColumnScope.PageLines() {
+private fun ColumnScope.PageLines(panelOpen: Boolean) {
     val theme = MaterialTheme.colorScheme
+    val lines = if (panelOpen) PAGE_LINE_SHARES.take(PANEL_PAGE_LINES) else PAGE_LINE_SHARES
     Column(
         modifier = Modifier
             .weight(1f)
@@ -156,7 +161,7 @@ private fun ColumnScope.PageLines() {
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
-        PAGE_LINE_SHARES.forEach { share ->
+        lines.forEach { share ->
             Line(theme.onBackground, PAGE_LINE_BAR.copy(share = share))
         }
     }
@@ -193,15 +198,15 @@ private fun BandIcon(imageVector: ImageVector, tint: Color) {
 }
 
 /**
- * The **Aa** sheet: the surface tone and the hairline, square because it meets
+ * The **Aa** panel: the surface tone and the hairline, square because it meets
  * the bottom edge, then a name and **Close**, and the three printed-form rows of
  * chips.
  */
 @Composable
-private fun TextPanel(modifier: Modifier) {
+private fun TextPanel() {
     val theme = MaterialTheme.colorScheme
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .background(theme.surface)
             .border(1.dp, theme.outline)
@@ -224,7 +229,7 @@ private fun TextPanel(modifier: Modifier) {
     }
 }
 
-/** The sheet's name and its way out. */
+/** The panel's name and its way out. */
 @Composable
 private fun PanelHeader() {
     val theme = MaterialTheme.colorScheme
@@ -251,7 +256,7 @@ private fun PanelRow(chips: @Composable () -> Unit) {
     }
 }
 
-/** A chip's visible frame: filled with ink when selected, paper against the sheet otherwise. */
+/** A chip's visible frame: filled with ink when selected, paper against the panel otherwise. */
 @Composable
 private fun Chip(width: Dp, selected: Boolean) {
     val theme = MaterialTheme.colorScheme

@@ -147,6 +147,23 @@ class ReadingPreferencesPanelSemanticsTest {
         compose.onNodeWithText("Text face").assertIsDisplayed()
     }
 
+    /**
+     * The panel joins the column under the bottom band, so it pushes the page and
+     * the position line up rather than covering them (docs/design.md §7.2).
+     */
+    @Test
+    fun thePanelPushesTheBandUpInsteadOfCoveringThePage() {
+        compose.setContent { PreferencesReader(renderer) }
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+
+        val page = compose.onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+        val position = compose.onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode().boundsInRoot
+        val panel = compose.onNodeWithTag(READING_PREFERENCES_PANEL_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue("the position must stay above the panel", position.bottom <= panel.top)
+        assertTrue("the page must end above the position band", page.bottom <= position.top)
+    }
+
     @Test
     fun tappingOutsideThePanelDismissesItWithoutTappingAWord() {
         var tappedWord = false

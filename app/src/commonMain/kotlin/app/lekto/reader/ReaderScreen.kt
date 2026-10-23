@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -135,16 +136,16 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
         buildChapterText(document.chapter, styles)
     }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val pages = rememberReaderPages(chapterText, styles)
         val state = remember(document.chapter) { ReaderState(actions.onPositionChange) }
-        state.bind(pages, chapterText.length, document.initialOffset)
         ReaderContent(document, chapterText, styles, state, actions)
     }
 }
 
 /**
- * The reader's chrome, page and **Aa** panel. A tap on the page closes whatever
- * panel is open above it — the **Aa** panel or a lookup — and the page scrim keeps
+ * The reader's chrome, page and **Aa** panel. The panel is part of the column, not
+ * an overlay: opening it shortens the page and lifts the bottom band, so it never
+ * covers the text (docs/design.md §7.2). A tap on the page closes whatever panel is
+ * open — the **Aa** panel below it or a lookup above it — and the page scrim keeps
  * that tap from looking a word up or turning the page. The chrome stays usable.
  */
 @Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
@@ -156,6 +157,18 @@ private fun BoxWithConstraintsScope.ReaderContent(
     state: ReaderState,
     actions: ReaderActions,
 ) {
+    // The panel's measured height is what the page above it loses. The first frame
+    // after it opens is laid out before the measurement lands; the page then
+    // repaginates around the same anchor.
+    var panelHeightPx by remember { mutableStateOf(0) }
+    val panelHeight = if (state.chromeVisible && state.preferencesVisible) {
+        with(LocalDensity.current) { panelHeightPx.toDp() }
+    } else {
+        0.dp
+    }
+    val pages = rememberReaderPages(chapterText, styles, panelHeight)
+    state.bind(pages, chapterText.length, document.initialOffset)
+
     Column(Modifier.fillMaxSize()) {
         if (state.chromeVisible) {
             ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences)
@@ -172,14 +185,14 @@ private fun BoxWithConstraintsScope.ReaderContent(
         if (state.chromeVisible && state.page != null) {
             ReaderPageBar(state.index, state.total, state::previous, state::next)
         }
-    }
-    if (state.chromeVisible && state.preferencesVisible) {
-        ReadingPreferencesPanel(
-            preferences = document.preferences,
-            onChange = actions.onReadingPreferencesChange,
-            onDismiss = state::dismissPreferences,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        if (state.chromeVisible && state.preferencesVisible) {
+            ReadingPreferencesPanel(
+                preferences = document.preferences,
+                onChange = actions.onReadingPreferencesChange,
+                onDismiss = state::dismissPreferences,
+                modifier = Modifier.onSizeChanged { size -> panelHeightPx = size.height },
+            )
+        }
     }
     // Back closes the **Aa** panel before the shell sees it (issue #185), the way a
     // tap outside the panel does.
@@ -423,13 +436,16 @@ private fun readerSurfaceTap(
 private fun BoxWithConstraintsScope.rememberReaderPages(
     chapterText: AnnotatedString,
     styles: ReaderStyles,
+    reservedHeight: Dp,
 ): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val contentWidth = with(density) {
         (maxWidth - styles.horizontalMargin * 2).roundToPx()
     }.coerceAtLeast(0)
-    val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
+    val contentHeight = with(density) {
+        (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT - reservedHeight).roundToPx()
+    }.coerceAtLeast(0)
     val pages = remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale) {
         mutableStateListOf<ReaderPage>()
     }

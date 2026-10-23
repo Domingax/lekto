@@ -37,6 +37,9 @@ import app.lekto.ui.swallowTaps
 /** The test tag on the reader's **Aa** control, so a UI test can open the panel exactly. */
 const val READING_PREFERENCES_TAG: String = "reader-reading-preferences"
 
+/** The test tag on the panel itself, so a layout test can read where it sits. */
+const val READING_PREFERENCES_PANEL_TAG: String = "reader-reading-preferences-panel"
+
 /** The test tag on the panel's **Close** action, so a UI test can dismiss the panel exactly. */
 const val READING_PREFERENCES_CLOSE_TAG: String = "reader-reading-preferences-close"
 
@@ -54,7 +57,7 @@ internal fun readerMarginTag(margin: ReadingMargin): String = "reader-margin-${m
 private val Hairline = 1.dp
 
 /**
- * The reader's **Aa** panel (ADR-0035; docs/design.md §7.2): a square sheet
+ * The reader's **Aa** panel (ADR-0035; docs/design.md §7.2): a square panel
  * anchored to the bottom edge, of printed-form rows — `Text face`, `Text size`,
  * `Margins` — whose values are chips. It owns no state: it renders [preferences]
  * and raises the whole next value through [onChange], so the page above
@@ -62,7 +65,7 @@ private val Hairline = 1.dp
  * confirm**: the page above is the preview.
  *
  * The App theme is not here — it recolours the app, not the book, and lives in
- * Settings ▸ Appearance (ADR-0035, ADR-0036). [onDismiss] is the sheet's own
+ * Settings ▸ Appearance (ADR-0035, ADR-0036). [onDismiss] is the panel's own
  * **Close**, and the reader also dismisses on a tap outside it, so the panel is
  * never a trap. The panel swallows taps that land on it, so only a tap truly
  * outside it dismisses.
@@ -79,7 +82,7 @@ internal fun ReadingPreferencesPanel(
 ) {
     val theme = MaterialTheme.colorScheme
     Surface(
-        modifier = modifier.fillMaxWidth().swallowTaps(),
+        modifier = modifier.fillMaxWidth().testTag(READING_PREFERENCES_PANEL_TAG).swallowTaps(),
         color = theme.surface,
         border = BorderStroke(Hairline, theme.outline),
     ) {
@@ -97,7 +100,7 @@ internal fun ReadingPreferencesPanel(
     }
 }
 
-/** The sheet's own name and its way out, for a reader who does not think to tap outside it. */
+/** The panel's own name and its way out, for a reader who does not think to tap outside it. */
 @Composable
 private fun SheetHeader(onDismiss: () -> Unit) {
     val texts = LocalAppTexts.current
@@ -270,7 +273,7 @@ private fun StepChip(
 
 /**
  * A chip's visible shape inside its 48 dp touch target: ink when selected, and
- * otherwise the theme's paper lifted against the sheet — a chip has to read as a
+ * otherwise the theme's paper lifted against the panel — a chip has to read as a
  * field on the panel, not as a hole in it (the sepia paper makes this plainest).
  */
 @Composable
