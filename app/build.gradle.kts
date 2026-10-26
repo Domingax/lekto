@@ -1,5 +1,6 @@
 @file:OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
 
+import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The Compose Multiplatform application. The same `App()` composable runs on
@@ -155,6 +156,22 @@ compose.desktop {
     }
 }
 
+// The desktop icon rasters (issue #177). The mark's geometry lives in one place,
+// the SVGs under `tools/icons/mark/`; `tools/icons/mark.sh` writes the two vector
+// drawables this task reads, and the PNG, ICO and ICNS it produces are committed,
+// the way the Lucide `ImageVector` set is. It has to live in `app` rather than in
+// `tools/`: nothing may depend on `app`, and the renderer needs the desktop
+// classpath, where Skia already is through Compose.
+val renderAppIcon by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Renders the committed desktop icon rasters from the generated vector drawables."
+    dependsOn("desktopMainClasses")
+    workingDir = projectDir
+    val desktopMain = kotlin.targets.getByName("desktop").compilations.getByName("main")
+    classpath(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
+    mainClass.set("app.lekto.tools.RenderAppIconKt")
+}
+
 if (androidEnabled) {
     // The Compose test rule starts a host Activity; `ui-test-manifest` contributes
     // it to the debug app the Robolectric host tests run against (issue #71). The
@@ -187,4 +204,14 @@ if (androidEnabled) {
 roborazzi {
     outputDir.set(layout.projectDirectory.dir("src/desktopTest/goldens"))
     separateOutputDirs.set(true)
+}
+
+// `AppIconTest` and `LauncherIconTest` read the Android source set at runtime, by
+// path, which Gradle cannot see: without this input, changing the mark and running
+// `check` reports the goldens UP-TO-DATE and verifies the drawing that was there
+// before. Declaring the tree makes both tests rerun when it moves.
+tasks.matching { it.name == "desktopTest" }.configureEach {
+    inputs.dir(layout.projectDirectory.dir("src/androidMain"))
+        .withPropertyName("androidSourceSet")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }

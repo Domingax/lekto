@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launch screen on a dark platform (issue #177; docs/design.md §7.7):
+         the Dark paper and the launcher's own layer. See `values-v31` for why the
+         paper is the platform's rather than the stored theme's, and why the
+         attributes are restated here rather than inherited. -->
+    <style name="Theme.Lekto" parent="@style/LektoPaper.Dark">
+        <item name="android:windowSplashScreenBackground">@color/lekto_paper_dark</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

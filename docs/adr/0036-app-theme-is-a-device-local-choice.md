@@ -61,3 +61,11 @@ looks rather than a contract the app must keep, so they live in `docs/design.md`
 `app/src/commonMain/kotlin/app/lekto/theme/`, not in an ADR. The one rule this ADR does fix is
 that the mastery ramps are measured against their own background, because an inaccessible palette
 is a defect rather than a taste.
+
+## Update — the launch screen is the platform's paper
+
+The starting window Android 12 draws before the app runs is built from the theme the manifest
+declares, not from the stored choice: it can read the device's light-or-dark setting and nothing
+else. An app set to Sepia on a light device therefore launches on the Light paper, and Sepia never
+appears at launch; the app's own window and every screen follow the choice from the first frame.
+`docs/design.md` §7.7 states the limit and `values-v31` says it where the attributes live.

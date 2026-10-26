@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launch screen Android 12 paints (issue #177; docs/design.md §7.7).
+         There is no launch screen to design, only a paper and a mark: the
+         platform's paper, and the launcher's own layer.
+
+         That paper is the *platform's*, not the stored App theme's: the starting
+         window is built from this manifest theme before the process starts, so it
+         can read the device's light-or-dark setting and nothing else. A reader who
+         chose Sepia on a light device launches on the Light paper; Sepia never
+         appears there. MainActivity's theme follows the choice from the first
+         frame on. That is the honest limit of a window the system owns.
+
+         These styles restate the paper themes because a style in a qualified
+         folder replaces the one it shares a name with. The paper itself stays in
+         `values`, named as a `parent`. -->
+    <style name="Theme.Lekto" parent="@style/LektoPaper.Light">
+        <item name="android:windowSplashScreenBackground">@color/lekto_paper_light</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+
+    <style name="Theme.Lekto.Light" parent="@style/LektoPaper.Light">
+        <item name="android:windowSplashScreenBackground">@color/lekto_paper_light</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+
+    <style name="Theme.Lekto.Dark" parent="@style/LektoPaper.Dark">
+        <item name="android:windowSplashScreenBackground">@color/lekto_paper_dark</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+
+    <style name="Theme.Lekto.Sepia" parent="@style/LektoPaper.Sepia">
+        <item name="android:windowSplashScreenBackground">@color/lekto_paper_sepia</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

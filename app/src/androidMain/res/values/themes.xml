@@ -9,35 +9,45 @@
 
          Each Light and Sepia theme keeps the platform's Light base, so anything
          Android draws outside Compose (a text cursor, a selection) is inked for a
-         light surface; Dark uses the dark base. -->
-    <style name="Theme.Lekto" parent="@android:style/Theme.Material.Light.NoActionBar">
+         light surface; Dark uses the dark base.
+
+         The papers live in `LektoPaper.*` so that `values-v31`, which has
+         to restate the theme to add the launch-screen attributes, inherits the
+         paper instead of copying it (issue #177). A style in a qualified folder
+         replaces the one it shares a name with, so only a base it can name in a
+         `parent` is reused. -->
+    <style name="LektoPaper.Light" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/lekto_paper_light</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <!-- An explicitly chosen Light paper, on a platform of either setting. -->
-    <style name="Theme.Lekto.Light" parent="@android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/lekto_paper_light</item>
+    <!-- A paper no platform setting selects, so it is never a default. -->
+    <style name="LektoPaper.Sepia" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/lekto_paper_sepia</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <!-- An explicitly chosen Dark paper, on a platform of either setting. -->
-    <style name="Theme.Lekto.Dark" parent="@android:style/Theme.Material.NoActionBar">
+    <style name="LektoPaper.Dark" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/lekto_paper_dark</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
+    <!-- The manifest's theme. On a dark platform `values-night` makes it the Dark
+         paper; here, on a light one, it is the Light paper. -->
+    <style name="Theme.Lekto" parent="@style/LektoPaper.Light" />
+
+    <!-- An explicitly chosen Light paper, on a platform of either setting. -->
+    <style name="Theme.Lekto.Light" parent="@style/LektoPaper.Light" />
+
+    <!-- An explicitly chosen Dark paper, on a platform of either setting. -->
+    <style name="Theme.Lekto.Dark" parent="@style/LektoPaper.Dark" />
+
     <!-- An explicitly chosen Sepia paper, which no platform setting selects. -->
-    <style name="Theme.Lekto.Sepia" parent="@android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/lekto_paper_sepia</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-    </style>
+    <style name="Theme.Lekto.Sepia" parent="@style/LektoPaper.Sepia" />
 </resources>
