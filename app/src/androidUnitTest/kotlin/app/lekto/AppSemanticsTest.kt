@@ -11,12 +11,14 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -447,6 +449,30 @@ class AppSemanticsTest {
 
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         compose.awaitPage(2)
+    }
+
+    @Test
+    fun aWordAtThePageBottomIsLiftedAboveTheLookupPanel() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        compose.openBook()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodes(WORD_LINK).fetchSemanticsNodes().isNotEmpty()
+        }
+        val lastWord = compose.onAllNodes(WORD_LINK).onLast()
+        lastWord.performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+
+        // The sheet never covers the word the reader touched: the page is lifted
+        // under it, without repaginating. The page number is unchanged.
+        compose.awaitPage(1)
+        val word = lastWord.getUnclippedBoundsInRoot()
+        val panel = compose.onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
+        assertTrue(
+            "the tapped word ends at ${word.bottom} dp, under the panel's ${panel.top} dp",
+            word.bottom.value <= panel.top.value + 1f,
+        )
     }
 
     @Test

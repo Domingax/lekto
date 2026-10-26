@@ -283,10 +283,12 @@ opens at the saved position, not on this state.
 ### 7.3 The lookup panel
 
 Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
-and the touched word still washed above it. A sheet, not an outlined card: the top corners take
-the 16 dp sheet radius, the surface tone and a hairline, and a drag handle marks where it was
-raised from. On desktop it is the context column instead, and closing the word returns the column
-to the chapter list.
+and the touched word still washed above it. The page **lifts** under the sheet by just enough to
+clear the word: it is not repaginated, so the page number and the page count do not move, and the
+top of the page is clipped for as long as the sheet is open — a transient state, not a new page.
+A sheet, not an outlined card: the top corners take the 16 dp sheet radius, the surface tone and a
+hairline, and a drag handle marks where it was raised from. On desktop it is the context column
+instead, and closing the word returns the column to the chapter list.
 
 A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
 inflection, its parts of speech and pronunciation, the speaker and the close action; then the

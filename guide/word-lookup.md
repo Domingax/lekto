@@ -5,8 +5,10 @@ Tap a **Word token** while reading to open the lookup panel for that word.
 ## What the panel shows
 
 The panel rises from the bottom of the page and never covers more than a little
-under half of it, so the sentence you are reading stays in view. The word you
-touched stays highlighted behind it.
+under half of it. The page slides up under the panel just enough to keep the word
+you touched in view, and that word stays highlighted. The page number does not
+change: the page is not split again, and the top of it is hidden for as long as
+the panel is open.
 
 - The word in the reading serif, with its part of speech and pronunciation under
   it.

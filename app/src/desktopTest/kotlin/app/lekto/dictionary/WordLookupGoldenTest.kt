@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
@@ -56,9 +58,10 @@ import kotlin.test.Test
  * the sheet's frame — the top corners at the sheet radius, the surface tone and
  * the hairline, the drag handle, the word and its muted meta line, the two real
  * icons, the numbered senses with their translations, the level named beside the
- * five chips, and the references as one muted line — over a page that stays
- * visible above the 45 % cap. The page's washed word shows why the reader keeps
- * their place. The semantics suite proves the text and the interactions.
+ * five chips, and the references as one muted line — over a page lifted under
+ * the sheet by just enough to keep the washed word in view, its first line
+ * clipped at the top and its page number unchanged. The semantics suite proves
+ * the text, the lift and the interactions.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with
  * `./gradlew :app:verifyRoborazziDesktop`.
@@ -115,8 +118,18 @@ private val LEVEL_NAME_BAR = LineBar(height = 12.dp, share = 0.18f)
 private val CHIP_LABEL_BAR = LineBar(height = 9.dp, share = 0.4f)
 private val REFERENCE_BARS = listOf(58.dp, 30.dp, 30.dp, 76.dp)
 
-/** The page's lines above the sheet, with a shorter one where a paragraph ends. */
-private val PAGE_LINE_SHARES = listOf(0.94f, 0.9f, 0.52f, 0.96f, 0.88f, 0.94f, 0.62f, 0.9f, 0.48f)
+/**
+ * The page's lines: twenty, so the washed word lands just above the sheet, and
+ * the first one is clipped at the top — the reader has lifted the page under the
+ * sheet, not repaginated it.
+ */
+private val PAGE_LINE_SHARES = listOf(
+    0.94f, 0.9f, 0.52f, 0.96f, 0.88f, 0.94f, 0.62f, 0.9f, 0.93f, 0.48f,
+    0.95f, 0.9f, 0.94f, 0.88f, 0.6f, 0.96f, 0.9f, 0.93f, 0.86f, 0.72f,
+)
+
+/** How far the page is lifted in the preview, so its first line is clipped. */
+private val PAGE_LIFT = 24.dp
 
 /**
  * The page, the washed word and the sheet raised over it. The page keeps its
@@ -149,14 +162,22 @@ private fun LookupPreview(offline: Boolean) {
 private fun PageBehind() {
     val theme = MaterialTheme.colorScheme
     Column(
-        modifier = Modifier.fillMaxWidth().padding(
-            horizontal = LektoSpacing.ScreenEdge,
-            vertical = LektoSpacing.InsidePanel,
-        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+            .padding(
+                horizontal = LektoSpacing.ScreenEdge,
+                vertical = LektoSpacing.InsidePanel,
+            )
+            .offset(y = -PAGE_LIFT),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
         PAGE_LINE_SHARES.forEachIndexed { index, share ->
-            if (index == 2) WashedLine(share) else Line(theme.onBackground, LineBar(height = 10.dp, share = share))
+            if (index == PAGE_LINE_SHARES.lastIndex) {
+                WashedLine(share)
+            } else {
+                Line(theme.onBackground, LineBar(height = 10.dp, share = share))
+            }
         }
     }
 }

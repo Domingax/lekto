@@ -840,9 +840,13 @@ and a previous session's save is present at startup — is a `VocabularyControll
 in `app/desktopTest`, and the panel's level chips are its save (issue #210):
 `WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
 no separate Save control exists, that the current level is named beside the
-chips, and that the sheet covers at most 45 % of the screen. The whole loop — tap
-a word, choose a level so it is saved with its context, change the level
-afterwards, and find an earlier session's entry already at its level — runs
+chips, and that the sheet covers at most 45 % of the screen. `AppSemanticsTest`
+also drives the reader's lift: a word at the bottom of the page is tapped, the
+sheet opens, and the word's bounds are asserted above the sheet's top while the
+page number stays put — the page rises under the sheet without repaginating.
+The whole loop — tap a word, choose a level so it is saved with its context,
+change the level afterwards, and find an earlier session's entry already at its
+level — runs
 through `AppSemanticsTest` against the in-memory
 vocabulary, including that saving an inflected form does not create a second
 entry; its same-named `app/androidUnitTest` twin (issue #79) re-proves the save

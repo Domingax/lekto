@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
@@ -879,7 +880,7 @@ private fun libraryActions(
 private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
 
 /** The reader over an opened [session], with a way back to the library and the lookup panel. */
-@Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.
+@Suppress("LongParameterList", "LongMethod") // The reader's independent inputs and its one wiring.
 @Composable
 private fun ReaderSession(
     session: ReadingSession,
@@ -900,6 +901,9 @@ private fun ReaderSession(
         language = session.book.language,
         blocks = session.text.blocks,
     )
+    // The word sheet's measured height, so the page can lift under it and keep
+    // the touched word visible without repaginating (issue #210).
+    var wordPanelHeightPx by remember { mutableStateOf(0) }
     Box(Modifier.fillMaxSize()) {
         ReaderScreen(
             document = ReaderDocument(
@@ -926,14 +930,25 @@ private fun ReaderSession(
                 // it closes it, rather than looking a word up or turning the page.
                 onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
             ),
+            overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
         )
-        LookupOverlays(lookup, session.book.language, environment.openUrl)
+        LookupOverlays(
+            lookup = lookup,
+            language = session.book.language,
+            openUrl = environment.openUrl,
+            onWordPanelHeight = { height -> wordPanelHeightPx = height },
+        )
     }
 }
 
 /** The panel for the open word or phrase, bottom-aligned over the reader. */
 @Composable
-private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: (String) -> Unit) {
+private fun BoxScope.LookupOverlays(
+    lookup: Lookup,
+    language: String?,
+    openUrl: (String) -> Unit,
+    onWordPanelHeight: (Int) -> Unit,
+) {
     lookup.selection?.let { selected ->
         LookupPanel(
             selected = selected,
@@ -942,6 +957,7 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
             translationLanguage = lookup.translationLanguage,
             openUrl = openUrl,
             onDismiss = lookup.onDismiss,
+            onPanelHeight = onWordPanelHeight,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -969,6 +985,7 @@ private fun LookupPanel(
     translationLanguage: String?,
     openUrl: (String) -> Unit,
     onDismiss: () -> Unit,
+    onPanelHeight: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val token = selected.tap.token
@@ -986,7 +1003,7 @@ private fun LookupPanel(
         ),
         pronunciation = pronunciation,
         vocabulary = vocabulary,
-        modifier = modifier,
+        modifier = modifier.onSizeChanged { size -> onPanelHeight(size.height) },
     )
 }
 

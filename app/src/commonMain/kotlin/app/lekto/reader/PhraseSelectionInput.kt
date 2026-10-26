@@ -3,6 +3,7 @@ package app.lekto.reader
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
@@ -31,14 +32,15 @@ internal fun Modifier.phraseSelectionInput(
     words: () -> List<WordToken>,
     layout: () -> TextLayoutResult?,
     marginPx: Int,
+    liftPx: Float,
     chapter: String,
     pageStart: Int,
     onSelecting: (IntRange?) -> Unit,
     onSelected: (PhraseSelection) -> Unit,
-): Modifier = pointerInput(marginPx, chapter, pageStart) {
+): Modifier = pointerInput(marginPx, liftPx, chapter, pageStart) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val anchor = wordIndexAt(down.position, marginPx, words(), layout(), snapToNearest = true)
+        val anchor = wordIndexAt(down.position.lifted(liftPx), marginPx, words(), layout(), snapToNearest = true)
             ?: return@awaitEachGesture
         awaitLongPress(down) ?: return@awaitEachGesture
         var current = anchor
@@ -50,7 +52,13 @@ internal fun Modifier.phraseSelectionInput(
                 dragging = false
             } else {
                 change.consume()
-                wordIndexAt(change.position, marginPx, words(), layout(), snapToNearest = true)?.let { index ->
+                wordIndexAt(
+                    change.position.lifted(liftPx),
+                    marginPx,
+                    words(),
+                    layout(),
+                    snapToNearest = true,
+                )?.let { index ->
                     current = index
                     onSelecting(phraseRangeAt(words(), anchor, current))
                 }
@@ -60,6 +68,9 @@ internal fun Modifier.phraseSelectionInput(
         onSelected(phraseInChapter(chapter, pageStart, phraseRangeAt(words(), anchor, current)))
     }
 }
+
+/** The pointer position in the text's own coordinates when the page is lifted by [liftPx]. */
+private fun Offset.lifted(liftPx: Float): Offset = Offset(x, y + liftPx)
 
 /**
  * Waits for a long press on [down] on the **initial** pass, so the touch is seen
