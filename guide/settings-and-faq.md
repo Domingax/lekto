@@ -41,7 +41,7 @@ Import reports a failure rather than blocking. Check the format: EPUB and TXT ar
 first-class, while PDF is best-effort and a scanned PDF may not extract. See
 [Import](/import).
 
-### I hear nothing when I tap Listen
+### I hear nothing when I tap the speaker icon
 
 The language may have no voice installed on your device. Lekto says so instead of
 failing. Install a voice for that language in your system settings and try again.

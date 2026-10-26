@@ -68,6 +68,9 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.core.vocabulary.VocabularyRecord
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
+import app.lekto.dictionary.LOOKUP_CLOSE_TAG
+import app.lekto.dictionary.LOOKUP_PANEL_TAG
+import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
@@ -350,7 +353,7 @@ class AppSemanticsTest {
         openBook()
         tapFirstWord()
 
-        onNodeWithText("Look it up online").assertIsDisplayed()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // No pack is wired, so the panel degrades to the honest message and the
         // reference shortcuts (issue #19).
         onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
@@ -391,13 +394,13 @@ class AppSemanticsTest {
         awaitPage(2)
 
         tapFirstWord()
-        onNodeWithText("Look it up online").assertIsDisplayed()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The reader stays put behind the panel, at the same page.
         awaitPage(2)
 
-        onNodeWithText("Close").performClick()
+        onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
 
-        onNodeWithText("Look it up online").assertDoesNotExist()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         awaitPage(2)
     }
 
@@ -411,13 +414,13 @@ class AppSemanticsTest {
         awaitPage(2)
 
         tapFirstWord()
-        onNodeWithText("Look it up online").assertIsDisplayed()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
 
         // A tap on the page, above the panel, is outside it: it closes the panel
         // and does not turn the page.
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
-        onNodeWithText("Look it up online").assertDoesNotExist()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         awaitPage(2)
     }
 
@@ -474,7 +477,7 @@ class AppSemanticsTest {
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
         onNodeWithText("Translate online").assertDoesNotExist()
-        onNodeWithText("Look it up online").assertDoesNotExist()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         awaitPage(2)
     }
 
@@ -541,7 +544,7 @@ class AppSemanticsTest {
 
         openBook()
         tapFirstWord()
-        onNodeWithText("Listen").performClick()
+        onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         val (text, language) = pronouncer.utterances.single()
@@ -557,7 +560,7 @@ class AppSemanticsTest {
 
         openBook()
         tapFirstWord()
-        onNodeWithText("Listen").performClick()
+        onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         waitForIdle()
@@ -571,7 +574,7 @@ class AppSemanticsTest {
 
         openBook()
         tapFirstWord()
-        onNodeWithText("Listen").performClick()
+        onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         onNodeWithText("No speech engine is available", substring = true).assertIsDisplayed()
     }
@@ -728,7 +731,8 @@ class AppSemanticsTest {
 
         openBook()
         tapFirstWord()
-        onNodeWithText("Save").performClick()
+        // The level is the save: one tap on the fresh level's chip stores the word.
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val entry = vocabulary.all().single()
@@ -740,11 +744,9 @@ class AppSemanticsTest {
         // The word has no signal (no reader level, no difficulty), so the fresh
         // save defaults to the familiar level (ADR-0030).
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
-        // No toast, no dialog: the saved state on the panel is the confirmation.
-        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithText("Saved").assertIsDisplayed()
+        // No toast, no dialog and no Save control: the reader's colour is the
+        // confirmation, and the footer already names the level.
+        onNodeWithText("Familiar").assertIsDisplayed()
     }
 
     @Test
@@ -755,7 +757,7 @@ class AppSemanticsTest {
 
         openBook()
         tapFirstWord()
-        onNodeWithText("Save").performClick()
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
         onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
@@ -777,9 +779,9 @@ class AppSemanticsTest {
         openBook()
         tapFirstWord()
 
-        // The entry survived the restart: the panel opens already saved.
-        onNodeWithText("Saved").assertIsDisplayed()
-        onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsDisplayed()
+        // The entry survived the restart: the sheet opens on its level.
+        onNodeWithText("Learned").assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsSelected()
     }
 
     @Test
@@ -793,17 +795,17 @@ class AppSemanticsTest {
 
         openBook()
         tapFirstWord()
-        onNodeWithText("Save").performClick()
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
         // The word panel is open over the page bar; close it before turning the page.
-        onNodeWithText("Close").performClick()
+        onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         tapFirstWord()
         // The same word (page two starts with "On.", so its key is "on"), so its
         // entry updates in place rather than adding a second one.
-        onNodeWithText("Saved").assertIsDisplayed()
-        onNodeWithText("Save").assertDoesNotExist()
+        onNodeWithText("Familiar").assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
         assertEquals(1, vocabulary.all().size)
     }
 
@@ -996,10 +998,10 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
-        // Save the first word from the panel, then find it in the list.
+        // Save the first word at a level, then find it in the list.
         openBook()
         tapFirstWord()
-        onNodeWithText("Save").performClick()
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val saved = vocabulary.all().single()
 
@@ -1019,8 +1021,11 @@ class AppSemanticsTest {
         openBook()
         tapFirstWord()
 
-        onNodeWithText("Save").assertIsDisplayed()
-        onNodeWithText("Saved").assertDoesNotExist()
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        assertTrue(
+            onAllNodesWithText("Save").fetchSemanticsNodes().isEmpty(),
+            "the level is the save; no Save word survives",
+        )
     }
 
     @Test

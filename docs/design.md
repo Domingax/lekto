@@ -118,8 +118,10 @@ The scale actually used, and nothing else:
 
 - **Radii**: 8 dp for controls (buttons, chips, fields, vignettes), 12 dp for surfaces (cards,
   panels, sections), 16 dp for anything that is a dialogue, and the app mark's tile at 22 % of
-  its size. A panel anchored to a screen edge is square: it joins the edge rather than floating
-  above it.
+  its size. A panel anchored to a screen edge is square where it meets the edge: it joins the
+  edge rather than floating above it. The one exception is the lookup sheet, which takes the
+  16 dp sheet radius on its two top corners and a drag handle, so it reads as raised over the
+  page (§7.3).
 - **No shadows.** A card is separated by a surface tone and a hairline border; a panel by a
   surface tone and a 1 dp rule. Material's elevation, and the tonal lift that comes with it, is
   what makes an app look like a template.
@@ -281,12 +283,16 @@ opens at the saved position, not on this state.
 ### 7.3 The lookup panel
 
 Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
-and the touched word still washed above it. On desktop it is the context column instead, and
-closing the word returns the column to the chapter list.
+and the touched word still washed above it. A sheet, not an outlined card: the top corners take
+the 16 dp sheet radius, the surface tone and a hairline, and a drag handle marks where it was
+raised from. On desktop it is the context column instead, and closing the word returns the column
+to the chapter list.
 
-A **word**: the word in the serif, its part of speech and pronunciation, the speaker and the close
-action; then the senses with their translation; then the level; then the external references as a
-muted line.
+A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
+inflection, its parts of speech and pronunciation, the speaker and the close action; then the
+senses with their translation; then the level; then the external references as a muted line. The
+header and the senses share one scroll, so a short screen never pushes the pinned footer past the
+sheet's edge.
 
 **There is no Save button.** The level (`Mastery`) *is* the save: one tap on a level chip stores the word at
 that level, which is one gesture for one intention. The chips show the number and the colour, and

@@ -5,8 +5,9 @@ speech engine. Nothing is sent to a network service, and nothing is stored.
 
 ## How it works
 
-Open the lookup panel from a word token and choose Listen. Lekto asks the platform
-for a voice in the book's language and speaks the selection.
+Open the lookup panel from a word token and tap the speaker icon beside the word.
+Lekto asks the platform for a voice in the book's language and speaks the
+selection.
 
 ## When there is no voice
 

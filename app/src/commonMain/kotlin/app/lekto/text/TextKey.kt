@@ -108,7 +108,6 @@ enum class TextKey {
     NOT_IN_DICTIONARY,
     NO_VOICE_FOR_LANGUAGE,
     NO_VOICE_FOR_UNKNOWN_LANGUAGE,
-    LOOK_IT_UP_ONLINE,
     TRANSLATE_ONLINE,
 
     // Phrase lookup panel.

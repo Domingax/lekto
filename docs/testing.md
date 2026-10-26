@@ -219,7 +219,13 @@ chevrons that mark the tap zones and turn the page, and the position, and one
 `reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
 hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
-and the page clipped rather than repaginated. A text-bearing golden waits on
+and the page clipped rather than repaginated. The lookup sheet adds one
+`word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
+(issue #210): the sheet raised over a page at the 45 % cap, its top corners at the
+sheet radius, its drag handle, the word and meta bars, the two real icons, the
+numbered senses with their translations, the level named beside the five chip
+frames and the references as one muted line; the offline sheet swaps the senses
+for the honest message. A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 
@@ -679,7 +685,7 @@ and the per-OS voice-listing parsers are `core/jvmTest` (`JvmPronouncerTest`,
 `core/androidHostTest` (`AndroidPronouncerHostTest`): it drives the platform
 `TextToSpeech` on a simulated runtime, where an installed language speaks and a
 language with no voice is an honest message, so the two clients cannot disagree
-about the outcome. The panel's Listen control and the messages it renders are
+about the outcome. The panel's speaker control and the messages it renders are
 `app/desktopTest`, and `AppSemanticsTest` speaks a tapped word through
 `testkit`'s `FakePronouncer`, covering the no-voice and no-engine messages.
 
@@ -831,10 +837,13 @@ by `ReaderTextTest`: a lemma lookup collapses an inflection onto the lemma's key
 and a tap carries the sentence the word was found in. The reader's live state —
 load once, an unsaved word is unknown, a save bumps the revision that recolours,
 and a previous session's save is present at startup — is a `VocabularyControllerTest`
-in `app/desktopTest`, and the panel's Save button and level chips are
-`WordLookupPanelSemanticsTest`. The whole loop — tap a word, Save it with its
-context and level, change the level afterwards, and find an earlier session's
-entry already saved — runs through `AppSemanticsTest` against the in-memory
+in `app/desktopTest`, and the panel's level chips are its save (issue #210):
+`WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
+no separate Save control exists, that the current level is named beside the
+chips, and that the sheet covers at most 45 % of the screen. The whole loop — tap
+a word, choose a level so it is saved with its context, change the level
+afterwards, and find an earlier session's entry already at its level — runs
+through `AppSemanticsTest` against the in-memory
 vocabulary, including that saving an inflected form does not create a second
 entry; its same-named `app/androidUnitTest` twin (issue #79) re-proves the save
 loop on the runtime Android uses. The translation a save keeps is the shared
