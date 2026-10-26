@@ -52,6 +52,6 @@ have chosen one on the **Languages** surface.
 
 ## Closing the panel
 
-Close the translation panel with **Close**, or by tapping the page outside it. A tap
-outside the panel only closes it: it does not look up the word under your finger or
-turn the page.
+Close the translation panel with its close icon, or by tapping the page outside
+it. A tap outside the panel only closes it: it does not look up the word under
+your finger or turn the page.

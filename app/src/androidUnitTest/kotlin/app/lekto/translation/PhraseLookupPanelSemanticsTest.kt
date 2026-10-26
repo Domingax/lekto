@@ -1,18 +1,24 @@
 package app.lekto.translation
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.text.AppMessage
+import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,7 +37,10 @@ import org.robolectric.annotation.Config
  * renders the panel.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
+// `android-compileSdk`; Robolectric 4.16 supports API 36. The qualifiers give the
+// sheet a phone-sized window (360 × 800 dp), so its 45 % cap leaves room for the
+// prompt and the shortcut, and the test reads them where a reader would.
+@Config(sdk = [36], qualifiers = "w360dp-h800dp")
 class PhraseLookupPanelSemanticsTest {
 
     @get:Rule
@@ -66,7 +75,7 @@ class PhraseLookupPanelSemanticsTest {
         compose.setContent { Panel(shortcut = null, onDismiss = { dismissed = true }) }
 
         compose.onNodeWithText("No translation service is available", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithTag(PHRASE_CLOSE_TAG).performClick()
 
         assertTrue(dismissed)
     }
@@ -80,7 +89,9 @@ class PhraseLookupPanelSemanticsTest {
         compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
         assertTrue(openedSettings)
 
-        // The shortcut still works with no provider and no key.
+        // The unconnected state says what a phrase needs and does not pretend to
+        // have a translation; the shortcut still works with no provider and no key.
+        compose.onNodeWithTag(TRANSLATION_RESULT_TAG).assertDoesNotExist()
         compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
     }
 
@@ -97,7 +108,8 @@ class PhraseLookupPanelSemanticsTest {
         }
 
         compose.onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne")
-        // The disclosure is collapsed so the translation stays the focus.
+        // The connected state shows a translation, not the no-provider prompt, and
+        // the disclosure is collapsed so the translation stays the focus.
         compose.onNodeWithText("What's sent?").assertIsDisplayed()
         compose.onNodeWithText("The lantern glows softly.", substring = true).assertDoesNotExist()
 
@@ -119,6 +131,9 @@ class PhraseLookupPanelSemanticsTest {
         }
 
         compose.onNodeWithText("The provider rejected the API key.").assertIsDisplayed()
+        // The failure is its own state: no prompt, and the shortcut still stands.
+        compose.onNodeWithText("Connect an LLM provider", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
         // The phrase was still sent, so the disclosure is still reachable.
         compose.onNodeWithTag(TRANSLATION_DISCLOSURE_TAG).performClick()
         compose.onNodeWithText("Sends your selection and its sentence to OpenAI.", substring = true).assertIsDisplayed()
@@ -138,6 +153,39 @@ class PhraseLookupPanelSemanticsTest {
         compose.onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("The provider returned no translation.")
     }
 
+    @Test
+    fun `a long translation scrolls rather than clipping`() {
+        val long = (1..40).joinToString(" ") { "Ligne $it de la traduction." }
+        compose.setContent {
+            Panel(
+                translation = PhraseTranslationUiState(
+                    provider = "OpenAI",
+                    state = PhraseTranslationState.Done(long),
+                ),
+                modifier = Modifier.size(width = 360.dp, height = 640.dp),
+            )
+        }
+
+        val panel = compose.onNodeWithTag(PHRASE_PANEL_TAG).getUnclippedBoundsInRoot()
+        val ceiling = 640f * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+        assertTrue(
+            "the sheet is ${panel.bottom.value - panel.top.value} dp tall, above the $ceiling dp ceiling",
+            panel.bottom.value - panel.top.value <= ceiling + 1f,
+        )
+
+        // The shortcut needs nothing configured, so it stays pinned while the long
+        // translation scrolls to its disclosure.
+        compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(TRANSLATION_DISCLOSURE_TAG).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
+
+        val shortcut = compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).getUnclippedBoundsInRoot()
+        assertTrue(
+            "the shortcut ends at ${shortcut.bottom} dp, past the sheet's ${panel.bottom} dp",
+            shortcut.bottom.value <= panel.bottom.value + 1f,
+        )
+    }
+
     @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide them.
     @Composable
     private fun Panel(
@@ -147,6 +195,7 @@ class PhraseLookupPanelSemanticsTest {
         onOpenShortcut: (TranslationShortcut) -> Unit = {},
         onOpenSettings: () -> Unit = {},
         onDismiss: () -> Unit = {},
+        modifier: Modifier = Modifier,
     ) {
         MaterialTheme {
             PhraseLookupPanel(
@@ -155,6 +204,7 @@ class PhraseLookupPanelSemanticsTest {
                 actions = PhraseLookupActions(onOpenShortcut = onOpenShortcut, onDismiss = onDismiss),
                 translation = translation,
                 onOpenSettings = onOpenSettings,
+                modifier = modifier,
             )
         }
     }

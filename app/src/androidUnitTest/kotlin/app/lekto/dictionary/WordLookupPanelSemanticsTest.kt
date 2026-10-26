@@ -25,6 +25,7 @@ import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.theme.LektoTheme
+import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -270,7 +271,7 @@ class WordLookupPanelSemanticsTest {
 
         val sheet = compose.onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
         val height = sheet.bottom.value - sheet.top.value
-        val ceiling = PANEL_HEIGHT.value * SHEET_MAX_HEIGHT_FRACTION
+        val ceiling = PANEL_HEIGHT.value * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 
         assertTrue(
             "the sheet is $height dp tall, above the $ceiling dp ceiling",
