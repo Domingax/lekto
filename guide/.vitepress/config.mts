@@ -10,6 +10,7 @@ const repository = "https://github.com/Domingax/lekto";
 
 const sections = [
   { text: "Getting started", link: "/getting-started" },
+  { text: "Lekto on the desktop", link: "/desktop" },
   { text: "Import", link: "/import" },
   { text: "Library", link: "/library" },
   { text: "Reading", link: "/reading" },
