@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +39,7 @@ import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
 import app.lekto.theme.hoverWash
+import app.lekto.ui.ChipFrame
 import app.lekto.ui.DELETE_ICON_SIZE
 import app.lekto.ui.FIRST_LINE_INSET
 import app.lekto.ui.HAIRLINE_THICKNESS
@@ -67,6 +67,8 @@ import kotlin.test.Test
  * dot is the screen's `LevelDot`, the chip's height and padding, the two icons,
  * the hairline and the mastery ramp are the values the screen itself uses, and
  * only the words are bars, because glyphs are the one thing a golden cannot pin.
+ * The sheet draws the phone's own filter row (one line, the last chip cut); a
+ * pointer wraps those chips instead, which is a layout no 360 dp sheet shows.
  * A hue, a radius or a spacing step that moves is caught here — the semantics
  * suite covers the text and the gestures.
  *
@@ -112,14 +114,14 @@ private val SCREEN_TITLE_BAR = LineBar(height = 24.dp, width = 150.dp)
 private val COUNT_BAR = LineBar(height = 11.dp, width = 52.dp)
 private val SEARCH_PLACEHOLDER_BAR = LineBar(height = 12.dp, width = 48.dp)
 
-/** A filter chip: its label bar's width, and the width of the pill it sits in. */
-private data class PreviewChip(val level: MasteryLevel?, val label: Dp, val pill: Dp)
+/** A filter chip: its level (absent for `All levels`) and the width of its label bar. */
+private data class PreviewChip(val level: MasteryLevel?, val label: Dp)
 private val CHIP_LABEL_BAR = 11.dp
 private val PREVIEW_CHIPS = listOf(
-    PreviewChip(level = null, label = 62.dp, pill = 86.dp),
-    PreviewChip(level = MasteryLevel.UNKNOWN, label = 52.dp, pill = 92.dp),
-    PreviewChip(level = MasteryLevel.RECOGNIZED, label = 66.dp, pill = 106.dp),
-    PreviewChip(level = MasteryLevel.FAMILIAR, label = 56.dp, pill = 96.dp),
+    PreviewChip(level = null, label = 62.dp),
+    PreviewChip(level = MasteryLevel.UNKNOWN, label = 52.dp),
+    PreviewChip(level = MasteryLevel.RECOGNIZED, label = 66.dp),
+    PreviewChip(level = MasteryLevel.FAMILIAR, label = 56.dp),
 )
 
 /** One row the preview draws: its level, its word bar and its context sentence's two line shares. */
@@ -199,27 +201,24 @@ private fun FilterRow() {
     }
 }
 
-/** One filter: a hairline pill with its level's dot and its name, filled with ink when it is the filter. */
+/**
+ * One filter, drawn with the screen's own frame (the **Aa** panel's chip, issue
+ * #212): its level's dot and its name, the paper lifted against the screen when it
+ * is not the filter and the ink when it is.
+ */
 @Composable
 private fun Chip(chip: PreviewChip, selected: Boolean) {
     val theme = MaterialTheme.colorScheme
-    val fill = if (selected) theme.primary else Color.Transparent
-    Row(
-        modifier = Modifier
-            .width(chip.pill)
-            .height(ButtonDefaults.MinHeight)
-            .background(fill, LektoRadii.Control)
-            // Only the unselected chip carries the hairline: the current filter is
-            // the filled control, as the screen's own Button draws it.
-            .then(
-                if (selected) Modifier else Modifier.border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Control),
-            )
-            .padding(FILTER_CHIP_PADDING),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        chip.level?.let { level -> Dot(level) }
-        Line(if (selected) theme.onPrimary else theme.onSurface, LineBar(CHIP_LABEL_BAR, chip.label))
+    Box(Modifier.heightIn(min = LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+        ChipFrame(selected = selected) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                chip.level?.let { level -> Dot(level) }
+                Line(if (selected) theme.onPrimary else theme.onSurface, LineBar(CHIP_LABEL_BAR, chip.label))
+            }
+        }
     }
 }
 

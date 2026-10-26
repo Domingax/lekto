@@ -74,7 +74,7 @@ internal fun DeletingRow(
 ) {
     // A drag is the touch idiom and only that: with a pointer, the delete waits
     // for the row's hover instead.
-    if (!swipeToDelete) {
+    if (!touchClient) {
         DeleteRowFrame(delete, modifier, verticalAlignment, row)
         return
     }

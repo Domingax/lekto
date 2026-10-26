@@ -1,7 +1,6 @@
 package app.lekto.reader
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,14 +21,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingFace
 import app.lekto.core.reading.ReadingMargin
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
-import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ChipFrame
+import app.lekto.ui.ChoiceChip
+import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
 import app.lekto.ui.swallowTaps
 
@@ -52,9 +51,6 @@ internal fun readerFaceTag(face: ReadingFace): String = "reader-face-${face.name
 
 /** The test tag on a **Reading preference** margin option. */
 internal fun readerMarginTag(margin: ReadingMargin): String = "reader-margin-${margin.name}"
-
-/** The 1 dp hairline a surface draws around itself (docs/design.md §4: no shadows). */
-private val Hairline = 1.dp
 
 /**
  * The reader's **Aa** panel (ADR-0035; docs/design.md §7.2): a square panel
@@ -84,7 +80,7 @@ internal fun ReadingPreferencesPanel(
     Surface(
         modifier = modifier.fillMaxWidth().testTag(READING_PREFERENCES_PANEL_TAG).swallowTaps(),
         color = theme.surface,
-        border = BorderStroke(Hairline, theme.outline),
+        border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
     ) {
         Column(
             modifier = Modifier
@@ -202,37 +198,6 @@ private fun ControlRow(label: String, values: @Composable () -> Unit) {
 }
 
 /**
- * One option chip: filled with the ink when [selected], ringed with the hairline
- * otherwise, and it announces the choice. The visible shape stays compact while
- * the touch target keeps the 48 dp floor (docs/design.md §9).
- */
-@Composable
-private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val theme = MaterialTheme.colorScheme
-    Box(
-        modifier = modifier
-            .heightIn(min = LektoSpacing.TouchTarget)
-            .handCursor()
-            .selectable(
-                selected = selected,
-                interactionSource = null,
-                indication = null,
-                role = Role.RadioButton,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        ChipFrame(selected = selected) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (selected) theme.onPrimary else theme.onSurface,
-            )
-        }
-    }
-}
-
-/**
  * A size step: a chip with a sign rather than a word, named for a screen reader by
  * [description]. At the bounds it is disabled and keeps the arrow cursor, so a
  * control that promises nothing shows nothing.
@@ -268,25 +233,6 @@ private fun StepChip(
                 color = if (enabled) theme.onSurface else theme.onSurfaceVariant,
             )
         }
-    }
-}
-
-/**
- * A chip's visible shape inside its 48 dp touch target: ink when selected, and
- * otherwise the theme's paper lifted against the panel — a chip has to read as a
- * field on the panel, not as a hole in it (the sepia paper makes this plainest).
- */
-@Composable
-private fun ChipFrame(selected: Boolean, content: @Composable () -> Unit) {
-    val theme = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .background(if (selected) theme.primary else theme.background, LektoRadii.Control)
-            .border(Hairline, if (selected) theme.primary else theme.outline, LektoRadii.Control)
-            .padding(horizontal = LektoSpacing.BetweenRows, vertical = LektoSpacing.InsideLabelPair),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
     }
 }
 

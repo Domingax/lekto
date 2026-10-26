@@ -910,13 +910,15 @@ runtime (issue #71).
 
 The mastery filter (issue #66) is proved the same way. `filterByMastery` is a
 pure transform, so `VocabularyFilterTest` proves a level keeps only its entries,
-`null` keeps them all, and the filter composes with the search. The list draws its
-own chips (issue #212: the current filter is the theme's ink behind its name, and
-each chip carries its level's dot), so the lookup panel's `MasteryChip` — where
-the level's own colour *is* the save — is not shared with it;
-`VocabularyScreenSemanticsTest` proves a chip raises its level, the all-levels
-chip clears it, and a filter that matches nothing says so, and `AppSemanticsTest`
-filters the list to a level and finds only that level's word.
+`null` keeps them all, and the filter composes with the search. The list's chips
+are the **Aa** panel's own `ChoiceChip` (issue #212; `ui/Chip.kt`), so a chip
+looks the same wherever it chooses something — the current filter is the theme's
+ink behind its name, and each carries its level's dot. The lookup panel's
+`MasteryChip` — where the level's own colour *is* the save — stays its own
+control. `VocabularyScreenSemanticsTest` proves a chip raises its level, the
+all-levels chip clears it, the current one is announced as selected, and a filter
+that matches nothing says so, and `AppSemanticsTest` filters the list to a level
+and finds only that level's word.
 
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to

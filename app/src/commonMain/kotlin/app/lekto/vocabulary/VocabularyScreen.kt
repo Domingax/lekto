@@ -1,11 +1,11 @@
 package app.lekto.vocabulary
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,10 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,10 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryPalette
@@ -39,13 +33,12 @@ import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
-import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
-import app.lekto.ui.ChipRowScrollbar
+import app.lekto.ui.ChoiceChip
 import app.lekto.ui.ConfirmationDialog
-import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.SearchField
 import app.lekto.ui.handCursor
+import app.lekto.ui.touchClient
 
 /** The test tag on the search field, so a UI test can type into it unambiguously. */
 internal const val VOCABULARY_SEARCH_TAG: String = "vocabulary-search"
@@ -61,9 +54,6 @@ internal const val VOCABULARY_CLEAR_SEARCH_TAG: String = "vocabulary-clear-searc
 
 /** The test tag on a mastery filter chip; `null` is the "All levels" chip. */
 internal fun vocabularyFilterTag(level: MasteryLevel?): String = "vocabulary-filter-${level?.name ?: "ALL"}"
-
-/** The padding every filter chip shares, the same inside shape the mastery chips use. */
-internal val FILTER_CHIP_PADDING = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
 
 /**
  * The vocabulary list's state (issue #23), one value per thing the screen can
@@ -208,7 +198,7 @@ private fun ColumnScope.Results(
             .padding(top = LektoSpacing.InsidePanel)
             .testTag(VOCABULARY_SEARCH_TAG),
     )
-    MasteryFilter(state.masteryLevel, actions.onFilter)
+    MasteryFilter(state.masteryLevel, actions.onFilter, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
     if (state.entries.isEmpty()) {
         NoWords(state, onClearSearch = actions.onClearSearch)
     } else {
@@ -227,52 +217,64 @@ private fun ColumnScope.VocabularyList(entries: List<VocabularyEntry>, onDelete:
 }
 
 /**
- * The mastery filter (issue #66; ink-filled selection #212): `All levels` and one
- * chip per level, so the list can be narrowed to a level. The row scrolls
- * sideways — a partly cut chip is what says so — and the current filter is the
- * theme's ink behind the paper, the identity's one shape for a selected filter
- * (`docs/design.md` §2.1, §7.4). The chip's dot keeps the level's own colour, so
- * the filter reads the way the rows do.
+ * The mastery filter (issue #66; the **Aa** panel's chip, #212): `All levels` and
+ * one chip per level, drawn as the reader's own value chips so the filter and the
+ * panel cannot drift into two looks.
+ *
+ * A touch screen gets one line that scrolls, and a partly cut chip is what says
+ * it moves: that is the thumb's idiom, and a phone has no height to spare. A
+ * pointer gets the chips wrapped instead — a mouse cannot swipe a row of buttons,
+ * and Material's own guidance is to wrap a small chip set rather than hide its
+ * ends behind a scrollbar (the six chips take two rows at most).
  */
+@OptIn(ExperimentalLayoutApi::class) // `FlowRow` is the wrapping layout a pointer gets.
 @Composable
-private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit) {
-    val texts = LocalAppTexts.current
-    val scroll = rememberScrollState()
-    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines)) {
+private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit, modifier: Modifier = Modifier) {
+    if (touchClient) {
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(scroll),
+            modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
         ) {
-            FilterChip(
-                level = null,
-                label = texts[TextKey.ALL_LEVELS],
-                selected = selected == null,
-                onClick = { onFilter(null) },
-                modifier = Modifier.testTag(vocabularyFilterTag(null)),
-            )
-            MasteryLevel.entries.forEach { level ->
-                FilterChip(
-                    level = level,
-                    label = texts.masteryName(level),
-                    selected = level == selected,
-                    onClick = { onFilter(level) },
-                    modifier = Modifier.testTag(vocabularyFilterTag(level)),
-                )
-            }
+            FilterChips(selected, onFilter)
         }
-        // Only a row with more chips than room needs a bar: a pointer cannot swipe
-        // them, and the cut chip alone is not a control (issue #212).
-        if (scroll.maxValue > 0) {
-            ChipRowScrollbar(scroll, Modifier.fillMaxWidth().padding(top = LektoSpacing.InsideLabelPair))
+    } else {
+        FlowRow(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
+        ) {
+            FilterChips(selected, onFilter)
         }
     }
 }
 
+/** The six chips themselves, emitted into whichever layout the platform asked for. */
+@Composable
+private fun FilterChips(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit) {
+    val texts = LocalAppTexts.current
+    FilterChip(
+        level = null,
+        label = texts[TextKey.ALL_LEVELS],
+        selected = selected == null,
+        onClick = { onFilter(null) },
+        modifier = Modifier.testTag(vocabularyFilterTag(null)),
+    )
+    MasteryLevel.entries.forEach { level ->
+        FilterChip(
+            level = level,
+            label = texts.masteryName(level),
+            selected = level == selected,
+            onClick = { onFilter(level) },
+            modifier = Modifier.testTag(vocabularyFilterTag(level)),
+        )
+    }
+}
+
 /**
- * One filter: the level's coloured dot and its name in a hairline pill, filled
- * with the theme's ink when it is the current filter. The name carries the
- * meaning and the dot ties it to the reader's ramp, so a reader who cannot tell
- * the hues apart loses nothing (§2.2).
+ * One filter, drawn by the shared [ChoiceChip]: the level's coloured dot before
+ * its name, and the chip's frame the same as the **Aa** panel's. The name carries
+ * the meaning and the dot ties it to the reader's ramp, so a reader who cannot
+ * tell the hues apart loses nothing (§2.2).
  */
 @Suppress("LongParameterList") // The chip's level, its label, its state and its tap are independent.
 @Composable
@@ -284,33 +286,15 @@ private fun FilterChip(
     modifier: Modifier = Modifier,
 ) {
     val theme = MaterialTheme.colorScheme
-    val marked = modifier.semantics { this.selected = selected }
-    val content: @Composable () -> Unit = {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MASTERY_DOT_GAP),
-        ) {
-            level?.let { drawn -> LevelDot(drawn.readerColorOr(theme.outline, MasteryPalette.of(theme))) }
-            Text(label)
-        }
-    }
-    if (selected) {
-        Button(
-            onClick = onClick,
-            colors = ButtonDefaults.buttonColors(containerColor = theme.primary, contentColor = theme.onPrimary),
-            shape = LektoRadii.Control,
-            contentPadding = FILTER_CHIP_PADDING,
-            modifier = marked.handCursor(),
-        ) { content() }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
-            shape = LektoRadii.Control,
-            contentPadding = FILTER_CHIP_PADDING,
-            modifier = marked.handCursor(),
-        ) { content() }
-    }
+    ChoiceChip(
+        label = label,
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        leading = level?.let { drawn ->
+            { LevelDot(drawn.readerColorOr(theme.outline, MasteryPalette.of(theme))) }
+        },
+    )
 }
 
 /**

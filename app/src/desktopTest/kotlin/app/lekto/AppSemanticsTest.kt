@@ -1007,7 +1007,7 @@ class AppSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("harbour").assertIsDisplayed()
 
-        onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performClick()
 
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("harbour").assertDoesNotExist()

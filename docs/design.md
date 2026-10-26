@@ -336,9 +336,13 @@ no undo does not get to delete on a mis-tap (§8).
 
 **Empty and no-results are different states.** One says how words arrive (`No words saved yet` and
 `Tap a word while reading, and it lands here.`); the other names the search (`No words match
-"princesse".`), says what it covered and offers `Clear search`. The filter row scrolls — `All
-levels`, then the five levels by name — a partially cut chip is what says so, each chip carries its
-level's dot, and the current filter is the theme's ink behind its name.
+"princesse".`), says what it covered and offers `Clear search`.
+
+The filters are the **Aa** panel's own chips (§7.2) — `All levels`, then the five levels by name,
+each carrying its level's dot, and the current filter is the theme's ink behind its name. On a touch
+screen the row is one line that scrolls, and a partly cut chip is what says so. With a pointer the
+chips wrap instead: a mouse cannot drag a row of buttons, and a small chip set reads better whole
+than behind a scrollbar.
 
 ### 7.5 Settings
 
@@ -437,9 +441,12 @@ the page behind it.
 - The list row's delete — `app/src/commonMain/kotlin/app/lekto/ui/RowDelete.kt`: `DeletingRow` is
   the one gesture the Library's rows and the Vocabulary list's share (§7.1, §7.4) — a trailing
   swipe on touch, a trash in the row's wash on hover with a pointer, the slot always reserved and
-  the confirmation the caller's. The seam that picks the idiom is `ui/SwipeToDelete.kt`.
+  the confirmation the caller's. The seam that picks the idiom is `ui/TouchClient.kt`.
 - The search field — `app/src/commonMain/kotlin/app/lekto/ui/SearchField.kt`: the surface, hairline
   and icon the Library and the Vocabulary list both search through (§7.1, §7.4).
+- The choice chip — `app/src/commonMain/kotlin/app/lekto/ui/Chip.kt`: one chip, used by the **Aa**
+  panel's values and by the Vocabulary list's level filters, so a chip looks the same wherever it
+  chooses something (§7.2, §7.4).
 - The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,
   each naming the section it belongs to) and `BackStack` (the history as a value). The platform's own

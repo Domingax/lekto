@@ -48,10 +48,10 @@ private val CompactChipHeight = 32.dp
  * selector (issue #22) — the control that saves a word — and its numbered
  * variant is the row [compact] draws.
  *
- * The vocabulary list's filter is deliberately *not* this chip (issue #212): its
- * selection is the theme's ink behind the paper, the identity's shape for a
- * selected filter (`docs/design.md` §2.1, §7.4), while saving a word keeps the
- * level's own colour as the signal.
+ * The vocabulary list's filter is deliberately *not* this chip (issue #212): it is
+ * the **Aa** panel's `ChoiceChip` (`app.lekto.ui.Chip`), whose selection is the
+ * theme's ink behind the paper, while saving a word keeps the level's own colour
+ * as the signal (`docs/design.md` §7.2, §7.4).
  *
  * [level] is `null` for a chip that takes the outline colour instead of a palette
  * one. The [label] carries the meaning and the colour is supplementary, taken

@@ -19,7 +19,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -158,7 +157,9 @@ class VocabularyScreenSemanticsTest {
         var filtered: MasteryLevel? = null
         setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), ""), onFilter = { filtered = it }) }
 
-        onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
+        // A pointer's chips wrap, so the level is on screen without scrolling; the
+        // Android twin still scrolls the one touch row (issue #212).
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.LEARNED)).performClick()
 
         assertEquals(MasteryLevel.LEARNED, filtered)
     }
