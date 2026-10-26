@@ -133,46 +133,58 @@ private fun DeleteRowFrame(
     val theme = MaterialTheme.colorScheme
     // The frame paints the paper over the swipe's red, so the action stays hidden
     // until the reader uncovers it. The hover wash is drawn over the paper, not
-    // under it, so its rounded corners cannot reveal that red.
+    // under it, and it is square: a row is a band across the list, not a card
+    // (§8: the wash marks the row, it does not round it into a surface).
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(theme.background)
-            .background(
-                if (hovered) hoverWash(theme.onBackground) else Color.Transparent,
-                LektoRadii.Control,
-            )
+            .background(if (hovered) hoverWash(theme.onBackground) else Color.Transparent)
             .padding(vertical = LektoSpacing.BetweenRows)
             .hoverable(interaction),
         verticalAlignment = verticalAlignment,
     ) {
         row(Modifier.weight(1f))
         // The action's place is reserved, so revealing it never shifts the row.
-        Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
-            if (hovered) DeleteIcon(delete)
+        Box(Modifier.size(LektoSpacing.TouchTarget)) {
+            if (hovered) DeleteIcon(delete, alignedToFirstLine = verticalAlignment == Alignment.Top)
         }
     }
 }
 
-/** The trash a mouse uncovers at the row's end: the desktop idiom for a row action. */
+/**
+ * The trash a mouse uncovers at the row's end: the desktop idiom for a row action.
+ *
+ * It is the muted ink, not red (`docs/design.md` §7.4): red is for the moment the
+ * action is taken, and this icon only opens the question. [alignedToFirstLine]
+ * centres it on the row's first line rather than on the whole row, because a word
+ * at the top with its translation under it leaves the middle of the row sitting
+ * between the two — where a trash reads as somebody else's control.
+ */
 @Composable
-private fun DeleteIcon(delete: DeleteAction) {
+private fun DeleteIcon(delete: DeleteAction, alignedToFirstLine: Boolean) {
     Box(
         modifier = Modifier
-            .size(LektoSpacing.TouchTarget)
+            .fillMaxSize()
             .handCursor()
             .testTag(delete.tag)
             .plainClickable(role = Role.Button, onClick = delete.onDelete),
-        contentAlignment = Alignment.Center,
+        contentAlignment = if (alignedToFirstLine) Alignment.TopCenter else Alignment.Center,
     ) {
         Icon(
             imageVector = LektoIcons.Trash,
             contentDescription = LocalAppTexts.current[TextKey.DELETE],
-            // The red is §2.4's, and it is only ever on screen while the pointer
-            // rests on the row: a delete is not decoration, and an idle row
-            // carries no red at all.
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(DELETE_ICON_SIZE),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .padding(top = if (alignedToFirstLine) FIRST_LINE_INSET else 0.dp)
+                .size(DELETE_ICON_SIZE),
         )
     }
 }
+
+/**
+ * The nudge that centres the trash on a row's first line: that line is the
+ * vocabulary word's 24 sp, and the icon is 18 dp, so half the difference of the
+ * two puts the icon's centre where the word's is.
+ */
+internal val FIRST_LINE_INSET = 3.dp

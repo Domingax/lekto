@@ -13,6 +13,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -193,6 +195,22 @@ class VocabularyScreenSemanticsTest {
         setContent { Vocabulary(VocabularyUiState.Results(emptyList(), "", MasteryLevel.KNOWN)) }
 
         onNodeWithText("No words at the Known level", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theDeleteSitsOnTheWordsLine() = runComposeUiTest {
+        // The trash belongs to the row's first line, not to the gap between the
+        // word and its translation: it is the word's action (issue #212).
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), "")) }
+
+        onNodeWithTag(vocabularyRowTag(lantern.key)).performMouseInput { moveTo(center) }
+        // Read from the unmerged tree: the trash's clickable target is 48 dp, and
+        // it is the icon's own 18 dp the eye aligns with the word.
+        val word = onNodeWithText("lantern", useUnmergedTree = true).getBoundsInRoot()
+        val trash = onNodeWithContentDescription("Delete", useUnmergedTree = true).getBoundsInRoot()
+
+        assertTrue(trash.top >= word.top, "the trash sits within the word's line: $trash vs $word")
+        assertTrue(trash.bottom <= word.bottom, "the trash sits within the word's line: $trash vs $word")
     }
 
     @Test

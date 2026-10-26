@@ -39,7 +39,9 @@ import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ChipRowScrollbar
 import app.lekto.ui.ConfirmationDialog
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.SearchField
@@ -235,25 +237,33 @@ private fun ColumnScope.VocabularyList(entries: List<VocabularyEntry>, onDelete:
 @Composable
 private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit) {
     val texts = LocalAppTexts.current
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = LektoSpacing.BetweenRelatedLines),
-        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
-    ) {
-        FilterChip(
-            level = null,
-            label = texts[TextKey.ALL_LEVELS],
-            selected = selected == null,
-            onClick = { onFilter(null) },
-            modifier = Modifier.testTag(vocabularyFilterTag(null)),
-        )
-        MasteryLevel.entries.forEach { level ->
+    val scroll = rememberScrollState()
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines)) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(scroll),
+            horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
             FilterChip(
-                level = level,
-                label = texts.masteryName(level),
-                selected = level == selected,
-                onClick = { onFilter(level) },
-                modifier = Modifier.testTag(vocabularyFilterTag(level)),
+                level = null,
+                label = texts[TextKey.ALL_LEVELS],
+                selected = selected == null,
+                onClick = { onFilter(null) },
+                modifier = Modifier.testTag(vocabularyFilterTag(null)),
             )
+            MasteryLevel.entries.forEach { level ->
+                FilterChip(
+                    level = level,
+                    label = texts.masteryName(level),
+                    selected = level == selected,
+                    onClick = { onFilter(level) },
+                    modifier = Modifier.testTag(vocabularyFilterTag(level)),
+                )
+            }
+        }
+        // Only a row with more chips than room needs a bar: a pointer cannot swipe
+        // them, and the cut chip alone is not a control (issue #212).
+        if (scroll.maxValue > 0) {
+            ChipRowScrollbar(scroll, Modifier.fillMaxWidth().padding(top = LektoSpacing.InsideLabelPair))
         }
     }
 }
@@ -288,6 +298,7 @@ private fun FilterChip(
         Button(
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(containerColor = theme.primary, contentColor = theme.onPrimary),
+            shape = LektoRadii.Control,
             contentPadding = FILTER_CHIP_PADDING,
             modifier = marked.handCursor(),
         ) { content() }
@@ -295,6 +306,7 @@ private fun FilterChip(
         OutlinedButton(
             onClick = onClick,
             border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
+            shape = LektoRadii.Control,
             contentPadding = FILTER_CHIP_PADDING,
             modifier = marked.handCursor(),
         ) { content() }

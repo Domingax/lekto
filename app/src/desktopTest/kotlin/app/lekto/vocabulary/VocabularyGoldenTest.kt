@@ -41,6 +41,7 @@ import app.lekto.theme.Light
 import app.lekto.theme.Sepia
 import app.lekto.theme.hoverWash
 import app.lekto.ui.DELETE_ICON_SIZE
+import app.lekto.ui.FIRST_LINE_INSET
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.SEARCH_ICON_SIZE
 import app.lekto.ui.icons.LektoIcons
@@ -234,7 +235,7 @@ private fun PreviewRow(entry: PreviewEntry, hovered: Boolean) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(if (hovered) hoverWash(theme.onBackground) else Color.Transparent, LektoRadii.Control)
+                .background(if (hovered) hoverWash(theme.onBackground) else Color.Transparent)
                 .padding(vertical = LektoSpacing.BetweenRows),
             verticalAlignment = Alignment.Top,
         ) {
@@ -255,14 +256,15 @@ private fun PreviewRow(entry: PreviewEntry, hovered: Boolean) {
                 if (entry.sentence.second > 0f) SentenceLine(theme, entry.sentence.second)
             }
             // The action's place is reserved on every row; the trash only shows
-            // while the pointer is on it, so revealing it never shifts the row.
-            Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+            // while the pointer is on it, so revealing it never shifts the row. It
+            // sits on the word's line, as the screen places it (issue #212).
+            Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.TopCenter) {
                 if (hovered) {
                     Icon(
                         imageVector = LektoIcons.Trash,
                         contentDescription = null,
-                        tint = theme.error,
-                        modifier = Modifier.size(DELETE_ICON_SIZE),
+                        tint = theme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = FIRST_LINE_INSET).size(DELETE_ICON_SIZE),
                     )
                 }
             }

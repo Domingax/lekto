@@ -329,10 +329,10 @@ level and name, its translation, and the sentence it came from in the muted ink;
 two rows. The row's one tap is reserved for the word panel (#178).
 
 **Delete never sits on the row as a red word.** A row deletes the way a Library row does (§7.1): a
-swipe from the trailing edge on a touch screen, and a trash that appears in the row's wash on hover
-with a mouse. Neither path deletes anything: both open the one confirmation, and the red is on
-screen only while the action is uncovered — a list with no undo does not get to delete on a mis-tap
-(§8).
+swipe from the trailing edge on a touch screen, and a muted-ink trash on the row's first line when a
+mouse hovers it. Neither path deletes anything: both open the one confirmation, and red belongs to
+the act, not to the row — the plate a swipe uncovers and the dialogue's confirm (§2.4). A list with
+no undo does not get to delete on a mis-tap (§8).
 
 **Empty and no-results are different states.** One says how words arrive (`No words saved yet` and
 `Tap a word while reading, and it lands here.`); the other names the search (`No words match
