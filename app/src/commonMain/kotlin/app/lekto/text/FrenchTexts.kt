@@ -51,7 +51,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION to "La progression de lecture est en cours de calcul.",
 
     // Vocabulary.
-    TextKey.VOCABULARY_EMPTY to "Aucun mot enregistré — touchez un mot pendant la lecture pour l'enregistrer",
+    TextKey.VOCABULARY_EMPTY_TITLE to "Aucun mot enregistré",
+    TextKey.VOCABULARY_EMPTY to "Touchez un mot pendant la lecture, et il apparaîtra ici.",
+    TextKey.VOCABULARY_COUNT_ONE to "1 mot",
+    TextKey.VOCABULARY_COUNT_MANY to "{0} mots",
     TextKey.ALL_LEVELS to "Tous les niveaux",
     TextKey.MASTERY_UNKNOWN to "Inconnu",
     TextKey.MASTERY_RECOGNIZED to "Reconnu",
@@ -62,6 +65,11 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.NO_WORDS_MATCH_QUERY to "Aucun mot ne correspond à « {0} ».",
     TextKey.NO_WORDS_MATCH_QUERY_AT_LEVEL to "Aucun mot ne correspond à « {0} » au niveau {1}.",
     TextKey.NO_WORDS_AT_LEVEL to "Aucun mot au niveau {0}.",
+    TextKey.NO_WORDS_MATCH_DETAIL to "La recherche porte sur le mot, sa traduction et sa phrase.",
+    TextKey.DELETE_WORD_TITLE to "Supprimer « {0} » ?",
+    TextKey.DELETE_WORD_MESSAGE to
+        "L'entrée sera retirée de votre vocabulaire. " +
+        "Le mot pourra être enregistré de nouveau en le touchant dans le livre.",
 
     // Reader.
     TextKey.PREVIOUS_PAGE to "Page précédente",

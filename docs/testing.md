@@ -230,7 +230,15 @@ the senses for the honest message. The phrase sheet adds
 `phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
 (issue #211): the same shell with the phrase in the serif band and the close icon,
 then either the translation body with its disclosure or the prompt with its
-settings link, above the zero-configuration shortcut. A text-bearing golden waits on
+settings link, above the zero-configuration shortcut. The Vocabulary list adds
+`vocabulary-<paper>.png` per paper and `vocabulary-delete-light.png` (issue #212):
+the title and the count beside it, the shared search surface, the filter row with
+its partly cut chip, the current filter filled in ink and each chip carrying its
+level's dot, then each row's word bar, dot and level name, translation and muted
+sentence with a hairline between rows — the first row hovered, so the trash in the
+slot reserved for it is recorded too. The confirmation sheet records the scrim,
+the 16 dp dialogue, its title and message, and `Delete` in the reserved red. A
+text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 
@@ -879,9 +887,15 @@ search is a pure transform, `VocabularySearchTest`: a blank query keeps every
 entry, and a word is found by its spelling, its lemma, its translation or its
 context sentence, case-insensitively. The list's surface is
 `VocabularyScreenSemanticsTest` in `app/desktopTest` — the instructional empty
-state, an entry's word, translation, context sentence and mastery, the search
-field raising the query, the no-match message and the delete action.
-The whole loop runs through `AppSemanticsTest` against the in-memory vocabulary:
+state, an entry's word, level, translation and context sentence, the count beside
+the title (singular at one, and the vocabulary's rather than the filtered list's),
+the search field raising the query, a search that matches nothing naming the query
+back beside a `Clear search` action, and a delete that only ever asks: the row's
+trash appears on hover and the confirmation removes nothing until it is confirmed.
+The delete's two idioms are each proved in their lane (issue #212): the desktop
+suite hovers the row and shows a drag deletes nothing, and its Android twin swipes
+the row and confirms. The whole loop runs through `AppSemanticsTest` against the
+in-memory vocabulary:
 a word saved from the reader appears in the list with its details, the list can
 be searched, and deleting the word returns it to unsaved in the reader — so the
 list and the text cannot disagree. The desktop wiring that deletes over a real
@@ -896,12 +910,15 @@ runtime (issue #71).
 
 The mastery filter (issue #66) is proved the same way. `filterByMastery` is a
 pure transform, so `VocabularyFilterTest` proves a level keeps only its entries,
-`null` keeps them all, and the filter composes with the search. The chips
-themselves are the shared `MasteryChip` (in `app`'s reader package), so the
-list's filter and the lookup panel's level selector cannot drift;
-`VocabularyScreenSemanticsTest` proves a chip raises its level, the all-levels
-chip clears it, and a filter that matches nothing says so, and `AppSemanticsTest`
-filters the list to a level and finds only that level's word.
+`null` keeps them all, and the filter composes with the search. The list's chips
+are the **Aa** panel's own `ChoiceChip` (issue #212; `ui/Chip.kt`), so a chip
+looks the same wherever it chooses something — the current filter is the theme's
+ink behind its name, and each carries its level's dot. The lookup panel's
+`MasteryChip` — where the level's own colour *is* the save — stays its own
+control. `VocabularyScreenSemanticsTest` proves a chip raises its level, the
+all-levels chip clears it, the current one is announced as selected, and a filter
+that matches nothing says so, and `AppSemanticsTest` filters the list to a level
+and finds only that level's word.
 
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to

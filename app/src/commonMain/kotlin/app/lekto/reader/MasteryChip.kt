@@ -44,15 +44,20 @@ private val CompactChipHeight = 32.dp
 
 /**
  * One mastery chip: the level's colour behind [label], filled when [selected]
- * and ringed otherwise, raising [onClick]. Shared by the lookup panel's level
- * selector (issue #22) and the vocabulary list's mastery filter (issue #66), so
- * the two controls cannot drift apart.
+ * and ringed otherwise, raising [onClick]. This is the lookup panel's level
+ * selector (issue #22) — the control that saves a word — and its numbered
+ * variant is the row [compact] draws.
  *
- * [level] is `null` for the filter's all-levels chip, which takes the outline
- * colour instead of a palette one. The [label] carries the meaning and the
- * colour is supplementary, taken from the active paper's measured ramp
- * (`docs/design.md` §2.2); the selected chip also carries `selected` semantics,
- * so the active choice is announced, not shown by fill alone.
+ * The vocabulary list's filter is deliberately *not* this chip (issue #212): it is
+ * the **Aa** panel's `ChoiceChip` (`app.lekto.ui.Chip`), whose selection is the
+ * theme's ink behind the paper, while saving a word keeps the level's own colour
+ * as the signal (`docs/design.md` §7.2, §7.4).
+ *
+ * [level] is `null` for a chip that takes the outline colour instead of a palette
+ * one. The [label] carries the meaning and the colour is supplementary, taken
+ * from the active paper's measured ramp (`docs/design.md` §2.2); the selected
+ * chip also carries `selected` semantics, so the active choice is announced, not
+ * shown by fill alone.
  *
  * [compact] draws the lookup panel's numbered chip (issue #210): the same colour
  * and selection, in a 32 × 28 frame inside a full 48 dp touch target, so all five

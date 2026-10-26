@@ -52,7 +52,10 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION to "Reading progress is being measured.",
 
     // Vocabulary.
-    TextKey.VOCABULARY_EMPTY to "No words saved yet — tap a word while reading to save it",
+    TextKey.VOCABULARY_EMPTY_TITLE to "No words saved yet",
+    TextKey.VOCABULARY_EMPTY to "Tap a word while reading, and it lands here.",
+    TextKey.VOCABULARY_COUNT_ONE to "1 word",
+    TextKey.VOCABULARY_COUNT_MANY to "{0} words",
     TextKey.ALL_LEVELS to "All levels",
     TextKey.MASTERY_UNKNOWN to "Unknown",
     TextKey.MASTERY_RECOGNIZED to "Recognized",
@@ -63,6 +66,10 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.NO_WORDS_MATCH_QUERY to "No words match \"{0}\".",
     TextKey.NO_WORDS_MATCH_QUERY_AT_LEVEL to "No words match \"{0}\" at the {1} level.",
     TextKey.NO_WORDS_AT_LEVEL to "No words at the {0} level.",
+    TextKey.NO_WORDS_MATCH_DETAIL to "The search covers the word, its translation and its sentence.",
+    TextKey.DELETE_WORD_TITLE to "Delete « {0} »?",
+    TextKey.DELETE_WORD_MESSAGE to
+        "This removes the entry from your vocabulary. The word can be saved again by tapping it in the book.",
 
     // Reader.
     TextKey.PREVIOUS_PAGE to "Previous page",

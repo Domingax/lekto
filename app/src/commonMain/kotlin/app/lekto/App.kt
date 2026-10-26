@@ -795,13 +795,21 @@ private fun VocabularyDestination(
     val state = if (all.isEmpty()) {
         VocabularyUiState.Empty
     } else {
-        VocabularyUiState.Results(filterByMastery(searchVocabulary(shown, query), masteryLevel), query, masteryLevel)
+        VocabularyUiState.Results(
+            entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
+            query = query,
+            masteryLevel = masteryLevel,
+            // The count beside the title is the vocabulary's, not the narrowed list's
+            // (docs/design.md §7.4).
+            total = all.size,
+        )
     }
     VocabularyScreen(
         state = state,
         actions = VocabularyActions(
             onSearch = { text -> query = text },
             onFilter = { chosen -> masteryLevel = chosen },
+            onClearSearch = { query = "" },
             onDelete = { entry ->
                 scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
             },
