@@ -50,7 +50,7 @@ class PhraseLookupPanelSemanticsTest {
     fun `a selected phrase shows the translation shortcut with no provider configured`() {
         compose.setContent { Panel() }
 
-        compose.onNodeWithText("the lantern glows").assertIsDisplayed()
+        compose.onNodeWithText("“the lantern glows”").assertIsDisplayed()
         compose.onNodeWithText("Translate online").assertIsDisplayed()
         compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
         compose.onNodeWithText(DictionarySource.GOOGLE_TRANSLATE.label).assertIsDisplayed()
@@ -85,7 +85,8 @@ class PhraseLookupPanelSemanticsTest {
         var openedSettings = false
         compose.setContent { Panel(onOpenSettings = { openedSettings = true }) }
 
-        compose.onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("A phrase needs an AI", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Set up a provider").assertIsDisplayed()
         compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
         assertTrue(openedSettings)
 
@@ -132,7 +133,7 @@ class PhraseLookupPanelSemanticsTest {
 
         compose.onNodeWithText("The provider rejected the API key.").assertIsDisplayed()
         // The failure is its own state: no prompt, and the shortcut still stands.
-        compose.onNodeWithText("Connect an LLM provider", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("A phrase needs an AI", substring = true).assertDoesNotExist()
         compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
         // The phrase was still sent, so the disclosure is still reachable.
         compose.onNodeWithTag(TRANSLATION_DISCLOSURE_TAG).performClick()

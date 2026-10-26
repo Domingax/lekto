@@ -90,8 +90,9 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.TRANSLATE_ONLINE to "Translate online",
 
     // Phrase lookup panel.
-    TextKey.CONNECT_PROVIDER_PROMPT to "Connect an LLM provider in settings to translate phrases here.",
-    TextKey.OPEN_SETTINGS to "Open settings",
+    TextKey.QUOTED_PHRASE to "\u201C{0}\u201D",
+    TextKey.CONNECT_PROVIDER_PROMPT to "A phrase needs an AI to be translated.",
+    TextKey.SET_UP_PROVIDER to "Set up a provider",
     TextKey.TRANSLATING to "Translating…",
     TextKey.PROVIDER_RETURNED_NO_TRANSLATION to "The provider returned no translation.",
     TextKey.HIDE_WHAT_IS_SENT to "Hide what's sent",

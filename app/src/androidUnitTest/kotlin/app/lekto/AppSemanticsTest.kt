@@ -580,7 +580,7 @@ class AppSemanticsTest {
 
         compose.selectFirstPhrase()
 
-        compose.onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("A phrase needs an AI", substring = true).assertIsDisplayed()
         compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
 
         // The non-blocking prompt lands on settings, leaving the book behind.

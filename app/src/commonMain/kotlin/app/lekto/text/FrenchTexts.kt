@@ -89,9 +89,9 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.TRANSLATE_ONLINE to "Traduire en ligne",
 
     // Phrase lookup panel.
-    TextKey.CONNECT_PROVIDER_PROMPT to
-        "Connectez un fournisseur LLM dans les réglages pour traduire des phrases ici.",
-    TextKey.OPEN_SETTINGS to "Ouvrir les réglages",
+    TextKey.QUOTED_PHRASE to "« {0} »",
+    TextKey.CONNECT_PROVIDER_PROMPT to "Une phrase a besoin d'une IA pour être traduite.",
+    TextKey.SET_UP_PROVIDER to "Configurer un fournisseur",
     TextKey.TRANSLATING to "Traduction…",
     TextKey.PROVIDER_RETURNED_NO_TRANSLATION to "Le fournisseur n'a renvoyé aucune traduction.",
     TextKey.HIDE_WHAT_IS_SENT to "Masquer ce qui est envoyé",

@@ -556,7 +556,7 @@ class AppSemanticsTest {
 
         selectFirstPhrase()
 
-        onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        onNodeWithText("A phrase needs an AI", substring = true).assertIsDisplayed()
         onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
 
         // The non-blocking prompt lands on settings, leaving the book behind.

@@ -119,9 +119,10 @@ fun PhraseLookupPanel(
  */
 @Composable
 private fun PhraseHeader(phrase: String, onDismiss: () -> Unit) {
+    val texts = LocalAppTexts.current
     LookupHeader {
         Text(
-            text = phrase,
+            text = texts.message(AppMessage.of(TextKey.QUOTED_PHRASE, phrase)),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.weight(1f).padding(bottom = LektoSpacing.BetweenRelatedLines),
         )
@@ -165,7 +166,7 @@ private fun NoProviderPrompt(onOpenSettings: () -> Unit) {
         onClick = onOpenSettings,
         modifier = Modifier.handCursor().testTag(TRANSLATION_SETTINGS_TAG),
     ) {
-        Text(texts[TextKey.OPEN_SETTINGS])
+        Text(texts[TextKey.SET_UP_PROVIDER])
     }
 }
 

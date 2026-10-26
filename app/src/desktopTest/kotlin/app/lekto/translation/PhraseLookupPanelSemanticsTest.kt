@@ -37,7 +37,7 @@ class PhraseLookupPanelSemanticsTest {
     fun aSelectedPhraseShowsTheTranslationShortcutWithNoProviderConfigured() = runComposeUiTest {
         setContent { Panel() }
 
-        onNodeWithText("the lantern glows").assertIsDisplayed()
+        onNodeWithText("“the lantern glows”").assertIsDisplayed()
         onNodeWithText("Translate online").assertIsDisplayed()
         onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
         onNodeWithText(DictionarySource.GOOGLE_TRANSLATE.label).assertIsDisplayed()
@@ -72,7 +72,8 @@ class PhraseLookupPanelSemanticsTest {
         var openedSettings = false
         setContent { Panel(onOpenSettings = { openedSettings = true }) }
 
-        onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        onNodeWithText("A phrase needs an AI", substring = true).assertIsDisplayed()
+        onNodeWithText("Set up a provider").assertIsDisplayed()
         onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
         assertTrue(openedSettings)
 
@@ -119,7 +120,7 @@ class PhraseLookupPanelSemanticsTest {
 
         onNodeWithText("The provider rejected the API key.").assertIsDisplayed()
         // The failure is its own state: no prompt, and the shortcut still stands.
-        onNodeWithText("Connect an LLM provider", substring = true).assertDoesNotExist()
+        onNodeWithText("A phrase needs an AI", substring = true).assertDoesNotExist()
         onNodeWithTag(TRANSLATION_SHORTCUT_TAG).assertIsDisplayed()
         // The phrase was still sent, so the disclosure is still reachable.
         onNodeWithTag(TRANSLATION_DISCLOSURE_TAG).performClick()
