@@ -42,6 +42,7 @@ import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
 import app.lekto.theme.contentColorOn
+import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Volume2
 import app.lekto.ui.icons.X
@@ -96,7 +97,7 @@ private val SHEET_WIDTH = 360.dp
 private val SHEET_HEIGHT = 640.dp
 
 /** The most of the screen the sheet may cover, as the panel enforces it. */
-private val SHEET_MAX_HEIGHT = SHEET_HEIGHT * SHEET_MAX_HEIGHT_FRACTION
+private val SHEET_MAX_HEIGHT = SHEET_HEIGHT * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 
 /** The drag handle's bar. */
 private val HANDLE_WIDTH = 32.dp

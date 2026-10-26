@@ -98,7 +98,7 @@ Two voices, and they never swap roles.
   face is a new artefact with its own licence notice, and it buys what the platform already gives.
 
 One deliberate borrowing: a **screen title** is set in the reading serif — "Library",
-"Vocabulary", "Settings", and the word at the top of the lookup panel. The app's own headings
+"Vocabulary", "Settings", and the word or phrase at the top of the lookup panel. The app's own headings
 sound like a book's headings. Every other piece of interface text is sans.
 
 The scale actually used, and nothing else:
@@ -299,6 +299,15 @@ sheet's edge.
 that level, which is one gesture for one intention. Every chip is filled with its level's colour and
 carries its number; the current one adds an ink ring, and its **name** stands beside the row, so the
 numbers never need a legend.
+
+A **phrase** is the word panel's sibling on the same shell (issue #211): the phrase in the serif with
+the close icon, then the answer in the body size. **With a provider**, the translation stands first
+and the disclosure beneath it — `What's sent?` — names the provider and says the selection and its
+sentence leave the device. **Without a provider**, the sheet says that a phrase needs an AI while a
+word has its offline dictionary, offers the settings link, and keeps the **Translation shortcut**,
+which needs nothing configured. The body scrolls under the sheet's cap, so a long phrase or a long
+translation never clips or pushes the shortcut past the edge. A failure is a sentence in the panel;
+the reading session is never interrupted.
 
 There are **no dictionary tabs**. The app has one offline dictionary and four external references
 that leave the app; presenting them as tabs would promise a symmetry that does not exist.

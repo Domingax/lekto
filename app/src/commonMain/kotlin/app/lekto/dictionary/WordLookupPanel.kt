@@ -1,35 +1,26 @@
 package app.lekto.dictionary
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryEntry
@@ -42,11 +33,13 @@ import app.lekto.reader.MasteryChip
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.LookupCloseButton
+import app.lekto.ui.LookupHeader
+import app.lekto.ui.LookupSheet
+import app.lekto.ui.SheetDivider
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Volume2
-import app.lekto.ui.icons.X
-import app.lekto.ui.swallowTaps
 
 /** The test tag on a source's reference, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
@@ -65,16 +58,6 @@ internal const val LOOKUP_PANEL_TAG: String = "lookup-panel"
 
 /** The test tag on a mastery level's button, so a UI test can click exactly one. */
 internal fun masteryTag(level: MasteryLevel): String = "lookup-mastery-${level.name}"
-
-/** The most of the screen the sheet may cover, so the page and the washed word stay visible. */
-internal const val SHEET_MAX_HEIGHT_FRACTION: Float = 0.45f
-
-/** The 1 dp hairline a surface draws around itself (docs/design.md §4: no shadows). */
-private val Hairline = 1.dp
-
-/** The drag handle's bar: its width and its height. */
-private val HandleWidth = 32.dp
-private val HandleHeight = 4.dp
 
 /** The breathing room around the dot between two references. */
 private val ReferenceGap = 4.dp
@@ -117,10 +100,11 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * pack and no network it still degrades to the references and an honest message
  * rather than an empty panel.
  *
- * The sheet covers at most [SHEET_MAX_HEIGHT_FRACTION] of the screen, so the page
- * stays visible and the touched word stays washed above it. Its header is the
- * word in the serif with its part of speech and pronunciation, the speaker and
- * the close as icons; its body lists the senses, each with its translation; its
+ * The sheet covers at most [app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION] of the
+ * screen, so the page stays visible and the touched word stays washed above it.
+ * Its header is the word in the serif with its part of speech and pronunciation,
+ * the speaker and the close as icons; its body lists the senses, each with its
+ * translation; its
  * footer names the level and carries the five chips. **There is no Save button**:
  * a level *is* the save, one tap for one intention, and the reader's colour
  * updating is the only confirmation.
@@ -140,30 +124,12 @@ fun WordLookupPanel(
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(modifier.fillMaxWidth()) {
-        val maxSheetHeight = if (constraints.hasBoundedHeight) maxHeight * SHEET_MAX_HEIGHT_FRACTION else Dp.Infinity
-        val theme = MaterialTheme.colorScheme
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .heightIn(max = maxSheetHeight)
-                .testTag(LOOKUP_PANEL_TAG),
-            color = theme.surface,
-            border = BorderStroke(Hairline, theme.outline),
-        ) {
-            Box(Modifier.fillMaxWidth()) {
-                // The sheet's own surface, behind the controls: a tap that lands on
-                // no control stops here instead of reaching the scrim over the page,
-                // while the controls stay above it and take their tap first.
-                Box(Modifier.matchParentSize().swallowTaps())
-                Column(Modifier.fillMaxWidth()) {
-                    DragHandle()
-                    SheetContent(term, result, pronunciation, actions.onDismiss)
-                    Footer(shortcuts, actions.onOpenShortcut, vocabulary)
-                }
-            }
-        }
+    LookupSheet(
+        modifier = modifier,
+        sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
+    ) {
+        SheetContent(term, result, pronunciation, actions.onDismiss)
+        Footer(shortcuts, actions.onOpenShortcut, vocabulary)
     }
 }
 
@@ -188,23 +154,6 @@ private fun ColumnScope.SheetContent(
     }
 }
 
-/** A hairline between two blocks; inset so it parts the content, not the sheet's whole width. */
-@Composable
-private fun SheetDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
-        color = MaterialTheme.colorScheme.outline,
-    )
-}
-
-/** The grabber that says the sheet was raised from the bottom edge. It is a hint, not a control. */
-@Composable
-private fun DragHandle() {
-    Box(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines), contentAlignment = Alignment.Center) {
-        Box(Modifier.width(HandleWidth).height(HandleHeight).background(MaterialTheme.colorScheme.outline, CircleShape))
-    }
-}
-
 /**
  * The word in the serif, its part of speech and pronunciation under it, and the
  * speaker and close as icons (docs/design.md §3, §7.3). The lemma stands on its
@@ -215,14 +164,7 @@ private fun DragHandle() {
 private fun SheetHeader(term: String, result: WordLookup, pronunciation: Pronunciation, onDismiss: () -> Unit) {
     val texts = LocalAppTexts.current
     val found = result as? WordLookup.Found
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(
-            start = LektoSpacing.InsidePanel,
-            end = LektoSpacing.InsideLabelPair,
-            top = LektoSpacing.InsideLabelPair,
-        ),
-        verticalAlignment = Alignment.Top,
-    ) {
+    LookupHeader {
         Column(Modifier.weight(1f).padding(bottom = LektoSpacing.BetweenRelatedLines)) {
             Text(term, style = MaterialTheme.typography.headlineMedium)
             Lemma(term, found?.lemma)
@@ -231,9 +173,7 @@ private fun SheetHeader(term: String, result: WordLookup, pronunciation: Pronunc
         IconButton(onClick = pronunciation.onSpeak, modifier = Modifier.handCursor().testTag(PRONOUNCE_TAG)) {
             Icon(imageVector = LektoIcons.Volume2, contentDescription = texts[TextKey.LISTEN])
         }
-        IconButton(onClick = onDismiss, modifier = Modifier.handCursor().testTag(LOOKUP_CLOSE_TAG)) {
-            Icon(imageVector = LektoIcons.X, contentDescription = texts[TextKey.CLOSE])
-        }
+        LookupCloseButton(onDismiss = onDismiss, tag = LOOKUP_CLOSE_TAG)
     }
 }
 

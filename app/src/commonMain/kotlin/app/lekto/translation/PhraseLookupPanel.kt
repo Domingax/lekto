@@ -2,11 +2,11 @@ package app.lekto.translation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -16,13 +16,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
+import app.lekto.ui.LookupCloseButton
+import app.lekto.ui.LookupHeader
+import app.lekto.ui.LookupSheet
+import app.lekto.ui.SheetDivider
 import app.lekto.ui.handCursor
-import app.lekto.ui.swallowTaps
+
+/** The test tag on the phrase sheet itself, so a layout test can read how much of the screen it takes. */
+internal const val PHRASE_PANEL_TAG: String = "phrase-lookup-panel"
+
+/** The test tag on the phrase sheet's close action. */
+internal const val PHRASE_CLOSE_TAG: String = "phrase-lookup-close"
 
 /** The test tag on the translation shortcut, so a UI test can click exactly it. */
 internal const val TRANSLATION_SHORTCUT_TAG: String = "lookup-translation-shortcut"
@@ -43,17 +52,24 @@ internal const val TRANSLATION_DISCLOSURE_TAG: String = "lookup-translation-disc
 data class PhraseLookupActions(val onOpenShortcut: (TranslationShortcut) -> Unit, val onDismiss: () -> Unit)
 
 /**
- * The lookup panel in **phrase mode** (issues #87, #89): it opens on the phrase
- * the reader selected, streams a translation from the connected **LLM provider**
- * into the panel, and always offers the zero-configuration **Translation
- * shortcut** — the service's prefilled page, handed to the platform browser.
+ * The lookup panel in **phrase mode** (issues #87, #89, #211): it opens on the
+ * phrase the reader selected, streams a translation from the connected **LLM
+ * provider** into the panel, and always offers the zero-configuration
+ * **Translation shortcut** — the service's prefilled page, handed to the platform
+ * browser.
+ *
+ * It is the word panel's sibling on the same sheet shell (docs/design.md §7.3):
+ * the phrase in the serif with the close icon, then the answer in the body size.
+ * The sheet is capped at [app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION] of the
+ * screen and its body scrolls, so a long phrase or a long translation never
+ * pushes the shortcut past the edge.
  *
  * The panel is honest about the two working modes: the provider branch keeps the
  * translation the focus and discloses exactly what leaves the device
  * ([PhraseTranslationUiState.context]) behind a control the reader can open, and
  * without a provider it shows a non-blocking prompt beside the shortcut, never a
  * dead action. A provider failure is rendered inline, so reading is never
- * interrupted (ADR-0022). The panel swallows taps that land on it, so only a tap
+ * interrupted (ADR-0022). The sheet swallows taps that land on it, so only a tap
  * truly outside it — which its [app.lekto.ui.DismissScrim] handles — dismisses it;
  * a tap on the reader behind it then never reaches a word. Like a Dictionary
  * shortcut, Lekto never embeds or scrapes the service.
@@ -68,20 +84,49 @@ fun PhraseLookupPanel(
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    OutlinedCard(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
+    LookupSheet(
+        modifier = modifier,
+        sheetModifier = Modifier.testTag(PHRASE_PANEL_TAG),
+    ) {
+        // The phrase and the answer share one scroll and sit under the sheet's
+        // cap; the shortcut stays pinned below it, so the one answer that needs
+        // nothing configured is always reachable.
         Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
         ) {
-            Text(phrase, style = MaterialTheme.typography.titleLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = actions.onDismiss, modifier = Modifier.handCursor()) {
-                    Text(LocalAppTexts.current[TextKey.CLOSE])
-                }
+            PhraseHeader(phrase, actions.onDismiss)
+            SheetDivider()
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+                verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+            ) {
+                TranslationSection(translation, onOpenSettings)
             }
-            TranslationSection(translation, onOpenSettings)
-            ShortcutSection(shortcut, actions)
         }
+        ShortcutSection(shortcut, actions)
+    }
+}
+
+/**
+ * The phrase in the serif with the close as an icon (docs/design.md §3, §7.3):
+ * the same header grammar as the word panel, so the two sheets cannot drift
+ * apart. A long phrase wraps instead of clipping.
+ */
+@Composable
+private fun PhraseHeader(phrase: String, onDismiss: () -> Unit) {
+    val texts = LocalAppTexts.current
+    LookupHeader {
+        Text(
+            text = texts.message(AppMessage.of(TextKey.QUOTED_PHRASE, phrase)),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.weight(1f).padding(bottom = LektoSpacing.BetweenRelatedLines),
+        )
+        LookupCloseButton(onDismiss = onDismiss, tag = PHRASE_CLOSE_TAG)
     }
 }
 
@@ -121,7 +166,7 @@ private fun NoProviderPrompt(onOpenSettings: () -> Unit) {
         onClick = onOpenSettings,
         modifier = Modifier.handCursor().testTag(TRANSLATION_SETTINGS_TAG),
     ) {
-        Text(texts[TextKey.OPEN_SETTINGS])
+        Text(texts[TextKey.SET_UP_PROVIDER])
     }
 }
 
@@ -197,22 +242,38 @@ private fun TranslationResult(text: String) {
     )
 }
 
-/** The zero-configuration Translation shortcut, or an honest message when the phrase cannot be addressed. */
+/**
+ * The pinned footer: the zero-configuration Translation shortcut, or an honest
+ * message when the phrase cannot be addressed. It sits outside the body's scroll,
+ * so a long translation never hides the answer that needs nothing configured.
+ */
 @Composable
 private fun ShortcutSection(shortcut: TranslationShortcut?, actions: PhraseLookupActions) {
     val texts = LocalAppTexts.current
-    if (shortcut == null) {
-        Text(
-            texts[TextKey.NO_TRANSLATION_SERVICE],
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    } else {
-        Text(texts[TextKey.TRANSLATE_ONLINE], style = MaterialTheme.typography.labelLarge)
-        TextButton(
-            onClick = { actions.onOpenShortcut(shortcut) },
-            modifier = Modifier.handCursor().testTag(TRANSLATION_SHORTCUT_TAG),
-        ) {
-            Text(shortcut.source.label)
+    SheetDivider()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
+    ) {
+        if (shortcut == null) {
+            Text(
+                texts[TextKey.NO_TRANSLATION_SERVICE],
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        } else {
+            Text(
+                texts[TextKey.TRANSLATE_ONLINE],
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                onClick = { actions.onOpenShortcut(shortcut) },
+                modifier = Modifier.handCursor().testTag(TRANSLATION_SHORTCUT_TAG),
+            ) {
+                Text(shortcut.source.label)
+            }
         }
     }
 }

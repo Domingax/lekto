@@ -226,7 +226,11 @@ edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
 meta bars, the two real icons, the numbered senses with their translations, the
 level named beside the five filled chip frames (the current one ringed in ink)
 and the references as one muted, content-aligned line; the offline sheet swaps
-the senses for the honest message. A text-bearing golden waits on
+the senses for the honest message. The phrase sheet adds
+`phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
+(issue #211): the same shell with the phrase in the serif band and the close icon,
+then either the translation body with its disclosure or the prompt with its
+settings link, above the zero-configuration shortcut. A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 
@@ -761,7 +765,9 @@ the context, report a failure inline, cancel on close, and fall back to the
 `app/desktopTest`, driven by virtual time. The panel is
 `PhraseLookupPanelSemanticsTest` on both lanes — the shortcut with no provider,
 the non-blocking prompt beside it, the streamed text with its disclosure
-collapsed until asked for, the inline failure and the empty answer — and the
+collapsed until asked for, the inline failure and the empty answer, the three
+states kept apart, and a long translation scrolling to the shortcut instead of
+clipping under the sheet's cap — and the
 whole loop — select a phrase,
 watch the translation stream in with the provider reachable directly, close and
 find the reader on the same page — runs through `AppSemanticsTest` on both

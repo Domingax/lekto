@@ -133,6 +133,7 @@ import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
 import app.lekto.testkit.testOfferedLanguage
+import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
@@ -505,7 +506,7 @@ class AppSemanticsTest {
             opened.orEmpty().startsWith("https://translate.google.com/"),
         )
 
-        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithTag(PHRASE_CLOSE_TAG).performClick()
         compose.onNodeWithText("Translate online").assertDoesNotExist()
         compose.awaitPage(2)
     }
@@ -579,7 +580,7 @@ class AppSemanticsTest {
 
         compose.selectFirstPhrase()
 
-        compose.onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("A phrase needs an AI", substring = true).assertIsDisplayed()
         compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
 
         // The non-blocking prompt lands on settings, leaving the book behind.
