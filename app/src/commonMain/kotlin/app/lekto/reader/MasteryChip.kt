@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
@@ -15,17 +18,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
+import app.lekto.theme.hoverWash
 import app.lekto.ui.handCursor
 
 /** The padding every mastery chip shares, so the lookup selector and the list filter stay identical. */
@@ -33,7 +40,7 @@ private val ChipPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
 
 /** The visible frame of a compact chip, inside its 48 dp touch target. */
 private val CompactChipWidth = 32.dp
-private val CompactChipHeight = 28.dp
+private val CompactChipHeight = 32.dp
 
 /**
  * One mastery chip: the level's colour behind [label], filled when [selected]
@@ -84,7 +91,13 @@ fun MasteryChip(
     }
 }
 
-/** The numbered chip: a small filled or ringed frame, centred in its 48 dp target. */
+/**
+ * The numbered chip (issue #210's mockup): every level keeps its colour as a
+ * filled frame, and the selected one adds an ink ring, so the ramp reads at once
+ * and "which one is the word's level" is a second, separate signal. The hover is
+ * the theme's ink at 5 % over the whole 48 dp target, so the pointer's row reads
+ * as one control.
+ */
 @Suppress("LongParameterList") // The chip's frame, its colour, its state and its tap are independent.
 @Composable
 private fun CompactChip(
@@ -95,11 +108,15 @@ private fun CompactChip(
     modifier: Modifier,
 ) {
     val theme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Box(
         modifier = Modifier
             .sizeIn(minWidth = LektoSpacing.TouchTarget, minHeight = LektoSpacing.TouchTarget)
+            .background(if (hovered) hoverWash(theme.onSurface) else Color.Transparent, LektoRadii.Control)
             .handCursor()
-            .clickable(role = Role.Button, onClick = onClick)
+            .hoverable(interaction)
+            .clickable(interactionSource = null, indication = null, role = Role.Button, onClick = onClick)
             .then(modifier),
         contentAlignment = Alignment.Center,
     ) {
@@ -107,14 +124,20 @@ private fun CompactChip(
             modifier = Modifier
                 .width(CompactChipWidth)
                 .height(CompactChipHeight)
-                .background(if (selected) colour else theme.background, LektoRadii.Control)
-                .border(2.dp, colour, LektoRadii.Control),
+                .background(colour, LektoRadii.Control)
+                .then(
+                    if (selected) Modifier.border(SelectedRing, theme.onBackground, LektoRadii.Control) else Modifier,
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = label,
-                color = if (selected) contentColorOn(colour) else theme.onSurface,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                color = contentColorOn(colour),
             )
         }
     }
 }
+
+/** The ring that marks the word's current level, in the theme's ink. */
+private val SelectedRing = 2.dp

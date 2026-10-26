@@ -55,8 +55,9 @@ import kotlin.test.Test
  *
  * It is deliberately text-free, like the other goldens: glyphs are rendered with
  * the host's fonts and would not verify on another machine. Instead it records
- * the sheet's frame — the top corners at the sheet radius, the surface tone and
- * the hairline, the drag handle, the word and its muted meta line, the two real
+ * the sheet's frame — square where it joins the bottom edge like the **Aa**
+ * panel, the surface tone and the inset hairline, the drag handle, the word and
+ * its muted meta line, the two real
  * icons, the numbered senses with their translations, the level named beside the
  * five chips, and the references as one muted line — over a page lifted under
  * the sheet by just enough to keep the washed word in view, its first line
@@ -103,7 +104,7 @@ private val HANDLE_HEIGHT = 4.dp
 
 /** A chip's visible frame inside its touch target. */
 private val CHIP_WIDTH = 32.dp
-private val CHIP_HEIGHT = 28.dp
+private val CHIP_HEIGHT = 32.dp
 
 /** A bar where a line of text would be: its height and the share of the width it takes. */
 private data class LineBar(val height: Dp, val share: Float)
@@ -142,14 +143,13 @@ private fun LookupPreview(offline: Boolean) {
         PageBehind()
         Surface(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(SHEET_MAX_HEIGHT),
-            shape = LektoRadii.SheetTop,
             color = theme.surface,
             border = BorderStroke(1.dp, theme.outline),
         ) {
             Column(Modifier.fillMaxWidth()) {
                 DragHandle()
                 SheetHeader()
-                HorizontalDivider(color = theme.outline)
+                PreviewDivider()
                 if (offline) OfflineBody() else SensesBody()
                 SheetFooter()
             }
@@ -282,26 +282,27 @@ private fun ColumnScope.OfflineBody() {
 @Composable
 private fun SheetFooter() {
     val theme = MaterialTheme.colorScheme
-    HorizontalDivider(color = theme.outline)
+    PreviewDivider()
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.InsideLabelPair),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        Column(
+            modifier = Modifier.height(LektoSpacing.TouchTarget),
+            verticalArrangement = Arrangement.Center,
+        ) {
             Line(theme.onSurfaceVariant, LEVEL_LABEL_BAR)
             Spacer(Modifier.height(4.dp))
             Line(theme.onBackground, LEVEL_NAME_BAR)
         }
         MasteryChips()
     }
-    HorizontalDivider(color = theme.outline)
+    PreviewDivider()
     ReferenceLine()
 }
 
-/** The five chip frames, the selected one filled with its level's colour. */
+/** The five chip frames, each filled with its level's colour; the selected one keeps an ink ring. */
 @Composable
 private fun MasteryChips() {
     val theme = MaterialTheme.colorScheme
@@ -316,15 +317,26 @@ private fun MasteryChips() {
                     modifier = Modifier
                         .width(CHIP_WIDTH)
                         .height(CHIP_HEIGHT)
-                        .background(if (selected) fill else theme.background, LektoRadii.Control)
-                        .border(2.dp, fill, LektoRadii.Control),
+                        .background(fill, LektoRadii.Control)
+                        .then(
+                            if (selected) Modifier.border(2.dp, theme.onBackground, LektoRadii.Control) else Modifier,
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Line(if (selected) contentColorOn(fill) else theme.onSurface, CHIP_LABEL_BAR)
+                    Line(contentColorOn(fill), CHIP_LABEL_BAR)
                 }
             }
         }
     }
+}
+
+/** A hairline between two blocks, inset to the content as the panel draws it. */
+@Composable
+private fun PreviewDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
+        color = MaterialTheme.colorScheme.outline,
+    )
 }
 
 /** The external references as one muted line: four names and the dots between them. */
@@ -334,7 +346,7 @@ private fun ReferenceLine() {
     Row(
         modifier = Modifier.fillMaxWidth().height(
             LektoSpacing.TouchTarget,
-        ).padding(horizontal = LektoSpacing.InsideLabelPair),
+        ).padding(horizontal = LektoSpacing.InsidePanel),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         REFERENCE_BARS.forEachIndexed { index, width ->

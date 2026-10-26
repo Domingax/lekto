@@ -41,7 +41,6 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryChip
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
-import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.LektoIcons
@@ -57,6 +56,9 @@ internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
 
 /** The test tag on the sheet's close action. */
 internal const val LOOKUP_CLOSE_TAG: String = "lookup-close"
+
+/** The test tag on the current level's name and label, so a layout test can compare it with the chips. */
+internal const val LOOKUP_LEVEL_TAG: String = "lookup-level"
 
 /** The test tag on the sheet itself, so a layout test can read how much of the screen it takes. */
 internal const val LOOKUP_PANEL_TAG: String = "lookup-panel"
@@ -74,11 +76,8 @@ private val Hairline = 1.dp
 private val HandleWidth = 32.dp
 private val HandleHeight = 4.dp
 
-/** The gap between two level chips. */
-private val ChipGap = 4.dp
-
-/** The breathing room inside one reference's touch target. */
-private val ReferencePadding = 4.dp
+/** The breathing room around the dot between two references. */
+private val ReferenceGap = 4.dp
 
 /**
  * The lookup panel's pronunciation control (issue #21): the action the speaker
@@ -150,7 +149,6 @@ fun WordLookupPanel(
                 .fillMaxWidth()
                 .heightIn(max = maxSheetHeight)
                 .testTag(LOOKUP_PANEL_TAG),
-            shape = LektoRadii.SheetTop,
             color = theme.surface,
             border = BorderStroke(Hairline, theme.outline),
         ) {
@@ -184,10 +182,19 @@ private fun ColumnScope.SheetContent(
 ) {
     Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
         SheetHeader(term, result, pronunciation, onDismiss)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        SheetDivider()
         SpeechMessage(pronunciation.result)
         Answer(result)
     }
+}
+
+/** A hairline between two blocks; inset so it parts the content, not the sheet's whole width. */
+@Composable
+private fun SheetDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
+        color = MaterialTheme.colorScheme.outline,
+    )
 }
 
 /** The grabber that says the sheet was raised from the bottom edge. It is a hint, not a control. */
@@ -211,6 +218,7 @@ private fun SheetHeader(term: String, result: WordLookup, pronunciation: Pronunc
     Row(
         modifier = Modifier.fillMaxWidth().padding(
             start = LektoSpacing.InsidePanel,
+            end = LektoSpacing.InsideLabelPair,
             top = LektoSpacing.InsideLabelPair,
         ),
         verticalAlignment = Alignment.Top,
@@ -260,23 +268,18 @@ private fun Meta(entries: List<DictionaryEntry>) {
  * that level. In the fixed footer the two stay reachable however long the senses
  * run.
  */
-@OptIn(ExperimentalLayoutApi::class) // `FlowRow` drops the chips below the name on a narrow phone.
 @Composable
 private fun Footer(
     shortcuts: List<DictionaryShortcut>,
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     vocabulary: VocabularyPanel,
 ) {
-    val theme = MaterialTheme.colorScheme
-    HorizontalDivider(color = theme.outline)
-    FlowRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.InsideLabelPair),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalArrangement = Arrangement.Center,
+    SheetDivider()
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        LevelName(vocabulary.level)
+        LevelName(vocabulary.level, Modifier.weight(1f))
         MasterySelector(vocabulary)
     }
     References(shortcuts, onOpenShortcut)
@@ -284,9 +287,12 @@ private fun Footer(
 
 /** The current level's name, in ordinary ink, so a chip's number is never the only signal. */
 @Composable
-private fun LevelName(level: MasteryLevel) {
+private fun LevelName(level: MasteryLevel, modifier: Modifier = Modifier) {
     val texts = LocalAppTexts.current
-    Column {
+    Column(
+        modifier = modifier.heightIn(min = LektoSpacing.TouchTarget).testTag(LOOKUP_LEVEL_TAG),
+        verticalArrangement = Arrangement.Center,
+    ) {
         Text(
             text = texts[TextKey.MASTERY],
             style = MaterialTheme.typography.labelSmall,
@@ -305,7 +311,9 @@ private fun LevelName(level: MasteryLevel) {
  */
 @Composable
 private fun MasterySelector(vocabulary: VocabularyPanel) {
-    Row(horizontalArrangement = Arrangement.spacedBy(ChipGap)) {
+    // Each chip's 48 dp target already leaves 8 dp on each side of its 32 dp
+    // frame; a gap between targets would wrap the row on a 360 dp phone.
+    Row {
         MasteryLevel.entries.forEach { level ->
             MasteryChip(
                 level = level,
@@ -338,9 +346,9 @@ private fun MasteryLevel.shortLabel(): String = when (this) {
 @Composable
 private fun References(shortcuts: List<DictionaryShortcut>, onOpenShortcut: (DictionaryShortcut) -> Unit) {
     if (shortcuts.isEmpty()) return
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+    SheetDivider()
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsideLabelPair),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.Center,
     ) {
         shortcuts.forEachIndexed { index, shortcut ->
@@ -365,7 +373,6 @@ private fun Reference(shortcut: DictionaryShortcut, onOpenShortcut: (DictionaryS
             text = shortcut.source.label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = ReferencePadding),
         )
     }
 }
@@ -378,6 +385,7 @@ private fun ReferenceSeparator() {
             text = "·",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = ReferenceGap),
         )
     }
 }

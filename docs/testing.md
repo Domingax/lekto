@@ -221,11 +221,12 @@ hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
 and the page clipped rather than repaginated. The lookup sheet adds one
 `word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
-(issue #210): the sheet raised over a page at the 45 % cap, its top corners at the
-sheet radius, its drag handle, the word and meta bars, the two real icons, the
-numbered senses with their translations, the level named beside the five chip
-frames and the references as one muted line; the offline sheet swaps the senses
-for the honest message. A text-bearing golden waits on
+(issue #210): the sheet raised over a page at the 45 % cap, square at its top
+edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
+meta bars, the two real icons, the numbered senses with their translations, the
+level named beside the five filled chip frames (the current one ringed in ink)
+and the references as one muted, content-aligned line; the offline sheet swaps
+the senses for the honest message. A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 

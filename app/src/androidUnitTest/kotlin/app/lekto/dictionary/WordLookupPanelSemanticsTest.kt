@@ -283,6 +283,35 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun `the level label is centred with the chips`() {
+        compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
+
+        val label = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
+        val chip = compose.onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).getUnclippedBoundsInRoot()
+        val labelCentre = (label.top.value + label.bottom.value) / 2f
+        val chipCentre = (chip.top.value + chip.bottom.value) / 2f
+
+        assertTrue(
+            "the label spans ${label.top}..${label.bottom} dp, the chip ${chip.top}..${chip.bottom} dp",
+            abs(labelCentre - chipCentre) < 1f,
+        )
+    }
+
+    @Test
+    fun `the references start at the content edge`() {
+        compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
+
+        val label = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
+        val reference =
+            compose.onNodeWithTag(sourceShortcutTag(DictionarySource.WORD_REFERENCE)).getUnclippedBoundsInRoot()
+
+        assertTrue(
+            "the references start at ${reference.left} dp, the content at ${label.left} dp",
+            abs(label.left.value - reference.left.value) < 1f,
+        )
+    }
+
+    @Test
     fun `every level chip fits inside the sheet`() {
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
 
