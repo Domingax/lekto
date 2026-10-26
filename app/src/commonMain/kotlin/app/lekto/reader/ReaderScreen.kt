@@ -28,11 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -136,17 +136,22 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
         buildChapterText(document.chapter, styles)
     }
     BoxWithConstraints(modifier.fillMaxSize()) {
+        val pages = rememberReaderPages(chapterText, styles)
         val state = remember(document.chapter) { ReaderState(actions.onPositionChange) }
+        state.bind(pages, chapterText.length, document.initialOffset)
         ReaderContent(document, chapterText, styles, state, actions)
     }
 }
 
 /**
  * The reader's chrome, page and **Aa** panel. The panel is part of the column, not
- * an overlay: opening it shortens the page and lifts the bottom band, so it never
- * covers the text (docs/design.md §7.2). A tap on the page closes whatever panel is
- * open — the **Aa** panel below it or a lookup above it — and the page scrim keeps
- * that tap from looking a word up or turning the page. The chrome stays usable.
+ * an overlay: opening it lifts the bottom band and shortens the visible page, so
+ * it never covers the text (docs/design.md §7.2). The page itself is not
+ * repaginated — the panel is a temporary display, so the page number and the page
+ * count stay put, and the page is whole again as soon as the panel closes. A tap
+ * on the page closes whatever panel is open — the **Aa** panel below it or a
+ * lookup above it — and the page scrim keeps that tap from looking a word up or
+ * turning the page. The chrome stays usable.
  */
 @Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
 @Composable
@@ -157,18 +162,6 @@ private fun BoxWithConstraintsScope.ReaderContent(
     state: ReaderState,
     actions: ReaderActions,
 ) {
-    // The panel's measured height is what the page above it loses. The first frame
-    // after it opens is laid out before the measurement lands; the page then
-    // repaginates around the same anchor.
-    var panelHeightPx by remember { mutableStateOf(0) }
-    val panelHeight = if (state.chromeVisible && state.preferencesVisible) {
-        with(LocalDensity.current) { panelHeightPx.toDp() }
-    } else {
-        0.dp
-    }
-    val pages = rememberReaderPages(chapterText, styles, panelHeight)
-    state.bind(pages, chapterText.length, document.initialOffset)
-
     Column(Modifier.fillMaxSize()) {
         if (state.chromeVisible) {
             ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences)
@@ -190,7 +183,6 @@ private fun BoxWithConstraintsScope.ReaderContent(
                 preferences = document.preferences,
                 onChange = actions.onReadingPreferencesChange,
                 onDismiss = state::dismissPreferences,
-                modifier = Modifier.onSizeChanged { size -> panelHeightPx = size.height },
             )
         }
     }
@@ -274,7 +266,7 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit) {
 }
 
 /** The page, its word layer built for this page only, and the tap zones over it. */
-@Suppress("LongParameterList") // The page's renderer pieces are threaded as one call; a bundle would only hide them.
+@Suppress("LongMethod", "LongParameterList") // The page's pieces share one layout; splitting would hide its state.
 @Composable
 private fun ColumnScope.ReaderPage(
     document: ReaderDocument,
@@ -300,6 +292,8 @@ private fun ColumnScope.ReaderPage(
         modifier = Modifier
             .fillMaxWidth()
             .weight(1f)
+            // The page keeps its full-height pagination; the **Aa** panel only clips it.
+            .clipToBounds()
             .testTag(READER_PAGE_TAG)
             .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .readerTapInput(latestTap)
@@ -436,16 +430,13 @@ private fun readerSurfaceTap(
 private fun BoxWithConstraintsScope.rememberReaderPages(
     chapterText: AnnotatedString,
     styles: ReaderStyles,
-    reservedHeight: Dp,
 ): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val contentWidth = with(density) {
         (maxWidth - styles.horizontalMargin * 2).roundToPx()
     }.coerceAtLeast(0)
-    val contentHeight = with(density) {
-        (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT - reservedHeight).roundToPx()
-    }.coerceAtLeast(0)
+    val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
     val pages = remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale) {
         mutableStateListOf<ReaderPage>()
     }

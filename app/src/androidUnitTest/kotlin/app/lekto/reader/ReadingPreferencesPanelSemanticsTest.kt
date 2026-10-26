@@ -148,6 +148,21 @@ class ReadingPreferencesPanelSemanticsTest {
     }
 
     /**
+     * The panel is a temporary display: opening it must not repaginate the book,
+     * so the page number and the page count stay put (issue #209 review).
+     */
+    @Test
+    fun openingThePanelDoesNotRepaginateTheBook() {
+        compose.setContent { PreferencesReader(renderer) }
+        val before = compose.pageBarText()
+
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+
+        compose.onNodeWithTag(READING_PREFERENCES_PANEL_TAG).assertIsDisplayed()
+        assertEquals("the panel must not change the page or the page count", before, compose.pageBarText())
+    }
+
+    /**
      * The panel joins the column under the bottom band, so it pushes the page and
      * the position line up rather than covering them (docs/design.md §7.2).
      */

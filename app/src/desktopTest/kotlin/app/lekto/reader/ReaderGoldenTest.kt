@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -96,14 +97,16 @@ private val ROW_LABEL_BAR = LineBar(height = 9.dp, share = 0.22f)
 private val CHIP_LABEL_BAR = LineBar(height = 9.dp, share = 0.45f)
 private val PAGE_LINE_BAR = LineBar(height = 10.dp, share = 0.94f)
 
-/** The page's lines, with the last line shorter as a paragraph ends. */
-private val PAGE_LINE_SHARES = listOf(0.96f, 0.92f, 0.95f, 0.9f, 0.93f, 0.6f, 0.94f, 0.88f, 0.52f)
+/** The page's lines, with a shorter one where a paragraph ends. */
+private val PAGE_LINE_SHARES = listOf(
+    0.96f, 0.92f, 0.95f, 0.9f, 0.93f, 0.6f,
+    0.94f, 0.88f, 0.52f, 0.95f, 0.9f, 0.93f,
+    0.91f, 0.62f, 0.96f, 0.9f, 0.94f, 0.89f,
+    0.93f, 0.48f,
+)
 
 /** A chip's visible height inside its 48 dp touch target. */
 private val CHIP_HEIGHT = 28.dp
-
-/** How many page lines still fit above the open **Aa** panel in the preview. */
-private const val PANEL_PAGE_LINES = 5
 
 /** The three chip frames the size row draws: the step down, the value and the step up. */
 private val STEP_CHIP_WIDTH = 32.dp
@@ -122,7 +125,7 @@ private fun ReaderPreview(panelOpen: Boolean) {
     val theme = MaterialTheme.colorScheme
     Column(Modifier.size(width = READER_WIDTH, height = READER_HEIGHT).background(theme.background)) {
         ChromeBand()
-        PageLines(panelOpen)
+        PageLines()
         PageBarBand()
         if (panelOpen) TextPanel()
     }
@@ -148,20 +151,21 @@ private fun ChromeBand() {
 
 /**
  * The book's page as bars: the reading margin on each side and the paragraph
- * rhythm. The panel takes room from the page, so it shows fewer lines while open.
+ * rhythm. The page keeps its full pagination; the panel only clips the visible
+ * part, as the reader does.
  */
 @Composable
-private fun ColumnScope.PageLines(panelOpen: Boolean) {
+private fun ColumnScope.PageLines() {
     val theme = MaterialTheme.colorScheme
-    val lines = if (panelOpen) PAGE_LINE_SHARES.take(PANEL_PAGE_LINES) else PAGE_LINE_SHARES
     Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxWidth()
+            .clipToBounds()
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
-        lines.forEach { share ->
+        PAGE_LINE_SHARES.forEach { share ->
             Line(theme.onBackground, PAGE_LINE_BAR.copy(share = share))
         }
     }

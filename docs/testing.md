@@ -218,8 +218,8 @@ its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
 chevrons that mark the tap zones and turn the page, and the position, and one
 `reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
 hairline and its printed-form rows of chip frames, each unselected chip on the
-paper behind it, with the page and the bottom band pushed up rather than covered.
-A text-bearing golden waits on
+paper behind it, with the page and the bottom band pushed up rather than covered
+and the page clipped rather than repaginated. A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
 

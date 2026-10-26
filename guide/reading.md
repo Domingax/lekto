@@ -29,12 +29,14 @@ so does the system back gesture on Android. Back closes a lookup panel or the
 ## Changing how the text looks
 
 Tap **Aa** in the reader's top bar to open the **Aa** panel. The panel sits under
-the page and the bottom bar, so the text gets shorter rather than being covered.
-Its chips set the text face (serif or sans-serif), the text size, and how wide
-the page margins are. There is nothing to confirm: the book repaginates as you
-tap a chip, so you see the effect straight away and stay on the same passage.
-Close the panel with **Close**, by tapping **Aa** again, or by tapping the page
-outside it — a tap outside the panel closes it and does not look a word up.
+the page and the bottom bar, so the bottom of the page is hidden while it is
+open. The page number does not change: the panel is temporary, and the whole page
+comes back when you close it. Its chips set the text face (serif or sans-serif),
+the text size, and how wide the page margins are. There is nothing to confirm:
+the book repaginates as you tap a chip, so you see the effect straight away and
+stay on the same passage. Close the panel with **Close**, by tapping **Aa**
+again, or by tapping the page outside it — a tap outside the panel closes it and
+does not look a word up.
 
 Your **Reading preference** is kept on this device only. It is not part of your
 vault, so it does not travel with an export or a sync — set it again on another

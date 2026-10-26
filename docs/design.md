@@ -259,10 +259,11 @@ The lookup panel and the chapter list are never open together.
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
 at once, and the page number and total update as pagination counts them.
 
-The **`Aa` panel** sits under the bottom band, in the column: opening it shortens the page and
-lifts the band, so the text is never covered. It is a square panel of printed-form rows (`Text
-face`, `Text size`, `Margins`: `Serif`/`Sans-serif`, `Narrow`/`Comfortable`/`Wide`) whose values
-are chips. An unselected chip carries the paper behind it, so it reads as a field on the panel
+The **`Aa` panel** sits under the bottom band, in the column: opening it lifts the band and
+clips the visible part of the page, so the text is never covered. The page keeps its
+pagination — the page number and the page count do not move — and is whole again as soon as the
+panel closes. It is a square panel of printed-form rows (`Text face`, `Text size`, `Margins`:
+`Serif`/`Sans-serif`, `Narrow`/`Comfortable`/`Wide`) whose values are chips. An unselected chip carries the paper behind it, so it reads as a field on the panel
 rather than a hole in it. The panel sets the face, the size and the margins, and previews live:
 there is no button to confirm a reading preference. The App theme is **not** here — it recolours
 the app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
