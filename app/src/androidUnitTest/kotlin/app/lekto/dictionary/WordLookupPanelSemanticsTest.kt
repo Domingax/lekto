@@ -283,6 +283,23 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun `a two digit sense number stays on one line`() {
+        val senses = (1..12).map { index -> DictionarySense("Sense $index.", emptyList()) }
+        val entry = DictionaryEntry("blorple", "en", "verb", null, null, senses)
+        compose.setContent { Panel(WordLookup.Found("blorple", "en", "blorple", listOf(entry))) }
+
+        val one = compose.onNodeWithTag(senseNumberTag(1)).getUnclippedBoundsInRoot()
+        val twelve = compose.onNodeWithTag(senseNumberTag(12)).getUnclippedBoundsInRoot()
+        val oneHeight = one.bottom.value - one.top.value
+        val twelveHeight = twelve.bottom.value - twelve.top.value
+
+        assertTrue(
+            "the number 12 is $twelveHeight dp tall against 1's $oneHeight dp, so it wrapped",
+            abs(oneHeight - twelveHeight) < 1f,
+        )
+    }
+
+    @Test
     fun `the level label is centred with the chips`() {
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
 

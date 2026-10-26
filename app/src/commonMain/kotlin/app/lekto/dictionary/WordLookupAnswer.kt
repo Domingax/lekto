@@ -5,11 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.dictionary.DictionaryEntry
 import app.lekto.core.dictionary.DictionarySense
@@ -20,8 +21,11 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 
-/** The column a sense's number occupies, so every definition starts on the same line. */
-private val NumberWidth = 16.dp
+/** The minimum column a sense's number occupies, so definitions start on the same line. */
+private val NumberWidth = 24.dp
+
+/** The test tag on a sense's number, so a layout test can read it apart from the level chips. */
+internal fun senseNumberTag(number: Int): String = "lookup-sense-$number"
 
 /** The honest outcome of the last pronunciation attempt: a failure is a sentence, success is silent. */
 @Composable
@@ -101,7 +105,8 @@ private fun Sense(number: Int, sense: DictionarySense) {
             text = number.toString(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(NumberWidth),
+            maxLines = 1,
+            modifier = Modifier.widthIn(min = NumberWidth).testTag(senseNumberTag(number)),
         )
         Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
             Text(sense.definition, style = MaterialTheme.typography.bodyLarge)

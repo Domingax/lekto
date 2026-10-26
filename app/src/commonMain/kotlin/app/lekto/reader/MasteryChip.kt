@@ -113,7 +113,7 @@ private fun CompactChip(
     Box(
         modifier = Modifier
             .sizeIn(minWidth = LektoSpacing.TouchTarget, minHeight = LektoSpacing.TouchTarget)
-            .background(if (hovered) hoverWash(theme.onSurface) else Color.Transparent, LektoRadii.Control)
+            .background(if (hovered) hoverWash(theme.onSurface) else Color.Transparent)
             .handCursor()
             .hoverable(interaction)
             .clickable(interactionSource = null, indication = null, role = Role.Button, onClick = onClick)
