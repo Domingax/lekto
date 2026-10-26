@@ -1,7 +1,11 @@
 package app.lekto
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import app.lekto.core.speech.JvmPronouncer
@@ -11,6 +15,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.withContext
+import org.jetbrains.skia.Image
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
 import java.util.Locale
@@ -40,7 +45,7 @@ fun main() {
         // window's focus listener raises, so sync runs when the user returns to the
         // app rather than only on its bounded timer.
         val resumes = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
-        Window(onCloseRequest = ::exitApplication, title = "Lekto") {
+        Window(onCloseRequest = ::exitApplication, title = "Lekto", icon = markIcon()) {
             // The dialogs are owned by this window (issue #219), so they are modal
             // to the app, centred on it and cannot open behind it.
             val vaultTransfer = remember {
@@ -101,6 +106,25 @@ fun main() {
         }
     }
 }
+
+/**
+ * The window and taskbar icon (issue #177): the committed 512 px raster, drawn
+ * from the same mark as the launcher by `tools/icons/mark.sh`.
+ *
+ * It is a raster because `Window(icon = …)` hands the painter to AWT. On macOS
+ * the Dock icon is `iconFile` of a packaged app and a window icon is ignored,
+ * which issue #29 owns; the same PNG feeds it.
+ */
+@Composable
+private fun markIcon(): Painter = remember {
+    val png = checkNotNull(IconResources::class.java.getResourceAsStream("/app-icon/app-icon.png")) {
+        "app-icon/app-icon.png is missing; run tools/icons/mark.sh"
+    }.use { it.readBytes() }
+    BitmapPainter(Image.makeFromEncoded(png).toComposeImageBitmap())
+}
+
+/** The classloader anchor for the icon raster, which ships beside the app's classes. */
+private object IconResources
 
 /**
  * The dispatcher the desktop **dialogs** block on (issue #192).

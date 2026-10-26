@@ -26,7 +26,8 @@ column on a desktop.
   labelled by the pair it translates into ("English → French"). An artefact Lekto
   does not publish says so and offers no download. **Reload list** refetches the
   list at any time, and **Attribution** opens the licences and sources of the data
-  you download. See [Reading](/reading) and [Word lookup](/word-lookup).
+  you download, and of the icons the app draws. See [Reading](/reading) and
+  [Word lookup](/word-lookup).
 - **Sync** — connect your own WebDAV server, test it, turn sync on and see its
   status and last result; see [Vault and sync](/vault-and-sync).
 - **Vault export and import** — write your whole Vault to a bundle, or restore one.

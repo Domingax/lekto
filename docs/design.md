@@ -137,16 +137,45 @@ The scale actually used, and nothing else:
   `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`.
   `tools/icons/fetch.sh` fetches them at the pinned Lucide tag and regenerates the Kotlin; the
   generated files are never edited by hand. Their ISC and Feather/MIT notices live in
-  `THIRD-PARTY-NOTICES.md` at the root.
+  `THIRD-PARTY-NOTICES.md` at the root, and the app names them in **Attribution**, reached from
+  Languages — the same screen that carries the mark's font licence.
 - **A navigation icon must be recognisable at 24 dp**, which is not the same as being handsome in
   a catalogue. `library` reads as a barcode and is not used; `book-open` is. `notebook-pen` reads
   as a scribble; `bookmark` is. An icon that only works large belongs in a sheet, not in the bar.
 - `arrow-left` must mirror in right-to-left layouts; the generator must set `autoMirror` and the
   regeneration script must keep it.
-- The launcher mark is layered (issue #177): the **page with the coloured spine** for the icon
-  itself, and the **letter in the reading serif alone** for the monochrome layer Android tints
-  from the wallpaper, and for the system launch screen. A combined glyph reduced to one colour at
-  48 dp is a smudge; a single letter is not.
+- **The launcher mark is the letter** (issue #177): the `L` of the reading serif, and it is the
+  whole mark. There is no page beside it and no tile behind it — the ground is the theme's paper —
+  so the icon, the launch screen and the guide's tab all show the same drawing.
+- **The letter carries the four Mastery level colours that have one**, and the letter's ink for
+  level 4. "Known" is the absence of colour (§2.2), so the mark shows what is still being learned
+  and never invents a fifth hue: the cap is level 0, the shaft carries levels 1 to 3, and the foot
+  is the letter's ink. The three shaft bands cover **the same area of the shaft**, measured on the
+  outline rather than estimated — which is why the thirds differ by a few tenths, the shaft is not a
+  rectangle. The colour stops at the foot's shoulder, `y = 63.38`: no cut crosses the arm, because a
+  boundary there would leave a stray wedge of one colour at its end.
+- **The letter wears a rim of its own paper.** The same outline, stroked 2 units and drawn under the
+  glyph, so 1 unit shows outside. On the Light paper — the launcher's ground — the rim is the paper
+  itself and draws nothing. On the Dark paper it is the letter's edge: without it the foot, which is
+  the letter's ink, would be ink on ink at 1.07:1. That is what lets the launch screen keep the
+  foreground alone (§7.7).
+- **The mark is fixed, not themed.** A launcher knows nothing about the App theme, so the letter
+  sits on the Light paper with the Light ramp (ADR-0036). This is the one place where the
+  **Mastery level** colours are decoration rather than meaning, and they are what makes the mark
+  Lekto's rather than any app's letter.
+- **Below 32 px the letter is one ink.** Four bands in a 16 px taskbar frame are a smear; the colour
+  is the identity where the size can carry it, and the letter alone where it cannot.
+- **The letter is an outline, not a font.** It is the `L` of **Noto Serif Bold 2.015** — the platform
+  serif Android renders for `FontFamily.Serif`, so the "reading serif" is what the mark carries —
+  taken once from the glyph and mapped to a 50-unit cap height, its corners inside the 66 dp safe
+  circle. A rendered `Text` would follow the machine's fonts and could not be pinned by a golden; an
+  outline can. The licence is SIL OFL 1.1, with its notice in `THIRD-PARTY-NOTICES.md`.
+- **One source, generated outputs.** `tools/icons/mark/` holds two SVGs — `mark.svg`, the letter with
+  its paper rim and its four bands, and `letter.svg`, the same letter in one ink. `tools/icons/mark.sh`
+  writes the adaptive icon's layers, the launch mark (the foreground itself) and the guide's favicon,
+  and `:app:renderAppIcon` renders the desktop PNG, ICO and ICNS from them. Everything is committed,
+  so a change to the mark is a reviewable diff and no build step depends on the script having run. A
+  generated file is never edited by hand.
 
 ## 6. Shell and navigation
 
@@ -372,9 +401,21 @@ action; anything irreversible is written in red.
 
 ### 7.7 Launch
 
-Android 12 and later paints a launch screen from the window background and the app's icon, so there
-is no launch screen to design, only a background to get right: **the active theme's paper**
-(ADR-0036). A dark theme that flashes white has a bug, not a style.
+Android 12 and later paints a launch screen before the app runs: the system builds a **starting
+window** from the theme the manifest declares, draws the app's icon in it, and only then lets the
+first frame through. There is no launch screen to design, only a paper and a mark to get right.
+
+The paper is the **platform's**, not the chosen one. The starting window is built before the process
+starts, so it can read the device's light-or-dark setting (`values-v31`, `values-night-v31`) and
+nothing else: an app set to Sepia on a light device launches on the Light paper, and Sepia never
+appears at launch. From the first frame on, the window and every screen follow the **App theme**
+(ADR-0036). That is the honest limit of a window the system owns.
+
+The mark in that window is **the launcher's own layer**. The system masks the outer third of the
+canvas on both surfaces, so the launch screen and the icon are the same drawing at the same
+proportions — there is nothing to keep in step. The layer's paper rim (§5) is what carries the mark
+off the Light paper: on the Dark paper the foot is ink on ink, and the rim is the edge that separates
+them. A dark theme that flashes white has a bug, not a style.
 
 The first frame is the shell with the Library's rows **in skeleton**, never a bare logo: the wait
 is a local vault read, and a screen shown for 40 ms is a flicker, which reads as slowness. No
@@ -431,9 +472,16 @@ the page behind it.
 - The generated icons — `app/src/commonMain/kotlin/app/lekto/ui/icons/`, regenerated by
   `tools/icons/fetch.sh`, which pins the Lucide tag and the generator; `THIRD-PARTY-NOTICES.md`
   carries the licences.
+- The launcher mark — `tools/icons/mark/mark.svg` (the letter, its paper rim and its four bands) and
+  `letter.svg` (the same letter in one ink) are the source. `tools/icons/mark.sh` writes the adaptive
+  icon's layers, the launch mark and the guide's favicon; `app.lekto.tools.RenderAppIcon`
+  (`./gradlew :app:renderAppIcon`) renders the desktop rasters into
+  `app/src/desktopMain/resources/app-icon/`. `AppIconTest`'s golden pins the geometry and
+  `LauncherIconTest` the wiring.
 - The screens — one file per screen, as today, with each list's row beside it: the Library's in
   `library/LibraryRow.kt` (issue #208) and the Vocabulary list's in `vocabulary/VocabularyRow.kt`
   (issue #212). A new screen follows §7's shape and §4's spacing.
+
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
   makes a missing one fail `./gradlew check` (§8). The reader page overrides descendants with

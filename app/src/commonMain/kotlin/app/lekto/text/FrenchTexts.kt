@@ -228,6 +228,12 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.ATTRIBUTION_DIFFICULTY_NOT_INSTALLED to
         "Les données de difficulté des mots ne sont pas encore installées. Leur attribution complète " +
         "apparaîtra ici une fois installées.",
+    TextKey.ATTRIBUTION_ICONS_GRANT to
+        "Les icônes de l'interface viennent de Lucide (ISC), dont six dérivées de Feather (MIT) : " +
+        "Copyright (c) 2026 Lucide Icons and Contributors, Copyright (c) 2013-present Cole Bemis. " +
+        "La lettre de l'icône est le tracé d'un glyphe de Noto Serif (SIL OFL 1.1) : " +
+        "Copyright 2022 The Noto Project Authors ; la police elle-même n'est pas embarquée dans " +
+        "Lekto. Les notices complètes sont dans THIRD-PARTY-NOTICES.md, à la racine du projet.",
     TextKey.FIELD_SOURCE to "Source",
     TextKey.FIELD_DATA to "Données",
     TextKey.FIELD_LICENCE to "Licence",

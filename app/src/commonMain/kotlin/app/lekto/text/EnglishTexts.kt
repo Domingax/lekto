@@ -213,6 +213,12 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
         "Lekto is not affiliated with, nor endorsed by, wordfreq.",
     TextKey.ATTRIBUTION_DIFFICULTY_NOT_INSTALLED to
         "The word-difficulty data isn't installed yet. Its full attribution appears here once it is.",
+    TextKey.ATTRIBUTION_ICONS_GRANT to
+        "The interface icons come from Lucide (ISC), six of them derived from Feather (MIT): " +
+        "Copyright (c) 2026 Lucide Icons and Contributors, Copyright (c) 2013-present Cole Bemis. " +
+        "The launcher mark's letter is the outline of a Noto Serif glyph (SIL OFL 1.1): " +
+        "Copyright 2022 The Noto Project Authors; the font itself is not bundled with Lekto. " +
+        "The full notices are in the project's THIRD-PARTY-NOTICES.md.",
     TextKey.FIELD_SOURCE to "Source",
     TextKey.FIELD_DATA to "Data",
     TextKey.FIELD_LICENCE to "Licence",

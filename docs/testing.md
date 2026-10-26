@@ -237,10 +237,14 @@ its partly cut chip, the current filter filled in ink and each chip carrying its
 level's dot, then each row's word bar, dot and level name, translation and muted
 sentence with a hairline between rows — the first row hovered, so the trash in the
 slot reserved for it is recorded too. The confirmation sheet records the scrim,
-the 16 dp dialogue, its title and message, and `Delete` in the reserved red. A
-text-bearing golden waits on
+the 16 dp dialogue, its title and message, and `Delete` in the reserved red. The launcher
+mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
+coloured letter on the paper and the monochrome letter tinted on the night surface (issue
+#177); it is text-free by construction, because the letter is an outline, not a glyph.
+A text-bearing golden waits on
 pinned reading typography (a bundled font); until then, typography is pinned by
 `ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
+
 
 ```sh
 ./gradlew :app:recordRoborazziDesktop

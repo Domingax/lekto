@@ -15,8 +15,16 @@
     <!-- The window theme of the App theme (ADR-0036): no fixed Light paper, so the
          window background is the active theme's. The night variant is the Dark
          paper for a System device; MainActivity picks the explicit paper for a
-         chosen Light, Dark or Sepia before the first frame. -->
+         chosen Light, Dark or Sepia before the first frame.
+
+         The icon is the adaptive mark of issue #177 (docs/design.md §5): a paper
+         tile with the page and its mastery spine, plus a monochrome letter for
+         Android 13's themed icons. `minSdk` is 27, so every launcher that runs the
+         app supports an adaptive icon and no density bitmap is needed. There is no
+         `android:roundIcon`: the adaptive mask already draws the round shape, and
+         a second icon would be a second copy of the mark. -->
     <application
+        android:icon="@mipmap/ic_launcher"
         android:label="Lekto"
         android:supportsRtl="true"
         android:theme="@style/Theme.Lekto">

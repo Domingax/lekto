@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <!--
+    The launcher mark's monochrome layer: the L alone (issue #177;
+    docs/design.md §5). Android 13 tints this layer with the wallpaper's palette,
+    so it must survive one flat colour: the combined page-and-letter drawing
+    becomes a smudge at 48 dp, a single letter does not.
+
+    The outline is the `L` of Noto Serif Bold 2.015 — the platform serif Android
+    renders `FontFamily.Serif` with, so the mark is the reading serif and not a
+    lookalike. It was taken once from the glyph and mapped to a 50-unit cap
+    height centred on the canvas, which is exactly the page's height in page.svg:
+    ink 41.6 x 50, top 29, baseline 79, corners 32.5 units from the centre and so
+    inside the 66 dp safe circle. A glyph outline, never a rendered `Text`: the
+    mark must not depend on the fonts of the machine that draws it. Licence: SIL
+    OFL 1.1 (THIRD-PARTY-NOTICES.md).
+
+    No rim here: Android tints this layer with one colour, so a rim would be the
+    glyph's own colour and draw nothing. The ink is the Light ink, `#1C1A17`
+    (docs/design.md §2.1), the same one the mark's foot carries.
+
+    `tools/icons/mark.sh` turns this file into
+    app/src/androidMain/res/drawable/ic_launcher_monochrome.xml and into the
+    guide's favicon. Edit here, never there.
+  -->
+  <path d="M33.20,79L33.20,75.29L35.72,75.29Q37.26,75.29 38.49,74.41Q39.71,73.54 39.71,71.23L39.71,36.91Q39.71,34.46 38.45,33.59Q37.19,32.71 35.44,32.71L33.20,32.71L33.20,29L57.43,29L57.43,32.71L55.05,32.71Q52.95,32.71 51.90,33.55Q50.85,34.39 50.85,36.70L50.85,74.73L63.87,74.73Q66.32,74.73 67.66,73.15Q68.99,71.58 69.69,68.64L70.88,63.38L74.80,63.38L74.31,79L33.20,79Z" fill="#1C1A17"/>
+</svg>
