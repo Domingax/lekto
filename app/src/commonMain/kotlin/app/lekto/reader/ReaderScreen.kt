@@ -303,14 +303,12 @@ private fun ColumnScope.ReaderPage(
     val density = LocalDensity.current
     val marginPx = with(density) { styles.horizontalMargin.roundToPx() }
     val pageBarPx = with(density) { if (state.chromeVisible) PAGE_BAR_HEIGHT.toPx() else 0f }
+    val visibleBottomPx = pageHeightPx - (overlayHeightPx - pageBarPx).coerceAtLeast(0f)
     val liftPx = pageLift(
         layout = layout,
-        pageStart = state.page?.start ?: 0,
-        pageEnd = state.page?.end ?: 0,
+        page = state.page,
         selected = document.selectedRange,
-        pageHeightPx = pageHeightPx,
-        overlayHeightPx = overlayHeightPx,
-        pageBarPx = pageBarPx,
+        visibleBottomPx = visibleBottomPx,
         gapPx = with(density) { GAP_ABOVE_PANEL.toPx() },
     )
     val latestTap = rememberUpdatedState(
@@ -330,7 +328,6 @@ private fun ColumnScope.ReaderPage(
                 words = { latestTokens.value?.words.orEmpty() },
                 layout = { layout },
                 marginPx = marginPx,
-                liftPx = liftPx,
                 chapter = chapterText.text,
                 pageStart = state.page?.start ?: 0,
                 onSelecting = { range -> dragRange = range },
@@ -365,21 +362,17 @@ private fun ColumnScope.ReaderPage(
 @Suppress("LongParameterList") // The layout, the page and the overlay are independent inputs.
 private fun pageLift(
     layout: TextLayoutResult?,
-    pageStart: Int,
-    pageEnd: Int,
+    page: ReaderPage?,
     selected: IntRange?,
-    pageHeightPx: Int,
-    overlayHeightPx: Int,
-    pageBarPx: Float,
+    visibleBottomPx: Float,
     gapPx: Float,
 ): Float {
-    if (overlayHeightPx <= 0 || pageHeightPx <= 0) return 0f
+    if (page == null || layout == null || visibleBottomPx <= 0f) return 0f
     val wordBottom = selected
-        ?.first?.minus(pageStart)
-        ?.takeIf { local -> local in 0 until pageEnd - pageStart }
-        ?.let { local -> layout?.getBoundingBox(local)?.bottom }
-    val visibleBottom = pageHeightPx - (overlayHeightPx - pageBarPx).coerceAtLeast(0f)
-    return if (wordBottom == null) 0f else (wordBottom + gapPx - visibleBottom).coerceAtLeast(0f)
+        ?.first?.minus(page.start)
+        ?.takeIf { local -> local in 0 until page.end - page.start }
+        ?.let { local -> layout.getBoundingBox(local).bottom }
+    return if (wordBottom == null) 0f else (wordBottom + gapPx - visibleBottomPx).coerceAtLeast(0f)
 }
 
 /**
