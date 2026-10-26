@@ -8,7 +8,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
@@ -238,7 +237,7 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library)) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
         // Opening records the first page and the turn records the second,
         // both off the UI thread; wait for the second before leaving the book.
@@ -247,10 +246,8 @@ class AppSemanticsTest {
         compose.leaveReader()
         compose.openBook()
 
-        // The reopened reader resumes past page one: the page number is enough,
-        // and Previous page enabled proves it is not page one.
+        // The reopened reader resumes past page one: the position line names it.
         compose.awaitPage(2)
-        compose.onNodeWithText("Previous page").assertIsEnabled()
     }
 
     @Test
@@ -260,7 +257,7 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("Continue reading").assertDoesNotExist()
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         // Leave at once: the position write is still in flight, and the library
         // still has to re-read when it lands (issue #188).
         compose.leaveReader()
@@ -413,7 +410,7 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
 
         compose.tapFirstWord()
@@ -435,7 +432,7 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
 
         compose.tapFirstWord()
@@ -464,7 +461,7 @@ class AppSemanticsTest {
         }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
 
         // Long-press and drag across the page's words to select a phrase.
@@ -490,7 +487,7 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
 
         compose.selectFirstPhrase()
@@ -525,7 +522,7 @@ class AppSemanticsTest {
         }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
 
         compose.selectFirstPhrase()
@@ -548,7 +545,7 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, dictionary = dictionaryServices())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.awaitPage(2)
 
         compose.selectFirstPhrase()
@@ -798,7 +795,7 @@ class AppSemanticsTest {
 
         // The word panel is open over the page bar; close it before turning the page.
         compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.tapFirstWord()
         // The same lemma again, so its entry updates in place rather than adding a
         // second one.

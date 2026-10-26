@@ -117,8 +117,9 @@ The scale actually used, and nothing else:
 ## 4. Shape, elevation and spacing
 
 - **Radii**: 8 dp for controls (buttons, chips, fields, vignettes), 12 dp for surfaces (cards,
-  panels, sections), 16 dp for anything that is a sheet or a dialogue, and the app mark's tile at
-  22 % of its size.
+  panels, sections), 16 dp for anything that is a dialogue, and the app mark's tile at 22 % of
+  its size. A panel anchored to a screen edge is square: it joins the edge rather than floating
+  above it.
 - **No shadows.** A card is separated by a surface tone and a hairline border; a panel by a
   surface tone and a 1 dp rule. Material's elevation, and the tonal lift that comes with it, is
   what makes an app look like a template.
@@ -242,9 +243,10 @@ a bordered block in the list, with a way to dismiss it.
 
 `arrow-left` · book title · `Aa` | the page | `‹` · position · `›`.
 
-The chevrons are not buttons: they *show* the three tap zones (previous third, chrome third, next
-third). The position reads `Chapter 4 · Page 99 of 357`. Before the first chapter, and in a book
-with one chapter, it reads `Page 99 of 357` and no chapter is current.
+The chevrons mark the three tap zones (previous third, chrome third, next third) and turn the
+page when tapped; a chevron disabled at a bound stays visible but faded. The position reads
+`Chapter 4 · Page 99 of 357`. Before the first chapter, and in a book with one chapter, it reads
+`Page 99 of 357` and no chapter is current.
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
 label. A book with one chapter has no list, so its position stays a label (ADR-0037).
@@ -257,10 +259,14 @@ The lookup panel and the chapter list are never open together.
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
 at once, and the page number and total update as pagination counts them.
 
-The **`Aa` panel** (`Text face`, `Text size`, `Margins`: `Serif`/`Sans-serif`,
-`Narrow`/`Comfortable`/`Wide`) sets the face, the size and the margins, and previews live: there
-is no button to confirm a reading preference. The App theme is **not** here — it recolours the
-app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
+The **`Aa` panel** sits under the bottom band, in the column: opening it lifts the band and
+clips the visible part of the page, so the text is never covered. The page keeps its
+pagination — the page number and the page count do not move — and is whole again as soon as the
+panel closes. It is a square panel of printed-form rows (`Text face`, `Text size`, `Margins`:
+`Serif`/`Sans-serif`, `Narrow`/`Comfortable`/`Wide`) whose values are chips. An unselected chip carries the paper behind it, so it reads as a field on the panel
+rather than a hole in it. The panel sets the face, the size and the margins, and previews live:
+there is no button to confirm a reading preference. The App theme is **not** here — it recolours
+the app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
 
 **The end of the book** is a full-screen reader state, not a page. Tapping the next zone on the
 last page raises it; reaching the last page does not. Reaching the panel never declares the book
@@ -377,6 +383,8 @@ the page behind it.
 - A **non-colour indicator** for every highlighted level: the underline.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.
+- The reader's page also carries the two page turns as accessibility actions, beside the two
+  chevrons: a screen-reader or switch user keeps a way through the book.
 - The language vignette's colour is decoration; its two letters are the information.
 - Every icon either carries a `contentDescription` or sits beside a label that names it.
 - The reading text honours the platform's font scale, and the **Reading preference**'s size stays

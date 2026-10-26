@@ -215,7 +215,7 @@ class AppSemanticsTest {
         setContent { App(environment(library)) }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
         // Opening records the first page and the turn records the second,
         // both off the UI thread; wait for the second before leaving the book.
@@ -234,7 +234,7 @@ class AppSemanticsTest {
 
         onNodeWithText("Continue reading").assertDoesNotExist()
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         // Leave at once: the position write is still in flight, and the library
         // still has to re-read when it lands (issue #188).
         leaveReader()
@@ -387,7 +387,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
 
         tapFirstWord()
@@ -407,7 +407,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
 
         tapFirstWord()
@@ -436,7 +436,7 @@ class AppSemanticsTest {
         }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
 
         // Long-press and drag across the page's words to select a phrase.
@@ -463,7 +463,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
 
         selectFirstPhrase()
@@ -498,7 +498,7 @@ class AppSemanticsTest {
         }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
 
         selectFirstPhrase()
@@ -521,7 +521,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, dictionary = dictionaryServices())) }
 
         openBook()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         awaitPage(2)
 
         selectFirstPhrase()
@@ -798,7 +798,7 @@ class AppSemanticsTest {
 
         // The word panel is open over the page bar; close it before turning the page.
         onNodeWithText("Close").performClick()
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         tapFirstWord()
         // The same word (page two starts with "On.", so its key is "on"), so its
         // entry updates in place rather than adding a second one.

@@ -135,6 +135,38 @@ class ReadingPreferencesPanelSemanticsTest {
         onNodeWithText("Text face").assertIsDisplayed()
     }
 
+    /**
+     * The panel is a temporary display: opening it must not repaginate the book,
+     * so the page number and the page count stay put (issue #209 review).
+     */
+    @Test
+    fun openingThePanelDoesNotRepaginateTheBook() = runComposeUiTest {
+        setContent { PreferencesReader(renderer) }
+        val before = pageBarText()
+
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+
+        onNodeWithTag(READING_PREFERENCES_PANEL_TAG).assertIsDisplayed()
+        assertEquals(before, pageBarText(), "the panel must not change the page or the page count")
+    }
+
+    /**
+     * The panel joins the column under the bottom band, so it pushes the page and
+     * the position line up rather than covering them (docs/design.md §7.2).
+     */
+    @Test
+    fun thePanelPushesTheBandUpInsteadOfCoveringThePage() = runComposeUiTest {
+        setContent { PreferencesReader(renderer) }
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+
+        val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+        val position = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode().boundsInRoot
+        val panel = onNodeWithTag(READING_PREFERENCES_PANEL_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(position.bottom <= panel.top, "the position must stay above the panel")
+        assertTrue(page.bottom <= position.top, "the page must end above the position band")
+    }
+
     @Test
     fun tappingOutsideThePanelDismissesItWithoutTappingAWord() = runComposeUiTest {
         var tappedWord = false
@@ -150,6 +182,34 @@ class ReadingPreferencesPanelSemanticsTest {
         onNodeWithText("Text face").assertDoesNotExist()
         assertTrue(!tappedWord, "a tap that dismisses the panel must not tap a word")
         onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+    }
+
+    /**
+     * The page above the sheet is the preview (ADR-0035): a face or margin choice
+     * reaches the reader the moment it is tapped, the sheet stays open, and there
+     * is no separate step to confirm it.
+     */
+    @Test
+    fun aFaceOrMarginChangeAppliesAtOnceWithNoConfirmationStep() = runComposeUiTest {
+        var changed: ReadingPreferences? = null
+        setContent { PreferencesReader(renderer) { next -> changed = next } }
+
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).performClick()
+
+        assertEquals(ReadingFace.SANS_SERIF, assertNotNull(changed).face)
+        onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).assertIsSelected()
+
+        onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).performClick()
+
+        assertEquals(ReadingMargin.WIDE, assertNotNull(changed).margin)
+        onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).assertIsSelected()
+
+        onNodeWithTag(READING_SMALLER_TAG).performClick()
+
+        assertEquals(ReadingPreferences.DEFAULT_SIZE - ReadingPreferences.SIZE_STEP, assertNotNull(changed).size)
+        // The sheet is still the one open surface: the change applied above it.
+        onNodeWithText("Text face").assertIsDisplayed()
     }
 
     @Test

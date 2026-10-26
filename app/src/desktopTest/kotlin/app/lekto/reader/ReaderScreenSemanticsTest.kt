@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -12,6 +13,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onFirst
@@ -49,8 +52,8 @@ class ReaderScreenSemanticsTest {
     )
 
     private companion object {
-        /** Previous, Next and the **Aa** control: the clickable nodes the screen adds itself. */
-        const val CHROME_BUTTONS = 3
+        /** The back arrow, the **Aa** control and the two page chevrons: the screen's own controls. */
+        const val CHROME_BUTTONS = 4
 
         /** One short line, so the page has blank space below it for a centre tap. */
         val SHORT_CHAPTER = ReaderChapter(
@@ -71,28 +74,52 @@ class ReaderScreenSemanticsTest {
     fun eachWordIsAFocusableLink() = runComposeUiTest {
         setContent { Reader(renderer) }
 
-        // The chrome contributes Previous/Next; every word adds another clickable
-        // node, so the count proves the word layer is tappable and reachable, not
-        // just painted.
+        // The chrome contributes the back arrow, the **Aa** control and the two
+        // page chevrons; every word adds another clickable node, so the count
+        // proves the word layer is tappable and reachable, not just painted.
         val clickables = onAllNodes(hasClickAction()).fetchSemanticsNodes()
 
         assertTrue(clickables.size > CHROME_BUTTONS, "expected word links beyond the chrome, found ${clickables.size}")
     }
 
+    /**
+     * The reader's two bands (docs/design.md §7.2): the back arrow, the book's
+     * title and the **Aa** control above; the two chevrons and the position below.
+     * The chevrons mark the tap zones and are controls too, disabled at a bound,
+     * so a tap turns the page like the zone under them.
+     */
     @Test
-    fun navigatesForwardAndBackWithTheButtons() = runComposeUiTest {
+    fun theBandsCarryTheBackTitleAaAndThePosition() = runComposeUiTest {
         setContent { Reader(renderer) }
 
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Previous page").assertIsNotEnabled()
+        onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_TITLE_TAG).assertTextEquals(SampleChapter.chapter.title)
+        onNodeWithTag(READING_PREFERENCES_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of", substring = true)
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsDisplayed().assertIsEnabled()
 
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Previous page").assertIsEnabled()
 
-        onNodeWithText("Previous page").performClick()
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).performClick()
         onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Previous page").assertIsNotEnabled()
+    }
+
+    /**
+     * The page carries the two turns as accessibility actions beside the two
+     * chevrons, so a screen-reader or switch user has a way through the book
+     * without hunting for the bottom band.
+     */
+    @Test
+    fun thePageOffersTheTwoPageTurnsToAScreenReader() = runComposeUiTest {
+        setContent { Reader(renderer) }
+
+        val actions = onNodeWithText("On the quiet evening", substring = true)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.CustomActions]
+
+        assertEquals(listOf("Previous page", "Next page"), actions.map { action -> action.label })
     }
 
     @Test
@@ -133,16 +160,18 @@ class ReaderScreenSemanticsTest {
         setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
 
         onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
-        onNodeWithText("Previous page").assertIsEnabled()
-        onNodeWithText("Next page").assertIsNotEnabled()
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsEnabled()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsNotEnabled()
     }
 
     @Test
     fun aPageTurnReportsItsPosition() = runComposeUiTest {
         var reported = -1
         setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
+        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
 
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
 
         assertTrue(reported > 0, "turning to page two must report a non-zero character offset")
     }

@@ -16,7 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -29,14 +28,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingPreferences
@@ -44,14 +49,21 @@ import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
 import app.lekto.ui.DismissScrim
 import app.lekto.ui.handCursor
+import app.lekto.ui.icons.ALargeSmall
 import app.lekto.ui.icons.ArrowLeft
+import app.lekto.ui.icons.ChevronLeft
+import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
 import kotlinx.coroutines.yield
 
-private val ChromeHeight = 48.dp
-private val PageBarHeight = 64.dp
+/** The top band's height: the icon, the title and the **Aa** control (docs/design.md §6, §7.2). */
+internal val CHROME_HEIGHT = 48.dp
+
+/** The bottom band's height: the two chevron controls and the position (docs/design.md §6, §7.2). */
+internal val PAGE_BAR_HEIGHT = 64.dp
 
 /** How many pages to lay out between yields, so the first page is shown at once. */
 private const val PAGE_YIELD_EVERY = 8
@@ -61,6 +73,18 @@ internal const val READER_PAGE_TAG = "reader-page"
 
 /** The test tag on the reader's way back to the shelf, an icon in its left band (docs/design.md §7.2). */
 internal const val READER_BACK_TAG = "reader-back"
+
+/** The test tag on the book's title in the top band. */
+internal const val READER_TITLE_TAG = "reader-title"
+
+/** The test tag on the position line in the bottom band. */
+internal const val READER_POSITION_TAG = "reader-position"
+
+/** The test tag on the left chevron, which marks the previous third and turns the page. */
+internal const val READER_PREVIOUS_PAGE_TAG = "reader-previous-page"
+
+/** The test tag on the right chevron, which marks the next third and turns the page. */
+internal const val READER_NEXT_PAGE_TAG = "reader-next-page"
 
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
@@ -120,9 +144,14 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
 }
 
 /**
- * The reader's chrome, page and **Aa** panel. A tap on the page closes whatever
- * panel is open above it — the **Aa** panel or a lookup — and the page scrim keeps
- * that tap from looking a word up or turning the page. The chrome stays usable.
+ * The reader's chrome, page and **Aa** panel. The panel is part of the column, not
+ * an overlay: opening it lifts the bottom band and shortens the visible page, so
+ * it never covers the text (docs/design.md §7.2). The page itself is not
+ * repaginated — the panel is a temporary display, so the page number and the page
+ * count stay put, and the page is whole again as soon as the panel closes. A tap
+ * on the page closes whatever panel is open — the **Aa** panel below it or a
+ * lookup above it — and the page scrim keeps that tap from looking a word up or
+ * turning the page. The chrome stays usable.
  */
 @Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
 @Composable
@@ -135,7 +164,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
 ) {
     Column(Modifier.fillMaxSize()) {
         if (state.chromeVisible) {
-            ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences, styles.horizontalMargin)
+            ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences)
         }
         ReaderPage(
             document,
@@ -147,16 +176,15 @@ private fun BoxWithConstraintsScope.ReaderContent(
             actions.onPhraseSelected,
         )
         if (state.chromeVisible && state.page != null) {
-            ReaderPageBar(state.index, state.total, styles.horizontalMargin, state::previous, state::next)
+            ReaderPageBar(state.index, state.total, state::previous, state::next)
         }
-    }
-    if (state.chromeVisible && state.preferencesVisible) {
-        ReadingPreferencesPanel(
-            preferences = document.preferences,
-            onChange = actions.onReadingPreferencesChange,
-            onDismiss = state::dismissPreferences,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        if (state.chromeVisible && state.preferencesVisible) {
+            ReadingPreferencesPanel(
+                preferences = document.preferences,
+                onChange = actions.onReadingPreferencesChange,
+                onDismiss = state::dismissPreferences,
+            )
+        }
     }
     // Back closes the **Aa** panel before the shell sees it (issue #185), the way a
     // tap outside the panel does.
@@ -238,7 +266,7 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit) {
 }
 
 /** The page, its word layer built for this page only, and the tap zones over it. */
-@Suppress("LongParameterList") // The page's renderer pieces are threaded as one call; a bundle would only hide them.
+@Suppress("LongMethod", "LongParameterList") // The page's pieces share one layout; splitting would hide its state.
 @Composable
 private fun ColumnScope.ReaderPage(
     document: ReaderDocument,
@@ -264,6 +292,8 @@ private fun ColumnScope.ReaderPage(
         modifier = Modifier
             .fillMaxWidth()
             .weight(1f)
+            // The page keeps its full-height pagination; the **Aa** panel only clips it.
+            .clipToBounds()
             .testTag(READER_PAGE_TAG)
             .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .readerTapInput(latestTap)
@@ -280,28 +310,56 @@ private fun ColumnScope.ReaderPage(
                 },
             ),
     ) {
-        PageText(tokens, styles, styles.horizontalMargin) { result -> layout = result }
+        PageText(
+            tokens = tokens,
+            styles = styles,
+            horizontalMargin = styles.horizontalMargin,
+            onPrevious = state::previous,
+            onNext = state::next,
+        ) { result -> layout = result }
         // Drawn over the whole page, margins included, so an outside tap dismisses
         // the open panel rather than landing in a tap zone or on a word.
         dismissOverlay?.let { dismiss -> DismissScrim(onDismiss = dismiss) }
     }
 }
 
-/** The page's text, inset by the reading margin; a slice built for this page, styled and selectable. */
+/**
+ * The page's text, inset by the reading margin; a slice built for this page,
+ * styled and selectable. The text also carries the two page turns as
+ * accessibility actions beside the two chevron controls, so a screen-reader or
+ * switch user has a way through the book without hunting for the bottom band.
+ */
+@Suppress("LongParameterList") // The page's inputs are independent; a bundle would only hide that.
 @Composable
 private fun PageText(
     tokens: ReaderTokens?,
     styles: ReaderStyles,
     horizontalMargin: Dp,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onLayout: (TextLayoutResult) -> Unit,
 ) {
+    val texts = LocalAppTexts.current
     Box(Modifier.fillMaxSize().padding(horizontal = horizontalMargin)) {
         if (tokens != null) {
             SelectionContainer {
                 Text(
                     text = tokens.text,
                     style = styles.body,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics {
+                            customActions = listOf(
+                                CustomAccessibilityAction(texts[TextKey.PREVIOUS_PAGE]) {
+                                    onPrevious()
+                                    true
+                                },
+                                CustomAccessibilityAction(texts[TextKey.NEXT_PAGE]) {
+                                    onNext()
+                                    true
+                                },
+                            )
+                        },
                     onTextLayout = onLayout,
                 )
             }
@@ -378,7 +436,7 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
     val contentWidth = with(density) {
         (maxWidth - styles.horizontalMargin * 2).roundToPx()
     }.coerceAtLeast(0)
-    val contentHeight = with(density) { (maxHeight - ChromeHeight - PageBarHeight).roundToPx() }.coerceAtLeast(0)
+    val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
     val pages = remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale) {
         mutableStateListOf<ReaderPage>()
     }
@@ -402,11 +460,15 @@ private suspend fun fillPages(text: AnnotatedString, layout: ReaderLayout, pages
     }
 }
 
+/**
+ * The reader's top band (docs/design.md §6, §7.2): the way back, the book's title
+ * in the theme's muted ink, and the **Aa** control. Nothing else.
+ */
 @Composable
-private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () -> Unit, horizontalMargin: Dp) {
+private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () -> Unit) {
     val texts = LocalAppTexts.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(ChromeHeight).padding(horizontal = horizontalMargin),
+        modifier = Modifier.fillMaxWidth().height(CHROME_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // `arrow-left`, not a word: the reader's band is an icon, a title and the
@@ -422,34 +484,89 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f).padding(start = if (onBack == null) 0.dp else 8.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = LektoSpacing.BetweenRelatedLines)
+                .testTag(READER_TITLE_TAG),
         )
-        TextButton(
+        // The `Aa` icon, not its two letters: the identity's set carries it, and
+        // its description names the control for a screen reader.
+        IconButton(
             onClick = onPreferences,
             modifier = Modifier.handCursor().testTag(READING_PREFERENCES_TAG),
         ) {
-            Text(texts[TextKey.READING_PREFERENCES])
+            Icon(imageVector = LektoIcons.ALargeSmall, contentDescription = texts[TextKey.READING_PREFERENCES])
         }
     }
 }
 
-/** The chrome: page position and the two navigation affordances. */
-@Suppress("LongParameterList") // The page, its count, the margin and the two turns; a bundle would only hide that.
+/**
+ * The bottom band (docs/design.md §6, §7.2): two chevrons that mark where the
+ * page's tap zones are **and** turn the page when tapped, and the position in the
+ * theme's muted ink. A chevron disabled at a bound stays visible but faded, so the
+ * band keeps its shape as the reader moves.
+ */
 @Composable
-private fun ReaderPageBar(page: Int, total: Int, horizontalMargin: Dp, onPrevious: () -> Unit, onNext: () -> Unit) {
+private fun ReaderPageBar(page: Int, total: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
     val texts = LocalAppTexts.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(PageBarHeight).padding(horizontal = horizontalMargin),
+        modifier = Modifier.fillMaxWidth().height(PAGE_BAR_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onPrevious, enabled = page > 0, modifier = Modifier.handCursor(page > 0)) {
-            Text(texts[TextKey.PREVIOUS_PAGE])
-        }
-        Text(texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)))
-        TextButton(onClick = onNext, enabled = page < total - 1, modifier = Modifier.handCursor(page < total - 1)) {
-            Text(texts[TextKey.NEXT_PAGE])
-        }
+        TapZoneButton(
+            imageVector = LektoIcons.ChevronLeft,
+            contentDescription = texts[TextKey.PREVIOUS_PAGE],
+            enabled = page > 0,
+            onClick = onPrevious,
+            tag = READER_PREVIOUS_PAGE_TAG,
+        )
+        Text(
+            text = texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(READER_POSITION_TAG),
+        )
+        TapZoneButton(
+            imageVector = LektoIcons.ChevronRight,
+            contentDescription = texts[TextKey.NEXT_PAGE],
+            enabled = page < total - 1,
+            onClick = onNext,
+            tag = READER_NEXT_PAGE_TAG,
+        )
     }
 }
+
+/**
+ * One chevron marking a tap zone and turning the page: muted ink, and faded while
+ * it is disabled at a bound. Its description names the turn, so a screen reader
+ * meets a control rather than a decorative glyph.
+ */
+@Suppress("LongParameterList") // The icon, its spoken name, its state and its tap are independent.
+@Composable
+private fun TapZoneButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    tag: String,
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.handCursor(enabled).testTag(tag),
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else DISABLED_ALPHA),
+        )
+    }
+}
+
+/** The opacity of a disabled control, matching Material's own content alphas. */
+private const val DISABLED_ALPHA = 0.38f
