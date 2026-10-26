@@ -35,6 +35,8 @@ import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
 import app.lekto.theme.contentColorOn
+import app.lekto.ui.HAIRLINE_THICKNESS
+import app.lekto.ui.SEARCH_ICON_SIZE
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Search
 import io.github.takahirom.roborazzi.captureRoboImage

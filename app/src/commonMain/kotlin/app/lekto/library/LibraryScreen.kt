@@ -8,20 +8,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,14 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
@@ -49,9 +41,10 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.ConfirmationDialog
+import app.lekto.ui.HAIRLINE_THICKNESS
+import app.lekto.ui.SearchField
 import app.lekto.ui.handCursor
-import app.lekto.ui.icons.LektoIcons
-import app.lekto.ui.icons.Search
+import app.lekto.ui.plainClickable
 
 /** The test tag on the Library's search field (issue #173). */
 internal const val LIBRARY_SEARCH_TAG: String = "library-search"
@@ -65,14 +58,8 @@ private const val CONTINUE_READING_KEY: String = "continue-reading"
 /** The lazy item key of the "Other books" heading, which is not a book either. */
 private const val OTHER_BOOKS_KEY: String = "other-books"
 
-/** The 1 dp hairline a surface draws around itself (§4: no shadows). */
-internal val HAIRLINE_THICKNESS = 1.dp
-
 /** The test tag on the Library's title, so a layout test can find it apart from the shell's bar. */
 internal const val LIBRARY_TITLE_TAG: String = "library-title"
-
-/** The `Search` icon's size in the field: 18 dp, the size the identity uses inside a control (§5). */
-internal val SEARCH_ICON_SIZE = 18.dp
 
 /**
  * The library screen: the books in the vault, a title search, an Import action, a
@@ -92,7 +79,7 @@ internal val SEARCH_ICON_SIZE = 18.dp
  * The way to another section is the shell's bar, not this screen's header.
  *
  * Its anatomy is the identity's (docs/design.md §7.1): the title is the theme's
- * screen title, the search is a surface with a hairline rather than a Material
+ * screen title, the search is the shared [SearchField] rather than a Material
  * field, and a row opens with its **Reading language**'s vignette. The states
  * stay distinct (§8): an empty vault says what to do, a shelf being read shows
  * skeleton rows rather than the empty message, and a query that matches nothing
@@ -110,7 +97,16 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
 
         // A field over an empty vault would search nothing; the empty state keeps
         // its one sentence and its action (issue #173).
-        if (!state.vaultEmpty) LibrarySearch(state.query, actions.onSearch)
+        if (!state.vaultEmpty) {
+            SearchField(
+                query = state.query,
+                onSearch = actions.onSearch,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = LektoSpacing.InsidePanel)
+                    .testTag(LIBRARY_SEARCH_TAG),
+            )
+        }
 
         state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
         if (state.importing) Importing(state.progress)
@@ -157,64 +153,6 @@ private fun ColumnScope.LibraryBody(state: LibraryUiState, actions: LibraryActio
         state.visibleBooks.isEmpty() -> LibraryNoMatches(state.query, actions.onClearSearch)
 
         else -> LibraryList(state, onOpen = actions.onOpen, onDelete = onDelete)
-    }
-}
-
-/**
- * The title search (issue #173; docs/design.md §7.1): a surface with a hairline
- * and the `Search` icon, not a Material field. The placeholder is the theme's
- * muted ink, and a clear action appears once there is something to clear — a
- * cross, so the field keeps its width in French. The placeholder and the field's
- * accessible name both say `Search`, as the Material label used to.
- */
-@Composable
-private fun LibrarySearch(query: String, onSearch: (String) -> Unit) {
-    val texts = LocalAppTexts.current
-    BasicTextField(
-        value = query,
-        onValueChange = onSearch,
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = LektoSpacing.InsidePanel)
-            .testTag(LIBRARY_SEARCH_TAG)
-            // The placeholder is a sibling node, so the field names itself: a
-            // reader must hear what the field is for, not only what it says.
-            .semantics { contentDescription = texts[TextKey.SEARCH] },
-        decorationBox = { field ->
-            SearchSurface(query = query, placeholder = texts[TextKey.SEARCH]) { field() }
-        },
-    )
-}
-
-/** The search field's frame: the surface, the hairline and the icon, with the placeholder while it is empty. */
-@Composable
-private fun SearchSurface(query: String, placeholder: String, field: @Composable () -> Unit) {
-    val theme = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = LektoSpacing.TouchTarget)
-            .background(theme.surface, LektoRadii.Control)
-            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Control)
-            .padding(start = LektoSpacing.InsidePanel, end = LektoSpacing.InsideLabelPair),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = LektoIcons.Search,
-            contentDescription = null,
-            tint = theme.onSurfaceVariant,
-            modifier = Modifier.size(SEARCH_ICON_SIZE),
-        )
-        Spacer(Modifier.width(LektoSpacing.BetweenRows))
-        Box(Modifier.weight(1f)) {
-            if (query.isEmpty()) {
-                Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = theme.onSurfaceVariant)
-            }
-            field()
-        }
     }
 }
 

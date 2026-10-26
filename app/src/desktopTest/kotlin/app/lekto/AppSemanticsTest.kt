@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -137,11 +138,13 @@ import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
+import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
 import app.lekto.vocabulary.vocabularyMasteryTag
+import app.lekto.vocabulary.vocabularyRowTag
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import kotlin.test.Test
@@ -1034,7 +1037,11 @@ class AppSemanticsTest {
 
         leaveReader()
         tapSection(ShellSection.VOCABULARY)
+        // The delete is a row gesture behind a confirmation now (issue #212): the
+        // trash appears on hover, and only the dialog's own action removes the word.
+        onNodeWithTag(vocabularyRowTag(saved.key)).performMouseInput { moveTo(center) }
         onNodeWithTag(vocabularyDeleteTag(saved.key)).performClick()
+        onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isEmpty() }
         // The list recomposes after the write; wait for the empty state before asserting.
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {

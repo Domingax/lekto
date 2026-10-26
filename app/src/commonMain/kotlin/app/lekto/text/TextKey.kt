@@ -73,7 +73,12 @@ enum class TextKey {
     LIBRARY_ROW_MEASURING_DESCRIPTION,
 
     // Vocabulary.
+    VOCABULARY_EMPTY_TITLE,
     VOCABULARY_EMPTY,
+
+    /** The saved-word count beside the screen's title, in the singular and the plural. */
+    VOCABULARY_COUNT_ONE,
+    VOCABULARY_COUNT_MANY,
     ALL_LEVELS,
     MASTERY_UNKNOWN,
     MASTERY_RECOGNIZED,
@@ -84,6 +89,11 @@ enum class TextKey {
     NO_WORDS_MATCH_QUERY,
     NO_WORDS_MATCH_QUERY_AT_LEVEL,
     NO_WORDS_AT_LEVEL,
+
+    /** What a search that found nothing covers, under the no-match heading. */
+    NO_WORDS_MATCH_DETAIL,
+    DELETE_WORD_TITLE,
+    DELETE_WORD_MESSAGE,
 
     // Reader.
     PREVIOUS_PAGE,

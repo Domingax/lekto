@@ -1,34 +1,21 @@
 package app.lekto.library
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -48,11 +35,10 @@ import app.lekto.theme.LanguageHues
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
-import app.lekto.theme.hoverWash
+import app.lekto.ui.DeleteAction
+import app.lekto.ui.DeletingRow
 import app.lekto.ui.handCursor
-import app.lekto.ui.icons.LektoIcons
-import app.lekto.ui.icons.Trash
-import kotlinx.coroutines.launch
+import app.lekto.ui.plainClickable
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
@@ -73,18 +59,6 @@ internal val LANGUAGE_VIGNETTE_HEIGHT = 60.dp
 /** What a row can do: open its book, or delete it. Bundled so a row is two values, not a parameter list. */
 internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Book) -> Unit)
 
-/** The delete action's icon size: 18 dp, the size the identity uses inside a control (§5). */
-private val DELETE_ICON_SIZE = 18.dp
-
-/**
- * A click with no Material indication. The identity's §8 is explicit: every
- * clickable surface shows the pointing hand on desktop, and **hover changes
- * nothing else** — so a row does not wash grey under the mouse, and a whole row
- * does not flash a ripple. The hand cursor is the affordance.
- */
-internal fun Modifier.plainClickable(enabled: Boolean = true, role: Role? = null, onClick: () -> Unit): Modifier =
-    clickable(interactionSource = null, indication = null, enabled = enabled, role = role, onClick = onClick)
-
 /**
  * One library row: the frame §7.1 gives it (issue #208) — the **Reading
  * language**'s vignette, the title beside it, its **Reading progress** line and
@@ -95,94 +69,20 @@ internal fun Modifier.plainClickable(enabled: Boolean = true, role: Role? = null
  * where a cover would go if one ever exists, so its colour is decoration and its
  * two-letter code is what carries the language.
  *
- * **Delete never sits on the shelf as a red word.** A destructive action on
- * every row is noise, and the identity reserves red for the moment it is used.
- * Each platform gets its own idiom: a swipe from the trailing edge on a touch
- * screen (Material's list pattern, and the one a thumb finds), and a trash that
- * appears when the row is hovered for a mouse. Both open the same confirmation,
- * because there is no undo (§8) — no full swipe deletes anything by itself. The
- * row also carries the action as a `customActions` entry, so a screen reader can
- * reach it without the gesture.
+ * **Delete never sits on the shelf as a red word.** The row's delete is the
+ * shared gesture every list row uses ([DeletingRow], issue #212): a swipe from
+ * the trailing edge on a touch screen, a trash in the row's wash on hover with a
+ * mouse. Both open the confirmation, because there is no undo (§8) — no full
+ * swipe deletes anything by itself. The row also carries the action as a
+ * `customActions` entry, so a screen reader can reach it without the gesture.
  *
  * The file name is deliberately gone from the row: it identifies a file, not a
  * book, so it survives only in import errors and the delete confirmation.
  */
 @Composable
 internal fun BookRow(book: Book, progress: BookProgress, actions: BookRowActions) {
-    // A drag is the touch idiom and only that: with a pointer, the delete waits
-    // for the row's hover instead (issue #208 review).
-    if (!swipeToDelete) {
-        BookRowFrame(book, progress, actions)
-        return
-    }
-    val dismiss = rememberSwipeToDismissBoxState()
-    val scope = rememberCoroutineScope()
-    SwipeToDismissBox(
-        state = dismiss,
-        modifier = Modifier.fillMaxWidth(),
-        // A swipe only ever asks: deleting is irreversible, so the gesture opens
-        // the confirmation and the row goes back where it was.
-        enableDismissFromStartToEnd = false,
-        onDismiss = {
-            actions.onDelete(book)
-            scope.launch { dismiss.reset() }
-        },
-        backgroundContent = { SwipeDeleteBackground() },
-    ) {
-        BookRowFrame(book, progress, actions)
-    }
-}
-
-/** What a swipe uncovers: the theme's red, the trash and the word it stands for. */
-@Composable
-private fun SwipeDeleteBackground() {
-    val theme = MaterialTheme.colorScheme
-    val texts = LocalAppTexts.current
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(theme.error, LektoRadii.Control)
-            .padding(horizontal = LektoSpacing.InsidePanel),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = LektoIcons.Trash,
-            contentDescription = null,
-            tint = contentColorOn(theme.error),
-            modifier = Modifier.size(DELETE_ICON_SIZE),
-        )
-        Spacer(Modifier.width(LektoSpacing.BetweenRelatedLines))
-        Text(texts[TextKey.DELETE], color = contentColorOn(theme.error), style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-/** The row itself: the vignette, the title and its progress line, and the delete the mouse uncovers. */
-@Composable
-private fun BookRowFrame(book: Book, progress: BookProgress, actions: BookRowActions) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val theme = MaterialTheme.colorScheme
-    // The row paints the paper over the swipe's red, so the action stays hidden
-    // until the reader uncovers it. The hover wash is drawn over the paper, not
-    // under it, so its rounded corners cannot reveal that red.
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(theme.background)
-            .background(
-                if (hovered) hoverWash(theme.onBackground) else Color.Transparent,
-                LektoRadii.Control,
-            )
-            .padding(vertical = LektoSpacing.BetweenRows)
-            .hoverable(interaction),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BookFrame(book, progress, actions, modifier = Modifier.weight(1f))
-        // The action's place is reserved, so revealing it never shifts the title.
-        Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
-            if (hovered) DeleteIcon(book, actions.onDelete)
-        }
+    DeletingRow(DeleteAction(tag = libraryDeleteTag(book.id), onDelete = { actions.onDelete(book) })) { content ->
+        BookFrame(book, progress, actions, modifier = content)
     }
 }
 
@@ -219,26 +119,6 @@ private fun BookFrame(book: Book, progress: BookProgress, actions: BookRowAction
             Text(book.title, style = MaterialTheme.typography.titleSmall)
             ProgressLine(book, progress)
         }
-    }
-}
-
-/** The trash a mouse uncovers at the row's end: the desktop idiom for a row action. */
-@Composable
-private fun DeleteIcon(book: Book, onDelete: (Book) -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(LektoSpacing.TouchTarget)
-            .handCursor()
-            .testTag(libraryDeleteTag(book.id))
-            .plainClickable(role = Role.Button) { onDelete(book) },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = LektoIcons.Trash,
-            contentDescription = LocalAppTexts.current[TextKey.DELETE],
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(DELETE_ICON_SIZE),
-        )
     }
 }
 

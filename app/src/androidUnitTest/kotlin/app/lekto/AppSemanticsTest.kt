@@ -26,6 +26,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.text.AnnotatedString
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
@@ -137,11 +138,12 @@ import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
+import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
-import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
 import app.lekto.vocabulary.vocabularyMasteryTag
+import app.lekto.vocabulary.vocabularyRowTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -1031,7 +1033,11 @@ class AppSemanticsTest {
 
         compose.leaveReader()
         compose.tapSection(ShellSection.VOCABULARY)
-        compose.onNodeWithTag(vocabularyDeleteTag(saved.key)).performScrollTo().performClick()
+        // The delete is a row gesture behind a confirmation now (issue #212): a
+        // swipe uncovers the trash, and only the dialog's own action removes the
+        // word.
+        compose.onNodeWithTag(vocabularyRowTag(saved.key)).performScrollTo().performTouchInput { swipeLeft() }
+        compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isEmpty() }
         // The list recomposes after the write; wait for the empty state before asserting.
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
