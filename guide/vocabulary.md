@@ -5,8 +5,9 @@ A **Vocabulary entry** is a word or phrase you have saved, with its translation,
 
 ## Saving a word
 
-Open the lookup panel from a word token and save it. Lekto keeps the sentence the
-word was cut from, so you can review it in context rather than in isolation.
+Open the lookup panel from a word token and tap a **Mastery level** chip: the
+level is the save. Lekto keeps the sentence the word was cut from, so you can
+review it in context rather than in isolation.
 
 Entries are keyed by the word's **Word key**: two spellings that share a **Lemma**
 share one key, so saving *mangeais* updates the entry for *manger* rather than

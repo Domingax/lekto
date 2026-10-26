@@ -50,7 +50,13 @@ internal fun Modifier.phraseSelectionInput(
                 dragging = false
             } else {
                 change.consume()
-                wordIndexAt(change.position, marginPx, words(), layout(), snapToNearest = true)?.let { index ->
+                wordIndexAt(
+                    change.position,
+                    marginPx,
+                    words(),
+                    layout(),
+                    snapToNearest = true,
+                )?.let { index ->
                     current = index
                     onSelecting(phraseRangeAt(words(), anchor, current))
                 }

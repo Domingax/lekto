@@ -86,7 +86,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.NOT_IN_DICTIONARY to "« {0} » n'est pas dans le dictionnaire hors ligne.",
     TextKey.NO_VOICE_FOR_LANGUAGE to "Aucune voix n'est installée pour « {0} ».",
     TextKey.NO_VOICE_FOR_UNKNOWN_LANGUAGE to "Aucune voix n'est installée pour cette langue.",
-    TextKey.LOOK_IT_UP_ONLINE to "Chercher en ligne",
     TextKey.TRANSLATE_ONLINE to "Traduire en ligne",
 
     // Phrase lookup panel.

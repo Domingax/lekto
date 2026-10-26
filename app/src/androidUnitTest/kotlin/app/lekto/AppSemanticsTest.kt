@@ -11,12 +11,14 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -69,6 +71,9 @@ import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
+import app.lekto.dictionary.LOOKUP_CLOSE_TAG
+import app.lekto.dictionary.LOOKUP_PANEL_TAG
+import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
@@ -373,7 +378,7 @@ class AppSemanticsTest {
         compose.openBook()
         compose.tapFirstWord()
 
-        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // No pack is wired, so the panel degrades to the honest message and the
         // reference shortcuts (issue #19).
         compose.onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
@@ -414,15 +419,15 @@ class AppSemanticsTest {
         compose.awaitPage(2)
 
         compose.tapFirstWord()
-        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The reader stays put behind the panel, at the same page. The panel is
         // bottom-aligned on Android and covers the page bar's position, so the
         // bar exists but is not visible; the page number is what matters.
         compose.onNodeWithText("Page 2 of", substring = true).assertExists()
 
-        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
 
-        compose.onNodeWithText("Look it up online").assertDoesNotExist()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         compose.awaitPage(2)
     }
 
@@ -436,14 +441,38 @@ class AppSemanticsTest {
         compose.awaitPage(2)
 
         compose.tapFirstWord()
-        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
 
         // A tap on the page, above the panel, is outside it: it closes the panel
         // and does not turn the page.
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
-        compose.onNodeWithText("Look it up online").assertDoesNotExist()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         compose.awaitPage(2)
+    }
+
+    @Test
+    fun aWordAtThePageBottomIsLiftedAboveTheLookupPanel() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        compose.openBook()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodes(WORD_LINK).fetchSemanticsNodes().isNotEmpty()
+        }
+        val lastWord = compose.onAllNodes(WORD_LINK).onLast()
+        lastWord.performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+
+        // The sheet never covers the word the reader touched: the page is lifted
+        // under it, without repaginating. The page number is unchanged.
+        compose.awaitPage(1)
+        val word = lastWord.getUnclippedBoundsInRoot()
+        val panel = compose.onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
+        assertTrue(
+            "the tapped word ends at ${word.bottom} dp, under the panel's ${panel.top} dp",
+            word.bottom.value <= panel.top.value + 1f,
+        )
     }
 
     @Test
@@ -498,7 +527,7 @@ class AppSemanticsTest {
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
         compose.onNodeWithText("Translate online").assertDoesNotExist()
-        compose.onNodeWithText("Look it up online").assertDoesNotExist()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         compose.awaitPage(2)
     }
 
@@ -565,7 +594,7 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Listen").performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         val (text, language) = pronouncer.utterances.single()
@@ -581,7 +610,7 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Listen").performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         compose.waitForIdle()
@@ -595,7 +624,7 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Listen").performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.onNodeWithText("No speech engine is available", substring = true).assertIsDisplayed()
     }
@@ -724,7 +753,8 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        // The level is the save: one tap on the fresh level's chip stores the word.
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val entry = vocabulary.all().single()
@@ -736,11 +766,9 @@ class AppSemanticsTest {
         // The word has no signal (no reader level, no difficulty), so the fresh
         // save defaults to the familiar level (ADR-0030).
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
-        // No toast, no dialog: the saved state on the panel is the confirmation.
-        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText("Saved").assertIsDisplayed()
+        // No toast, no dialog and no Save control: the reader's colour is the
+        // confirmation, and the footer already names the level.
+        compose.onNodeWithText("Familiar").assertIsDisplayed()
     }
 
     @Test
@@ -751,10 +779,10 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
-        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             vocabulary.all().single().mastery == MasteryLevel.LEARNED
@@ -773,9 +801,9 @@ class AppSemanticsTest {
         compose.openBook()
         compose.tapFirstWord()
 
-        // The entry survived the restart: the panel opens already saved.
-        compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().assertIsDisplayed()
+        // The entry survived the restart: the sheet opens on its level.
+        compose.onNodeWithText("Learned").assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsSelected()
     }
 
     @Test
@@ -789,18 +817,18 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         assertEquals("the save must key on the lemma", "lantern", vocabulary.all().single().key.key)
 
         // The word panel is open over the page bar; close it before turning the page.
-        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         compose.tapFirstWord()
         // The same lemma again, so its entry updates in place rather than adding a
         // second one.
-        compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithText("Save").assertDoesNotExist()
+        compose.onNodeWithText("Familiar").assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
         assertEquals(1, vocabulary.all().size)
     }
 
@@ -993,10 +1021,10 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
-        // Save the first word from the panel, then find it in the list.
+        // Save the first word at a level, then find it in the list.
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val saved = vocabulary.all().single()
 
@@ -1016,8 +1044,11 @@ class AppSemanticsTest {
         compose.openBook()
         compose.tapFirstWord()
 
-        compose.onNodeWithText("Save").assertIsDisplayed()
-        compose.onNodeWithText("Saved").assertDoesNotExist()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        assertTrue(
+            "the level is the save; no Save word survives",
+            compose.onAllNodesWithText("Save").fetchSemanticsNodes().isEmpty(),
+        )
     }
 
     @Test

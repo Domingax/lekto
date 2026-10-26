@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Icon
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.navigation.PlatformBackHandler
@@ -58,6 +61,7 @@ import app.lekto.ui.icons.ChevronLeft
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
 import kotlinx.coroutines.yield
+import kotlin.math.roundToInt
 
 /** The top band's height: the icon, the title and the **Aa** control (docs/design.md §6, §7.2). */
 internal val CHROME_HEIGHT = 48.dp
@@ -67,6 +71,9 @@ internal val PAGE_BAR_HEIGHT = 64.dp
 
 /** How many pages to lay out between yields, so the first page is shown at once. */
 private const val PAGE_YIELD_EVERY = 8
+
+/** The breathing room kept between the lifted word and the sheet's top edge. */
+private val GAP_ABOVE_PANEL = 8.dp
 
 /** The test tag on the page, so the UI tests can inject a tap at a zone's coordinates. */
 internal const val READER_PAGE_TAG = "reader-page"
@@ -123,7 +130,12 @@ data class ReaderActions(
  * page the reader turns to, so the caller can persist the reading position.
  */
 @Composable
-fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, actions: ReaderActions = ReaderActions()) {
+fun ReaderScreen(
+    document: ReaderDocument,
+    modifier: Modifier = Modifier,
+    actions: ReaderActions = ReaderActions(),
+    overlayHeightPx: Int = 0,
+) {
     // The reader builds its typography from the preference (ADR-0035), so a change
     // recomposes the text and repaginates at once, the way a Reader level change
     // recolours it.
@@ -139,7 +151,7 @@ fun ReaderScreen(document: ReaderDocument, modifier: Modifier = Modifier, action
         val pages = rememberReaderPages(chapterText, styles)
         val state = remember(document.chapter) { ReaderState(actions.onPositionChange) }
         state.bind(pages, chapterText.length, document.initialOffset)
-        ReaderContent(document, chapterText, styles, state, actions)
+        ReaderContent(document, chapterText, styles, state, actions, overlayHeightPx)
     }
 }
 
@@ -161,6 +173,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
     styles: ReaderStyles,
     state: ReaderState,
     actions: ReaderActions,
+    overlayHeightPx: Int,
 ) {
     Column(Modifier.fillMaxSize()) {
         if (state.chromeVisible) {
@@ -172,6 +185,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
             styles,
             state,
             overlayDismiss(state, actions),
+            overlayHeightPx,
             actions.onWordTap,
             actions.onPhraseSelected,
         )
@@ -274,6 +288,7 @@ private fun ColumnScope.ReaderPage(
     styles: ReaderStyles,
     state: ReaderState,
     dismissOverlay: (() -> Unit)?,
+    overlayHeightPx: Int,
     onWordTap: (WordTap) -> Unit,
     onPhraseSelected: (PhraseSelection) -> Unit,
 ) {
@@ -284,9 +299,20 @@ private fun ColumnScope.ReaderPage(
     val tokens = rememberPageTokens(document, chapterText, styles, state.page, selected, onWordTap)
     val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val marginPx = with(LocalDensity.current) { styles.horizontalMargin.roundToPx() }
+    var pageHeightPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val marginPx = with(density) { styles.horizontalMargin.roundToPx() }
+    val pageBarPx = with(density) { if (state.chromeVisible) PAGE_BAR_HEIGHT.toPx() else 0f }
+    val visibleBottomPx = pageHeightPx - (overlayHeightPx - pageBarPx).coerceAtLeast(0f)
+    val liftPx = pageLift(
+        layout = layout,
+        page = state.page,
+        selected = document.selectedRange,
+        visibleBottomPx = visibleBottomPx,
+        gapPx = with(density) { GAP_ABOVE_PANEL.toPx() },
+    )
     val latestTap = rememberUpdatedState(
-        readerSurfaceTap(marginPx, tokens, layout, state, enabled = dismissOverlay == null),
+        readerSurfaceTap(marginPx, tokens, layout, state, enabled = dismissOverlay == null, liftPx = liftPx),
     )
     Box(
         modifier = Modifier
@@ -294,6 +320,7 @@ private fun ColumnScope.ReaderPage(
             .weight(1f)
             // The page keeps its full-height pagination; the **Aa** panel only clips it.
             .clipToBounds()
+            .onSizeChanged { size -> pageHeightPx = size.height }
             .testTag(READER_PAGE_TAG)
             .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .readerTapInput(latestTap)
@@ -314,6 +341,7 @@ private fun ColumnScope.ReaderPage(
             tokens = tokens,
             styles = styles,
             horizontalMargin = styles.horizontalMargin,
+            liftPx = liftPx,
             onPrevious = state::previous,
             onNext = state::next,
         ) { result -> layout = result }
@@ -321,6 +349,30 @@ private fun ColumnScope.ReaderPage(
         // the open panel rather than landing in a tap zone or on a word.
         dismissOverlay?.let { dismiss -> DismissScrim(onDismiss = dismiss) }
     }
+}
+
+/**
+ * How far the page must move up for the selected word to clear an overlay of
+ * [overlayHeightPx] (the lookup sheet). The lift is only as large as the word
+ * demands, so a word already above the sheet does not move, and a word under it
+ * rises just above it; the page is never repaginated, so the top of the page is
+ * clipped for as long as the sheet is open. The panel overlaps the page only
+ * above the page bar, which is why the visible bottom subtracts that bar.
+ */
+@Suppress("LongParameterList") // The layout, the page and the overlay are independent inputs.
+private fun pageLift(
+    layout: TextLayoutResult?,
+    page: ReaderPage?,
+    selected: IntRange?,
+    visibleBottomPx: Float,
+    gapPx: Float,
+): Float {
+    if (page == null || layout == null || visibleBottomPx <= 0f) return 0f
+    val wordBottom = selected
+        ?.first?.minus(page.start)
+        ?.takeIf { local -> local in 0 until page.end - page.start }
+        ?.let { local -> layout.getBoundingBox(local).bottom }
+    return if (wordBottom == null) 0f else (wordBottom + gapPx - visibleBottomPx).coerceAtLeast(0f)
 }
 
 /**
@@ -335,12 +387,18 @@ private fun PageText(
     tokens: ReaderTokens?,
     styles: ReaderStyles,
     horizontalMargin: Dp,
+    liftPx: Float,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onLayout: (TextLayoutResult) -> Unit,
 ) {
     val texts = LocalAppTexts.current
-    Box(Modifier.fillMaxSize().padding(horizontal = horizontalMargin)) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .offset { IntOffset(0, -liftPx.roundToInt()) }
+            .padding(horizontal = horizontalMargin),
+    ) {
         if (tokens != null) {
             SelectionContainer {
                 Text(
@@ -404,14 +462,16 @@ private fun readerSurfaceTap(
     layout: TextLayoutResult?,
     state: ReaderState,
     enabled: Boolean,
+    liftPx: Float,
 ): (Offset, Float) -> Unit = { position, width ->
     // While a panel is open above the page (the **Aa** panel or a lookup), a tap on
     // the page only dismisses it — through the page scrim — and must not look a
     // word up or turn the page.
     if (enabled) {
         val zone = readerTapZone(position.x, width.toInt())
-        // A tap on a word is left to the word's link, wherever it lands.
-        val onWord = wordAt(position, marginPx, tokens?.words.orEmpty(), layout) != null
+        // A tap on a word is left to the word's link, wherever it lands. The text
+        // is lifted with the page, so its layout coordinates are that much lower.
+        val onWord = wordAt(Offset(position.x, position.y + liftPx), marginPx, tokens?.words.orEmpty(), layout) != null
         when {
             onWord -> Unit
             zone == ReaderTapZone.CHROME -> state.toggleChrome()

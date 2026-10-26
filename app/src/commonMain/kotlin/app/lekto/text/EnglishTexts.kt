@@ -87,7 +87,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.NOT_IN_DICTIONARY to "\"{0}\" isn't in the offline dictionary.",
     TextKey.NO_VOICE_FOR_LANGUAGE to "No voice is installed for \"{0}\".",
     TextKey.NO_VOICE_FOR_UNKNOWN_LANGUAGE to "No voice is installed for this language.",
-    TextKey.LOOK_IT_UP_ONLINE to "Look it up online",
     TextKey.TRANSLATE_ONLINE to "Translate online",
 
     // Phrase lookup panel.
