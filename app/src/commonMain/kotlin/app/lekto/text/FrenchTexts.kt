@@ -19,8 +19,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.DISMISS to "Fermer",
     TextKey.DELETE to "Supprimer",
     TextKey.CANCEL to "Annuler",
-    TextKey.SAVE to "Enregistrer",
-    TextKey.SAVED to "Enregistré",
     TextKey.CLOSE to "Fermer",
     TextKey.SHOW to "Afficher",
     TextKey.HIDE to "Masquer",
@@ -121,15 +119,14 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "plus de livres. Définissez votre niveau et téléchargez les données de difficulté des mots et " +
         "le dictionnaire hors ligne pour chacune.",
     TextKey.VAULT_SECTION_DESCRIPTION to
-        "Votre coffre contient tout ce que vous avez importé et enregistré. Exportez-le dans un fichier " +
-        "que vous conservez, ou importez-en un pour restaurer vos livres et votre vocabulaire sur cet " +
-        "appareil. L'importation remplace le coffre déjà présent sur cet appareil.",
+        "Le coffre vit dans le stockage privé de l'application. Il contient vos livres, votre " +
+        "vocabulaire et vos positions de lecture.",
     TextKey.VAULT_UNAVAILABLE to "L'export et l'import du coffre ne sont pas disponibles dans cette version.",
     TextKey.EXPORT_VAULT to "Exporter le coffre",
     TextKey.IMPORT_VAULT to "Importer un coffre",
     TextKey.PROVIDER_SECTION_DESCRIPTION to
-        "Traduisez une phrase sélectionnée avec votre propre fournisseur LLM. Votre clé est conservée " +
-        "dans le stockage sécurisé de cet appareil — jamais dans votre coffre, un export ou un journal.",
+        "Une phrase sélectionnée peut être traduite par votre fournisseur. La clé reste dans le " +
+        "trousseau de cet appareil ; vos livres ne quittent jamais le coffre.",
     TextKey.PROVIDER_UNAVAILABLE to
         "La connexion à un fournisseur LLM n'est pas disponible dans cette version.",
     TextKey.PROVIDER to "Fournisseur",
@@ -139,7 +136,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.CHOOSE_A_PROVIDER to "Choisir un fournisseur",
     TextKey.KEY_STORED to "Une clé est enregistrée.",
     TextKey.REMOVE_KEY to "Supprimer la clé",
-    TextKey.TEST_CONNECTION to "Tester la connexion",
+    TextKey.CONNECTION to "Connexion",
     TextKey.APP_LANGUAGE_DESCRIPTION to "La langue que Lekto utilise pour ses propres textes.",
     TextKey.APPEARANCE_DESCRIPTION to
         "Choisissez l'apparence de Lekto sur cet appareil. Le thème recolore toute l'application — " +
@@ -156,10 +153,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.CURRENT_THEME to "Actuel",
 
     // Sync.
-    TextKey.SYNC_SECTION_DESCRIPTION to
-        "Synchronisez votre coffre entre vos appareils via votre propre serveur WebDAV — Nextcloud, " +
-        "ownCloud, Synology ou tout hôte WebDAV. Votre mot de passe est conservé dans le stockage " +
-        "sécurisé de cet appareil.",
     TextKey.SYNC_FOLDER_WARNING to
         "Ne pointez pas un outil de synchronisation de dossiers vers votre coffre. Syncthing, Dropbox, " +
         "iCloud Drive et similaires ajouteraient un second écrivain sur les mêmes fichiers et " +
@@ -168,10 +161,15 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.SERVER_ADDRESS to "Adresse du serveur",
     TextKey.USERNAME to "Nom d'utilisateur",
     TextKey.APPLICATION_PASSWORD to "Mot de passe d'application",
-    TextKey.TURN_OFF_SYNC to "Désactiver la synchronisation",
-    TextKey.ENABLE_SYNC to "Activer la synchronisation",
     TextKey.SYNC_NOW to "Synchroniser maintenant",
     TextKey.DISCONNECT to "Déconnecter",
+    TextKey.SYNC_LAST_JUST_NOW to "Synchronisé à l'instant.",
+    TextKey.SYNC_LAST_MINUTE to "Synchronisé il y a 1 minute.",
+    TextKey.SYNC_LAST_MINUTES to "Synchronisé il y a {0} minutes.",
+    TextKey.SYNC_LAST_HOUR to "Synchronisé il y a 1 heure.",
+    TextKey.SYNC_LAST_HOURS to "Synchronisé il y a {0} heures.",
+    TextKey.SYNC_LAST_DAY to "Synchronisé il y a 1 jour.",
+    TextKey.SYNC_LAST_DAYS to "Synchronisé il y a {0} jours.",
     TextKey.SYNC_STATUS_ON to "La synchronisation est active.",
     TextKey.SYNC_STATUS_OFF to "La synchronisation est inactive.",
     TextKey.SYNC_STATUS_NOT_SET_UP to "La synchronisation n'est pas encore configurée.",

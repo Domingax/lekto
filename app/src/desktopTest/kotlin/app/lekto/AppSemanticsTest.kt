@@ -49,6 +49,7 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
@@ -100,16 +101,17 @@ import app.lekto.settings.APPEARANCE_LINK_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
+import app.lekto.settings.PROVIDER_CONNECT_TAG
 import app.lekto.settings.PROVIDER_LINK_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
 import app.lekto.settings.SETTINGS_TITLE_TAG
+import app.lekto.settings.SYNC_CONNECT_TAG
 import app.lekto.settings.SYNC_HOST_FIELD_TAG
-import app.lekto.settings.SYNC_SAVE_TAG
+import app.lekto.settings.SYNC_PASSWORD_FIELD_TAG
 import app.lekto.settings.SYNC_USERNAME_FIELD_TAG
 import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
-import app.lekto.settings.TEST_CONNECTION_TAG
 import app.lekto.settings.VAULT_LINK_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.appLanguageOptionTag
@@ -660,10 +662,15 @@ class AppSemanticsTest {
         onNodeWithText("Anthropic").performClick()
         onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("claude-3")
         onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
+        onNodeWithTag(PROVIDER_CONNECT_TAG).performScrollTo().performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
+        // Connection stores the key only after the provider answers (issue #213).
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            secrets.get(ProviderController.providerSecretKey(LlmProvider.ANTHROPIC)) ==
+                SecretResult.Found("sk-live-123")
+        }
         onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
     }
 
@@ -718,14 +725,19 @@ class AppSemanticsTest {
         onNodeWithTag(SYNC_HOST_FIELD_TAG).performScrollTo().performTextInput("https://cloud.example.test/dav")
         onNodeWithTag(SYNC_USERNAME_FIELD_TAG).performScrollTo().performTextInput("reader")
 
-        // The endpoint is reversible, so it applies on change: no Save needed (issue #213).
+        // The endpoint is reversible, so it applies on change (issue #213).
         assertEquals(
             SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
             settings.load(),
         )
-        onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
+        onNodeWithTag(SYNC_PASSWORD_FIELD_TAG).performScrollTo().performTextInput("app-password")
+        onNodeWithTag(SYNC_CONNECT_TAG).performScrollTo().performClick()
+
+        // Connection tests the server, stores the password and turns sync on.
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { settings.load().enabled }
+        assertEquals(SecretResult.Found("app-password"), secrets.get(SyncController.PASSWORD_KEY))
         assertEquals(
-            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
             settings.load(),
         )
     }

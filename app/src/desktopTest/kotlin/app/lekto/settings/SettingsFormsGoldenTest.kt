@@ -150,7 +150,7 @@ private fun RedBar() {
     Box(Modifier.height(LABEL_HEIGHT).width(72.dp).background(MaterialTheme.colorScheme.error))
 }
 
-/** The provider screen's frame: its preset, key and model rows, then its one filled action. */
+/** The provider screen's frame: its preset, key and model rows, then its one filled action and the red removal. */
 @Composable
 private fun ProviderPreview() {
     FieldPreview()
@@ -158,7 +158,6 @@ private fun ProviderPreview() {
     FieldPreview()
     Bar(width = 0.3f, height = LABEL_HEIGHT, muted = true)
     FilledBar()
-    OutlinedBar(Modifier.fillMaxWidth())
     RedBar()
 }
 

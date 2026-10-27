@@ -19,6 +19,7 @@ class SyncOutcomeStoreContract(private val newStore: () -> SyncOutcomeStore) {
         ContractCase("an empty store holds no outcome") { loadsNothing() },
         ContractCase("a saved success round-trips") { roundTripsSuccess() },
         ContractCase("a later save replaces the previous outcome") { replaces() },
+        ContractCase("the run's time round-trips") { roundTripsTime() },
         ContractCase("clearing forgets the outcome") { clears() },
     )
 
@@ -39,6 +40,13 @@ class SyncOutcomeStoreContract(private val newStore: () -> SyncOutcomeStore) {
         val second = SyncOutcome(succeeded = true, message = "Everything was already up to date.")
         store.save(second)
         expectEquals(second, store.load(), "a replaced outcome")
+    }
+
+    private fun roundTripsTime() {
+        val store = newStore()
+        val outcome = SyncOutcome(succeeded = true, message = "Synced.", atMillis = 1_700_000_000_000)
+        store.save(outcome)
+        expectEquals(outcome, store.load(), "an outcome's run time")
     }
 
     private fun clears() {

@@ -30,8 +30,10 @@ and you can still type a name yourself. The model applies as you choose it. If y
 have just entered your API key, opening the field fetches the list with that key.
 The list is device-local and is not stored in your Vault.
 
-The key is the one thing the screen does not write as you type: press **Save** to
-store it. **Test connection** checks it without waiting for a phrase.
+The key is the one thing the screen does not write as you type: press
+**Connection**. Lekto tests the provider first and stores the key only when it
+answers, so a wrong key never replaces a working one. Once a key is stored, the
+field shows masked dots instead of staying empty; type a new key to replace it.
 
 OpenCode Zen and OpenCode Go publish their list, so it loads without a key. A
 provider that has no model list — or answers in a way Lekto cannot read — is
@@ -40,8 +42,8 @@ your provider needs a key, a discreet note under the field reminds you to enter 
 
 ## Testing the connection
 
-The **LLM provider** screen offers a connection test, so you can check that a
-provider works before you rely on it. A rejected key is reported inline.
+**Connection** checks that a provider works before you rely on it. A rejected key
+is reported inline, and nothing is stored.
 
 ## When no provider is connected
 

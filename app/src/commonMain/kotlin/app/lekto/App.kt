@@ -123,6 +123,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 
 /**
  * The pieces a platform entry point supplies to the [App]: the [segmenter], the
@@ -506,16 +507,12 @@ private fun AppScreens(
             onModelChange = { model -> settings.provider?.setModel(model) },
             onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
             onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
-            onSaveProvider = { apiKey -> settings.provider?.save(apiKey) },
-            onTestProvider = { apiKey -> settings.provider?.test(apiKey) },
+            onConnectProvider = { apiKey -> settings.provider?.connect(apiKey) },
             onRemoveProviderKey = { settings.provider?.removeKey() },
             onDismissProviderResult = { settings.provider?.dismissResult() },
             onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
             onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
-            onSaveSync = { password -> settings.sync?.save(password) },
-            onTestSync = { password -> settings.sync?.test(password) },
-            onEnableSync = { settings.sync?.enable() },
-            onDisableSync = { settings.sync?.disable() },
+            onConnectSync = { password -> settings.sync?.connect(password) },
             onSyncNow = { settings.sync?.syncNow() },
             onDisconnectSync = { settings.sync?.disconnect() },
             onDismissSyncResult = { settings.sync?.dismissResult() },
@@ -550,6 +547,7 @@ private fun AppScreens(
                     sync = settings.state.sync,
                     actions = settingsActions,
                     onBack = { stack = stack.back() },
+                    now = settings.sync?.now ?: Clock.System.now(),
                 )
 
                 Destination.Appearance -> AppearanceScreen(

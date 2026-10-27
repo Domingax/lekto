@@ -85,9 +85,10 @@ data class ProviderUiState(
 
 /**
  * The LLM provider's state holder (issue #88; ADR-0022): it chooses one active
- * **LLM provider**, saves the non-secret configuration app-privately and the key
- * in the **Secret store** (ADR-0021), and runs a connection test off the UI
- * thread, reporting success or an inline failure.
+ * **LLM provider**, keeps the non-secret configuration app-privately, and runs a
+ * connection test off the UI thread. A successful test stores the key in the
+ * **Secret store** (ADR-0021); a failure changes nothing. Either way the outcome
+ * is reported inline.
  *
  * The [dispatcher] is injected because the connection test blocks, and a
  * hard-coded one cannot be driven by virtual time; the [scope] carries that work
@@ -149,40 +150,40 @@ class ProviderController(
     }
 
     /**
-     * Persists the active configuration app-privately and, when [apiKey] is not
-     * blank, stores the key in the **Secret store**. Both never enter the vault;
-     * an unavailable store is reported inline rather than silently dropping the
-     * key.
+     * The screen's one action (issue #213): test the active provider, then store
+     * [apiKey] only if it answered. Testing first means a wrong key never replaces
+     * a working one; a blank field re-tests the stored key without rewriting it.
+     * The non-secret configuration is written app-privately on success, and the key
+     * goes to the **Secret store** (ADR-0021). An unavailable store is reported
+     * inline rather than silently dropping the key.
      */
-    fun save(apiKey: String) {
-        val config = _state.value.config
-        settings.save(config)
-        val keyFailure = apiKey.takeIf { it.isNotBlank() }?.let { value ->
-            when (val outcome = secrets.put(providerSecretKey(config.provider), value)) {
-                is SecretResult.Unavailable -> AppMessage.core(outcome.message)
-                else -> null
-            }
-        }
-        _state.update { current ->
-            current.copy(
-                hasStoredKey = storedKey(current.config.provider) != null,
-                result = keyFailure?.let { message -> ProviderResult.Failure(message) }
-                    ?: ProviderResult.Success(SAVED),
-            )
-        }
-    }
-
-    /**
-     * Tests the active provider, using [apiKey] when the field is not blank and
-     * the stored key otherwise, so a saved key can be re-tested without retyping.
-     */
-    fun test(apiKey: String) {
+    fun connect(apiKey: String) {
         if (_state.value.testing) return
         val config = _state.value.config
         _state.update { current -> current.copy(testing = true, result = null) }
         scope.launch {
             val outcome = withContext(dispatcher) { client.testConnection(config, keyFor(apiKey, config.provider)) }
-            _state.update { current -> current.copy(testing = false, result = outcome.toProviderResult()) }
+            val result = when (outcome) {
+                LlmConnectionResult.Connected -> persistSuccessfulConnection(apiKey, config)
+                is LlmConnectionResult.Failed -> ProviderResult.Failure(AppMessage.core(outcome.message))
+            }
+            _state.update { current ->
+                current.copy(
+                    testing = false,
+                    hasStoredKey = storedKey(current.config.provider) != null,
+                    result = result,
+                )
+            }
+        }
+    }
+
+    /** Writes the configuration and, when [apiKey] is not blank, the key, after a successful test. */
+    private fun persistSuccessfulConnection(apiKey: String, config: LlmProviderConfig): ProviderResult {
+        settings.save(config)
+        if (apiKey.isBlank()) return ProviderResult.Success(CONNECTED)
+        return when (val outcome = secrets.put(providerSecretKey(config.provider), apiKey)) {
+            is SecretResult.Unavailable -> ProviderResult.Failure(AppMessage.core(outcome.message))
+            else -> ProviderResult.Success(CONNECTED)
         }
     }
 
@@ -283,15 +284,7 @@ class ProviderController(
     companion object {
         /** The key slot is per provider, so switching back finds a key already stored. */
         internal fun providerSecretKey(provider: LlmProvider): String = "llm-api-key-${provider.name.lowercase()}"
-
-        val SAVED: AppMessage = AppMessage.Text(TextKey.MESSAGE_SAVED)
         val KEY_REMOVED: AppMessage = AppMessage.Text(TextKey.MESSAGE_KEY_REMOVED)
         val CONNECTED: AppMessage = AppMessage.Text(TextKey.MESSAGE_PROVIDER_CONNECTED)
     }
-}
-
-/** The reader-facing result of a connection test. */
-private fun LlmConnectionResult.toProviderResult(): ProviderResult = when (this) {
-    LlmConnectionResult.Connected -> ProviderResult.Success(ProviderController.CONNECTED)
-    is LlmConnectionResult.Failed -> ProviderResult.Failure(AppMessage.core(message))
 }

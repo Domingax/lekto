@@ -1,7 +1,12 @@
 package app.lekto.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,14 +23,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.VisualTransformation
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.theme.hoverWash
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ArrowLeft
@@ -76,6 +85,7 @@ internal fun FormField(
     enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    placeholder: String? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val theme = MaterialTheme.colorScheme
@@ -95,6 +105,18 @@ internal fun FormField(
                 keyboardOptions = keyboardOptions,
                 visualTransformation = visualTransformation,
                 modifier = modifier.weight(1f),
+                decorationBox = { field ->
+                    Box {
+                        if (value.isEmpty() && placeholder != null) {
+                            Text(
+                                text = placeholder,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = theme.onSurfaceVariant,
+                            )
+                        }
+                        field()
+                    }
+                },
             )
             trailing?.invoke()
         }
@@ -116,15 +138,21 @@ internal fun FormRow(
     onClick: () -> Unit,
     trailing: (@Composable () -> Unit)? = null,
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Column(Modifier.fillMaxWidth()) {
         FormLabel(label)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = LektoSpacing.TouchTarget)
+                .background(
+                    if (hovered) hoverWash(MaterialTheme.colorScheme.onBackground) else Color.Transparent,
+                )
                 .handCursor()
-                .testTag(tag)
-                .clickable(onClick = onClick),
+                .hoverable(interaction)
+                .clickable(interactionSource = null, indication = null, onClick = onClick)
+                .testTag(tag),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
         ) {

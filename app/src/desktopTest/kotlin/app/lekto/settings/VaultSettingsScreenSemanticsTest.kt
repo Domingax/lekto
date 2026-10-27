@@ -24,6 +24,7 @@ import app.lekto.text.appTextsFor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /**
  * The **Vault and sync** screen's behaviour through semantics (issues #20, #28,
@@ -157,61 +158,56 @@ class VaultSettingsScreenSemanticsTest {
         )
 
         onNodeWithText("Sync is on.").performScrollTo().assertIsDisplayed()
-        onNodeWithTag(SYNC_DISABLE_TAG).performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun savingSyncPassesTheTypedPasswordToTheController() = runComposeUiTest {
-        var saved: String? = null
+    fun connectingPassesTheTypedPasswordToTheController() = runComposeUiTest {
+        var connected: String? = null
         vault(
             sync = SyncUiState(available = true),
-            actions = SettingsActions(onSaveSync = { password -> saved = password }),
+            actions = SettingsActions(onConnectSync = { password -> connected = password }),
         )
 
         onNodeWithTag(SYNC_PASSWORD_FIELD_TAG).performScrollTo().performTextInput("app-password")
-        onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
+        onNodeWithTag(SYNC_CONNECT_TAG).performScrollTo().performClick()
 
-        assertEquals("app-password", saved)
+        assertEquals("app-password", connected)
     }
 
     @Test
-    fun testingSyncPassesTheTypedPasswordToTheController() = runComposeUiTest {
-        var tested: String? = null
-        vault(
-            sync = SyncUiState(available = true),
-            actions = SettingsActions(onTestSync = { password -> tested = password }),
-        )
+    fun aStoredPasswordShowsAMaskedPlaceholder() = runComposeUiTest {
+        vault(sync = SyncUiState(available = true, hasStoredPassword = true))
 
-        onNodeWithTag(SYNC_PASSWORD_FIELD_TAG).performScrollTo().performTextInput("app-password")
-        onNodeWithTag(SYNC_TEST_TAG).performScrollTo().performClick()
-
-        assertEquals("app-password", tested)
+        onNodeWithText(SECRET_PLACEHOLDER).performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun enablingSyncRaisesTheAction() = runComposeUiTest {
-        var enabled = false
+    fun theLastRunTimeIsShown() = runComposeUiTest {
+        val now = Instant.fromEpochMilliseconds(FIXED_NOW_MILLIS)
         vault(
-            sync = SyncUiState(available = true, config = configured()),
-            actions = SettingsActions(onEnableSync = { enabled = true }),
+            sync = SyncUiState(
+                available = true,
+                config = configured(enabled = true),
+                hasStoredPassword = true,
+                lastRunAt = now.toEpochMilliseconds() - TWO_MINUTES_MILLIS,
+            ),
+            now = now,
         )
 
-        onNodeWithTag(SYNC_ENABLE_TAG).performScrollTo().performClick()
-
-        assertTrue(enabled)
+        onNodeWithText("Synced 2 minutes ago.", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun disablingSyncRaisesTheAction() = runComposeUiTest {
-        var disabled = false
+    fun theLastSyncOutcomeIsShown() = runComposeUiTest {
         vault(
-            sync = SyncUiState(available = true, config = configured(enabled = true)),
-            actions = SettingsActions(onDisableSync = { disabled = true }),
+            sync = SyncUiState(
+                available = true,
+                config = configured(enabled = true),
+                lastSync = SyncResult.Success(AppMessage.core("Synced: uploaded 1.")),
+            ),
         )
 
-        onNodeWithTag(SYNC_DISABLE_TAG).performScrollTo().performClick()
-
-        assertTrue(disabled)
+        onNodeWithText("Synced: uploaded 1.").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -232,19 +228,6 @@ class VaultSettingsScreenSemanticsTest {
         onNodeWithTag(SYNC_NOW_TAG).performScrollTo().performClick()
 
         assertTrue(synced)
-    }
-
-    @Test
-    fun theLastSyncOutcomeIsShown() = runComposeUiTest {
-        vault(
-            sync = SyncUiState(
-                available = true,
-                config = configured(enabled = true),
-                lastSync = SyncResult.Success(AppMessage.core("Synced: uploaded 1.")),
-            ),
-        )
-
-        onNodeWithText("Synced: uploaded 1.").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -293,8 +276,7 @@ class VaultSettingsScreenSemanticsTest {
     fun syncingInProgressDisablesTheControls() = runComposeUiTest {
         vault(sync = SyncUiState(available = true, config = configured(enabled = true), syncing = true))
 
-        onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().assertIsNotEnabled()
-        onNodeWithTag(SYNC_TEST_TAG).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(SYNC_CONNECT_TAG).performScrollTo().assertIsNotEnabled()
         onNodeWithTag(SYNC_NOW_TAG).performScrollTo().assertIsNotEnabled()
         onNodeWithTag(SYNC_DISCONNECT_TAG).performScrollTo().assertIsNotEnabled()
     }
@@ -316,6 +298,7 @@ class VaultSettingsScreenSemanticsTest {
         actions: SettingsActions = SettingsActions(),
         onBack: () -> Unit = {},
         texts: AppTexts? = null,
+        now: Instant = Instant.fromEpochMilliseconds(FIXED_NOW_MILLIS),
     ) {
         val screen: @Composable () -> Unit = {
             VaultSettingsScreen(
@@ -324,6 +307,7 @@ class VaultSettingsScreenSemanticsTest {
                 actions = actions,
                 onBack = onBack,
                 modifier = Modifier.size(width = 360.dp, height = 720.dp),
+                now = now,
             )
         }
         setContent {
@@ -333,6 +317,9 @@ class VaultSettingsScreenSemanticsTest {
         }
     }
 }
+
+private const val FIXED_NOW_MILLIS = 1_700_000_000_000L
+private const val TWO_MINUTES_MILLIS = 2 * 60 * 1000L
 
 /** A usable endpoint with the password stored, for the sync tests. */
 private fun configured(enabled: Boolean = false): SyncSettings =

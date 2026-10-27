@@ -382,9 +382,11 @@ The provider's API key and the WebDAV server are **screens of their own**, not t
 mid-page. Their fields read like a printed form — the label in small muted type, the value under
 it, a hairline — rather than a wall of outlined boxes.
 
-The rules for a form: **one filled button per screen**; everything reversible applies on change,
-with no confirmation, and something that costs a network call or writes a secret gets an explicit
-action; anything irreversible is written in red.
+The rules for a form: **one filled button per screen** — `Connection` on the provider, `Sync now`
+on the vault; everything reversible applies on change, with no confirmation, and something that
+costs a network call or writes a secret gets an explicit action; anything irreversible is written
+in red. `Connection` is the explicit action for a secret: it tests first and writes only when the
+endpoint answered.
 
 ### 7.6 Appearance, Languages, LLM provider, Vault and sync
 
@@ -393,9 +395,11 @@ action; anything irreversible is written in red.
 - **Languages** — one row per **Reading language**, its state (word-difficulty data, offline
   dictionary) and the download action when one is missing.
 - **LLM provider** — provider, key, model. The key is masked with a reveal, and the screen says
-  where it is stored: the device's keychain, never the vault.
+  where it is stored: the device's keychain, never the vault. `Connection` tests it and stores it
+  only when the provider answered; a stored key shows masked dots rather than an empty field.
 - **Vault and sync** — export and import; then the server, the user, the application
-  password, the state ("Sync is on.") and the actions. The vault is
+  password, the last run ("Synced 2 minutes ago.") and the actions. `Connection` tests the
+  endpoint, stores the password and turns sync on; `Sync now` runs one. The vault is
   **app-private** (ADR-0010): there is no folder to choose, and a "change location" control would
   describe an app that does not exist.
 

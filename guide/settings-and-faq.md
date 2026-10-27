@@ -52,10 +52,10 @@ See [Pronunciation](/pronunciation).
 
 ### My provider rejects the key
 
-Use the connection test on the **LLM provider** screen (Settings → LLM provider)
-to see the failure. Check that the key is correct, that the provider is the one
-the key belongs to, and that the model is available to it — **Load models** lists
-what the provider offers, so you can pick a valid one. See
+Press **Connection** on the **LLM provider** screen (Settings → LLM provider) to
+see the failure. Check that the key is correct, that the provider is the one the
+key belongs to, and that the model is available to it — **Load models** lists what
+the provider offers, so you can pick a valid one. See
 [LLM provider and privacy](/llm-provider).
 
 ### Every word is still highlighted
@@ -77,8 +77,9 @@ the **Reload list** button at the top refetches it once you are back online.
 
 Check **Settings → Vault and sync** on both devices: each needs the same WebDAV
 server address and a username and application password that reach it, and sync
-must be on. Use **Test connection** to spot a wrong address or password, then
-**Sync now**. A failed run says why and changes nothing locally. See
+must be on. Press **Connection** to spot a wrong address or password — it tests
+first, then stores the password and turns sync on — then **Sync now**. A failed
+run says why and changes nothing locally. See
 [Vault and sync](/vault-and-sync).
 
 ### Where do I get Lekto for my computer?

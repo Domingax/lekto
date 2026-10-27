@@ -33,7 +33,14 @@ import app.lekto.ui.handCursor
  * value and a hairline under it, not an outlined box.
  */
 @Composable
-fun SecretField(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
+@Suppress("LongParameterList") // The field's value, its label, its layout and whether a stored secret exists.
+fun SecretField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    hasStoredSecret: Boolean = false,
+) {
     var revealed by remember { mutableStateOf(false) }
     FormField(
         value = value,
@@ -42,10 +49,21 @@ fun SecretField(value: String, onValueChange: (String) -> Unit, label: String, m
         modifier = modifier,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
+        // An empty field used to read as "nothing is configured", even though a key
+        // or password was stored (issue #213). A masked placeholder says one is
+        // there without ever showing it; typing replaces it.
+        placeholder = if (hasStoredSecret) SECRET_PLACEHOLDER else null,
         trailing = {
-            TextButton(onClick = { revealed = !revealed }, modifier = Modifier.handCursor()) {
-                Text(LocalAppTexts.current[if (revealed) TextKey.HIDE else TextKey.SHOW])
+            // The placeholder says a secret is stored without revealing it, so a
+            // Show toggle would have nothing to show until the reader types.
+            if (value.isNotEmpty() || !hasStoredSecret) {
+                TextButton(onClick = { revealed = !revealed }, modifier = Modifier.handCursor()) {
+                    Text(LocalAppTexts.current[if (revealed) TextKey.HIDE else TextKey.SHOW])
+                }
             }
         },
     )
 }
+
+/** The masked dots that say a secret is already stored, never the secret itself. */
+internal val SECRET_PLACEHOLDER: String = "\u2022".repeat(12)

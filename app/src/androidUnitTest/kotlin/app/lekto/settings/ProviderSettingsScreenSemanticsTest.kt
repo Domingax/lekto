@@ -112,32 +112,26 @@ class ProviderSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun savingPassesTheTypedKeyToTheController() {
-        var saved: String? = null
-        render(
-            state = ProviderUiState(available = true, providerChosen = true),
-            actions = SettingsActions(onSaveProvider = { key -> saved = key }),
-        )
-
-        compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("gpt-4o-mini")
-        compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        compose.onNodeWithText("Save").performScrollTo().performClick()
-
-        assertEquals("sk-live-123", saved)
-    }
-
-    @Test
-    fun testingPassesTheTypedKeyToTheController() {
+    fun connectingPassesTheTypedKeyToTheController() {
         var tested: String? = null
         render(
             state = ProviderUiState(available = true, providerChosen = true),
-            actions = SettingsActions(onTestProvider = { key -> tested = key }),
+            actions = SettingsActions(onConnectProvider = { key -> tested = key }),
         )
 
         compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(PROVIDER_CONNECT_TAG).performScrollTo().performClick()
 
         assertEquals("sk-live-123", tested)
+    }
+
+    @Test
+    fun aStoredKeyShowsAMaskedPlaceholder() {
+        render(
+            state = ProviderUiState(available = true, providerChosen = true, hasStoredKey = true),
+        )
+
+        compose.onNodeWithText(SECRET_PLACEHOLDER).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -216,11 +210,10 @@ class ProviderSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun testingInProgressDisablesTheActions() {
+    fun testingInProgressDisablesTheAction() {
         render(state = ProviderUiState(available = true, providerChosen = true, testing = true))
 
-        compose.onNodeWithText("Save").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(PROVIDER_CONNECT_TAG).performScrollTo().assertIsNotEnabled()
     }
 
     @Test

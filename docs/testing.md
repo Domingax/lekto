@@ -241,8 +241,9 @@ the 16 dp dialogue, its title and message, and `Delete` in the reserved red. The
 two settings forms add one sheet, `settings-forms-light.png` (issue #213): the
 **LLM provider** and **Vault and sync** screens side by side, each with its back
 arrow and serif title, their printed-form rows — label, value, hairline — the one
-filled action per screen, the outlined secondary actions, and `Remove key` and
-`Disconnect` in the reserved red. The launcher
+filled action per screen (`Connection` on the provider, `Sync now` on the vault),
+the vault's outlined `Connection`, and `Remove key` and `Disconnect` in the
+reserved red. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.
@@ -590,8 +591,10 @@ leaving it stale (issue #116). `SyncReportSummaryTest` pins the plain-language
 summary, and the **Vault and sync** screen's controls, status line and
 folder-sync warning are `VaultSettingsScreenSemanticsTest` on both lanes
 (issue #213), and the loop — reach Settings → Vault and sync, type the endpoint
-and find it persisted before any Save — is driven through `AppSemanticsTest` on
-both lanes. The
+and find it persisted before **Connection**, which stores the password and turns
+sync on — is driven through `AppSemanticsTest` on both lanes. A run records its
+time with the injected clock, so the screen can say "Synced 2 minutes ago";
+`SyncOutcomeStoreContract` pins that the time round-trips. The
 composition roots now both wire a real driver (issue #116; ADR-0026):
 `desktopSync` and `androidSync` build the same `WebDavSyncTarget` over their
 platform's transport, rooted app-privately under the client's own directory. The
@@ -768,12 +771,13 @@ no provider-authored text — and therefore no echoed key — ever reaches a mes
 `LlmConnectionResultTest` pins the allowlist, the status fallback, and that an unknown
 identifier cannot be rendered. No provider and no real key is involved, as the pack
 downloader's lane is. The state
-holder — load, choose one provider, save app-privately while the key goes to the
-`SecretStore`, test off the UI thread, report inline — is `ProviderControllerTest` in
+holder — load, choose one provider, test off the UI thread and, on success, store
+the key in the `SecretStore`, report inline — is `ProviderControllerTest` in
 `app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The screen's
 controls are `ProviderSettingsScreenSemanticsTest` on both lanes (issue #213), and
-the whole loop — reach Settings → LLM provider, choose a provider, type a key, test
-the connection and see it answered — runs through `AppSemanticsTest` on both lanes. Android excludes the local Ollama preset,
+the whole loop — reach Settings → LLM provider, choose a provider, type a key,
+press **Connection** and see it answered and stored — runs through `AppSemanticsTest`
+on both lanes. Android excludes the local Ollama preset,
 which only a desktop can reach (ADR-0022), through the provider list the platform
 wires.
 

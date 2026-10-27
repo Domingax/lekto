@@ -3,6 +3,7 @@ package app.lekto.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,7 +18,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import app.lekto.core.llm.LlmProvider
@@ -41,7 +42,7 @@ internal const val PROVIDER_PICKER_TAG: String = "settings-provider-picker"
 internal const val MODEL_FIELD_TAG: String = "settings-provider-model"
 internal const val BASE_URL_FIELD_TAG: String = "settings-provider-base-url"
 internal const val API_KEY_FIELD_TAG: String = "settings-provider-api-key"
-internal const val TEST_CONNECTION_TAG: String = "settings-provider-test"
+internal const val PROVIDER_CONNECT_TAG: String = "settings-provider-connect"
 internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
@@ -58,11 +59,10 @@ internal const val PROVIDER_SETTINGS_TITLE_TAG: String = "provider-settings-titl
  * Choosing a provider loads that provider's model list automatically, and
  * opening the model field refreshes it with the key now typed, so there is no
  * separate action to press. The model and a custom base URL apply on change; the
- * key keeps an explicit **Save**, because writing it is a secret write, and
- * **Test connection** is the screen's one filled action. The key is handed to
- * the controller only to be stored or tested — it never enters this screen's
- * state. The screen says where the key lives: the device's keychain, never the
- * vault.
+ * key is written only after **Connection** answers, and that same success stores
+ * it. The key is handed to the controller only to be tested or stored — it never
+ * enters this screen's state. The screen says where the key lives: the device's
+ * keychain, never the vault.
  */
 @Composable
 @Suppress("LongMethod") // The screen's fields read top to bottom in the order docs/design.md §7.6 names them.
@@ -110,13 +110,19 @@ fun ProviderSettingsScreen(
                 onValueChange = { typed -> apiKey = typed },
                 label = texts[TextKey.API_KEY],
                 modifier = Modifier.fillMaxWidth().testTag(API_KEY_FIELD_TAG),
+                hasStoredSecret = state.hasStoredKey,
             )
         }
 
         ModelField(state, apiKey, actions)
-        StoredKey(state, actions)
-        ProviderStatus(state, actions)
-        ProviderActions(state, apiKey, actions)
+        StoredKey(state)
+        // The action, its answer and the way to undo it are one group, so the result
+        // and Remove key sit right under the button that produced them (issue #213).
+        Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+            ProviderActions(state, apiKey, actions)
+            ProviderStatus(state, actions)
+            RemoveKey(state, actions)
+        }
     }
 }
 
@@ -202,22 +208,45 @@ private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider?,
     }
 }
 
-/** Whether a key is already stored for the active provider, and the way to remove it. */
+/** Whether a key is already stored for the active provider. */
 @Composable
-private fun StoredKey(state: ProviderUiState, actions: SettingsActions) {
+private fun StoredKey(state: ProviderUiState) {
     if (!state.hasStoredKey) return
-    val texts = LocalAppTexts.current
-    Text(texts[TextKey.KEY_STORED], style = MaterialTheme.typography.bodyMedium)
-    IrreversibleAction(text = texts[TextKey.REMOVE_KEY], onClick = actions.onRemoveProviderKey)
+    Text(LocalAppTexts.current[TextKey.KEY_STORED], style = MaterialTheme.typography.bodyMedium)
 }
 
-/** The in-progress indicator and the last inline result, success or failure. */
+/** The way to remove the stored key, under the action it belongs to. */
+@Composable
+private fun RemoveKey(state: ProviderUiState, actions: SettingsActions) {
+    if (!state.hasStoredKey) return
+    IrreversibleAction(
+        text = LocalAppTexts.current[TextKey.REMOVE_KEY],
+        onClick = actions.onRemoveProviderKey,
+    )
+}
+
+/**
+ * The screen's one action: **Connection** tests the provider and, when it
+ * answers, stores the key. It is disabled while the test is in flight.
+ */
+@Composable
+private fun ProviderActions(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
+    val texts = LocalAppTexts.current
+    Button(
+        onClick = { actions.onConnectProvider(apiKey) },
+        enabled = !state.testing,
+        shape = LektoRadii.Control,
+        modifier = Modifier.fillMaxWidth().handCursor(!state.testing).testTag(PROVIDER_CONNECT_TAG),
+    ) { Text(texts[TextKey.CONNECTION]) }
+    if (state.testing) LinearProgressIndicator(Modifier.fillMaxWidth())
+}
+
+/** The inline result under **Connection**, with its Dismiss aligned to the trailing edge. */
 @Composable
 private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
-    if (state.testing) LinearProgressIndicator(Modifier.fillMaxWidth())
     val result = state.result ?: return
     val texts = LocalAppTexts.current
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             texts.message(result.message),
             color = when (result) {
@@ -225,6 +254,7 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
                 is ProviderResult.Failure -> MaterialTheme.colorScheme.error
             },
             style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
         )
         TextButton(
             onClick = actions.onDismissProviderResult,
@@ -233,26 +263,4 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
             Text(texts[TextKey.DISMISS])
         }
     }
-}
-
-/**
- * The screen's actions: **Test connection** is the one filled button, and the
- * key's explicit **Save** is its outlined sibling. Both are disabled while a
- * test is in flight.
- */
-@Composable
-private fun ProviderActions(state: ProviderUiState, apiKey: String, actions: SettingsActions) {
-    val texts = LocalAppTexts.current
-    Button(
-        onClick = { actions.onTestProvider(apiKey) },
-        enabled = !state.testing,
-        shape = LektoRadii.Control,
-        modifier = Modifier.fillMaxWidth().handCursor(!state.testing).testTag(TEST_CONNECTION_TAG),
-    ) { Text(texts[TextKey.TEST_CONNECTION]) }
-    OutlinedButton(
-        onClick = { actions.onSaveProvider(apiKey) },
-        enabled = !state.testing,
-        shape = LektoRadii.Control,
-        modifier = Modifier.fillMaxWidth().handCursor(!state.testing),
-    ) { Text(texts[TextKey.SAVE]) }
 }

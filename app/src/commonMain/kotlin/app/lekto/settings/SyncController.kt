@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * The pieces a platform entry point supplies so sync can be configured from the
@@ -86,6 +88,12 @@ data class SyncUiState(
     val syncing: Boolean = false,
     val result: SyncResult? = null,
     val lastSync: SyncResult? = null,
+    /**
+     * When the last run finished, as epoch milliseconds, so the screen can say
+     * "Synced 2 minutes ago". `null` before any run and after a disconnect, and
+     * `0` for an outcome written by a build that did not record it.
+     */
+    val lastRunAt: Long? = null,
 ) {
 
     /**
@@ -147,10 +155,19 @@ class SyncController(
     private val changes: LocalChanges,
     /** The automatic-run cadence and its backoff (issue #121; ADR-0028). */
     private val schedule: SyncSchedule = SyncSchedule(),
+    /** The clock the last run's time is stamped with; tests pass a [TestClock] (docs/testing.md). */
+    private val clock: Clock = Clock.System,
 ) {
 
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<SyncUiState> = _state.asStateFlow()
+
+    /**
+     * The same clock the run times are stamped with, so the screen's "2 minutes
+     * ago" and the stored time cannot come from two different clocks
+     * (docs/testing.md, "Deterministic seams").
+     */
+    internal val now: Instant get() = clock.now()
 
     /**
      * Whether the app has asked for automatic sync ([start] was called). The
@@ -243,6 +260,61 @@ class SyncController(
     }
 
     /**
+     * The screen's one action (issue #213): test the endpoint, then store the
+     * application password and turn sync on only if it answered. A blank field
+     * re-tests the stored password without rewriting it. A failed test changes
+     * nothing, so a wrong password never replaces a working one; **Disconnect**
+     * is the way back off.
+     */
+    fun connect(password: String) {
+        if (_state.value.testing) return
+        val config = _state.value.config
+        val typed = password.takeIf { it.isNotBlank() }
+        val secret = typed ?: storedPassword()
+        val missing = when {
+            !config.isConfigured -> NOT_CONFIGURED
+            secret == null -> NO_PASSWORD
+            else -> null
+        }
+        if (missing != null) {
+            _state.update { current -> current.copy(result = SyncResult.Failure(missing)) }
+            return
+        }
+        _state.update { current -> current.copy(testing = true, result = null) }
+        scope.launch {
+            val result = when (val outcome = withContext(dispatcher) { probe(config, checkNotNull(secret)) }) {
+                is SyncResult.Failure -> outcome
+                is SyncResult.Success -> activate(config, typed)
+            }
+            _state.update { current -> current.copy(testing = false, result = result) }
+        }
+    }
+
+    /** Stores the typed password, turns sync on and runs the first sync after a successful test. */
+    private fun activate(config: SyncSettings, typed: String?): SyncResult {
+        typed?.let(::storePassword)?.let { failure -> return SyncResult.Failure(failure) }
+        turnOn(config, SyncResult.Success(CONNECTED))
+        return SyncResult.Success(CONNECTED)
+    }
+
+    /** Enables sync, arms its triggers and runs once, so turning it on has a visible outcome. */
+    private fun turnOn(config: SyncSettings, result: SyncResult.Success) {
+        services.settings.save(config.copy(enabled = true))
+        _state.update { current ->
+            current.copy(
+                config = current.config.copy(enabled = true),
+                hasStoredPassword = storedPassword() != null,
+                result = result,
+            )
+        }
+        syncNow()
+        if (started) {
+            startCollectingChanges()
+            scheduleTicker()
+        }
+    }
+
+    /**
      * Turns sync on as a deliberate act (issue #28): it needs a usable endpoint
      * and a stored password, so enabling can never silently sync nothing. Turning
      * it on runs the first sync immediately, so the choice has a visible outcome
@@ -259,15 +331,7 @@ class SyncController(
             _state.update { current -> current.copy(result = failure) }
             return
         }
-        services.settings.save(config.copy(enabled = true))
-        _state.update { current ->
-            current.copy(config = current.config.copy(enabled = true), result = SyncResult.Success(SyncUiState.SYNC_ON))
-        }
-        syncNow()
-        if (started) {
-            startCollectingChanges()
-            scheduleTicker()
-        }
+        turnOn(config, SyncResult.Success(SyncUiState.SYNC_ON))
     }
 
     /** Turns sync off, leaving the endpoint configured and the vault local and usable. */
@@ -313,6 +377,7 @@ class SyncController(
                 config = SyncSettings.DEFAULT,
                 hasStoredPassword = deletion is SecretResult.Unavailable && current.hasStoredPassword,
                 lastSync = null,
+                lastRunAt = null,
                 result = (deletion as? SecretResult.Unavailable)?.let { outcome ->
                     SyncResult.Failure(AppMessage.core(outcome.message))
                 }
@@ -333,11 +398,13 @@ class SyncController(
 
     private fun initialState(): SyncUiState {
         val config = services.settings.load()
+        val outcome = services.outcomes.load()
         return SyncUiState(
             available = true,
             config = config,
             hasStoredPassword = storedPassword() != null,
-            lastSync = services.outcomes.load()?.toResult(),
+            lastSync = outcome?.toResult(),
+            lastRunAt = outcome?.atMillis,
         )
     }
 
@@ -389,8 +456,9 @@ class SyncController(
     private fun recordRun(outcome: SyncResult) {
         failures = if (outcome is SyncResult.Failure) failures + 1 else 0
         if (_state.value.config.enabled) {
-            services.outcomes.save(outcome.toOutcome())
-            _state.update { current -> current.copy(syncing = false, lastSync = outcome) }
+            val at = clock.now().toEpochMilliseconds()
+            services.outcomes.save(outcome.toOutcome(at))
+            _state.update { current -> current.copy(syncing = false, lastSync = outcome, lastRunAt = at) }
         } else {
             _state.update { current -> current.copy(syncing = false) }
         }
@@ -520,9 +588,10 @@ internal fun SyncReport.summary(): AppMessage = AppMessage.SyncReportText(
 )
 
 /** The outcome as it is kept device-locally, so it can be read back after a restart (issue #121). */
-private fun SyncResult.toOutcome(): SyncOutcome = SyncOutcome(
+private fun SyncResult.toOutcome(atMillis: Long): SyncOutcome = SyncOutcome(
     succeeded = this is SyncResult.Success,
     message = AppMessage.encode(message),
+    atMillis = atMillis,
 )
 
 /** The stored outcome back as the section's value, so a restart shows the same line. */

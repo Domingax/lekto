@@ -104,32 +104,26 @@ class ProviderSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun savingPassesTheTypedKeyToTheController() = runComposeUiTest {
-        var saved: String? = null
-        provider(
-            state = ProviderUiState(available = true, providerChosen = true),
-            actions = SettingsActions(onSaveProvider = { key -> saved = key }),
-        )
-
-        onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("gpt-4o-mini")
-        onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        onNodeWithText("Save").performScrollTo().performClick()
-
-        assertEquals("sk-live-123", saved)
-    }
-
-    @Test
-    fun testingPassesTheTypedKeyToTheController() = runComposeUiTest {
+    fun connectingPassesTheTypedKeyToTheController() = runComposeUiTest {
         var tested: String? = null
         provider(
             state = ProviderUiState(available = true, providerChosen = true),
-            actions = SettingsActions(onTestProvider = { key -> tested = key }),
+            actions = SettingsActions(onConnectProvider = { key -> tested = key }),
         )
 
         onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
+        onNodeWithTag(PROVIDER_CONNECT_TAG).performScrollTo().performClick()
 
         assertEquals("sk-live-123", tested)
+    }
+
+    @Test
+    fun aStoredKeyShowsAMaskedPlaceholder() = runComposeUiTest {
+        provider(
+            state = ProviderUiState(available = true, providerChosen = true, hasStoredKey = true),
+        )
+
+        onNodeWithText(SECRET_PLACEHOLDER).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -208,11 +202,10 @@ class ProviderSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun testingInProgressDisablesTheActions() = runComposeUiTest {
+    fun testingInProgressDisablesTheAction() = runComposeUiTest {
         provider(state = ProviderUiState(available = true, providerChosen = true, testing = true))
 
-        onNodeWithText("Save").performScrollTo().assertIsNotEnabled()
-        onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(PROVIDER_CONNECT_TAG).performScrollTo().assertIsNotEnabled()
     }
 
     @Test

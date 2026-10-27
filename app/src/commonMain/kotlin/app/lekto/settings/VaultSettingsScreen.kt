@@ -19,23 +19,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.handCursor
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /** The test tags the vault and sync screen's controls carry, so a UI test can click exactly one. */
 internal const val SYNC_HOST_FIELD_TAG: String = "settings-sync-host"
 internal const val SYNC_USERNAME_FIELD_TAG: String = "settings-sync-username"
 internal const val SYNC_PASSWORD_FIELD_TAG: String = "settings-sync-password"
-internal const val SYNC_SAVE_TAG: String = "settings-sync-save"
-internal const val SYNC_TEST_TAG: String = "settings-sync-test"
-internal const val SYNC_ENABLE_TAG: String = "settings-sync-enable"
-internal const val SYNC_DISABLE_TAG: String = "settings-sync-disable"
+internal const val SYNC_CONNECT_TAG: String = "settings-sync-connect"
 internal const val SYNC_NOW_TAG: String = "settings-sync-now"
 internal const val SYNC_DISCONNECT_TAG: String = "settings-sync-disconnect"
 internal const val SYNC_DISMISS_TAG: String = "settings-sync-dismiss"
@@ -54,10 +55,11 @@ internal const val VAULT_SETTINGS_TITLE_TAG: String = "vault-settings-title"
  *
  * The screen is **app-private** (ADR-0010): there is no folder to choose, and a
  * "change location" control would describe an app that does not exist. The server
- * address and username apply on change; the **application password** keeps an
- * explicit **Save**, because writing it is a secret write. **Sync now** is the one
- * filled button. **Disconnect** is red because it wipes the stored password, and
- * the warning about external folder-sync tools is always shown.
+ * address and username apply on change; the **application password** is written
+ * only after **Connection** answers, and that same success turns sync on.
+ * **Sync now** is the one filled button. **Disconnect** is red because it wipes
+ * the stored password, and the warning about external folder-sync tools is always
+ * shown, in the muted ink.
  */
 @Composable
 @Suppress("LongParameterList") // The vault, its sync, the shared actions, the way back and the layout.
@@ -67,6 +69,7 @@ fun VaultSettingsScreen(
     actions: SettingsActions = SettingsActions(),
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
+    now: Instant = Clock.System.now(),
 ) {
     val texts = LocalAppTexts.current
     Column(
@@ -82,7 +85,7 @@ fun VaultSettingsScreen(
         )
         Text(texts[TextKey.VAULT_SECTION_DESCRIPTION], style = MaterialTheme.typography.bodyMedium)
         VaultTransfer(vault, actions)
-        SyncForm(sync, actions)
+        SyncForm(sync, actions, now)
     }
 }
 
@@ -120,22 +123,21 @@ private fun VaultTransfer(state: VaultUiState, actions: SettingsActions) {
 
 /** The sync form: its state, the endpoint, the password and the actions. */
 @Composable
-private fun SyncForm(state: SyncUiState, actions: SettingsActions) {
+@Suppress("LongMethod") // The form reads top to bottom in the order docs/design.md §7.6 names it.
+private fun SyncForm(state: SyncUiState, actions: SettingsActions, now: Instant) {
     val texts = LocalAppTexts.current
     FormGroupLabel(texts[TextKey.SECTION_SYNC])
-    Text(texts[TextKey.SYNC_SECTION_DESCRIPTION], style = MaterialTheme.typography.bodyMedium)
-    // An advisory, not an act: red belongs to the irreversible actions (docs/design.md §2.4, §7.5).
-    Text(
-        texts[TextKey.SYNC_FOLDER_WARNING],
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodyMedium,
-    )
     if (!state.available) {
         Text(texts[TextKey.SYNC_UNAVAILABLE], style = MaterialTheme.typography.bodyMedium)
+        FolderSyncWarning()
         return
     }
 
-    Text(texts.message(state.status), style = MaterialTheme.typography.titleSmall)
+    // The state is always visible (CONTEXT.md, "Sync"), and the last run's time
+    // joins it so the block says when it last happened as well as whether it is on.
+    val status = texts.message(state.status)
+    val age = state.lastRunAt?.let { at -> texts.message(lastSyncLabel(now, at)) }
+    Text(if (age == null) status else "$status $age", style = MaterialTheme.typography.titleSmall)
     state.lastSync?.let { outcome -> SyncOutcomeLine(outcome) }
 
     var password by remember { mutableStateOf("") }
@@ -156,18 +158,34 @@ private fun SyncForm(state: SyncUiState, actions: SettingsActions) {
         onValueChange = { typed -> password = typed },
         label = texts[TextKey.APPLICATION_PASSWORD],
         modifier = Modifier.fillMaxWidth().testTag(SYNC_PASSWORD_FIELD_TAG),
+        hasStoredSecret = state.hasStoredPassword,
     )
 
-    state.result?.let { result -> SyncResultLine(result, actions.onDismissSyncResult) }
     if (state.syncing) LinearProgressIndicator(Modifier.fillMaxWidth())
-    SyncActions(state, password, actions)
-    SyncToggle(state, actions)
-    Disconnect(state, actions)
+    // The actions, the answer and the way off are one group, so the result and
+    // Disconnect sit right under the buttons (issue #213).
+    Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+        SyncActions(state, password, actions)
+        state.result?.let { result -> SyncResultLine(result, actions.onDismissSyncResult) }
+        Disconnect(state, actions)
+    }
+    FolderSyncWarning()
+}
+
+/** The folder-sync caution, always shown: an advisory, so it carries the muted ink, not the error red. */
+@Composable
+private fun FolderSyncWarning() {
+    Text(
+        LocalAppTexts.current[TextKey.SYNC_FOLDER_WARNING],
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 /**
- * The sync actions: **Sync now** is the one filled button; testing the
- * connection and the password's explicit **Save** are outlined.
+ * The sync actions: **Sync now** is the one filled button; **Connection** tests
+ * the endpoint, stores the password and turns sync on. Both are disabled while a
+ * test or a run is in flight.
  */
 @Composable
 private fun SyncActions(state: SyncUiState, password: String, actions: SettingsActions) {
@@ -180,38 +198,11 @@ private fun SyncActions(state: SyncUiState, password: String, actions: SettingsA
         modifier = Modifier.fillMaxWidth().handCursor(canSync).testTag(SYNC_NOW_TAG),
     ) { Text(texts[TextKey.SYNC_NOW]) }
     OutlinedButton(
-        onClick = { actions.onTestSync(password) },
+        onClick = { actions.onConnectSync(password) },
         enabled = !state.busy,
         shape = LektoRadii.Control,
-        modifier = Modifier.fillMaxWidth().handCursor(!state.busy).testTag(SYNC_TEST_TAG),
-    ) { Text(texts[TextKey.TEST_CONNECTION]) }
-    OutlinedButton(
-        onClick = { actions.onSaveSync(password) },
-        enabled = !state.busy,
-        shape = LektoRadii.Control,
-        modifier = Modifier.fillMaxWidth().handCursor(!state.busy).testTag(SYNC_SAVE_TAG),
-    ) { Text(texts[TextKey.SAVE]) }
-}
-
-/** Turning sync on is a deliberate act, and the manual run is offered only once it is on. */
-@Composable
-private fun SyncToggle(state: SyncUiState, actions: SettingsActions) {
-    val texts = LocalAppTexts.current
-    if (state.config.enabled) {
-        OutlinedButton(
-            onClick = actions.onDisableSync,
-            enabled = !state.busy,
-            shape = LektoRadii.Control,
-            modifier = Modifier.fillMaxWidth().handCursor(!state.busy).testTag(SYNC_DISABLE_TAG),
-        ) { Text(texts[TextKey.TURN_OFF_SYNC]) }
-    } else {
-        OutlinedButton(
-            onClick = actions.onEnableSync,
-            enabled = !state.busy,
-            shape = LektoRadii.Control,
-            modifier = Modifier.fillMaxWidth().handCursor(!state.busy).testTag(SYNC_ENABLE_TAG),
-        ) { Text(texts[TextKey.ENABLE_SYNC]) }
-    }
+        modifier = Modifier.fillMaxWidth().handCursor(!state.busy).testTag(SYNC_CONNECT_TAG),
+    ) { Text(texts[TextKey.CONNECTION]) }
 }
 
 /** Disconnecting clears the endpoint and password; the vault stays on this device. */
@@ -235,17 +226,50 @@ private fun SyncOutcomeLine(outcome: SyncResult) {
     )
 }
 
-/** The inline result of the screen's own actions, with a way to dismiss it. */
+/** The inline result under **Connection**, with its Dismiss aligned to the trailing edge. */
 @Composable
 private fun SyncResultLine(result: SyncResult, onDismiss: () -> Unit) {
     val texts = LocalAppTexts.current
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
-        Text(texts.message(result.message), color = syncColor(result), style = MaterialTheme.typography.bodyMedium)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            texts.message(result.message),
+            color = syncColor(result),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
         TextButton(onClick = onDismiss, modifier = Modifier.handCursor().testTag(SYNC_DISMISS_TAG)) {
             Text(texts[TextKey.DISMISS])
         }
     }
 }
+
+/**
+ * The time since the last run, in the reading language (issue #213): "Synced 2
+ * minutes ago" at rest, so the sync block says when it last happened rather than
+ * only whether it is on. A clock that went backwards reads as "just now".
+ */
+internal fun lastSyncLabel(now: Instant, atMillis: Long): AppMessage {
+    val minutes = (now - Instant.fromEpochMilliseconds(atMillis)).inWholeMinutes
+    return when {
+        minutes < 1 -> AppMessage.Text(TextKey.SYNC_LAST_JUST_NOW)
+        minutes == 1L -> AppMessage.Text(TextKey.SYNC_LAST_MINUTE)
+        minutes < MINUTES_PER_HOUR -> AppMessage.of(TextKey.SYNC_LAST_MINUTES, minutes)
+        minutes < MINUTES_PER_DAY -> hoursLabel(minutes / MINUTES_PER_HOUR)
+        else -> daysLabel(minutes / MINUTES_PER_DAY)
+    }
+}
+
+/** "1 hour ago" or "N hours ago", so the `when` above stays one line per branch. */
+private fun hoursLabel(hours: Long): AppMessage =
+    if (hours == 1L) AppMessage.Text(TextKey.SYNC_LAST_HOUR) else AppMessage.of(TextKey.SYNC_LAST_HOURS, hours)
+
+/** "1 day ago" or "N days ago". */
+private fun daysLabel(days: Long): AppMessage =
+    if (days == 1L) AppMessage.Text(TextKey.SYNC_LAST_DAY) else AppMessage.of(TextKey.SYNC_LAST_DAYS, days)
+
+/** The minute count in an hour and a day, so the relative label reads without magic numbers. */
+private const val MINUTES_PER_HOUR = 60
+private const val MINUTES_PER_DAY = MINUTES_PER_HOUR * 24
 
 /** A failure reads in the error colour; a confirmation in the primary one. */
 @Composable

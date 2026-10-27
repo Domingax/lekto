@@ -45,10 +45,13 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+
+private const val FIXED_RUN_MILLIS = 1_700_000_000_000L
 
 /** How many rapid page turns the coalescing test emits; only the count matters, not the value. */
 private const val PAGE_TURNS = 10
@@ -123,6 +126,64 @@ class SyncControllerTest {
         assertEquals(SecretResult.Found("app-password"), secrets.get(SyncController.PASSWORD_KEY))
         assertTrue(controller.state.value.hasStoredPassword)
         assertEquals(SyncResult.Success(SyncController.SAVED), controller.state.value.result)
+    }
+
+    @Test
+    fun `connecting tests the endpoint, stores the password and turns sync on`() = runTest {
+        val settings = InMemorySyncSettingsStore()
+        val secrets = InMemorySecretStore()
+        val target = InMemorySyncTarget()
+        val controller = controller(settings = settings, secrets = secrets, target = target)
+
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.connect("app-password")
+        advanceUntilIdle()
+
+        assertEquals(1, target.listCalls)
+        assertEquals(SecretResult.Found("app-password"), secrets.get(SyncController.PASSWORD_KEY))
+        assertTrue(settings.load().enabled, "a successful connection turns sync on")
+        assertEquals(SyncResult.Success(SyncController.CONNECTED), controller.state.value.result)
+        assertNotNull(controller.state.value.lastRunAt, "the first sync runs and records its time")
+    }
+
+    @Test
+    fun `a failed connection stores nothing and leaves sync off`() = runTest {
+        val settings = InMemorySyncSettingsStore()
+        val secrets = InMemorySecretStore()
+        val target = FailingSyncTarget()
+        val controller = controller(settings = settings, secrets = secrets, target = target)
+
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.connect("app-password")
+        advanceUntilIdle()
+
+        assertIs<SyncResult.Failure>(controller.state.value.result)
+        assertEquals(SecretResult.Absent, secrets.get(SyncController.PASSWORD_KEY))
+        assertFalse(settings.load().enabled)
+    }
+
+    @Test
+    fun `connecting without a password says so`() = runTest {
+        val controller = controller()
+
+        controller.setServerUrl("https://cloud.example.test/dav")
+        controller.setUsername("reader")
+        controller.connect("")
+        advanceUntilIdle()
+
+        assertEquals(SyncResult.Failure(SyncController.NO_PASSWORD), controller.state.value.result)
+    }
+
+    @Test
+    fun `connecting without an endpoint says so`() = runTest {
+        val controller = controller()
+
+        controller.connect("app-password")
+        advanceUntilIdle()
+
+        assertEquals(SyncResult.Failure(SyncController.NOT_CONFIGURED), controller.state.value.result)
     }
 
     @Test
@@ -444,12 +505,13 @@ class SyncControllerTest {
             resynced = false,
         )
         val outcomes = InMemorySyncOutcomeStore(
-            SyncOutcome(succeeded = true, message = AppMessage.encode(stored)),
+            SyncOutcome(succeeded = true, message = AppMessage.encode(stored), atMillis = FIXED_RUN_MILLIS),
         )
 
         val controller = controller(outcomes = outcomes)
 
         assertEquals(SyncResult.Success(stored), controller.state.value.lastSync)
+        assertEquals(FIXED_RUN_MILLIS, controller.state.value.lastRunAt)
     }
 
     @Test
@@ -861,6 +923,7 @@ class SyncControllerTest {
         changes: LocalChanges = LocalChanges(),
         schedule: SyncSchedule = SyncSchedule(),
         dispatcher: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
+        clock: TestClock = TestClock(),
         onSynced: () -> Unit = {},
     ): SyncController = SyncController(
         services = SyncServices(
@@ -883,6 +946,7 @@ class SyncControllerTest {
         onSynced = onSynced,
         changes = changes,
         schedule = schedule,
+        clock = clock,
     )
 }
 
