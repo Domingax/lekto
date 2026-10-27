@@ -44,7 +44,7 @@ data class WordTap(val token: WordToken, val contextSentence: String?)
  */
 @Suppress("LongParameterList") // The chapter, its renderer, its styles and the tap; a bundle would only hide that.
 fun buildReaderTokens(
-    chapter: ReaderChapter,
+    chapter: ReaderText,
     renderer: ReaderRenderer,
     styles: ReaderStyles,
     selected: IntRange? = null,
@@ -71,7 +71,7 @@ fun buildReaderTokens(
  * line breaks are the same as the tokenised text's, and building it costs a
  * string copy rather than a tokenisation per word.
  */
-fun buildChapterText(chapter: ReaderChapter, styles: ReaderStyles): AnnotatedString {
+fun buildChapterText(chapter: ReaderText, styles: ReaderStyles): AnnotatedString {
     val builder = AnnotatedString.Builder()
     appendBlocks(builder, chapter, styles)
     return builder.toAnnotatedString()
@@ -96,7 +96,7 @@ fun buildPageTokens(
     chapterText: AnnotatedString,
     page: ReaderPage,
     renderer: ReaderRenderer,
-    chapter: ReaderChapter,
+    chapter: ReaderText,
     styles: ReaderStyles,
     selected: IntRange? = null,
     onWordTap: (WordTap) -> Unit = {},
@@ -113,7 +113,7 @@ fun buildPageTokens(
 }
 
 /** Appends each block, its block-level style and its runs' inline styles; returns each block's start offset. */
-private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderChapter, styles: ReaderStyles): List<Int> {
+private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderText, styles: ReaderStyles): List<Int> {
     val blockStarts = mutableListOf<Int>()
     var cursor = 0
     chapter.blocks.forEachIndexed { index, block ->

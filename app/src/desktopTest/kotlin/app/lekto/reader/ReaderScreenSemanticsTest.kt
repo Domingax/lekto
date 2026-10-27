@@ -56,7 +56,7 @@ class ReaderScreenSemanticsTest {
         const val CHROME_BUTTONS = 4
 
         /** One short line, so the page has blank space below it for a centre tap. */
-        val SHORT_CHAPTER = ReaderChapter(
+        val SHORT_CHAPTER = ReaderText(
             title = "Short",
             language = "en",
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Hello.")))),
@@ -210,7 +210,7 @@ class ReaderScreenSemanticsTest {
     @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
     private fun Reader(
         renderer: ReaderRenderer,
-        chapter: ReaderChapter = SampleChapter.chapter,
+        chapter: ReaderText = SampleChapter.chapter,
         initialOffset: Int = 0,
         onPositionChange: (Int) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},

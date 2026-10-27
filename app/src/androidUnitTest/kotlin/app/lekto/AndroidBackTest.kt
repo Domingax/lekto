@@ -21,7 +21,9 @@ import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
+import app.lekto.reader.READER_CHAPTER_SHEET_TAG
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.SETTINGS_TITLE_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
@@ -138,6 +140,23 @@ class AndroidBackTest {
         // page it was on (issue #185).
         compose.onNodeWithText("isn't installed yet", substring = true).assertDoesNotExist()
         compose.onNodeWithTag(READER_PAGE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun backClosesTheChapterSheetBeforeTheReader() {
+        val library = InMemoryLibrary(chapters = true).apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library)) }
+        openBook()
+        compose.onNodeWithTag(READER_POSITION_TAG).performClick()
+        compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertIsDisplayed()
+
+        pressBack()
+
+        // The sheet is what is open over the reader, so Back closes it and the
+        // page stays where it was; the reader is still in front of the shell.
+        compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(READER_PAGE_TAG).assertIsDisplayed()
+        assertTrue("back does not leave the reader while it is open", !compose.activity.isFinishing)
     }
 
     @Test

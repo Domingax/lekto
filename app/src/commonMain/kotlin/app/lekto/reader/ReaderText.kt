@@ -2,15 +2,85 @@ package app.lekto.reader
 
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
+import app.lekto.core.text.BLOCK_SEPARATOR
+import app.lekto.core.text.Chapter
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextSegmenter
+import app.lekto.core.text.flattened
+import app.lekto.core.text.renderedLength
 
 /**
- * A parsed chapter as the reader consumes it: the blocks `core` produced, the
- * chapter title for the chrome, and the language its words are segmented in.
+ * A whole book as the reader consumes it: every block `core` produced, the
+ * book's title for the chrome, the language its words are segmented in, and its
+ * **Chapter list** (ADR-0037). It used to be called a "chapter" while it held
+ * the whole book; a [Chapter] is now a real chapter.
  */
-data class ReaderChapter(val title: String, val language: String?, val blocks: List<TextBlock>)
+data class ReaderText(
+    val title: String,
+    val language: String?,
+    val blocks: List<TextBlock>,
+    val chapters: List<Chapter> = emptyList(),
+)
+
+/**
+ * One row of the chapter list, ready for the reader: the [chapter], its [depth]
+ * in the hierarchy, the character [startOffset] of its first block in the
+ * rendered text, and the [number] the reader shows — `null` for a **Part** that
+ * only groups, because it is not a reading unit (ADR-0037).
+ */
+data class ReaderChapterEntry(val chapter: Chapter, val depth: Int, val startOffset: Int, val number: Int?)
+
+/**
+ * The book's chapter list flattened to rows, numbered in reading order. A leaf
+ * and a part with its own text are reading units and get a number; a part that
+ * only groups does not. The offsets are into the same rendered text the reader
+ * paginates, which is what lets a page name its chapter and a jump move to a
+ * character.
+ */
+fun ReaderText.chapterEntries(): List<ReaderChapterEntry> {
+    if (chapters.isEmpty()) return emptyList()
+    val starts = blockOffsets(blocks)
+    val end = blocks.renderedLength()
+    var number = 0
+
+    fun walk(list: List<Chapter>, depth: Int): List<ReaderChapterEntry> = list.flatMap { chapter ->
+        val offset = starts.getOrElse(chapter.startBlock) { end }
+        val entry = ReaderChapterEntry(
+            chapter = chapter,
+            depth = depth,
+            startOffset = offset,
+            number = if (chapter.isReadingUnit) ++number else null,
+        )
+        listOf(entry) + walk(chapter.children, depth + 1)
+    }
+
+    return walk(chapters, depth = 0).sortedBy { entry -> entry.startOffset }
+}
+
+/** The deepest chapter whose range holds [offset], or `null` before the first chapter. */
+fun List<ReaderChapterEntry>.entryAt(offset: Int): ReaderChapterEntry? =
+    lastOrNull { entry -> entry.startOffset <= offset }
+
+/**
+ * Every chapter's start as a character offset into the rendered text. Pagination
+ * starts a page at each of them, so a chapter's first page is exact without
+ * measuring the chapters before it (ADR-0037).
+ */
+fun ReaderText.chapterStartOffsets(): Set<Int> {
+    val starts = blockOffsets(blocks)
+    val end = blocks.renderedLength()
+    return chapters.flattened().map { chapter -> starts.getOrElse(chapter.startBlock) { end } }.toSet()
+}
+
+/** The character offset of each block's start, the text's own block separator counted. */
+private fun blockOffsets(blocks: List<TextBlock>): List<Int> = buildList {
+    var offset = 0
+    blocks.forEach { block ->
+        add(offset)
+        offset += block.text.length + BLOCK_SEPARATOR.length
+    }
+}
 
 /**
  * How a chapter becomes rendered text: the [segmenter] that finds words, the
@@ -29,7 +99,7 @@ data class ReaderRenderer(
 )
 
 /**
- * What the reader shows: the parsed [chapter], the [renderer] that colours it,
+ * What the reader shows: the parsed [text], the [renderer] that colours it,
  * the character [initialOffset] a resumed session opens at (0 for a book read
  * from the start), the [selectedRange] of the word whose lookup panel is open,
  * washed with the selection highlight so the word stays visible behind the panel,
@@ -42,7 +112,7 @@ data class ReaderRenderer(
  * and a plain state read would not force it to rebuild (issue #22).
  */
 data class ReaderDocument(
-    val chapter: ReaderChapter,
+    val text: ReaderText,
     val renderer: ReaderRenderer,
     val initialOffset: Int = 0,
     val selectedRange: IntRange? = null,

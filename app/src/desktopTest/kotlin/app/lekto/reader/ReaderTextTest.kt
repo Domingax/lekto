@@ -46,7 +46,7 @@ class ReaderTextTest {
 
     private val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
-    private val chapter = ReaderChapter(
+    private val chapter = ReaderText(
         title = "Chapter",
         language = "en",
         blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lantern glows")))),
@@ -74,7 +74,7 @@ class ReaderTextTest {
                 TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("and the keeper waits"))),
             ),
         )
-        val book = ReaderChapter(text.title.orEmpty(), text.language, text.blocks)
+        val book = ReaderText(text.title.orEmpty(), text.language, text.blocks)
 
         assertEquals(text.renderedLength(), buildChapterText(book, styles).length)
     }
@@ -122,7 +122,7 @@ class ReaderTextTest {
 
     @Test
     fun inlineEmphasisSurvivesIntoTheText() {
-        val emphasised = ReaderChapter(
+        val emphasised = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(
@@ -146,7 +146,7 @@ class ReaderTextTest {
 
     @Test
     fun aHeadingKeepsItsOwnStyle() {
-        val heading = ReaderChapter(
+        val heading = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(
@@ -187,7 +187,7 @@ class ReaderTextTest {
 
     @Test
     fun aPageSliceKeepsHeadingAndEmphasisStyles() {
-        val styled = ReaderChapter(
+        val styled = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(
@@ -243,7 +243,7 @@ class ReaderTextTest {
     fun aTokenCarriesTheLemmaKeyWhenTheLemmaLookupKnowsIt() {
         val lemmas = InMemoryLemmaLookup(mapOf("lanterns" to "lantern"))
         val lemmaRenderer = ReaderRenderer(WhitespaceTextSegmenter(), renderer.mastery, lemmas)
-        val plural = ReaderChapter(
+        val plural = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lanterns glow")))),

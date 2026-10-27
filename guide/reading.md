@@ -11,6 +11,22 @@ middle of the page hides both bars so the text fills the screen; tapping again
 brings them back. With a screen reader, the page offers **Previous page** and
 **Next page** as actions, so you can move through the book from the page itself.
 
+## Moving by chapter
+
+When a book declares chapters, the bottom bar tells you both where you are in
+the chapter and where you are in the book: `Chapter 4 · Page 99 of 357`. Every
+chapter starts on a new page.
+
+Tap that position to open the chapter list. It keeps the book's hierarchy, marks
+the chapter you are reading and scrolls it into view. Choose a chapter to jump
+there: the reader saves your new place at once and shows the chapter without
+waiting for the rest of the book to be counted, so the page number catches up a
+moment later. Close the list with **Close**, by tapping outside it, or with the
+system back gesture; back closes the list before it closes the reader.
+
+A book with one chapter — and every text file — has no chapter list. Its
+position stays a label and reads `Page 99 of 357`.
+
 ## Resuming where you left off
 
 The reader saves your **Reading position** per book and restores it when you

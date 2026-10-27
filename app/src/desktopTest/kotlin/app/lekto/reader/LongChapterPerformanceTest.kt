@@ -32,7 +32,7 @@ import kotlin.test.assertTrue
 @Suppress("MagicNumber") // Paragraph count and viewport dimensions are the experiment's parameters.
 class LongChapterPerformanceTest {
 
-    private val chapter = ReaderChapter(
+    private val chapter = ReaderText(
         title = "A three-hundred-page book",
         language = "en",
         blocks = List(900) { index ->

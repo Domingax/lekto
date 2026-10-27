@@ -74,6 +74,8 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.PREVIOUS_PAGE to "Previous page",
     TextKey.NEXT_PAGE to "Next page",
     TextKey.PAGE_OF to "Page {0} of {1}",
+    TextKey.CHAPTER_POSITION to "Chapter {0} · Page {1} of {2}",
+    TextKey.CHAPTERS to "Chapters",
     TextKey.READING_PREFERENCES to "Aa",
     TextKey.READING_TEXT to "Text",
     TextKey.READING_FACE to "Text face",

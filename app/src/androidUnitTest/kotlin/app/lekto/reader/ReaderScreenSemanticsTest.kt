@@ -84,14 +84,14 @@ class ReaderScreenSemanticsTest {
         const val CHROME_BUTTONS = 4
 
         /** One short line, so the page has blank space below it for a centre tap. */
-        val SHORT_CHAPTER = ReaderChapter(
+        val SHORT_CHAPTER = ReaderText(
             title = "Short",
             language = "en",
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Hello.")))),
         )
 
         /** Sixty paragraphs of one sentence, so the chapter spans pages under Robolectric's tighter metrics. */
-        val LONG_CHAPTER = ReaderChapter(
+        val LONG_CHAPTER = ReaderText(
             title = "The Lantern Keeper",
             language = "en",
             blocks = List(60) {
@@ -264,7 +264,7 @@ class ReaderScreenSemanticsTest {
     @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
     private fun Reader(
         renderer: ReaderRenderer,
-        chapter: ReaderChapter = LONG_CHAPTER,
+        chapter: ReaderText = LONG_CHAPTER,
         initialOffset: Int = 0,
         onPositionChange: (Int) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},

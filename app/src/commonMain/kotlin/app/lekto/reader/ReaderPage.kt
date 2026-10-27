@@ -39,6 +39,7 @@ private const val FIRST_WINDOW = 1024
  * of its own rather than looping forever. Measuring a run longer than the page
  * guarantees the cut line is a natural wrap and not the end of the measured
  * window, so the result is the same as laying out the whole chapter at once.
+ *
  */
 fun paginateChapter(text: AnnotatedString, layout: ReaderLayout): Sequence<ReaderPage> = sequence {
     when {

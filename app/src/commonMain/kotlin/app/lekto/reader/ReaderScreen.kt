@@ -1,7 +1,9 @@
 package app.lekto.reader
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -38,7 +41,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
@@ -93,6 +98,15 @@ internal const val READER_PREVIOUS_PAGE_TAG = "reader-previous-page"
 /** The test tag on the right chevron, which marks the next third and turns the page. */
 internal const val READER_NEXT_PAGE_TAG = "reader-next-page"
 
+/** The test tag on the chapter sheet, so a UI test can tell it is open. */
+internal const val READER_CHAPTER_SHEET_TAG = "reader-chapter-sheet"
+
+/** The test tag on the chapter sheet's **Close** action. */
+internal const val READER_CHAPTER_SHEET_CLOSE_TAG = "reader-chapter-sheet-close"
+
+/** The test tag on the scrim behind the chapter sheet, the "tap outside" target. */
+internal const val READER_CHAPTER_SHEET_SCRIM_TAG = "reader-chapter-sheet-scrim"
+
 /**
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
  * a word, a phrase selected by a long-press drag, a way back to the library, the
@@ -144,14 +158,16 @@ fun ReaderScreen(
     val styles = remember(document.preferences, theme) {
         ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink)
     }
-    val chapterText = remember(document.chapter, styles) {
-        buildChapterText(document.chapter, styles)
+    val chapterText = remember(document.text, styles) {
+        buildChapterText(document.text, styles)
     }
+    val entries = remember(document.text) { document.text.chapterEntries() }
+    val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val pages = rememberReaderPages(chapterText, styles)
-        val state = remember(document.chapter) { ReaderState(actions.onPositionChange) }
+        val state = remember(document.text) { ReaderState(actions.onPositionChange, document.initialOffset) }
+        val pages = rememberReaderPages(chapterText, styles, chapterStarts, state.paginationStart)
         state.bind(pages, chapterText.length, document.initialOffset)
-        ReaderContent(document, chapterText, styles, state, actions, overlayHeightPx)
+        ReaderContent(document, chapterText, entries, styles, state, actions, overlayHeightPx)
     }
 }
 
@@ -167,9 +183,34 @@ fun ReaderScreen(
  */
 @Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
 @Composable
-private fun BoxWithConstraintsScope.ReaderContent(
+private fun ReaderContent(
     document: ReaderDocument,
     chapterText: AnnotatedString,
+    entries: List<ReaderChapterEntry>,
+    styles: ReaderStyles,
+    state: ReaderState,
+    actions: ReaderActions,
+    overlayHeightPx: Int,
+) {
+    val current = state.page?.let { page -> entries.entryAt(page.start) }
+    Box(Modifier.fillMaxSize()) {
+        ReaderBands(document, chapterText, entries, current, styles, state, actions, overlayHeightPx)
+        if (state.chaptersVisible) ChapterOverlay(entries, current, state)
+    }
+    // Back closes the chapter sheet first, then the **Aa** panel, before the shell
+    // sees it (issues #185, #198).
+    PlatformBackHandler(enabled = state.chaptersVisible) { state.dismissChapters() }
+    PlatformBackHandler(enabled = state.preferencesVisible) { state.dismissPreferences() }
+}
+
+/** The page and its two bands, plus the **Aa** panel under them. */
+@Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
+@Composable
+private fun ReaderBands(
+    document: ReaderDocument,
+    chapterText: AnnotatedString,
+    entries: List<ReaderChapterEntry>,
+    current: ReaderChapterEntry?,
     styles: ReaderStyles,
     state: ReaderState,
     actions: ReaderActions,
@@ -177,7 +218,7 @@ private fun BoxWithConstraintsScope.ReaderContent(
 ) {
     Column(Modifier.fillMaxSize()) {
         if (state.chromeVisible) {
-            ReaderTitle(document.chapter.title, actions.onBack, state::togglePreferences)
+            ReaderTitle(document.text.title, actions.onBack, state::togglePreferences)
         }
         ReaderPage(
             document,
@@ -190,7 +231,20 @@ private fun BoxWithConstraintsScope.ReaderContent(
             actions.onPhraseSelected,
         )
         if (state.chromeVisible && state.page != null) {
-            ReaderPageBar(state.index, state.total, state::previous, state::next)
+            ReaderPageBar(
+                page = state.index,
+                total = state.total,
+                chapter = current?.number.takeIf { entries.size > 1 },
+                hasChapters = entries.size > 1,
+                onPrevious = state::previous,
+                onNext = state::next,
+                onOpenChapters = {
+                    // The lookup panel and the chapter sheet are never open
+                    // together, so opening the list dismisses a lookup first.
+                    actions.onDismissOverlay?.invoke()
+                    state.openChapters()
+                },
+            )
         }
         if (state.chromeVisible && state.preferencesVisible) {
             ReadingPreferencesPanel(
@@ -200,9 +254,36 @@ private fun BoxWithConstraintsScope.ReaderContent(
             )
         }
     }
-    // Back closes the **Aa** panel before the shell sees it (issue #185), the way a
-    // tap outside the panel does.
-    PlatformBackHandler(enabled = state.preferencesVisible) { state.dismissPreferences() }
+}
+
+/** The chapter sheet over the page, behind its dismiss scrim, low enough to keep the book visible. */
+@Composable
+private fun BoxScope.ChapterOverlay(
+    entries: List<ReaderChapterEntry>,
+    current: ReaderChapterEntry?,
+    state: ReaderState,
+) {
+    Box(Modifier.fillMaxSize()) {
+        DismissScrim(
+            onDismiss = state::dismissChapters,
+            modifier = Modifier.testTag(READER_CHAPTER_SHEET_SCRIM_TAG),
+        )
+        ChapterSheet(
+            entries = entries,
+            current = current,
+            onChoose = { entry ->
+                // A jump to the chapter already shown only closes the list and
+                // writes nothing (ADR-0037).
+                if (current?.startOffset == entry.startOffset) {
+                    state.dismissChapters()
+                } else {
+                    state.jumpTo(entry.startOffset)
+                }
+            },
+            onDismiss = state::dismissChapters,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 }
 
 /** The dismiss a tap on the page runs: the **Aa** panel's, or the lookup panel's, or none. */
@@ -216,7 +297,7 @@ private fun overlayDismiss(state: ReaderState, actions: ReaderActions): (() -> U
  * losing the reader's place (ADR-0035).
  */
 @Stable
-private class ReaderState(private val onPositionChange: (Int) -> Unit) {
+private class ReaderState(private val onPositionChange: (Int) -> Unit, initialOffset: Int) {
     var chromeVisible by mutableStateOf(true)
         private set
 
@@ -224,9 +305,22 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit) {
     var preferencesVisible by mutableStateOf(false)
         private set
 
+    /** Whether the chapter sheet is open; it and the **Aa** panel are never both up. */
+    var chaptersVisible by mutableStateOf(false)
+        private set
+
+    /**
+     * Where pagination starts: the saved position when the book opens, then the
+     * chapter a jump chose. Changing it restarts the pages with the segment the
+     * reader is looking at, so a jump shows its chapter without waiting for the
+     * pages before it (ADR-0037).
+     */
+    var paginationStart by mutableStateOf(initialOffset)
+        private set
+
     private var pages: List<ReaderPage> = emptyList()
     private var textLength: Int = 0
-    private var anchor by mutableStateOf(0)
+    private var anchor by mutableStateOf(initialOffset)
     private var opened = false
 
     /**
@@ -258,18 +352,47 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit) {
     /** Applies a tap on the middle third: hide or show the chrome. */
     fun toggleChrome() {
         chromeVisible = !chromeVisible
-        if (!chromeVisible) preferencesVisible = false
+        if (!chromeVisible) {
+            preferencesVisible = false
+            chaptersVisible = false
+        }
     }
 
     /** Opens or closes the **Aa** panel; it is part of the chrome, so toggling it shows the chrome. */
     fun togglePreferences() {
         chromeVisible = true
+        chaptersVisible = false
         preferencesVisible = !preferencesVisible
     }
 
     /** Closes the **Aa** panel; a tap outside it, or its own **Close**, lands here. */
     fun dismissPreferences() {
         preferencesVisible = false
+    }
+
+    /** Opens the chapter sheet, closing the **Aa** panel so the two never overlap. */
+    fun openChapters() {
+        chromeVisible = true
+        preferencesVisible = false
+        chaptersVisible = true
+    }
+
+    /** Closes the chapter sheet; a choice, a tap outside, **Close** or Back lands here. */
+    fun dismissChapters() {
+        chaptersVisible = false
+    }
+
+    /**
+     * Moves to [offset] — a chapter's first block — and saves it at once, so
+     * **Last read** moves and the target is shown without waiting for the whole
+     * book to be counted (ADR-0037).
+     */
+    fun jumpTo(offset: Int) {
+        chaptersVisible = false
+        preferencesVisible = false
+        anchor = offset.coerceIn(0, textLength)
+        paginationStart = anchor
+        onPositionChange(anchor)
     }
 
     private fun goTo(target: Int) {
@@ -440,14 +563,14 @@ private fun rememberPageTokens(
     return remember(
         chapterText,
         page,
-        document.chapter,
+        document.text,
         document.renderer,
         styles,
         selected,
         document.masteryRevision,
     ) {
         page?.let { slice ->
-            buildPageTokens(chapterText, slice, document.renderer, document.chapter, styles, selected) { word ->
+            buildPageTokens(chapterText, slice, document.renderer, document.text, styles, selected) { word ->
                 latestTap.value(word)
             }
         }
@@ -482,14 +605,19 @@ private fun readerSurfaceTap(
 }
 
 /**
- * Pages the chapter incrementally: a fresh list is filled by a coroutine in this
- * composable's scope, so the first page appears before the last is measured. The
- * list's snapshot reads drive recomposition as pages arrive.
+ * Pages the whole book incrementally: a fresh list is filled by a coroutine in
+ * this composable's scope, so the first page appears before the last is
+ * measured. Pages never cross a chapter start (ADR-0037), and the segment
+ * holding [focus] is measured first, so a jump shows its chapter at once while
+ * the rest of the book is counted behind it. The list's snapshot reads drive
+ * recomposition as pages arrive.
  */
 @Composable
 private fun BoxWithConstraintsScope.rememberReaderPages(
     chapterText: AnnotatedString,
     styles: ReaderStyles,
+    chapterStarts: Set<Int>,
+    paginationStart: Int,
 ): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -497,26 +625,55 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
         (maxWidth - styles.horizontalMargin * 2).roundToPx()
     }.coerceAtLeast(0)
     val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
-    val pages = remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale) {
-        mutableStateListOf<ReaderPage>()
-    }
+    val pages =
+        remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale, paginationStart) {
+            mutableStateListOf<ReaderPage>()
+        }
     val layout = remember(measurer, styles, contentWidth, contentHeight) {
         ReaderLayout(measurer, styles.body, contentWidth, contentHeight)
     }
-    LaunchedEffect(layout) { fillPages(chapterText, layout, pages) }
+    LaunchedEffect(layout, chapterStarts, paginationStart) {
+        fillPages(chapterText, layout, chapterStarts, paginationStart, pages)
+    }
     return pages
 }
 
-/** Appends pages until the chapter ends, yielding every [PAGE_YIELD_EVERY] so the UI stays live. */
-private suspend fun fillPages(text: AnnotatedString, layout: ReaderLayout, pages: SnapshotStateList<ReaderPage>) {
+/**
+ * Appends pages until the book ends, yielding every [PAGE_YIELD_EVERY] so the
+ * UI stays live. The segments are the chapter starts: the one holding [focus]
+ * is measured first, then the later ones, then the earlier ones, and the list is
+ * kept in reading order throughout.
+ */
+@Suppress("LongParameterList") // The paginator's inputs are the text, its layout and its state list.
+private suspend fun fillPages(
+    text: AnnotatedString,
+    layout: ReaderLayout,
+    chapterStarts: Set<Int>,
+    paginationStart: Int,
+    pages: SnapshotStateList<ReaderPage>,
+) {
+    val boundaries = (chapterStarts + 0 + text.length)
+        .filter { offset -> offset in 0..text.length }
+        .distinct()
+        .sorted()
+    val segments = boundaries.zipWithNext().filter { (start, end) -> end > start }
+    if (segments.isEmpty()) {
+        paginateChapter(text, layout).forEach { page -> pages += page }
+        return
+    }
+    val focusIndex = segments.indexOfLast { (start, _) -> start <= paginationStart }.coerceAtLeast(0)
+    val ordered = segments.drop(focusIndex) + segments.take(focusIndex)
     var sinceYield = 0
-    for (page in paginateChapter(text, layout)) {
-        pages += page
-        sinceYield++
-        if (sinceYield == PAGE_YIELD_EVERY) {
-            sinceYield = 0
-            yield()
+    for ((start, end) in ordered) {
+        for (page in paginateChapter(text.subSequence(start, end), layout)) {
+            pages += ReaderPage(page.start + start, page.end + start)
+            sinceYield++
+            if (sinceYield == PAGE_YIELD_EVERY) {
+                sinceYield = 0
+                yield()
+            }
         }
+        pages.sortWith(compareBy { page -> page.start })
     }
 }
 
@@ -570,8 +727,17 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
  * theme's muted ink. A chevron disabled at a bound stays visible but faded, so the
  * band keeps its shape as the reader moves.
  */
+@Suppress("LongParameterList") // The bar's controls and its two counters are independent.
 @Composable
-private fun ReaderPageBar(page: Int, total: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
+private fun ReaderPageBar(
+    page: Int,
+    total: Int,
+    chapter: Int?,
+    hasChapters: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onOpenChapters: () -> Unit,
+) {
     val texts = LocalAppTexts.current
     Row(
         modifier = Modifier.fillMaxWidth().height(PAGE_BAR_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
@@ -586,10 +752,21 @@ private fun ReaderPageBar(page: Int, total: Int, onPrevious: () -> Unit, onNext:
             tag = READER_PREVIOUS_PAGE_TAG,
         )
         Text(
-            text = texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)),
+            text = when (chapter) {
+                null -> texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total))
+                else -> texts.message(AppMessage.of(TextKey.CHAPTER_POSITION, chapter, page + 1, total))
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag(READER_POSITION_TAG),
+            modifier = if (hasChapters) {
+                Modifier
+                    .testTag(READER_POSITION_TAG)
+                    .heightIn(min = LektoSpacing.TouchTarget)
+                    .clickable(onClick = onOpenChapters)
+                    .semantics { role = Role.Button }
+            } else {
+                Modifier.testTag(READER_POSITION_TAG)
+            },
         )
         TapZoneButton(
             imageVector = LektoIcons.ChevronRight,
