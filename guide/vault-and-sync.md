@@ -32,8 +32,8 @@ Once sync is on, it runs **by itself**: when you open Lekto, every so often whil
 it is open, when you come back to it, and shortly after you change something — an
 imported book, a saved or deleted word — or pause your reading. **Sync now** runs
 one straight away. The sync block says how long ago the last run happened —
-"Synced 2 minutes ago." — and shows its outcome in plain language. A run that
-fails says so and changes nothing locally, so the app stays fully usable offline;
+"Synced 2 minutes ago." — and a failed run says why in plain language. A failed
+run changes nothing locally, so the app stays fully usable offline;
 Lekto waits longer between runs after a failure, so a server that is not
 answering is not hammered. **Disconnect** clears the address and the password and
 leaves your Vault on the device.

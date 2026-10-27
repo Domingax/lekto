@@ -133,8 +133,9 @@ The scale actually used, and nothing else:
 - The set is **Lucide geometry**: a 24-unit grid, a 2-unit stroke, round caps and joins. It is
   generated once, committed as `ImageVector` Kotlin, and carries no runtime dependency — the
   reasoning and the alternatives are in `docs/research/icones-compose.md`.
-- **The set is twelve icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
-  `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`.
+- **The set is thirteen icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
+  `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`,
+  `info`.
   `tools/icons/fetch.sh` fetches them at the pinned Lucide tag and regenerates the Kotlin; the
   generated files are never edited by hand. Their ISC and Feather/MIT notices live in
   `THIRD-PARTY-NOTICES.md` at the root, and the app names them in **Attribution**, reached from
@@ -399,9 +400,10 @@ endpoint answered.
   only when the provider answered; a stored key shows masked dots rather than an empty field.
 - **Vault and sync** — export and import; then the server, the user, the application
   password, the last run ("Synced 2 minutes ago.") and the actions. `Connection` tests the
-  endpoint, stores the password and turns sync on; `Sync now` runs one. The vault is
-  **app-private** (ADR-0010): there is no folder to choose, and a "change location" control would
-  describe an app that does not exist.
+  endpoint, stores the password and turns sync on; `Sync now` runs one. The folder-sync
+  caution lives behind the `info` icon beside **Server address**, not as a paragraph in the
+  flow. The vault is **app-private** (ADR-0010): there is no folder to choose, and a
+  "change location" control would describe an app that does not exist.
 
 ### 7.7 Launch
 

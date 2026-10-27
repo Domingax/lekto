@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
@@ -40,6 +42,7 @@ import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ArrowLeft
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.touchClient
 
 /**
  * The header the two settings screens share (docs/design.md §7.5, §7.6): the
@@ -86,13 +89,14 @@ internal fun FormField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     placeholder: String? = null,
+    labelTrailing: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val theme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth()) {
-        FormLabel(label)
+        FormLabel(label, labelTrailing)
         Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = LektoSpacing.TouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = fieldHeight()),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BasicTextField(
@@ -145,7 +149,7 @@ internal fun FormRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = LektoSpacing.TouchTarget)
+                .heightIn(min = fieldHeight())
                 .background(
                     if (hovered) hoverWash(MaterialTheme.colorScheme.onBackground) else Color.Transparent,
                 )
@@ -174,8 +178,14 @@ internal fun FormRow(
 
 /** The form's small muted label, with the 4 dp the label pair takes. */
 @Composable
-internal fun FormLabel(text: String) {
-    MutedLabel(text)
+internal fun FormLabel(text: String, trailing: (@Composable () -> Unit)? = null) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
+    ) {
+        MutedLabel(text)
+        trailing?.invoke()
+    }
     Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
 }
 
@@ -189,13 +199,22 @@ private fun MutedLabel(text: String) {
     )
 }
 
+/** A desktop pointer gets the mockup's tighter field; a thumb keeps the 48 dp target. */
+private fun fieldHeight() = if (touchClient) LektoSpacing.TouchTarget else COMPACT_FIELD_HEIGHT
+
+/** The gap under a value before the hairline that closes the field. */
+private val HAIRLINE_GAP = 2.dp
+
+/** The field's height under a pointer, closer to the mockup than the thumb's 48 dp. */
+private val COMPACT_FIELD_HEIGHT = 32.dp
+
 /** The hairline that closes one field and parts it from the next. */
 @Composable
 internal fun FormHairline() {
     HorizontalDivider(
         thickness = HAIRLINE_THICKNESS,
         color = MaterialTheme.colorScheme.outline,
-        modifier = Modifier.padding(top = LektoSpacing.InsideLabelPair),
+        modifier = Modifier.padding(top = HAIRLINE_GAP),
     )
 }
 
@@ -230,6 +249,7 @@ internal fun IrreversibleAction(
     TextButton(
         onClick = onClick,
         enabled = enabled,
+        contentPadding = PaddingValues(0.dp),
         modifier = modifier.handCursor(enabled),
     ) {
         // A disabled action reads muted, never as a live red invitation.

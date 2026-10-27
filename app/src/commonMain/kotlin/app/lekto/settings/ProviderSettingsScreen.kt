@@ -76,7 +76,7 @@ fun ProviderSettingsScreen(
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
-        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenBlocks),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         SettingsFormHeader(
             title = texts[TextKey.SECTION_LLM_PROVIDER],
@@ -84,44 +84,52 @@ fun ProviderSettingsScreen(
             titleTag = PROVIDER_SETTINGS_TITLE_TAG,
             onBack = onBack,
         )
-        Text(texts[TextKey.PROVIDER_SECTION_DESCRIPTION], style = MaterialTheme.typography.bodyMedium)
+        Text(
+            texts[TextKey.PROVIDER_SECTION_DESCRIPTION],
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
         if (!state.available) {
             Text(texts[TextKey.PROVIDER_UNAVAILABLE], style = MaterialTheme.typography.bodyMedium)
             return@Column
         }
 
-        ProviderPicker(state.providers, state.selectedProvider, actions.onSelectProvider)
-        val chosen = state.selectedProvider ?: return@Column
+        // The fields are one block: their labels and hairlines read as a form, not
+        // as six unrelated blocks (docs/design.md §7.5; issue #213).
+        Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
+            ProviderPicker(state.providers, state.selectedProvider, actions.onSelectProvider)
+            val chosen = state.selectedProvider ?: return@Column
 
-        if (chosen == LlmProvider.CUSTOM) {
-            FormField(
-                value = state.config.customBaseUrl,
-                onValueChange = actions.onBaseUrlChange,
-                label = texts[TextKey.BASE_URL],
-                modifier = Modifier.fillMaxWidth().testTag(BASE_URL_FIELD_TAG),
-            )
-        }
-        // A key typed for one provider must not survive a switch to another, so the
-        // field resets with the provider; a keyless Ollama shows no field at all.
-        var apiKey by remember(state.config.provider) { mutableStateOf("") }
-        if (chosen.requiresKey) {
-            SecretField(
-                value = apiKey,
-                onValueChange = { typed -> apiKey = typed },
-                label = texts[TextKey.API_KEY],
-                modifier = Modifier.fillMaxWidth().testTag(API_KEY_FIELD_TAG),
-                hasStoredSecret = state.hasStoredKey,
-            )
-        }
+            if (chosen == LlmProvider.CUSTOM) {
+                FormField(
+                    value = state.config.customBaseUrl,
+                    onValueChange = actions.onBaseUrlChange,
+                    label = texts[TextKey.BASE_URL],
+                    modifier = Modifier.fillMaxWidth().testTag(BASE_URL_FIELD_TAG),
+                )
+            }
+            // A key typed for one provider must not survive a switch to another, so the
+            // field resets with the provider; a keyless Ollama shows no field at all.
+            var apiKey by remember(state.config.provider) { mutableStateOf("") }
+            if (chosen.requiresKey) {
+                SecretField(
+                    value = apiKey,
+                    onValueChange = { typed -> apiKey = typed },
+                    label = texts[TextKey.API_KEY],
+                    modifier = Modifier.fillMaxWidth().testTag(API_KEY_FIELD_TAG),
+                    hasStoredSecret = state.hasStoredKey,
+                )
+            }
 
-        ModelField(state, apiKey, actions)
-        StoredKey(state)
-        // The action, its answer and the way to undo it are one group, so the result
-        // and Remove key sit right under the button that produced them (issue #213).
-        Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
-            ProviderActions(state, apiKey, actions)
-            ProviderStatus(state, actions)
-            RemoveKey(state, actions)
+            ModelField(state, apiKey, actions)
+            // The action, its answer and the way to undo it are one group, so the
+            // result and Remove key sit right under the button (issue #213).
+            Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+                StoredKey(state)
+                ProviderActions(state, apiKey, actions)
+                ProviderStatus(state, actions)
+                RemoveKey(state, actions)
+            }
         }
     }
 }
@@ -212,7 +220,11 @@ private fun ProviderPicker(providers: List<LlmProvider>, provider: LlmProvider?,
 @Composable
 private fun StoredKey(state: ProviderUiState) {
     if (!state.hasStoredKey) return
-    Text(LocalAppTexts.current[TextKey.KEY_STORED], style = MaterialTheme.typography.bodyMedium)
+    Text(
+        LocalAppTexts.current[TextKey.KEY_STORED],
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 /** The way to remove the stored key, under the action it belongs to. */
@@ -250,7 +262,7 @@ private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
         Text(
             texts.message(result.message),
             color = when (result) {
-                is ProviderResult.Success -> MaterialTheme.colorScheme.primary
+                is ProviderResult.Success -> MaterialTheme.colorScheme.onSurfaceVariant
                 is ProviderResult.Failure -> MaterialTheme.colorScheme.error
             },
             style = MaterialTheme.typography.bodyMedium,

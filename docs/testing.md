@@ -493,7 +493,7 @@ row and each demanded level to a red → green before the commit.
 The icon set (issue #184) is generated once and committed, so the Kotlin it adds
 is not hand-written and the generator is not run in tests. `LektoIconsTest` pins
 what a regeneration could silently change: the 24 dp grid, the 2-unit round
-stroke, the twelve-name set, and the back arrow as the only icon that mirrors in
+stroke, the thirteen-name set, and the back arrow as the only icon that mirrors in
 a right-to-left layout.
 
 `VaultStore` is the first seam to use the pattern: `testkit` holds

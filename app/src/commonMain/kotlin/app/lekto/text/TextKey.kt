@@ -171,6 +171,7 @@ enum class TextKey {
 
     // Sync section.
     SYNC_FOLDER_WARNING,
+    SYNC_FOLDER_WARNING_TITLE,
     SYNC_UNAVAILABLE,
     SERVER_ADDRESS,
     USERNAME,

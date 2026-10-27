@@ -77,7 +77,7 @@ private fun ScreenFrame(content: @Composable () -> Unit) {
         modifier = Modifier
             .width(SCREEN_WIDTH)
             .padding(LektoSpacing.ScreenEdge),
-        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenBlocks),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         HeaderBar()
         content()
@@ -104,12 +104,12 @@ private fun FieldPreview() {
         Bar(width = 0.22f, height = LABEL_HEIGHT, muted = true)
         Box(Modifier.height(LektoSpacing.InsideLabelPair))
         Row(
-            modifier = Modifier.fillMaxWidth().height(LektoSpacing.TouchTarget),
+            modifier = Modifier.fillMaxWidth().height(COMPACT_FIELD_HEIGHT),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Bar(width = 0.55f, height = VALUE_HEIGHT)
         }
-        Box(Modifier.height(LektoSpacing.InsideLabelPair))
+        Box(Modifier.height(HAIRLINE_GAP))
         Hairline()
     }
 }
@@ -153,25 +153,33 @@ private fun RedBar() {
 /** The provider screen's frame: its preset, key and model rows, then its one filled action and the red removal. */
 @Composable
 private fun ProviderPreview() {
-    FieldPreview()
-    FieldPreview()
-    FieldPreview()
-    Bar(width = 0.3f, height = LABEL_HEIGHT, muted = true)
-    FilledBar()
-    RedBar()
+    Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
+        FieldPreview()
+        FieldPreview()
+        FieldPreview()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+        Bar(width = 0.3f, height = LABEL_HEIGHT, muted = true)
+        FilledBar()
+        RedBar()
+    }
 }
 
 /** The vault screen's frame: export/import, then the sync form and its actions. */
 @Composable
 private fun VaultPreview() {
     OutlinedPairPreview()
-    Bar(width = 0.16f, height = LABEL_HEIGHT, muted = true)
-    FieldPreview()
-    FieldPreview()
-    FieldPreview()
-    FilledBar()
-    OutlinedBar(Modifier.fillMaxWidth())
-    RedBar()
+    Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
+        Bar(width = 0.16f, height = LABEL_HEIGHT, muted = true)
+        FieldPreview()
+        FieldPreview()
+        FieldPreview()
+        Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+            FilledBar()
+            OutlinedBar(Modifier.fillMaxWidth())
+            RedBar()
+        }
+    }
 }
 
 /** A bar where a line of text would be: its share of the width, its height and whether it is muted. */
@@ -195,7 +203,9 @@ private fun Hairline() {
 /** The preview's phone width: the frame the design's planche gives each screen. */
 private val SCREEN_WIDTH = 360.dp
 
-/** The four heights that stand in for type and controls. */
+/** The heights that stand in for type and controls, matching the compact desktop field. */
 private val LABEL_HEIGHT = 11.dp
 private val VALUE_HEIGHT = 15.dp
 private val BUTTON_HEIGHT = 44.dp
+private val COMPACT_FIELD_HEIGHT = 32.dp
+private val HAIRLINE_GAP = 2.dp

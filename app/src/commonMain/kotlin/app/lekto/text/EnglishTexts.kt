@@ -152,8 +152,9 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to
-        "Don't point a folder-sync tool at your vault. Syncthing, Dropbox, iCloud Drive and the like " +
-        "would put a second writer on the same files and can corrupt them. Use Lekto's own sync instead.",
+        "Syncthing, Dropbox, iCloud Drive and the like would put a second writer on the same files " +
+        "and can corrupt them. Use Lekto's own sync instead.",
+    TextKey.SYNC_FOLDER_WARNING_TITLE to "Don't point a folder-sync tool at your vault",
     TextKey.SYNC_UNAVAILABLE to "Sync isn't available in this build.",
     TextKey.SERVER_ADDRESS to "Server address",
     TextKey.USERNAME to "Username",

@@ -154,9 +154,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to
-        "Ne pointez pas un outil de synchronisation de dossiers vers votre coffre. Syncthing, Dropbox, " +
-        "iCloud Drive et similaires ajouteraient un second écrivain sur les mêmes fichiers et " +
-        "pourraient les corrompre. Utilisez la synchronisation propre à Lekto.",
+        "Syncthing, Dropbox, iCloud Drive et similaires ajouteraient un second écrivain sur les mêmes " +
+        "fichiers et pourraient les corrompre. Utilisez la synchronisation propre à Lekto.",
+    TextKey.SYNC_FOLDER_WARNING_TITLE to
+        "Ne pointez pas un outil de synchronisation de dossiers vers votre coffre",
     TextKey.SYNC_UNAVAILABLE to "La synchronisation n'est pas disponible dans cette version.",
     TextKey.SERVER_ADDRESS to "Adresse du serveur",
     TextKey.USERNAME to "Nom d'utilisateur",

@@ -100,11 +100,13 @@ class VaultSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun syncAlwaysWarnsAgainstFolderSyncTools() = runComposeUiTest {
-        vault()
+    fun theServerAddressInfoExplainsFolderSyncTools() = runComposeUiTest {
+        vault(sync = SyncUiState(available = true))
 
-        onNodeWithText("folder-sync tool", substring = true).performScrollTo().assertIsDisplayed()
-        onNodeWithText("corrupt", substring = true).performScrollTo().assertIsDisplayed()
+        onNodeWithTag(SYNC_WARNING_INFO_TAG).performScrollTo().performClick()
+
+        onNodeWithText("Syncthing", substring = true).assertIsDisplayed()
+        onNodeWithText("corrupt", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -195,19 +197,6 @@ class VaultSettingsScreenSemanticsTest {
         )
 
         onNodeWithText("Synced 2 minutes ago.", substring = true).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun theLastSyncOutcomeIsShown() = runComposeUiTest {
-        vault(
-            sync = SyncUiState(
-                available = true,
-                config = configured(enabled = true),
-                lastSync = SyncResult.Success(AppMessage.core("Synced: uploaded 1.")),
-            ),
-        )
-
-        onNodeWithText("Synced: uploaded 1.").performScrollTo().assertIsDisplayed()
     }
 
     @Test
