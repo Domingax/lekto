@@ -24,6 +24,13 @@ class InMemoryLanguageCatalog(private var current: LanguageCatalogState = Langua
     /** When set, the next [reload] fails with it; used to test the honest offline state. */
     var failure: Exception? = null
 
+    /**
+     * When set, [reload] runs it once its outcome is decided and before it reports
+     * it: the seam a test holds a fetch in flight with, so the window where the
+     * surface renders while a fetch runs is proved rather than raced.
+     */
+    var whileInFlight: (() -> Unit)? = null
+
     /** When set, a [reload] lands on it and [status] then reports it; used to test a fetch. */
     var onReload: LanguageCatalogState? = null
 
@@ -35,7 +42,9 @@ class InMemoryLanguageCatalog(private var current: LanguageCatalogState = Langua
 
     override fun reload(): LanguageCatalogState {
         reloads++
-        failure?.let { throw it }
+        val decided = failure
+        whileInFlight?.invoke()
+        decided?.let { throw it }
         onReload?.let { landed -> current = landed }
         return current
     }

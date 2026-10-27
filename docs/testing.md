@@ -440,6 +440,18 @@ own: `sync` is a `suspend` function that runs on the caller's context, so
 that must move work off the caller's thread takes a `CoroutineDispatcher`
 parameter, the way `Seams` threads its clock, ids and randomness.
 
+A seam is only half the answer: the test must also wait for the work it means to
+observe. A surface that renders a **provisional** state lets a test run ahead of
+it — the Languages screen shows its honest empty state, with **Reload list**
+disabled, while the first fetch is still in flight — so a tap asked for during
+that window is dropped and the test waits for a result no one will fetch. The
+suite's rule is to wait for the settled state with `AWAIT_DISPATCHED_WORK_MILLIS`
+(the failure message, the loaded list), never to assert on something the first
+frame already shows. Where that window only opens on a loaded machine, `testkit`'s
+fakes hold the work in flight (`InMemoryLanguageCatalog.whileInFlight`), so the
+race is proved on an idle one — `AppSemanticsTest`'s reload test is the case that
+taught this, on both lanes.
+
 The **window insets** are a seam of the same kind. `App` takes a `WindowInsets`
 that defaults to `WindowInsets.safeDrawing`, so every screen clears the status
 and navigation bars and any display cutout — Android 15 draws an app targeting

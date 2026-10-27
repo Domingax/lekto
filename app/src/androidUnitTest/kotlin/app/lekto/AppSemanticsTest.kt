@@ -1201,10 +1201,20 @@ class AppSemanticsTest {
     @Test
     fun reloadingTheLanguageListRefetchesItWhenNoneIsCached() {
         // The first open finds no cache and the fetch fails: the honest empty state.
+        // The fetch is held in flight for a moment, the way a loaded machine holds
+        // it, because that is where CI lost this test: the surface renders its empty
+        // state at once, so a tap on **Reload list** asked for before the first
+        // fetch lands is a dropped tap — the action is disabled while a fetch runs —
+        // and the failure is never retried. Waiting for the failure first is the
+        // fix, and the held fetch makes that wait load-bearing here too.
         val catalog = InMemoryLanguageCatalog().apply { failure = IOException("offline") }
+        catalog.whileInFlight = { if (catalog.reloads == 1) Thread.sleep(FIRST_FETCH_MILLIS) }
         compose.setContent { App(environment(InMemoryLibrary(), languages = catalog)) }
 
         compose.openLanguages()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("offline").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("hasn't loaded the list of languages", substring = true).assertIsDisplayed()
 
         catalog.failure = null
@@ -1497,6 +1507,13 @@ private const val PARAGRAPHS = 40
  * rather than the one-second Compose default (issue #194).
  */
 private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
+
+/**
+ * How long the Languages surface's first fetch is held in flight before it
+ * reports its failure. Long enough that the surface renders while the fetch
+ * runs — the window CI lost the reload test in — and short enough to be free.
+ */
+private const val FIRST_FETCH_MILLIS: Long = 300
 
 /**
  * A [BookLibrary] held in memory: import, open and reading progress without a
