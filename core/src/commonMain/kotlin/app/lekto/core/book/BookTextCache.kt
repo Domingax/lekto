@@ -3,6 +3,7 @@ package app.lekto.core.book
 import app.lekto.core.text.StructuredText
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.VaultCodec
+import kotlinx.serialization.Serializable
 
 /**
  * The device-local cache of a book's parsed text (ADR-0005): the parsed
@@ -17,12 +18,20 @@ import app.lekto.core.vault.VaultCodec
  * The length entry is written and removed with the text, so an import, a
  * delete and a re-parse cannot drift apart. The Library reads it without
  * decoding the text, which is what keeps listing a shelf cheap.
+ *
+ * The text is stored in an envelope carrying [FORMAT_VERSION] (ADR-0037): a
+ * missing or different version reads as a cache miss, so a shape this build does
+ * not understand is re-parsed from the original rather than decoded as valid.
+ * There is no migration — a derived asset is cheap to rebuild.
  */
 internal class BookTextCache(private val derived: DerivedAssetStore) {
 
     /** The cached text for [bookId], or `null` when there is none or it is unreadable. */
     fun textOf(bookId: String): StructuredText? = derived.get(textPath(bookId))?.let { bytes ->
-        runCatching { VaultCodec.json.decodeFromJsonElement(StructuredText.serializer(), jsonOf(bytes)) }.getOrNull()
+        runCatching {
+            val envelope = VaultCodec.json.decodeFromJsonElement(CachedText.serializer(), jsonOf(bytes))
+            envelope.text.takeIf { envelope.formatVersion == FORMAT_VERSION }
+        }.getOrNull()
     }
 
     /** The cached rendered length for [bookId], or `null` when the text has not been measured. */
@@ -30,9 +39,10 @@ internal class BookTextCache(private val derived: DerivedAssetStore) {
 
     /** Stores [text] as [bookId]'s parsed text, with its rendered length beside it. */
     fun put(bookId: String, text: StructuredText) {
+        val envelope = CachedText(FORMAT_VERSION, text)
         derived.put(
             textPath(bookId),
-            VaultCodec.json.encodeToString(StructuredText.serializer(), text).encodeToByteArray(),
+            VaultCodec.json.encodeToString(CachedText.serializer(), envelope).encodeToByteArray(),
         )
         putLength(bookId, text.renderedLength())
     }
@@ -53,4 +63,13 @@ internal class BookTextCache(private val derived: DerivedAssetStore) {
     private fun lengthPath(bookId: String): String = "book-text/$bookId.length"
 
     private fun jsonOf(bytes: ByteArray) = VaultCodec.json.parseToJsonElement(bytes.decodeToString())
+
+    /** The versioned envelope the parsed text is stored in (ADR-0037). */
+    @Serializable
+    private data class CachedText(val formatVersion: Int, val text: StructuredText)
+
+    companion object {
+        /** The shape of [CachedText] this build writes and accepts; anything else is a miss. */
+        const val FORMAT_VERSION = 1
+    }
 }

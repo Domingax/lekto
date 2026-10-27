@@ -10,6 +10,12 @@ import org.jsoup.nodes.TextNode
 import java.io.ByteArrayInputStream
 
 /**
+ * One content document: the blocks it contributes to the book and the fragment
+ * anchors it exposes (ADR-0037), named id or legacy `<a name>` to block index.
+ */
+internal data class XhtmlDocument(val blocks: List<TextBlock>, val anchors: Map<String, Int>)
+
+/**
  * Turns one XHTML content document into [TextBlock]s.
  *
  * It uses jsoup's HTML parser rather than a strict XML one on purpose: real
@@ -20,29 +26,41 @@ import java.io.ByteArrayInputStream
  * and containers (`div`, `blockquote`, `ul`, `table`, …) are descended into so
  * their child blocks keep their place in the reading order.
  */
+@Suppress("TooManyFunctions") // The walk, its inline pass and its two style helpers are one parser.
 internal object XhtmlBlocks {
 
     /** Parses [bytes] into blocks, in document order. */
-    fun of(bytes: ByteArray): List<TextBlock> {
+    fun of(bytes: ByteArray): List<TextBlock> = parse(bytes).blocks
+
+    /**
+     * Parses [bytes] into blocks and the fragment anchors the document exposes
+     * (ADR-0037): an element's `id` (or a legacy `<a name>`) mapped to the block
+     * that holds it, so a TOC fragment can become a block index.
+     */
+    fun parse(bytes: ByteArray): XhtmlDocument {
         val document = Jsoup.parse(ByteArrayInputStream(bytes), null, "")
         val blocks = mutableListOf<TextBlock>()
-        descend(document.body(), blocks)
-        return blocks
+        val anchors = mutableMapOf<String, Int>()
+        descend(document.body(), blocks, anchors)
+        return XhtmlDocument(blocks, anchors)
     }
 
     /** Reads every child of [container] in order, keeping their place in the reading order. */
-    private fun descend(container: Element, into: MutableList<TextBlock>) {
-        for (child in container.children()) collectBlock(child, into)
+    private fun descend(container: Element, into: MutableList<TextBlock>, anchors: MutableMap<String, Int>) {
+        for (child in container.children()) collectBlock(child, into, anchors)
     }
 
-    private fun collectBlock(element: Element, into: MutableList<TextBlock>) {
+    private fun collectBlock(element: Element, into: MutableList<TextBlock>, anchors: MutableMap<String, Int>) {
+        element.recordAnchors(into.size, anchors)
         val tag = element.normalName()
         when {
             tag in SKIPPED -> Unit
 
-            tag in CONTAINERS -> descend(element, into)
+            tag in CONTAINERS -> descend(element, into, anchors)
 
-            tag in BLOCKS -> runsOf(element).takeIf { it.isNotEmpty() }?.let { into += block(tag, it) }
+            tag in BLOCKS -> runsOf(element, into.size, anchors)
+                .takeIf { it.isNotEmpty() }
+                ?.let { runs -> into += block(tag, runs) }
 
             // An element the format does not classify: usually an inline wrapper
             // whose text belongs in a paragraph. But a heading that writes its
@@ -50,9 +68,10 @@ internal object XhtmlBlocks {
             // with an `<a>` it never closes, and the rest of the chapter lands
             // inside it — so descend when the element holds blocks, or that
             // chapter would be lost.
-            element.wrapsBlocks -> descend(element, into)
+            element.wrapsBlocks -> descend(element, into, anchors)
 
-            else -> runsOf(element).takeIf { it.isNotEmpty() }?.let { into += TextBlock(BlockKind.PARAGRAPH, it) }
+            else -> runsOf(element, into.size, anchors).takeIf { it.isNotEmpty() }
+                ?.let { into += TextBlock(BlockKind.PARAGRAPH, it) }
         }
     }
 
@@ -60,28 +79,54 @@ internal object XhtmlBlocks {
     private val Element.wrapsBlocks: Boolean
         get() = children().any { child -> child.normalName() in BLOCKS || child.normalName() in CONTAINERS }
 
-    private fun runsOf(element: Element): List<TextRun> {
+    private fun runsOf(element: Element, blockIndex: Int, anchors: MutableMap<String, Int>): List<TextRun> {
         val characters = mutableListOf<StyledChar>()
-        collectInline(element, emptySet(), characters)
+        collectInline(element, emptySet(), characters, blockIndex, anchors)
         return toRuns(characters)
     }
 
-    private fun collectInline(element: Element, styles: Set<InlineStyle>, into: MutableList<StyledChar>) {
+    @Suppress("LongParameterList") // The walk's accumulator and anchor map travel together.
+    private fun collectInline(
+        element: Element,
+        styles: Set<InlineStyle>,
+        into: MutableList<StyledChar>,
+        blockIndex: Int,
+        anchors: MutableMap<String, Int>,
+    ) {
         for (node in element.childNodes()) {
             when (node) {
                 is TextNode -> node.wholeText.forEach { character -> into += StyledChar(character, styles) }
-                is Element -> collectElement(node, styles, into)
+                is Element -> collectElement(node, styles, into, blockIndex, anchors)
                 else -> Unit
             }
         }
     }
 
-    private fun collectElement(element: Element, styles: Set<InlineStyle>, into: MutableList<StyledChar>) {
+    @Suppress("LongParameterList") // The walk's accumulator and anchor map travel together.
+    private fun collectElement(
+        element: Element,
+        styles: Set<InlineStyle>,
+        into: MutableList<StyledChar>,
+        blockIndex: Int,
+        anchors: MutableMap<String, Int>,
+    ) {
+        element.recordAnchors(blockIndex, anchors)
         when (val tag = element.normalName()) {
             in CONTAINERS, in BLOCKS, in SKIPPED -> Unit
             "br" -> into += StyledChar(' ', styles)
-            else -> collectInline(element, styles + styleOf(tag), into)
+            else -> collectInline(element, styles + styleOf(tag), into, blockIndex, anchors)
         }
+    }
+
+    /**
+     * Records the fragment names [element] carries as pointing at [blockIndex].
+     * A named element inside a block belongs to that block; one that starts a
+     * block belongs to the block it starts.
+     */
+    private fun Element.recordAnchors(blockIndex: Int, anchors: MutableMap<String, Int>) {
+        id().takeIf { id -> id.isNotEmpty() }?.let { id -> anchors.putIfAbsent(id, blockIndex) }
+        attr("name").takeIf { name -> normalName() == "a" && name.isNotEmpty() }
+            ?.let { name -> anchors.putIfAbsent(name, blockIndex) }
     }
 
     private fun styleOf(tag: String): Set<InlineStyle> = when (tag) {

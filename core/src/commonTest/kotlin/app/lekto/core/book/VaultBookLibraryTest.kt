@@ -10,6 +10,7 @@ import app.lekto.core.text.TxtParser
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
+import app.lekto.core.vault.VaultCodec
 import app.lekto.core.vault.VaultFileSystem
 import app.lekto.core.vault.VaultStore
 import app.lekto.testkit.InMemoryTombstoneStore
@@ -214,6 +215,18 @@ class VaultBookLibraryTest :
                 "book-text/${book.id}.json",
                 "book-text/${book.id}.length",
             )
+        }
+
+        test("a cache written by another format version is re-parsed and rewritten") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val library = newLibrary(derived = derived)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            val stale = StructuredText(title = "Stale", language = null, blocks = emptyList())
+            val json = VaultCodec.json.encodeToString(StructuredText.serializer(), stale)
+            derived.put("book-text/${book.id}.json", """{"formatVersion":0,"text":$json}""".encodeToByteArray())
+
+            library.open(book.id)?.text shouldBe epubText
+            derived.get("book-text/${book.id}.json")?.decodeToString()?.contains("\"formatVersion\": 1") shouldBe true
         }
 
         test("the parsed-text cache writes and removes the rendered length with the text") {

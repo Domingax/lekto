@@ -18,7 +18,14 @@ class TxtParser : BookTextParser {
             .map { paragraph -> paragraph.replace(WHITESPACE, " ").trim() }
             .filter { paragraph -> paragraph.isNotEmpty() }
             .map { paragraph -> TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(paragraph))) }
-        return StructuredText(title = null, language = null, blocks = blocks)
+        return StructuredText(
+            title = null,
+            language = null,
+            blocks = blocks,
+            // A TXT declares no structure, so it is one chapter covering the
+            // whole text (ADR-0037): there is nothing to invent.
+            chapters = listOf(Chapter(title = "", startBlock = 0)),
+        )
     }
 
     private companion object {

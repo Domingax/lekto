@@ -37,6 +37,12 @@ class TxtParserTest :
             text.plainText() shouldBe "Bonjour le monde."
         }
 
+        test("a text file is one chapter covering the whole text") {
+            val text = TxtParser().parse("Un\n\nDeux".encodeToByteArray())
+
+            text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+        }
+
         test("a multi-byte character survives decoding") {
             val text = TxtParser().parse("日本語の文章です。".encodeToByteArray())
 
