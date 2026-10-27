@@ -18,6 +18,7 @@ enum class TextKey {
     LANGUAGES,
     ATTRIBUTION,
     BACK,
+    OPEN,
     DISMISS,
     DELETE,
     CANCEL,
@@ -136,9 +137,11 @@ enum class TextKey {
     SECTION_APPEARANCE,
     SECTION_APP_LANGUAGE,
     SECTION_LANGUAGES,
-    SECTION_VAULT,
     SECTION_SYNC,
     SECTION_LLM_PROVIDER,
+
+    /** The **Vault and sync** screen's title (docs/design.md §7.6; issue #213). */
+    VAULT_AND_SYNC,
     LANGUAGES_SECTION_DESCRIPTION,
     VAULT_SECTION_DESCRIPTION,
     VAULT_UNAVAILABLE,
@@ -146,6 +149,7 @@ enum class TextKey {
     IMPORT_VAULT,
     PROVIDER_SECTION_DESCRIPTION,
     PROVIDER_UNAVAILABLE,
+    PROVIDER,
     BASE_URL,
     API_KEY,
     MODEL,

@@ -23,11 +23,15 @@ device.
 
 ## Choosing the model
 
-Pick your provider first: Lekto asks it for the models it offers and lists them, so
-you never type a name from memory. Then open the **Model** field — its list drops
-straight out of the field, and you can still type a name yourself. If you have just
-entered your API key, opening the field fetches the list with that key. The list is
-device-local and is not stored in your Vault.
+Open the **LLM provider** screen from Settings. Pick your provider first: Lekto
+asks it for the models it offers and lists them, so you never type a name from
+memory. Then open the **Model** field — its list drops straight out of the field,
+and you can still type a name yourself. The model applies as you choose it. If you
+have just entered your API key, opening the field fetches the list with that key.
+The list is device-local and is not stored in your Vault.
+
+The key is the one thing the screen does not write as you type: press **Save** to
+store it. **Test connection** checks it without waiting for a phrase.
 
 OpenCode Zen and OpenCode Go publish their list, so it loads without a key. A
 provider that has no model list — or answers in a way Lekto cannot read — is
@@ -36,8 +40,8 @@ your provider needs a key, a discreet note under the field reminds you to enter 
 
 ## Testing the connection
 
-Settings offers a connection test, so you can check that a provider works before you
-rely on it. A rejected key is reported inline.
+The **LLM provider** screen offers a connection test, so you can check that a
+provider works before you rely on it. A rejected key is reported inline.
 
 ## When no provider is connected
 

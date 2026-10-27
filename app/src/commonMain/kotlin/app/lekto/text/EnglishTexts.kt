@@ -16,6 +16,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.LANGUAGES to "Languages",
     TextKey.ATTRIBUTION to "Attribution",
     TextKey.BACK to "Back",
+    TextKey.OPEN to "Open",
     TextKey.DISMISS to "Dismiss",
     TextKey.DELETE to "Delete",
     TextKey.CANCEL to "Cancel",
@@ -112,9 +113,9 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_APPEARANCE to "Appearance",
     TextKey.SECTION_APP_LANGUAGE to "App language",
     TextKey.SECTION_LANGUAGES to "Languages",
-    TextKey.SECTION_VAULT to "Vault",
     TextKey.SECTION_SYNC to "Sync",
     TextKey.SECTION_LLM_PROVIDER to "LLM provider",
+    TextKey.VAULT_AND_SYNC to "Vault and sync",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
         "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
         "Set your level and download the word-difficulty data and the offline dictionary for each there.",
@@ -129,6 +130,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
         "Translate a selected phrase with your own LLM provider. Your key is kept in this device's " +
         "secure storage — never in your vault, an export or a log.",
     TextKey.PROVIDER_UNAVAILABLE to "Connecting an LLM provider isn't available in this build.",
+    TextKey.PROVIDER to "Provider",
     TextKey.BASE_URL to "Base URL",
     TextKey.API_KEY to "API key",
     TextKey.MODEL to "Model",

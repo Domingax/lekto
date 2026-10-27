@@ -126,6 +126,22 @@ class SyncControllerTest {
     }
 
     @Test
+    fun `the endpoint and username write at once`() = runTest {
+        val settings = InMemorySyncSettingsStore()
+        val controller = controller(settings = settings)
+
+        // Reversible fields apply on change; only the password needs an explicit Save (issue #213).
+        controller.setServerUrl("https://cloud.example.test/dav")
+        assertEquals(SyncSettings(serverUrl = "https://cloud.example.test/dav"), settings.load())
+
+        controller.setUsername("reader")
+        assertEquals(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
+            settings.load(),
+        )
+    }
+
+    @Test
     fun `saving with no password typed leaves the stored password in place`() = runTest {
         val secrets = InMemorySecretStore()
         secrets.put(SyncController.PASSWORD_KEY, "existing")

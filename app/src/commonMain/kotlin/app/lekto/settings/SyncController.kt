@@ -101,6 +101,9 @@ data class SyncUiState(
             else -> SYNC_OFF
         }
 
+    /** Whether a test or a run is in flight, so the screen disables every action alike. */
+    val busy: Boolean get() = testing || syncing
+
     companion object {
         val SYNC_ON: AppMessage = AppMessage.Text(TextKey.SYNC_STATUS_ON)
         val SYNC_OFF: AppMessage = AppMessage.Text(TextKey.SYNC_STATUS_OFF)
@@ -185,14 +188,20 @@ class SyncController(
         requestSync()
     }
 
-    /** Sets the WebDAV server address the driver connects to. */
+    /**
+     * Sets the WebDAV server address the driver connects to and writes it at
+     * once: an address is reversible, so it applies on change with no explicit
+     * save (docs/design.md §7.5; issue #213).
+     */
     fun setServerUrl(value: String) {
         _state.update { current -> current.copy(config = current.config.copy(serverUrl = value), result = null) }
+        persistConfig()
     }
 
-    /** Sets the username the driver authenticates as. */
+    /** Sets the username the driver authenticates as and writes it at once (issue #213). */
     fun setUsername(value: String) {
         _state.update { current -> current.copy(config = current.config.copy(username = value), result = null) }
+        persistConfig()
     }
 
     /**
@@ -315,6 +324,11 @@ class SyncController(
     /** Clears the last inline result, so the section returns to its resting state. */
     fun dismissResult() {
         _state.update { current -> current.copy(result = null) }
+    }
+
+    /** Writes the non-secret endpoint now: everything reversible applies on change (issue #213). */
+    private fun persistConfig() {
+        services.settings.save(_state.value.config)
     }
 
     private fun initialState(): SyncUiState {

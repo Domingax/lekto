@@ -237,7 +237,12 @@ its partly cut chip, the current filter filled in ink and each chip carrying its
 level's dot, then each row's word bar, dot and level name, translation and muted
 sentence with a hairline between rows — the first row hovered, so the trash in the
 slot reserved for it is recorded too. The confirmation sheet records the scrim,
-the 16 dp dialogue, its title and message, and `Delete` in the reserved red. The launcher
+the 16 dp dialogue, its title and message, and `Delete` in the reserved red. The
+two settings forms add one sheet, `settings-forms-light.png` (issue #213): the
+**LLM provider** and **Vault and sync** screens side by side, each with its back
+arrow and serif title, their printed-form rows — label, value, hairline — the one
+filled action per screen, the outlined secondary actions, and `Remove key` and
+`Disconnect` in the reserved red. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.
@@ -582,17 +587,18 @@ reached. It also pins that the blocking probe and sync move onto the injected
 dispatcher rather than the caller's scope — so Android never runs a network call
 on the main thread — and that a completed sync refreshes the library rather than
 leaving it stale (issue #116). `SyncReportSummaryTest` pins the plain-language
-summary, the section's
-controls, status line and folder-sync warning are `SettingsScreenSemanticsTest`
-on both lanes, and the loop — reach settings, save the endpoint and find it
-persisted — is driven through `AppSemanticsTest` on both lanes. The
+summary, and the **Vault and sync** screen's controls, status line and
+folder-sync warning are `VaultSettingsScreenSemanticsTest` on both lanes
+(issue #213), and the loop — reach Settings → Vault and sync, type the endpoint
+and find it persisted before any Save — is driven through `AppSemanticsTest` on
+both lanes. The
 composition roots now both wire a real driver (issue #116; ADR-0026):
 `desktopSync` and `androidSync` build the same `WebDavSyncTarget` over their
 platform's transport, rooted app-privately under the client's own directory. The
 Android wiring is proved on the host lane by `AndroidSyncHostTest` — the settings
 document under `Context.filesDir`, the library's device id and a delete's
 tombstone there, and the engine reconciling the Android vault — so **Settings →
-Sync** is usable on the first-class client, not only desktop. Without a driver the
+Vault and sync** is usable on the first-class client, not only desktop. Without a driver the
 section says sync is unavailable and never gates the reader.
 
 The automatic triggers (issue #121; ADR-0028) are proved at their own levels. The
@@ -764,10 +770,10 @@ identifier cannot be rendered. No provider and no real key is involved, as the p
 downloader's lane is. The state
 holder — load, choose one provider, save app-privately while the key goes to the
 `SecretStore`, test off the UI thread, report inline — is `ProviderControllerTest` in
-`app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The section's
-controls are `SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach
-settings, choose a provider, type a key, test the connection and see it answered — runs
-through `AppSemanticsTest` on both lanes. Android excludes the local Ollama preset,
+`app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The screen's
+controls are `ProviderSettingsScreenSemanticsTest` on both lanes (issue #213), and
+the whole loop — reach Settings → LLM provider, choose a provider, type a key, test
+the connection and see it answered — runs through `AppSemanticsTest` on both lanes. Android excludes the local Ollama preset,
 which only a desktop can reach (ADR-0022), through the provider list the platform
 wires.
 
@@ -822,9 +828,9 @@ section's controls — the provider picker reading "Choose a provider" until one
 chosen, opening the model field raising the typed key, the model field offering the
 loaded list as an exposed dropdown that still accepts manual typing, the discreet
 missing-key note, and an unsupported list reported inline — are
-`SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach settings,
-choose a provider, watch its models load, pick one and see the field fill — runs
-through `AppSemanticsTest` on both lanes. The list is device-local UI state:
+`ProviderSettingsScreenSemanticsTest` on both lanes (issue #213), and the whole
+loop — reach Settings → LLM provider, choose a provider, watch its models load,
+pick one and see the field fill — runs through `AppSemanticsTest` on both lanes. The list is device-local UI state:
 it never enters the vault, an export or a log.
 
 The settings screen's vault export/import (issue #20) is proved at the same
@@ -833,13 +839,14 @@ the save action, an import restoring the vault, a cancelled file dialog as a
 no-op, and a bad or unreadable file becoming an honest message rather than a
 crash — is a behaviour over the in-memory vault in
 `app/desktopTest/.../settings/VaultTransferControllerTest`, driven by
-`kotlinx-coroutines-test`'s virtual time. The screen's sections and its
-export/import controls are UI semantics in `SettingsScreenSemanticsTest`, and the
-same screen is re-proved on a simulated Android runtime in
-`app/androidUnitTest/.../settings/SettingsScreenSemanticsTest` (issue #77) — the
-way to the **Languages** surface, the vault section's export/import controls, and
-the LLM provider and sync sections — so the screen is proved on both lanes, as the
-parity rule requires (issue #73). The
+`kotlinx-coroutines-test`'s virtual time. The **Vault and sync** screen and its
+export/import controls are UI semantics in `VaultSettingsScreenSemanticsTest`,
+and the same screen is re-proved on a simulated Android runtime in
+`app/androidUnitTest/.../settings/VaultSettingsScreenSemanticsTest` (issue #77).
+Since issue #213 the two forms are screens of their own, so `SettingsScreenSemanticsTest`
+keeps the index's own surfaces — the **Appearance** and **Languages** doorways,
+the **app language** picker, and the doorways to the provider and the vault — on
+both lanes, as the parity rule requires (issue #73). The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
 (`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
@@ -1122,8 +1129,10 @@ round-trips so a kept sync outcome still reads after a restart. It also pins tha
 the platform file dialogs keep only their titles, with no filter text the system
 dialog would never display (issue #219). The whole
 **Settings** screen re-rendered in French is `SettingsScreenSemanticsTest` on both
-lanes, and the picker's re-render without a relaunch is `AppSemanticsTest` on both
-lanes.
+lanes, as are the two screens it now opens,
+`ProviderSettingsScreenSemanticsTest` and `VaultSettingsScreenSemanticsTest`
+(issue #213), and the picker's re-render without a relaunch is `AppSemanticsTest`
+on both lanes.
 
 ## Naming and placement
 

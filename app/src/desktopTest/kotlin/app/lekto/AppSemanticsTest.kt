@@ -100,6 +100,7 @@ import app.lekto.settings.APPEARANCE_LINK_TAG
 import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.MODEL_FIELD_TAG
+import app.lekto.settings.PROVIDER_LINK_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
 import app.lekto.settings.SETTINGS_TITLE_TAG
@@ -109,6 +110,7 @@ import app.lekto.settings.SYNC_USERNAME_FIELD_TAG
 import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
 import app.lekto.settings.TEST_CONNECTION_TAG
+import app.lekto.settings.VAULT_LINK_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.appLanguageOptionTag
 import app.lekto.settings.appearanceOptionTag
@@ -653,7 +655,7 @@ class AppSemanticsTest {
             )
         }
 
-        tapSection(ShellSection.SETTINGS)
+        openProvider()
         onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
         onNodeWithText("Anthropic").performClick()
         onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("claude-3")
@@ -678,7 +680,7 @@ class AppSemanticsTest {
             )
         }
 
-        tapSection(ShellSection.SETTINGS)
+        openProvider()
         onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
         onNodeWithText("Anthropic").performClick()
 
@@ -712,11 +714,16 @@ class AppSemanticsTest {
         )
         setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }
 
-        tapSection(ShellSection.SETTINGS)
+        openVault()
         onNodeWithTag(SYNC_HOST_FIELD_TAG).performScrollTo().performTextInput("https://cloud.example.test/dav")
         onNodeWithTag(SYNC_USERNAME_FIELD_TAG).performScrollTo().performTextInput("reader")
-        onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
 
+        // The endpoint is reversible, so it applies on change: no Save needed (issue #213).
+        assertEquals(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
+            settings.load(),
+        )
+        onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
         assertEquals(
             SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
             settings.load(),
@@ -1317,6 +1324,18 @@ class AppSemanticsTest {
     private fun ComposeUiTest.openLanguages() {
         tapSection(ShellSection.SETTINGS)
         onNodeWithTag(LANGUAGES_LINK_TAG).performScrollTo().performClick()
+    }
+
+    /** Reaches the **LLM provider** screen from Settings and its doorway (issue #213). */
+    private fun ComposeUiTest.openProvider() {
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(PROVIDER_LINK_TAG).performScrollTo().performClick()
+    }
+
+    /** Reaches the **Vault and sync** screen from Settings and its doorway (issue #213). */
+    private fun ComposeUiTest.openVault() {
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
     }
 }
 

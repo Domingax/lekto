@@ -108,6 +108,19 @@ class BackStackTest {
     }
 
     @Test
+    fun theTwoExtractedSettingsFormsWalkBackToSettings() {
+        // The provider and vault forms are screens of their own now (issue #213), and
+        // Back returns to the Settings index that opened them.
+        listOf(Destination.ProviderSettings, Destination.VaultSettings).forEach { screen ->
+            val stack = BackStack.Root.select(ShellSection.SETTINGS).push(screen)
+
+            assertEquals(ShellSection.SETTINGS, stack.current.section)
+            assertEquals(Destination.Settings, stack.back().current)
+            assertEquals(Destination.Library, stack.back().back().current)
+        }
+    }
+
+    @Test
     fun pushingThePlaceAlreadyShownIsANoOp() {
         val stack = BackStack.Root.select(ShellSection.SETTINGS)
 

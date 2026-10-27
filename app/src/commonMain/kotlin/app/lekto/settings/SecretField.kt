@@ -1,7 +1,6 @@
 package app.lekto.settings
 
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,7 +20,7 @@ import app.lekto.ui.handCursor
  * A secret input (issue #24, acceptance criterion 4; ADR-0021): the value is
  * masked by default, so a key cannot be shoulder-surfed, with a reveal toggle
  * for the moments the user needs to check what they pasted. It is the control
- * the AI settings section (#25) uses for an API key.
+ * the LLM provider and the vault's sync screen use (issue #213).
  *
  * The mask is a [PasswordVisualTransformation], so the platform's own password
  * handling applies (no suggestions, a password keyboard); the toggle is a plain
@@ -29,22 +28,24 @@ import app.lekto.ui.handCursor
  * screen reader as on screen. The reveal is remembered only for the current
  * composition — a configuration change re-masks the field — so it cannot come
  * back revealed after the screen is rebuilt.
+ *
+ * It is drawn as a printed-form field (docs/design.md §7.5): the label above the
+ * value and a hairline under it, not an outlined box.
  */
 @Composable
 fun SecretField(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
     var revealed by remember { mutableStateOf(false) }
-    OutlinedTextField(
+    FormField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
+        label = label,
+        modifier = modifier,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = {
+        trailing = {
             TextButton(onClick = { revealed = !revealed }, modifier = Modifier.handCursor()) {
                 Text(LocalAppTexts.current[if (revealed) TextKey.HIDE else TextKey.SHOW])
             }
         },
-        modifier = modifier,
     )
 }

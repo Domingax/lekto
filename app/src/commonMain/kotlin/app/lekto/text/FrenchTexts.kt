@@ -15,6 +15,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.LANGUAGES to "Langues",
     TextKey.ATTRIBUTION to "Attribution",
     TextKey.BACK to "Retour",
+    TextKey.OPEN to "Ouvrir",
     TextKey.DISMISS to "Fermer",
     TextKey.DELETE to "Supprimer",
     TextKey.CANCEL to "Annuler",
@@ -112,9 +113,9 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_APPEARANCE to "Apparence",
     TextKey.SECTION_APP_LANGUAGE to "Langue de l'application",
     TextKey.SECTION_LANGUAGES to "Langues",
-    TextKey.SECTION_VAULT to "Coffre",
     TextKey.SECTION_SYNC to "Synchronisation",
     TextKey.SECTION_LLM_PROVIDER to "Fournisseur LLM",
+    TextKey.VAULT_AND_SYNC to "Coffre et synchronisation",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
         "Découvrez les langues que Lekto propose pour la lecture, classées selon celles où vous avez le " +
         "plus de livres. Définissez votre niveau et téléchargez les données de difficulté des mots et " +
@@ -131,6 +132,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "dans le stockage sécurisé de cet appareil — jamais dans votre coffre, un export ou un journal.",
     TextKey.PROVIDER_UNAVAILABLE to
         "La connexion à un fournisseur LLM n'est pas disponible dans cette version.",
+    TextKey.PROVIDER to "Fournisseur",
     TextKey.BASE_URL to "URL de base",
     TextKey.API_KEY to "Clé API",
     TextKey.MODEL to "Modèle",

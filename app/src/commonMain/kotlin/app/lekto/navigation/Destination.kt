@@ -68,6 +68,16 @@ sealed interface Destination {
         override val section: ShellSection = ShellSection.SETTINGS
     }
 
+    /** The **LLM provider** screen (issue #213): an entry inside **Settings**. */
+    data object ProviderSettings : Destination {
+        override val section: ShellSection = ShellSection.SETTINGS
+    }
+
+    /** The **Vault and sync** screen (issue #213): an entry inside **Settings**. */
+    data object VaultSettings : Destination {
+        override val section: ShellSection = ShellSection.SETTINGS
+    }
+
     /**
      * The attribution screen (issue #149), reached from the **Languages** surface
      * for the data it offers.

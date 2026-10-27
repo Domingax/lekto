@@ -78,6 +78,25 @@ class ProviderControllerTest {
     }
 
     @Test
+    fun `choosing a provider and editing the model or base URL write at once`() = runTest {
+        val settings = InMemoryLlmSettingsStore()
+        val controller = controller(settings = settings)
+
+        // Reversible choices apply on change; only the key needs an explicit Save (issue #213).
+        controller.selectProvider(LlmProvider.OPENAI)
+        assertEquals(LlmProviderConfig(LlmProvider.OPENAI, ""), settings.load())
+
+        controller.setModel("gpt-4o-mini")
+        assertEquals(LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini"), settings.load())
+
+        controller.setBaseUrl("https://example.test/v1")
+        assertEquals("https://example.test/v1", settings.load().customBaseUrl)
+
+        controller.selectProvider(LlmProvider.CUSTOM)
+        assertEquals(LlmProvider.CUSTOM, settings.load().provider)
+    }
+
+    @Test
     fun `saving with no key typed leaves the stored key in place`() = runTest {
         val secrets = InMemorySecretStore()
         secrets.put(key(LlmProvider.OPENAI), "sk-existing")

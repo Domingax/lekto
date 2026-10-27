@@ -93,7 +93,7 @@ data class ProviderUiState(
  * hard-coded one cannot be driven by virtual time; the [scope] carries that work
  * (docs/testing.md, "Deterministic seams").
  */
-@Suppress("LongParameterList") // settings/secrets/client/providers are independent seams the composition wires.
+@Suppress("LongParameterList", "TooManyFunctions") // Each seam and each one-step action is its own public method.
 class ProviderController(
     private val settings: LlmSettingsStore,
     private val secrets: SecretStore,
@@ -123,19 +123,29 @@ class ProviderController(
                 providerChosen = true,
             )
         }
+        persistConfig()
         loadModels(apiKey = "", silent = true)
     }
 
-    /** Sets the model the active provider is called with. */
+    /**
+     * Sets the model the active provider is called with and writes it at once:
+     * choosing a model is reversible, so it applies on change with no explicit
+     * save (docs/design.md §7.5; issue #213).
+     */
     fun setModel(model: String) {
         _state.update { current -> current.copy(config = current.config.copy(model = model)) }
+        persistConfig()
     }
 
-    /** Sets the base URL a [LlmProvider.CUSTOM] provider is called with; a new host invalidates its list. */
+    /**
+     * Sets the base URL a [LlmProvider.CUSTOM] provider is called with and writes
+     * it at once; a new host invalidates its list (issue #213).
+     */
     fun setBaseUrl(baseUrl: String) {
         _state.update { current ->
             current.copy(config = current.config.copy(customBaseUrl = baseUrl), models = emptyList())
         }
+        persistConfig()
     }
 
     /**
@@ -244,6 +254,11 @@ class ProviderController(
     /** Clears the last result, so the section returns to its resting state. */
     fun dismissResult() {
         _state.update { current -> current.copy(result = null) }
+    }
+
+    /** Writes the non-secret configuration now: everything reversible applies on change (issue #213). */
+    private fun persistConfig() {
+        settings.save(_state.value.config)
     }
 
     private fun initialState(): ProviderUiState {
