@@ -97,6 +97,13 @@ The ordered, nested **Chapters** of a **Book**, as its original file declares th
 **Derived asset**, re-derived from the book original and never synced.
 _Avoid_: Table of contents, TOC, index
 
+**Reading unit**:
+A **Chapter** the reader can read: a leaf, or a **Part** with text before its first
+child. A **Part** that only groups is not one. The reader numbers reading units in
+reading order, so "Chapter 4" is the fourth reading unit, not the fourth entry of
+the **Chapter list**.
+_Avoid_: Section, entry, TOC item
+
 **Import**:
 Getting a book original into the vault: read the file, parse it to text, store the
 book and its original, and list it in the library. An occasional action that reports

@@ -74,6 +74,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.PREVIOUS_PAGE to "Page précédente",
     TextKey.NEXT_PAGE to "Page suivante",
     TextKey.PAGE_OF to "Page {0} sur {1}",
+    TextKey.CHAPTERS to "Chapitres",
     TextKey.READING_PREFERENCES to "Aa",
     TextKey.READING_TEXT to "Texte",
     TextKey.READING_FACE to "Police du texte",

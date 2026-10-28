@@ -78,10 +78,10 @@ import app.lekto.navigation.PlatformBackHandler
 import app.lekto.reader.MasteryController
 import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
-import app.lekto.reader.ReaderChapter
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
+import app.lekto.reader.ReaderText
 import app.lekto.reader.ReadingPreferencesController
 import app.lekto.reader.WordTap
 import app.lekto.settings.AppearanceActions
@@ -898,13 +898,14 @@ private fun ReaderSession(
     onBack: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
-    // The reader shows one chapter at a time; this build renders a book's blocks
-    // as a single chapter and the chrome carries the book's title. It opens at
-    // the saved reading position, or the start for a book never opened.
-    val chapter = ReaderChapter(
+    // The reader shows the whole book and its chapter list; the chrome carries
+    // the book's title. It opens at the saved reading position, or the start for
+    // a book never opened (ADR-0037).
+    val text = ReaderText(
         title = session.book.title,
         language = session.book.language,
         blocks = session.text.blocks,
+        chapters = session.text.chapters,
     )
     // The word sheet's measured height, so the page can lift under it and keep
     // the touched word visible without repaginating (issue #210).
@@ -912,7 +913,7 @@ private fun ReaderSession(
     Box(Modifier.fillMaxSize()) {
         ReaderScreen(
             document = ReaderDocument(
-                chapter = chapter,
+                text = text,
                 renderer = ReaderRenderer(
                     segmenter = environment.segmenter,
                     mastery = mastery,

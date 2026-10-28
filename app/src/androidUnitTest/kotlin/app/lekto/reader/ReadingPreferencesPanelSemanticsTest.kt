@@ -248,7 +248,7 @@ class ReadingPreferencesPanelSemanticsTest {
 }
 
 /** Sixty paragraphs of one sentence, so the chapter spans pages under Robolectric's tighter metrics. */
-private val LONG_CHAPTER = ReaderChapter(
+private val LONG_CHAPTER = ReaderText(
     title = "The Lantern Keeper",
     language = "en",
     blocks = List(60) {

@@ -98,6 +98,9 @@ enum class TextKey {
     PREVIOUS_PAGE,
     NEXT_PAGE,
     PAGE_OF,
+
+    /** The chapter sheet's heading. */
+    CHAPTERS,
     READING_PREFERENCES,
     READING_TEXT,
     READING_FACE,

@@ -59,6 +59,7 @@ import app.lekto.core.speech.SpeechResult
 import app.lekto.core.sync.SyncEngine
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.Chapter
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
@@ -1552,7 +1553,7 @@ private const val FIRST_FETCH_MILLIS: Long = 300
  * vault. Shared with `AppWindowInsetsSemanticsTest`, which needs a book to open
  * without standing a vault up.
  */
-internal class InMemoryLibrary : BookLibrary {
+internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val positions = mutableMapOf<String, Int>()
@@ -1628,6 +1629,11 @@ internal class InMemoryLibrary : BookLibrary {
     private fun longText(book: Book): StructuredText = StructuredText(
         title = book.title,
         language = book.language,
+        chapters = if (chapters) {
+            listOf(Chapter("First", startBlock = 0), Chapter("Second", startBlock = PARAGRAPHS / 2))
+        } else {
+            emptyList()
+        },
         blocks = List(PARAGRAPHS) {
             TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("On the quiet evening.")))
         },

@@ -1078,6 +1078,27 @@ size disabled at its bounds — and the whole loop, changing the size in the rea
 and finding it kept after leaving and reopening the book, runs through
 `AppSemanticsTest` on both lanes.
 
+The book's **Chapter list** (issue #198; ADR-0037) is derived beside the parsed
+text, so it is proved at the parser level and its cache envelope at the store
+level. `EpubChaptersTest` in `core/jvmTest` runs the EPUB fixtures through the
+real parser: a one-file nav whose entries point at fragment anchors yields nested
+chapters at the right block starts, the nav wins over an NCX that names the same
+entries differently, the NCX is read when no nav exists and ordered by the spine
+rather than `playOrder`, a label falls back to the first heading, an unresolved
+fragment to its document's start, an entry outside the spine is dropped, and a
+book with no usable TOC yields one chapter per spine document. `TxtParserTest`
+pins the text file's one chapter, and `BookTextCacheTest` plus a
+`VaultBookLibraryTest` case pin that a missing or different cache `formatVersion`
+is a miss, so the original is re-parsed and rewritten. The reader's side is
+`ReaderChaptersTest` in `app/desktopTest` — a page break at every chapter start,
+the chapter's title above the page (`XI`, then `Page 285 of 405`), a one-chapter
+book keeping `Page X of Y`, the sheet's
+hierarchy and current row, a jump saving its chapter's first block, a jump to the
+current chapter writing nothing, Close and an outside tap dismissing the sheet,
+and opening the sheet dismissing an open lookup — with
+`ReaderChaptersAndroidTest` re-proving the `LazyColumn` sheet on the Android host
+lane and `AndroidBackTest` pinning that Back closes the sheet before the reader.
+
 The app's own **App theme** (issue #182; ADR-0036) — Light, Dark, Sepia, or System
 following the platform — is proved at its own levels too. `AppTheme.resolve` is
 the one resolution function, so `AppThemeTest` in `core/commonTest` pins that

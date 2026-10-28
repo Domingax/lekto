@@ -236,7 +236,7 @@ class ReadingPreferencesPanelSemanticsTest {
 @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
 private fun PreferencesReader(
     renderer: ReaderRenderer,
-    chapter: ReaderChapter = SampleChapter.chapter,
+    chapter: ReaderText = SampleChapter.chapter,
     onWordTap: (WordTap) -> Unit = {},
     onChange: (ReadingPreferences) -> Unit = {},
 ) {
