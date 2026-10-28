@@ -99,9 +99,6 @@ enum class TextKey {
     NEXT_PAGE,
     PAGE_OF,
 
-    /** The position of a book with chapters: the chapter's own title, then the page (ADR-0039). */
-    CHAPTER_POSITION,
-
     /** The chapter sheet's heading. */
     CHAPTERS,
     READING_PREFERENCES,

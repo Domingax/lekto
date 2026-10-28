@@ -48,7 +48,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -781,27 +780,38 @@ private fun ReaderPageBar(
 @Composable
 private fun RowScope.ReaderPosition(page: Int, total: Int, chapter: String?, onOpenChapters: (() -> Unit)?) {
     val texts = LocalAppTexts.current
-    Text(
-        text = when (chapter) {
-            null -> texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total))
-            else -> texts.message(AppMessage.of(TextKey.CHAPTER_POSITION, chapter, page + 1, total))
-        },
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-        modifier = if (onOpenChapters != null) {
-            Modifier
-                .weight(1f)
-                .testTag(READER_POSITION_TAG)
-                .heightIn(min = LektoSpacing.TouchTarget)
-                .handCursor()
-                .plainClickable(role = Role.Button, onClick = onOpenChapters)
-        } else {
-            Modifier.weight(1f).testTag(READER_POSITION_TAG)
-        },
-    )
+    val base = Modifier
+        .weight(1f)
+        .testTag(READER_POSITION_TAG)
+        .heightIn(min = LektoSpacing.TouchTarget)
+    val interactive = if (onOpenChapters != null) {
+        base.handCursor().plainClickable(role = Role.Button, onClick = onOpenChapters)
+    } else {
+        base
+    }
+    Box(
+        // One accessibility node, so a screen reader reads the two lines as one
+        // position rather than two stray labels.
+        interactive.semantics(mergeDescendants = true) {},
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            chapter?.let { title ->
+                Text(
+                    text = title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 /**

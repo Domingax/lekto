@@ -275,9 +275,10 @@ a bordered block in the list, with a way to dismiss it.
 
 The chevrons mark the three tap zones (previous third, chrome third, next third) and turn the
 page when tapped; a chevron disabled at a bound stays visible but faded. The position reads the current chapter's
-title, then the page — `XI · Page 285 of 405` — so it uses the same words as the chapter list
-(ADR-0039). Before the first chapter, and in a book with one chapter, it reads `Page 99 of 357`
-and no chapter is current.
+title above the page — `XI` over `Page 285 of 405` — so it uses the same words as the chapter
+list (ADR-0039). The two lines are centred in the band; the title takes one line and ellipsises.
+Before the first chapter, and in a book with one chapter, the page line stands alone and no
+chapter is current.
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
 label. A book with one chapter has no list, so its position stays a label (ADR-0037).

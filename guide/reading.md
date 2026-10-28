@@ -14,8 +14,9 @@ brings them back. With a screen reader, the page offers **Previous page** and
 ## Moving by chapter
 
 When a book declares chapters, the bottom bar tells you both where you are in
-the chapter and where you are in the book: `XI · Page 285 of 405`. The first part
-is the chapter's own title, the same words the chapter list shows. Every chapter
+the chapter and where you are in the book. The chapter's own title sits above the
+page — `XI`, then `Page 285 of 405` — so it uses the same words the chapter list
+shows. A long title is shortened with `…` to keep the page visible. Every chapter
 starts on a new page.
 
 Tap that position to open the chapter list. It keeps the book's hierarchy, marks
