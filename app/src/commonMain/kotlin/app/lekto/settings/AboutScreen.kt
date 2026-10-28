@@ -12,6 +12,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import app.lekto.APP_VERSION
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
@@ -62,13 +63,14 @@ fun AboutScreen(actions: AboutActions = AboutActions(), modifier: Modifier = Mod
         )
         Text(
             texts.message(AppMessage.of(TextKey.ABOUT_VERSION, version)),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
             modifier = Modifier.testTag(ABOUT_VERSION_TAG),
         )
         Text(
             texts[TextKey.ABOUT_LICENCE],
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
         )
         TextButton(
             onClick = actions.onOpenSource,

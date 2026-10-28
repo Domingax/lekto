@@ -463,7 +463,7 @@ like any other. It is pinned at 5.4.0 because 5.5.0's Android artifact requires
 ## Icon pipeline
 
 `tools/icons/fetch.sh` regenerates the icon set committed under
-`app/src/commonMain/kotlin/app/lekto/ui/icons/`. It fetches the thirteen SVGs at the
+`app/src/commonMain/kotlin/app/lekto/ui/icons/`. It fetches the fourteen SVGs at the
 pinned Lucide tag, runs the pinned Valkyrie CLI with its zip digest checked, and
 writes the `ImageVector` Kotlin. Nothing is generated at build time and the app
 declares no icon dependency: the output is committed, and `LektoIconsTest` pins

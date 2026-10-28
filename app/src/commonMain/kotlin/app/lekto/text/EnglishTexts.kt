@@ -159,7 +159,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.THEME_DARK_DESCRIPTION to "Warm night, light ink",
     TextKey.THEME_SEPIA to "Sepia",
     TextKey.THEME_SEPIA_DESCRIPTION to "Rag paper",
-    TextKey.CURRENT to "Current",
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to

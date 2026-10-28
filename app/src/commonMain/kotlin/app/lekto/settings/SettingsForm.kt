@@ -1,6 +1,5 @@
 package app.lekto.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
@@ -26,22 +26,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
-import app.lekto.theme.hoverWash
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ArrowLeft
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.rowHover
 import app.lekto.ui.touchClient
 
 /**
@@ -66,7 +66,7 @@ internal fun SettingsFormHeader(title: String, backTag: String, titleTag: String
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.testTag(titleTag),
         )
     }
@@ -150,9 +150,7 @@ internal fun FormRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = fieldHeight())
-                .background(
-                    if (hovered) hoverWash(MaterialTheme.colorScheme.onBackground) else Color.Transparent,
-                )
+                .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
                 .handCursor()
                 .hoverable(interaction)
                 .clickable(interactionSource = null, indication = null, onClick = onClick)
@@ -218,15 +216,22 @@ internal fun FormHairline() {
     )
 }
 
-/** The affordance a row's value opens something: `chevron-right`, decorative beside the value. */
+/**
+ * The affordance a row's value opens something: `chevron-right`, decorative beside
+ * the value. It draws at 16 dp, the size the design gives it beside a row.
+ */
 @Composable
-internal fun Chevron() {
+internal fun Chevron(size: Dp = CHEVRON_SIZE) {
     Icon(
         imageVector = LektoIcons.ChevronRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(size),
     )
 }
+
+/** The chevron's frame: 16 dp, small enough to sit beside a row's value (docs/design.md §7.5). */
+internal val CHEVRON_SIZE: Dp = 16.dp
 
 /** The group label above a form's block of rows, in the muted label style. */
 @Composable

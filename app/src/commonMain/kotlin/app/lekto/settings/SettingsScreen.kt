@@ -1,6 +1,5 @@
 package app.lekto.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -20,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -29,9 +27,9 @@ import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
-import app.lekto.theme.hoverWash
 import app.lekto.ui.handCursor
 import app.lekto.ui.plainClickable
+import app.lekto.ui.rowHover
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -240,7 +238,7 @@ private fun IndexRow(row: IndexEntry) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = LektoSpacing.TouchTarget)
-            .background(if (hovered) hoverWash(MaterialTheme.colorScheme.onBackground) else Color.Transparent)
+            .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
             .hoverable(interaction)
             .plainClickable(role = Role.Button, onClick = row.onClick)
@@ -253,11 +251,11 @@ private fun IndexRow(row: IndexEntry) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         ) {
-            Text(row.title, style = MaterialTheme.typography.titleMedium)
+            Text(row.title, style = MaterialTheme.typography.bodyLarge)
             if (row.value != null) {
                 Text(
                     row.value,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

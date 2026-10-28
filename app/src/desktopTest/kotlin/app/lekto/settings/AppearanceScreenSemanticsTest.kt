@@ -60,7 +60,6 @@ class AppearanceScreenSemanticsTest {
         appearance(AppTheme.DARK)
 
         onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).assertIsSelected()
-        onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -98,7 +97,6 @@ class AppearanceScreenSemanticsTest {
         onNodeWithText("Système").assertIsDisplayed()
         onNodeWithText("Sombre").assertIsDisplayed()
         onNodeWithText("Sépia").assertIsDisplayed()
-        onNodeWithText("Actuel").assertIsDisplayed()
     }
 }
 

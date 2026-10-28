@@ -133,9 +133,9 @@ The scale actually used, and nothing else:
 - The set is **Lucide geometry**: a 24-unit grid, a 2-unit stroke, round caps and joins. It is
   generated once, committed as `ImageVector` Kotlin, and carries no runtime dependency — the
   reasoning and the alternatives are in `docs/research/icones-compose.md`.
-- **The set is thirteen icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
+- **The set is fourteen icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
   `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`,
-  `info`.
+  `info`, `check`.
   `tools/icons/fetch.sh` fetches them at the pinned Lucide tag and regenerates the Kotlin; the
   generated files are never edited by hand. Their ISC and Feather/MIT notices live in
   `THIRD-PARTY-NOTICES.md` at the root, and the app names them in **Attribution**, reached from
@@ -404,8 +404,9 @@ endpoint answered.
 ### 7.6 Appearance, App language, Languages, LLM provider, Vault and sync, About
 
 - **Appearance** — the four theme entries, each *shown on its own paper*: a 48 × 34 preview with two
-  lines of ink, System split down the middle. A theme is chosen by looking at it.
-- **App language** — the languages the app ships, by name, the current one marked; the choice
+  lines of ink, System split down the middle. A theme is chosen by looking at it, and the current one
+  carries a check rather than a word.
+- **App language** — the languages the app ships, by name, the current one checked; the choice
   re-renders the whole interface at once.
 - **Languages** — one row per **Reading language**, its state (word-difficulty data, offline
   dictionary) and the download action when one is missing.
@@ -463,8 +464,10 @@ animation, no tagline, no artificial delay.
 Every clickable surface shows the pointing hand on desktop; a disabled control keeps the
 arrow. A list row also carries a wash of the theme's ink at **5 %** while the pointer rests on it —
 the surface under the mouse is the one it is about — and its row action appears there (§7.1).
-Nothing moves and nothing else changes: hover is a hint, not an animation. `HandCursor.kt` (§10) is
-the one modifier that asks for the hand.
+The wash is a **rounded band inset from the row's edges** — 8 dp corners, reaching 10 dp past the
+content — so it reads as the target under the pointer rather than a highlighted table cell, and the
+text keeps air on every side. Nothing moves and nothing else changes: hover is a hint, not an
+animation. `HandCursor.kt` (§10) is the one modifier that asks for the hand.
 
 Nothing blocks the reading: an error never becomes a full-screen alert, and no state ever hides
 the page behind it.

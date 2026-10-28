@@ -14,6 +14,14 @@ private val ScreenTitle = TextStyle(
     lineHeight = 32.sp,
 )
 
+/** A screen one tap below a section — Appearance, App language, About — at 24 sp. */
+private val SubScreenTitle = TextStyle(
+    fontFamily = FontFamily.Serif,
+    fontWeight = FontWeight.Bold,
+    fontSize = 24.sp,
+    lineHeight = 30.sp,
+)
+
 /** A section or panel title, at the lower end of the 19–24 sp band. */
 private val SectionTitle = TextStyle(
     fontFamily = FontFamily.Serif,
@@ -95,7 +103,7 @@ val LektoTypography: Typography = Typography(
     displaySmall = ScreenTitle,
     headlineLarge = ScreenTitle,
     headlineMedium = ScreenTitle,
-    headlineSmall = ScreenTitle,
+    headlineSmall = SubScreenTitle,
     titleLarge = SectionTitle,
     titleMedium = VocabularyWord,
     titleSmall = RowTitle,

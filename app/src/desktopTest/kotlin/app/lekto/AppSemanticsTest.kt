@@ -103,6 +103,7 @@ import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APPEARANCE_LINK_TAG
 import app.lekto.settings.APP_LANGUAGE_BACK_TAG
 import app.lekto.settings.APP_LANGUAGE_LINK_TAG
+import app.lekto.settings.ATTRIBUTION_BACK_TAG
 import app.lekto.settings.ATTRIBUTION_LINK_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.LEKTO_SOURCE_URL
@@ -358,7 +359,6 @@ class AppSemanticsTest {
         // paper: choosing one writes through and marks it, with no toast (ADR-0036).
         assertEquals(AppTheme.DARK, appTheme.load())
         onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).assertIsSelected()
-        onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -1096,7 +1096,7 @@ class AppSemanticsTest {
         onNodeWithTag(ATTRIBUTION_LINK_TAG).performScrollTo().performClick()
         onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
             .performScrollTo().assertIsDisplayed()
-        onNodeWithText("Back").performClick()
+        onNodeWithTag(ATTRIBUTION_BACK_TAG).performClick()
 
         // The About row names the version, and its source opens where the platform
         // sends a link (issue #214).
@@ -1139,7 +1139,6 @@ class AppSemanticsTest {
         assertEquals("fr", settings.load().appLanguage)
         // The whole interface follows the choice without a relaunch (ADR-0034), and
         // the index names it under **App language** once back on the list.
-        onNodeWithText("Actuel").assertIsDisplayed()
         onNodeWithTag(APP_LANGUAGE_BACK_TAG).performClick()
         onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
         onNodeWithText("français").assertIsDisplayed()

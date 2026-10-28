@@ -188,9 +188,6 @@ enum class TextKey {
     THEME_SEPIA,
     THEME_SEPIA_DESCRIPTION,
 
-    /** The mark a chosen entry carries, on Appearance and on App language. */
-    CURRENT,
-
     // Sync section.
     SYNC_FOLDER_WARNING,
     SYNC_FOLDER_WARNING_TITLE,

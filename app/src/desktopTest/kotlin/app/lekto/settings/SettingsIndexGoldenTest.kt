@@ -163,8 +163,8 @@ private val SCREEN_WIDTH = 360.dp
 private val TITLE_HEIGHT = 22.dp
 private const val GROUP_LABEL_WIDTH = 0.14f
 private val LABEL_HEIGHT = 11.dp
-private val ROW_TITLE_HEIGHT = 16.dp
+private val ROW_TITLE_HEIGHT = 15.dp
 private val ROW_VALUE_HEIGHT = 12.dp
 
 /** The chevron's frame, the size the icon draws at. */
-private val CHEVRON_SIZE = 24.dp
+private val CHEVRON_SIZE = 16.dp

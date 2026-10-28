@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -16,7 +15,13 @@ import app.lekto.core.dictionary.PackMetadata
 import app.lekto.core.difficulty.DifficultyMetadata
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
-import app.lekto.ui.handCursor
+import app.lekto.theme.LektoSpacing
+
+/** The test tag on the way back, so a UI test can click exactly it. */
+internal const val ATTRIBUTION_BACK_TAG: String = "attribution-back"
+
+/** The test tag on the screen's title, so a test can tell the screen from the shell's bar. */
+internal const val ATTRIBUTION_TITLE_TAG: String = "attribution-title"
 
 /**
  * The mandatory attribution screen (issues #18, #64, #149 and #177; ADR-0011,
@@ -44,13 +49,16 @@ fun AttributionScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
-        TextButton(onClick = onBack, modifier = Modifier.handCursor()) {
-            Text(LocalAppTexts.current[TextKey.BACK])
-        }
-        Text(LocalAppTexts.current[TextKey.ATTRIBUTION], style = MaterialTheme.typography.headlineMedium)
+        SettingsFormHeader(
+            title = LocalAppTexts.current[TextKey.ATTRIBUTION],
+            backTag = ATTRIBUTION_BACK_TAG,
+            titleTag = ATTRIBUTION_TITLE_TAG,
+            onBack = onBack,
+        )
         DictionaryAttribution(metadata)
         DifficultyAttribution(difficulty)
         IconAttribution()

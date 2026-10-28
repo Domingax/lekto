@@ -48,7 +48,6 @@ class AppLanguageScreenSemanticsTest {
         appLanguage("fr")
 
         onNodeWithTag(appLanguageOptionTag("fr")).assertIsSelected()
-        onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -78,7 +77,6 @@ class AppLanguageScreenSemanticsTest {
         onNodeWithText("Langue de l'application").assertIsDisplayed()
         onNodeWithText("français").performScrollTo().assertIsDisplayed()
         onNodeWithText("anglais").performScrollTo().assertIsDisplayed()
-        onNodeWithText("Actuel").assertIsDisplayed()
     }
 
     /** Renders the screen in the app theme, sized like a phone. */

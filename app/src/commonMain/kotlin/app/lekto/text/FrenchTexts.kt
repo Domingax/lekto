@@ -161,7 +161,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.THEME_DARK_DESCRIPTION to "Nuit chaude, encre claire",
     TextKey.THEME_SEPIA to "Sépia",
     TextKey.THEME_SEPIA_DESCRIPTION to "Papier chiffon",
-    TextKey.CURRENT to "Actuel",
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to
