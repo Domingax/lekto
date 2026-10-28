@@ -242,17 +242,30 @@ class VaultSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun aSyncResultRendersAndDismisses() {
-        var dismissed = false
-        render(
-            sync = SyncUiState(available = true, result = SyncResult.Success(AppMessage.core("Saved."))),
-            actions = SettingsActions(onDismissSyncResult = { dismissed = true }),
-        )
+    fun aSyncResultIsReported() {
+        render(sync = SyncUiState(available = true, result = SyncResult.Success(AppMessage.core("Saved."))))
 
         compose.onNodeWithText("Saved.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag(SYNC_DISMISS_TAG).performScrollTo().performClick()
+    }
 
-        assertTrue(dismissed)
+    @Test
+    fun aConnectionTestShowsTheLoader() {
+        // An indeterminate indicator never reaches idle, so the test clock must not
+        // advance while the node is asserted.
+        compose.mainClock.autoAdvance = false
+        render(sync = SyncUiState(available = true, testing = true))
+        compose.mainClock.advanceTimeByFrame()
+
+        compose.onNodeWithTag(SYNC_PROGRESS_TAG).assertExists()
+    }
+
+    @Test
+    fun aSyncRunShowsTheLoader() {
+        compose.mainClock.autoAdvance = false
+        render(sync = SyncUiState(available = true, syncing = true))
+        compose.mainClock.advanceTimeByFrame()
+
+        compose.onNodeWithTag(SYNC_PROGRESS_TAG).assertExists()
     }
 
     @Test

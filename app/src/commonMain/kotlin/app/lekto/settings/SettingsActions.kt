@@ -34,11 +34,9 @@ data class SettingsActions(
     val onLoadModels: (String) -> Unit = {},
     val onConnectProvider: (String) -> Unit = {},
     val onRemoveProviderKey: () -> Unit = {},
-    val onDismissProviderResult: () -> Unit = {},
     val onSyncHostChange: (String) -> Unit = {},
     val onSyncUsernameChange: (String) -> Unit = {},
     val onConnectSync: (String) -> Unit = {},
     val onSyncNow: () -> Unit = {},
     val onDisconnectSync: () -> Unit = {},
-    val onDismissSyncResult: () -> Unit = {},
 )

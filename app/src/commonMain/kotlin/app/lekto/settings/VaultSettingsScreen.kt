@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -47,8 +46,8 @@ internal const val SYNC_PASSWORD_FIELD_TAG: String = "settings-sync-password"
 internal const val SYNC_CONNECT_TAG: String = "settings-sync-connect"
 internal const val SYNC_NOW_TAG: String = "settings-sync-now"
 internal const val SYNC_WARNING_INFO_TAG: String = "settings-sync-warning"
+internal const val SYNC_PROGRESS_TAG: String = "settings-sync-progress"
 internal const val SYNC_DISCONNECT_TAG: String = "settings-sync-disconnect"
-internal const val SYNC_DISMISS_TAG: String = "settings-sync-dismiss"
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
 internal const val VAULT_BACK_TAG: String = "vault-settings-back"
@@ -185,12 +184,16 @@ private fun SyncForm(state: SyncUiState, actions: SettingsActions, now: Instant)
             hasStoredSecret = state.hasStoredPassword,
         )
 
-        if (state.syncing) LinearProgressIndicator(Modifier.fillMaxWidth())
+        // A connection test and a run both take time; the loader must cover both, not
+        // only the sync that follows a successful test (issue #213).
+        if (state.busy) {
+            LinearProgressIndicator(Modifier.fillMaxWidth().testTag(SYNC_PROGRESS_TAG))
+        }
         // The actions, the answer and the way off are one group, so the result and
         // Disconnect sit right under the buttons (issue #213).
         Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
             SyncActions(state, password, actions)
-            state.result?.let { result -> SyncResultLine(result, actions.onDismissSyncResult) }
+            state.result?.let { result -> SyncResultLine(result) }
             Disconnect(state, actions)
         }
     }
@@ -279,21 +282,14 @@ private fun SyncOutcomeLine(outcome: SyncResult) {
     )
 }
 
-/** The inline result under **Connection**, with its Dismiss aligned to the trailing edge. */
+/** The inline result under **Connection**; the next action clears it. */
 @Composable
-private fun SyncResultLine(result: SyncResult, onDismiss: () -> Unit) {
-    val texts = LocalAppTexts.current
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            texts.message(result.message),
-            color = syncColor(result),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss, modifier = Modifier.handCursor().testTag(SYNC_DISMISS_TAG)) {
-            Text(texts[TextKey.DISMISS])
-        }
-    }
+private fun SyncResultLine(result: SyncResult) {
+    Text(
+        LocalAppTexts.current.message(result.message),
+        color = syncColor(result),
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 /**

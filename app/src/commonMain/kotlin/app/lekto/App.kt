@@ -509,13 +509,11 @@ private fun AppScreens(
             onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
             onConnectProvider = { apiKey -> settings.provider?.connect(apiKey) },
             onRemoveProviderKey = { settings.provider?.removeKey() },
-            onDismissProviderResult = { settings.provider?.dismissResult() },
             onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
             onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
             onConnectSync = { password -> settings.sync?.connect(password) },
             onSyncNow = { settings.sync?.syncNow() },
             onDisconnectSync = { settings.sync?.disconnect() },
-            onDismissSyncResult = { settings.sync?.dismissResult() },
         )
         AppShell(
             current = checkNotNull(current.section) { "$current covers the shell; it is rendered above it" },

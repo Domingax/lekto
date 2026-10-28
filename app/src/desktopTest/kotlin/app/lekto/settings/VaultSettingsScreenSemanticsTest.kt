@@ -235,17 +235,24 @@ class VaultSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun aSyncResultRendersAndDismisses() = runComposeUiTest {
-        var dismissed = false
-        vault(
-            sync = SyncUiState(available = true, result = SyncResult.Success(AppMessage.core("Saved."))),
-            actions = SettingsActions(onDismissSyncResult = { dismissed = true }),
-        )
+    fun aSyncResultIsReported() = runComposeUiTest {
+        vault(sync = SyncUiState(available = true, result = SyncResult.Success(AppMessage.core("Saved."))))
 
         onNodeWithText("Saved.").performScrollTo().assertIsDisplayed()
-        onNodeWithTag(SYNC_DISMISS_TAG).performScrollTo().performClick()
+    }
 
-        assertTrue(dismissed)
+    @Test
+    fun aConnectionTestShowsTheLoader() = runComposeUiTest {
+        vault(sync = SyncUiState(available = true, testing = true))
+
+        onNodeWithTag(SYNC_PROGRESS_TAG).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aSyncRunShowsTheLoader() = runComposeUiTest {
+        vault(sync = SyncUiState(available = true, syncing = true))
+
+        onNodeWithTag(SYNC_PROGRESS_TAG).performScrollTo().assertIsDisplayed()
     }
 
     @Test

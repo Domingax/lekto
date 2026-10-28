@@ -127,21 +127,23 @@ class ProviderSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun aSuccessfulConnectionIsReportedAndDismissed() = runComposeUiTest {
-        var dismissed = false
+    fun aSuccessfulConnectionIsReported() = runComposeUiTest {
         provider(
             state = ProviderUiState(
                 available = true,
                 providerChosen = true,
                 result = ProviderResult.Success(AppMessage.core("The provider answered.")),
             ),
-            actions = SettingsActions(onDismissProviderResult = { dismissed = true }),
         )
 
         onNodeWithText("The provider answered.").performScrollTo().assertIsDisplayed()
-        onNodeWithTag(PROVIDER_DISMISS_TAG).performScrollTo().performClick()
+    }
 
-        assertTrue(dismissed)
+    @Test
+    fun aConnectionTestShowsTheLoader() = runComposeUiTest {
+        provider(state = ProviderUiState(available = true, providerChosen = true, testing = true))
+
+        onNodeWithTag(PROVIDER_PROGRESS_TAG).performScrollTo().assertIsDisplayed()
     }
 
     @Test

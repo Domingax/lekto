@@ -135,21 +135,27 @@ class ProviderSettingsScreenSemanticsTest {
     }
 
     @Test
-    fun aSuccessfulConnectionIsReportedAndDismissed() {
-        var dismissed = false
+    fun aSuccessfulConnectionIsReported() {
         render(
             state = ProviderUiState(
                 available = true,
                 providerChosen = true,
                 result = ProviderResult.Success(AppMessage.core("The provider answered.")),
             ),
-            actions = SettingsActions(onDismissProviderResult = { dismissed = true }),
         )
 
         compose.onNodeWithText("The provider answered.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag(PROVIDER_DISMISS_TAG).performScrollTo().performClick()
+    }
 
-        assertTrue(dismissed)
+    @Test
+    fun aConnectionTestShowsTheLoader() {
+        // An indeterminate indicator never reaches idle, so the test clock must not
+        // advance while the node is asserted.
+        compose.mainClock.autoAdvance = false
+        render(state = ProviderUiState(available = true, providerChosen = true, testing = true))
+        compose.mainClock.advanceTimeByFrame()
+
+        compose.onNodeWithTag(PROVIDER_PROGRESS_TAG).assertExists()
     }
 
     @Test

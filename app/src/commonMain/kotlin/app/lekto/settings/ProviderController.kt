@@ -252,11 +252,6 @@ class ProviderController(
         }
     }
 
-    /** Clears the last result, so the section returns to its resting state. */
-    fun dismissResult() {
-        _state.update { current -> current.copy(result = null) }
-    }
-
     /** Writes the non-secret configuration now: everything reversible applies on change (issue #213). */
     private fun persistConfig() {
         settings.save(_state.value.config)

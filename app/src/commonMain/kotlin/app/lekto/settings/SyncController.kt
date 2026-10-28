@@ -386,11 +386,6 @@ class SyncController(
         }
     }
 
-    /** Clears the last inline result, so the section returns to its resting state. */
-    fun dismissResult() {
-        _state.update { current -> current.copy(result = null) }
-    }
-
     /** Writes the non-secret endpoint now: everything reversible applies on change (issue #213). */
     private fun persistConfig() {
         services.settings.save(_state.value.config)

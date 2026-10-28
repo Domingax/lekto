@@ -3,7 +3,6 @@ package app.lekto.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,13 +18,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import app.lekto.core.llm.LlmProvider
@@ -43,7 +40,7 @@ internal const val MODEL_FIELD_TAG: String = "settings-provider-model"
 internal const val BASE_URL_FIELD_TAG: String = "settings-provider-base-url"
 internal const val API_KEY_FIELD_TAG: String = "settings-provider-api-key"
 internal const val PROVIDER_CONNECT_TAG: String = "settings-provider-connect"
-internal const val PROVIDER_DISMISS_TAG: String = "settings-provider-dismiss"
+internal const val PROVIDER_PROGRESS_TAG: String = "settings-provider-progress"
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
 internal const val PROVIDER_BACK_TAG: String = "provider-settings-back"
@@ -127,7 +124,7 @@ fun ProviderSettingsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
                 StoredKey(state)
                 ProviderActions(state, apiKey, actions)
-                ProviderStatus(state, actions)
+                ProviderStatus(state)
                 RemoveKey(state, actions)
             }
         }
@@ -250,29 +247,21 @@ private fun ProviderActions(state: ProviderUiState, apiKey: String, actions: Set
         shape = LektoRadii.Control,
         modifier = Modifier.fillMaxWidth().handCursor(!state.testing).testTag(PROVIDER_CONNECT_TAG),
     ) { Text(texts[TextKey.CONNECTION]) }
-    if (state.testing) LinearProgressIndicator(Modifier.fillMaxWidth())
+    if (state.testing) {
+        LinearProgressIndicator(Modifier.fillMaxWidth().testTag(PROVIDER_PROGRESS_TAG))
+    }
 }
 
-/** The inline result under **Connection**, with its Dismiss aligned to the trailing edge. */
+/** The inline result under **Connection**; the next action clears it. */
 @Composable
-private fun ProviderStatus(state: ProviderUiState, actions: SettingsActions) {
+private fun ProviderStatus(state: ProviderUiState) {
     val result = state.result ?: return
-    val texts = LocalAppTexts.current
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            texts.message(result.message),
-            color = when (result) {
-                is ProviderResult.Success -> MaterialTheme.colorScheme.onSurfaceVariant
-                is ProviderResult.Failure -> MaterialTheme.colorScheme.error
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(
-            onClick = actions.onDismissProviderResult,
-            modifier = Modifier.handCursor().testTag(PROVIDER_DISMISS_TAG),
-        ) {
-            Text(texts[TextKey.DISMISS])
-        }
-    }
+    Text(
+        LocalAppTexts.current.message(result.message),
+        color = when (result) {
+            is ProviderResult.Success -> MaterialTheme.colorScheme.onSurfaceVariant
+            is ProviderResult.Failure -> MaterialTheme.colorScheme.error
+        },
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
