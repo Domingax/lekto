@@ -149,10 +149,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.REMOVE_KEY to "Supprimer la clé",
     TextKey.CONNECTION to "Connexion",
     TextKey.APP_LANGUAGE_DESCRIPTION to "La langue que Lekto utilise pour ses propres textes.",
-    TextKey.APPEARANCE_DESCRIPTION to
-        "Choisissez l'apparence de Lekto sur cet appareil. Le thème recolore toute l'application — " +
-        "jamais le texte d'un livre, qui garde sa police, sa taille et ses marges. Votre choix reste " +
-        "sur cet appareil et ne voyage jamais avec votre coffre.",
     TextKey.THEME_SYSTEM to "Système",
     TextKey.THEME_SYSTEM_DESCRIPTION to "Suit le réglage de l'appareil",
     TextKey.THEME_LIGHT to "Clair",

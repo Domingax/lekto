@@ -147,10 +147,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.REMOVE_KEY to "Remove key",
     TextKey.CONNECTION to "Connection",
     TextKey.APP_LANGUAGE_DESCRIPTION to "The language Lekto uses for its own texts.",
-    TextKey.APPEARANCE_DESCRIPTION to
-        "Choose how Lekto looks on this device. The theme recolours the whole app — never a book's " +
-        "text, which keeps its face, size and margins. Your choice stays on this device and never " +
-        "travels with your vault.",
     TextKey.THEME_SYSTEM to "System",
     TextKey.THEME_SYSTEM_DESCRIPTION to "Follows the device setting",
     TextKey.THEME_LIGHT to "Light",

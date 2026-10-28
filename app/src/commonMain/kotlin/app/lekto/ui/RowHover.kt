@@ -9,11 +9,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.lekto.theme.hoverWash
 
-/** The radius of a row's wash: the control radius, so a hovered row reads as one target. */
-private val HOVER_CORNER = 8.dp
+/** The radius of a row's wash: soft enough that the band reads as a target, not a cell. */
+private val HOVER_CORNER = 10.dp
 
 /** How far the wash reaches past the row's content, so the text is never flush with its edge. */
 internal val HOVER_INSET = 10.dp
+
+/** How far the band stops short of the row's top and bottom, so it never touches its neighbours. */
+private val HOVER_VERTICAL_INSET = 4.dp
 
 /**
  * The wash a row carries while the pointer rests on it (`docs/design.md` §8): the
@@ -30,10 +33,11 @@ internal val HOVER_INSET = 10.dp
 internal fun Modifier.rowHover(hovered: Boolean, ink: Color): Modifier = drawBehind {
     if (!hovered) return@drawBehind
     val inset = HOVER_INSET.toPx()
+    val verticalInset = HOVER_VERTICAL_INSET.toPx()
     drawRoundRect(
         color = hoverWash(ink),
-        topLeft = Offset(-inset, 0f),
-        size = Size(size.width + inset * 2, size.height),
+        topLeft = Offset(-inset, verticalInset),
+        size = Size(size.width + inset * 2, size.height - verticalInset * 2),
         cornerRadius = CornerRadius(HOVER_CORNER.toPx()),
     )
 }

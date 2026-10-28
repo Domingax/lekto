@@ -80,18 +80,13 @@ fun AppearanceScreen(
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
-        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
         SettingsFormHeader(
             title = texts[TextKey.SECTION_APPEARANCE],
             backTag = APPEARANCE_BACK_TAG,
             titleTag = APPEARANCE_TITLE_TAG,
             onBack = actions.onBack,
-        )
-        Text(
-            texts[TextKey.APPEARANCE_DESCRIPTION],
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Column(
             Modifier.selectableGroup(),

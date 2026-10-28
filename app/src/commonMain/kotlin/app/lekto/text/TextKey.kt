@@ -178,7 +178,6 @@ enum class TextKey {
     APP_LANGUAGE_DESCRIPTION,
 
     // Appearance screen (ADR-0036).
-    APPEARANCE_DESCRIPTION,
     THEME_SYSTEM,
     THEME_SYSTEM_DESCRIPTION,
     THEME_LIGHT,
