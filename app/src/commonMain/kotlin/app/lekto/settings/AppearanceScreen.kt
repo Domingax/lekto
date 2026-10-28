@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.theme.AppTheme
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
 import app.lekto.theme.appThemeScheme
 import app.lekto.ui.handCursor
 
@@ -64,12 +65,16 @@ fun AppearanceScreen(
 ) {
     val texts = LocalAppTexts.current
     Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         Header(actions.onBack)
         Text(texts[TextKey.APPEARANCE_DESCRIPTION], style = MaterialTheme.typography.bodyMedium)
-        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
             AppTheme.entries.forEach { theme ->
                 ThemeEntry(
                     theme = theme,
@@ -84,7 +89,7 @@ fun AppearanceScreen(
 @Composable
 private fun Header(onBack: () -> Unit) {
     val texts = LocalAppTexts.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
         TextButton(
             onClick = onBack,
             modifier = Modifier.handCursor().testTag(APPEARANCE_BACK_TAG),
@@ -104,13 +109,13 @@ private fun ThemeEntry(theme: AppTheme, selected: Boolean, onClick: () -> Unit) 
             .fillMaxWidth()
             .handCursor()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(vertical = 12.dp)
+            .padding(vertical = LektoSpacing.BetweenRows)
             .testTag(appearanceOptionTag(theme)),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.InsidePanel),
     ) {
         ThemePreview(theme)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
             Text(texts.themeName(theme), style = MaterialTheme.typography.titleMedium)
             Text(
                 texts.themeDescription(theme),
@@ -120,7 +125,7 @@ private fun ThemeEntry(theme: AppTheme, selected: Boolean, onClick: () -> Unit) 
         }
         if (selected) {
             Text(
-                texts[TextKey.CURRENT_THEME],
+                texts[TextKey.CURRENT],
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

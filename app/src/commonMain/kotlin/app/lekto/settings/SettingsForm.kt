@@ -220,7 +220,7 @@ internal fun FormHairline() {
 
 /** The affordance a row's value opens something: `chevron-right`, decorative beside the value. */
 @Composable
-private fun Chevron() {
+internal fun Chevron() {
     Icon(
         imageVector = LektoIcons.ChevronRight,
         contentDescription = null,

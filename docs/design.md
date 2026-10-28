@@ -376,8 +376,20 @@ than behind a scrollbar.
 
 ### 7.5 Settings
 
-An **index**, not a form: a row per area, with its current value underneath, grouped in the
-sentence-case labels *Reading*, *Data*, *Application*.
+An **index**, not a form: a row per area, its name in the title style and its current value under
+it in the muted ink — `Appearance · Sepia`, `App language · French`, `Reading languages · English,
+Spanish`, `LLM provider · Anthropic, configured`, `Vault and sync · Synced 2 minutes ago`, then
+`Attribution` and `About · version`. A `chevron-right` closes each row, and a hairline parts two
+rows of one group, never one after the last.
+
+The rows are grouped in the sentence-case labels *Reading*, *Data*, *Application*, in the small
+muted style. **Reading** holds what the reader reads with, **Data** what leaves the device, and
+**Application** the licences and the build itself.
+
+The rows carry no control: a value that needs changing is a screen away, which is the whole point
+of an index. A row whose screen is not wired in a build says `Not available` rather than naming a
+value it does not have, and a row whose state is empty says so — `Reading languages · None yet`
+before the first book.
 
 The provider's API key and the WebDAV server are **screens of their own**, not two forms buried
 mid-page. Their fields read like a printed form — the label in small muted type, the value under
@@ -389,10 +401,12 @@ costs a network call or writes a secret gets an explicit action; anything irreve
 in red. `Connection` is the explicit action for a secret: it tests first and writes only when the
 endpoint answered.
 
-### 7.6 Appearance, Languages, LLM provider, Vault and sync
+### 7.6 Appearance, App language, Languages, LLM provider, Vault and sync, About
 
 - **Appearance** — the four theme entries, each *shown on its own paper*: a 48 × 34 preview with two
   lines of ink, System split down the middle. A theme is chosen by looking at it.
+- **App language** — the languages the app ships, by name, the current one marked; the choice
+  re-renders the whole interface at once.
 - **Languages** — one row per **Reading language**, its state (word-difficulty data, offline
   dictionary) and the download action when one is missing.
 - **LLM provider** — provider, key, model. The key is masked with a reveal, and the screen says
@@ -404,6 +418,9 @@ endpoint answered.
   caution lives behind the `info` icon beside **Server address**, not as a paragraph in the
   flow. The vault is **app-private** (ADR-0010): there is no folder to choose, and a
   "change location" control would describe an app that does not exist.
+- **About** — the version an installed copy reports, the licence it is released under and the
+  way to its source. The index's row carries the version, so the reader can read it without
+  opening the screen.
 
 ### 7.7 Launch
 
