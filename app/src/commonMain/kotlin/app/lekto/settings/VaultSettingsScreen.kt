@@ -155,7 +155,7 @@ private fun SyncForm(state: SyncUiState, actions: SettingsActions, now: Instant)
         Text(
             if (age == null) status else "$status $age",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.bodyLarge,
         )
         // The time above already says when it last ran; only a failure needs detail.
         (state.lastSync as? SyncResult.Failure)?.let { outcome -> SyncOutcomeLine(outcome) }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -31,7 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
@@ -246,16 +246,30 @@ internal fun IrreversibleAction(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    TextButton(
-        onClick = onClick,
-        enabled = enabled,
-        contentPadding = PaddingValues(0.dp),
-        modifier = modifier.handCursor(enabled),
+    // A text action, not a button: the pointer underlines it rather than painting the
+    // grey pill a TextButton shows on hover (issue #213).
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Box(
+        modifier = modifier
+            .heightIn(min = if (touchClient) LektoSpacing.TouchTarget else COMPACT_FIELD_HEIGHT)
+            .handCursor(enabled)
+            .hoverable(interaction, enabled = enabled)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.CenterStart,
     ) {
         // A disabled action reads muted, never as a live red invitation.
         Text(
-            text,
+            text = text,
             color = if (enabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            textDecoration = if (hovered && enabled) TextDecoration.Underline else null,
         )
     }
 }
