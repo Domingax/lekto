@@ -56,7 +56,8 @@ _Avoid_: Expiry, TTL, grace period
 **Sync**:
 Reconciling the **Vault** with a remote copy the user owns, so the same books,
 reading positions and vocabulary appear on every device. It is off by default,
-turned on by an explicit act, and its status and last outcome are always visible.
+turned on by an explicit act, and its status and the time of its last run are
+always visible; a failed run says why.
 _Avoid_: Folder sync, backup, mirror
 
 **Sync target**:

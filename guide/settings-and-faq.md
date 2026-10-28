@@ -28,11 +28,13 @@ column on a desktop.
   list at any time, and **Attribution** opens the licences and sources of the data
   you download, and of the icons the app draws. See [Reading](/reading) and
   [Word lookup](/word-lookup).
-- **Sync** — connect your own WebDAV server, test it, turn sync on and see its
-  status and last result; see [Vault and sync](/vault-and-sync).
-- **Vault export and import** — write your whole Vault to a bundle, or restore one.
-- **LLM provider** — choose a provider, enter an API key, load and pick a model, and
-  test the connection. See [LLM provider and privacy](/llm-provider).
+- **Vault and sync** — a screen of its own, reached from Settings. It writes your
+  whole Vault to a bundle or restores one, then connects your own WebDAV server,
+  tests it, turns sync on and shows its status and last result. See
+  [Vault and sync](/vault-and-sync).
+- **LLM provider** — a screen of its own, reached from Settings. Choose a provider,
+  enter an API key, load and pick a model, and test the connection. See
+  [LLM provider and privacy](/llm-provider).
 
 ## Frequently asked questions
 
@@ -50,10 +52,11 @@ See [Pronunciation](/pronunciation).
 
 ### My provider rejects the key
 
-Use the connection test in Settings to see the failure. Check that the key is
-correct, that the provider is the one the key belongs to, and that the model is
-available to it — **Load models** lists what the provider offers, so you can pick a
-valid one. See [LLM provider and privacy](/llm-provider).
+Press **Connection** on the **LLM provider** screen (Settings → LLM provider) to
+see the failure. Check that the key is correct, that the provider is the one the
+key belongs to, and that the model is available to it — **Load models** lists what
+the provider offers, so you can pick a valid one. See
+[LLM provider and privacy](/llm-provider).
 
 ### Every word is still highlighted
 
@@ -72,10 +75,11 @@ the **Reload list** button at the top refetches it once you are back online.
 
 ### The second device does not see my data
 
-Check **Settings → Sync** on both devices: each needs the same WebDAV server
-address and a username and application password that reach it, and sync must be
-on. Use **Test connection** to spot a wrong address or password, then **Sync
-now**. A failed run says why and changes nothing locally. See
+Check **Settings → Vault and sync** on both devices: each needs the same WebDAV
+server address and a username and application password that reach it, and sync
+must be on. Press **Connection** to spot a wrong address or password — it tests
+first, then stores the password and turns sync on — then **Sync now**. A failed
+run says why and changes nothing locally. See
 [Vault and sync](/vault-and-sync).
 
 ### Where do I get Lekto for my computer?

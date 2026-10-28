@@ -16,11 +16,10 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.LANGUAGES to "Languages",
     TextKey.ATTRIBUTION to "Attribution",
     TextKey.BACK to "Back",
+    TextKey.OPEN to "Open",
     TextKey.DISMISS to "Dismiss",
     TextKey.DELETE to "Delete",
     TextKey.CANCEL to "Cancel",
-    TextKey.SAVE to "Save",
-    TextKey.SAVED to "Saved",
     TextKey.CLOSE to "Close",
     TextKey.SHOW to "Show",
     TextKey.HIDE to "Hide",
@@ -112,30 +111,30 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_APPEARANCE to "Appearance",
     TextKey.SECTION_APP_LANGUAGE to "App language",
     TextKey.SECTION_LANGUAGES to "Languages",
-    TextKey.SECTION_VAULT to "Vault",
     TextKey.SECTION_SYNC to "Sync",
     TextKey.SECTION_LLM_PROVIDER to "LLM provider",
+    TextKey.VAULT_AND_SYNC to "Vault and sync",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
         "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
         "Set your level and download the word-difficulty data and the offline dictionary for each there.",
     TextKey.VAULT_SECTION_DESCRIPTION to
-        "Your vault holds everything you've imported and saved. Export it to a file you keep, " +
-        "or import one to restore your books and vocabulary on this device. Importing replaces " +
-        "the vault already on this device.",
+        "The vault lives in the app's private storage. It holds your books, your vocabulary and " +
+        "your positions.",
     TextKey.VAULT_UNAVAILABLE to "Vault export and import aren't available in this build.",
     TextKey.EXPORT_VAULT to "Export vault",
     TextKey.IMPORT_VAULT to "Import vault",
     TextKey.PROVIDER_SECTION_DESCRIPTION to
-        "Translate a selected phrase with your own LLM provider. Your key is kept in this device's " +
-        "secure storage — never in your vault, an export or a log.",
+        "A selected phrase can be translated by your provider. The key stays in this device's " +
+        "keychain; your books never leave the vault.",
     TextKey.PROVIDER_UNAVAILABLE to "Connecting an LLM provider isn't available in this build.",
+    TextKey.PROVIDER to "Provider",
     TextKey.BASE_URL to "Base URL",
     TextKey.API_KEY to "API key",
     TextKey.MODEL to "Model",
     TextKey.CHOOSE_A_PROVIDER to "Choose a provider",
     TextKey.KEY_STORED to "A key is stored.",
     TextKey.REMOVE_KEY to "Remove key",
-    TextKey.TEST_CONNECTION to "Test connection",
+    TextKey.CONNECTION to "Connection",
     TextKey.APP_LANGUAGE_DESCRIPTION to "The language Lekto uses for its own texts.",
     TextKey.APPEARANCE_DESCRIPTION to
         "Choose how Lekto looks on this device. The theme recolours the whole app — never a book's " +
@@ -152,20 +151,23 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.CURRENT_THEME to "Current",
 
     // Sync.
-    TextKey.SYNC_SECTION_DESCRIPTION to
-        "Sync your vault between your devices through your own WebDAV server — Nextcloud, ownCloud, " +
-        "Synology or any WebDAV host. Your password is kept in this device's secure storage.",
     TextKey.SYNC_FOLDER_WARNING to
-        "Don't point a folder-sync tool at your vault. Syncthing, Dropbox, iCloud Drive and the like " +
-        "would put a second writer on the same files and can corrupt them. Use Lekto's own sync instead.",
+        "Syncthing, Dropbox, iCloud Drive and the like would put a second writer on the same files " +
+        "and can corrupt them. Use Lekto's own sync instead.",
+    TextKey.SYNC_FOLDER_WARNING_TITLE to "Don't point a folder-sync tool at your vault",
     TextKey.SYNC_UNAVAILABLE to "Sync isn't available in this build.",
     TextKey.SERVER_ADDRESS to "Server address",
     TextKey.USERNAME to "Username",
     TextKey.APPLICATION_PASSWORD to "Application password",
-    TextKey.TURN_OFF_SYNC to "Turn off sync",
-    TextKey.ENABLE_SYNC to "Enable sync",
     TextKey.SYNC_NOW to "Sync now",
     TextKey.DISCONNECT to "Disconnect",
+    TextKey.SYNC_LAST_JUST_NOW to "Synced just now.",
+    TextKey.SYNC_LAST_MINUTE to "Synced 1 minute ago.",
+    TextKey.SYNC_LAST_MINUTES to "Synced {0} minutes ago.",
+    TextKey.SYNC_LAST_HOUR to "Synced 1 hour ago.",
+    TextKey.SYNC_LAST_HOURS to "Synced {0} hours ago.",
+    TextKey.SYNC_LAST_DAY to "Synced 1 day ago.",
+    TextKey.SYNC_LAST_DAYS to "Synced {0} days ago.",
     TextKey.SYNC_STATUS_ON to "Sync is on.",
     TextKey.SYNC_STATUS_OFF to "Sync is off.",
     TextKey.SYNC_STATUS_NOT_SET_UP to "Sync isn't set up yet.",

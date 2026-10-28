@@ -18,7 +18,8 @@ set.
 
 Applies to every icon in `app/src/commonMain/kotlin/app/lekto/ui/icons/`:
 `book-open`, `bookmark`, `settings`, `search`, `import`, `arrow-left`,
-`volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`.
+`volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`,
+`info`.
 
 ```
 ISC License

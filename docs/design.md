@@ -133,8 +133,9 @@ The scale actually used, and nothing else:
 - The set is **Lucide geometry**: a 24-unit grid, a 2-unit stroke, round caps and joins. It is
   generated once, committed as `ImageVector` Kotlin, and carries no runtime dependency — the
   reasoning and the alternatives are in `docs/research/icones-compose.md`.
-- **The set is twelve icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
-  `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`.
+- **The set is thirteen icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
+  `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`,
+  `info`.
   `tools/icons/fetch.sh` fetches them at the pinned Lucide tag and regenerates the Kotlin; the
   generated files are never edited by hand. Their ISC and Feather/MIT notices live in
   `THIRD-PARTY-NOTICES.md` at the root, and the app names them in **Attribution**, reached from
@@ -382,9 +383,11 @@ The provider's API key and the WebDAV server are **screens of their own**, not t
 mid-page. Their fields read like a printed form — the label in small muted type, the value under
 it, a hairline — rather than a wall of outlined boxes.
 
-The rules for a form: **one filled button per screen**; everything reversible applies on change,
-with no confirmation, and something that costs a network call or writes a secret gets an explicit
-action; anything irreversible is written in red.
+The rules for a form: **one filled button per screen** — `Connection` on the provider, `Sync now`
+on the vault; everything reversible applies on change, with no confirmation, and something that
+costs a network call or writes a secret gets an explicit action; anything irreversible is written
+in red. `Connection` is the explicit action for a secret: it tests first and writes only when the
+endpoint answered.
 
 ### 7.6 Appearance, Languages, LLM provider, Vault and sync
 
@@ -393,11 +396,14 @@ action; anything irreversible is written in red.
 - **Languages** — one row per **Reading language**, its state (word-difficulty data, offline
   dictionary) and the download action when one is missing.
 - **LLM provider** — provider, key, model. The key is masked with a reveal, and the screen says
-  where it is stored: the device's keychain, never the vault.
+  where it is stored: the device's keychain, never the vault. `Connection` tests it and stores it
+  only when the provider answered; a stored key shows masked dots rather than an empty field.
 - **Vault and sync** — export and import; then the server, the user, the application
-  password, the state ("Sync is on.") and the actions. The vault is
-  **app-private** (ADR-0010): there is no folder to choose, and a "change location" control would
-  describe an app that does not exist.
+  password, the last run ("Synced 2 minutes ago.") and the actions. `Connection` tests the
+  endpoint, stores the password and turns sync on; `Sync now` runs one. The folder-sync
+  caution lives behind the `info` icon beside **Server address**, not as a paragraph in the
+  flow. The vault is **app-private** (ADR-0010): there is no folder to choose, and a
+  "change location" control would describe an app that does not exist.
 
 ### 7.7 Launch
 

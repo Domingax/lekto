@@ -88,6 +88,7 @@ import app.lekto.settings.AppearanceActions
 import app.lekto.settings.AppearanceScreen
 import app.lekto.settings.AttributionScreen
 import app.lekto.settings.ProviderController
+import app.lekto.settings.ProviderSettingsScreen
 import app.lekto.settings.ProviderUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
@@ -95,6 +96,7 @@ import app.lekto.settings.SettingsUiState
 import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
 import app.lekto.settings.SyncUiState
+import app.lekto.settings.VaultSettingsScreen
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
@@ -121,6 +123,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 
 /**
  * The pieces a platform entry point supplies to the [App]: the [segmenter], the
@@ -487,6 +490,31 @@ private fun AppScreens(
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
         )
     } else {
+        // Every settings entry shares one action bundle: the same controllers, and
+        // the same ways into the screens below Settings (issue #213). The screens
+        // keep only the secret a field is typing; every persisted value comes from
+        // these actions.
+        val settingsActions = SettingsActions(
+            onOpenAppearance = { stack = stack.push(Destination.Appearance) },
+            onOpenLanguages = { stack = stack.push(Destination.Languages) },
+            onOpenProvider = { stack = stack.push(Destination.ProviderSettings) },
+            onOpenVault = { stack = stack.push(Destination.VaultSettings) },
+            onSelectAppLanguage = { code -> settings.languageSettings?.chooseAppLanguage(code) },
+            onExportVault = { settings.vaultTransfer?.export() },
+            onImportVault = { settings.vaultTransfer?.import(controller::refresh) },
+            onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
+            onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
+            onModelChange = { model -> settings.provider?.setModel(model) },
+            onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
+            onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
+            onConnectProvider = { apiKey -> settings.provider?.connect(apiKey) },
+            onRemoveProviderKey = { settings.provider?.removeKey() },
+            onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
+            onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
+            onConnectSync = { password -> settings.sync?.connect(password) },
+            onSyncNow = { settings.sync?.syncNow() },
+            onDisconnectSync = { settings.sync?.disconnect() },
+        )
         AppShell(
             current = checkNotNull(current.section) { "$current covers the shell; it is rendered above it" },
             onSelect = { section -> stack = stack.select(section) },
@@ -501,11 +529,23 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Settings -> SettingsDestination(
-                    settings,
-                    onVaultImported = controller::refresh,
-                    onOpenAppearance = { stack = stack.push(Destination.Appearance) },
-                    onOpenLanguages = { stack = stack.push(Destination.Languages) },
+                Destination.Settings -> SettingsScreen(
+                    state = settings.state,
+                    actions = settingsActions,
+                )
+
+                Destination.ProviderSettings -> ProviderSettingsScreen(
+                    state = settings.state.provider,
+                    actions = settingsActions,
+                    onBack = { stack = stack.back() },
+                )
+
+                Destination.VaultSettings -> VaultSettingsScreen(
+                    vault = settings.state.vault,
+                    sync = settings.state.sync,
+                    actions = settingsActions,
+                    onBack = { stack = stack.back() },
+                    now = settings.sync?.now ?: Clock.System.now(),
                 )
 
                 Destination.Appearance -> AppearanceScreen(
@@ -675,8 +715,8 @@ private class Lookup(
 }
 
 /**
- * The settings screen's live pieces, bundled so [AppScreens] stays within the
- * parameter bound: the two controllers it drives and the state it renders.
+ * The settings surface's live pieces, bundled so [AppScreens] stays within the
+ * parameter bound: the controllers its screens drive and the state they render.
  */
 @Suppress("LongParameterList") // The settings controllers; bundling a bundle adds a type, not clarity.
 private class Settings(
@@ -688,49 +728,6 @@ private class Settings(
     val languageSettings: LanguageSettingsController?,
     val state: SettingsUiState,
 )
-
-/**
- * The settings destination wrapped so its action bundle stays out of [AppScreens].
- * It is a section of the shell now, so it has no back action of its own: the bar
- * and the back stack replace it (issue #185).
- */
-@Suppress("LongParameterList") // The settings controllers and the ways it navigates, each independent.
-@Composable
-private fun SettingsDestination(
-    settings: Settings,
-    onVaultImported: () -> Unit,
-    onOpenAppearance: () -> Unit,
-    onOpenLanguages: () -> Unit,
-) {
-    SettingsScreen(
-        state = settings.state,
-        actions = SettingsActions(
-            onOpenAppearance = onOpenAppearance,
-            onOpenLanguages = onOpenLanguages,
-            onSelectAppLanguage = { language -> settings.languageSettings?.chooseAppLanguage(language) },
-            onExportVault = { settings.vaultTransfer?.export() },
-            onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
-            onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
-            onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
-            onModelChange = { model -> settings.provider?.setModel(model) },
-            onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
-            onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
-            onSaveProvider = { apiKey -> settings.provider?.save(apiKey) },
-            onTestProvider = { apiKey -> settings.provider?.test(apiKey) },
-            onRemoveProviderKey = { settings.provider?.removeKey() },
-            onDismissProviderResult = { settings.provider?.dismissResult() },
-            onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
-            onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
-            onSaveSync = { password -> settings.sync?.save(password) },
-            onTestSync = { password -> settings.sync?.test(password) },
-            onEnableSync = { settings.sync?.enable() },
-            onDisableSync = { settings.sync?.disable() },
-            onSyncNow = { settings.sync?.syncNow() },
-            onDisconnectSync = { settings.sync?.disconnect() },
-            onDismissSyncResult = { settings.sync?.dismissResult() },
-        ),
-    )
-}
 
 /** The library destination wrapped so its navigation bundle stays out of [AppScreens]. */
 @Suppress("LongParameterList") // The composition's inputs; a bundle is [LibraryNavigation] already.

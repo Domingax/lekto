@@ -62,51 +62,73 @@ class ProviderControllerTest {
     }
 
     @Test
-    fun `saving persists the configuration and stores the key in the secret store`() = runTest {
+    fun `connecting persists the configuration and stores the key after the provider answers`() = runTest {
         val settings = InMemoryLlmSettingsStore()
         val secrets = InMemorySecretStore()
         val controller = controller(settings = settings, secrets = secrets)
 
         controller.selectProvider(LlmProvider.OPENAI)
         controller.setModel("gpt-4o-mini")
-        controller.save("sk-live-123")
+        controller.connect("sk-live-123")
+        advanceUntilIdle()
 
         assertEquals(LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini"), settings.load())
         assertEquals(SecretResult.Found("sk-live-123"), secrets.get(key(LlmProvider.OPENAI)))
         assertTrue(controller.state.value.hasStoredKey)
-        assertEquals(ProviderResult.Success(ProviderController.SAVED), controller.state.value.result)
+        assertEquals(ProviderResult.Success(ProviderController.CONNECTED), controller.state.value.result)
     }
 
     @Test
-    fun `saving with no key typed leaves the stored key in place`() = runTest {
+    fun `choosing a provider and editing the model or base URL write at once`() = runTest {
+        val settings = InMemoryLlmSettingsStore()
+        val controller = controller(settings = settings)
+
+        // Reversible choices apply on change; only the key waits for Connection (issue #213).
+        controller.selectProvider(LlmProvider.OPENAI)
+        assertEquals(LlmProviderConfig(LlmProvider.OPENAI, ""), settings.load())
+
+        controller.setModel("gpt-4o-mini")
+        assertEquals(LlmProviderConfig(LlmProvider.OPENAI, "gpt-4o-mini"), settings.load())
+
+        controller.setBaseUrl("https://example.test/v1")
+        assertEquals("https://example.test/v1", settings.load().customBaseUrl)
+
+        controller.selectProvider(LlmProvider.CUSTOM)
+        assertEquals(LlmProvider.CUSTOM, settings.load().provider)
+    }
+
+    @Test
+    fun `connecting with no key typed leaves the stored key in place`() = runTest {
         val secrets = InMemorySecretStore()
         secrets.put(key(LlmProvider.OPENAI), "sk-existing")
         val controller = controller(secrets = secrets)
 
-        controller.save("")
+        controller.connect("")
+        advanceUntilIdle()
 
         assertEquals(SecretResult.Found("sk-existing"), secrets.get(key(LlmProvider.OPENAI)))
         assertTrue(controller.state.value.hasStoredKey)
     }
 
     @Test
-    fun `saving reports an unavailable secret store inline`() = runTest {
+    fun `connecting reports an unavailable secret store inline`() = runTest {
         val controller = controller(secrets = InMemorySecretStore(available = false))
 
-        controller.save("sk-live-123")
+        controller.connect("sk-live-123")
+        advanceUntilIdle()
 
         assertEquals(ProviderResult.Failure(AppMessage.core(SecretStore.UNAVAILABLE)), controller.state.value.result)
         assertFalse(controller.state.value.hasStoredKey)
     }
 
     @Test
-    fun `a test uses the stored key when the field is empty`() = runTest {
+    fun `connecting uses the stored key when the field is empty`() = runTest {
         val secrets = InMemorySecretStore()
         secrets.put(key(LlmProvider.OPENAI), "sk-stored")
         val client = FakeLlmClient()
         val controller = controller(secrets = secrets, client = client)
 
-        controller.test("")
+        controller.connect("")
         advanceUntilIdle()
 
         assertEquals("sk-stored", client.tested.single().second)
@@ -114,30 +136,33 @@ class ProviderControllerTest {
     }
 
     @Test
-    fun `a test prefers a freshly typed key over the stored one`() = runTest {
+    fun `connecting prefers a freshly typed key and stores it`() = runTest {
         val secrets = InMemorySecretStore()
         secrets.put(key(LlmProvider.OPENAI), "sk-stored")
         val client = FakeLlmClient()
         val controller = controller(secrets = secrets, client = client)
 
-        controller.test("sk-typed")
+        controller.connect("sk-typed")
         advanceUntilIdle()
 
         assertEquals("sk-typed", client.tested.single().second)
+        assertEquals(SecretResult.Found("sk-typed"), secrets.get(key(LlmProvider.OPENAI)))
     }
 
     @Test
-    fun `a failed test is reported inline and clears the testing flag`() = runTest {
+    fun `a failed connection is reported inline and stores nothing`() = runTest {
+        val secrets = InMemorySecretStore()
         val client = FakeLlmClient(LlmConnectionResult.Failed(LlmConnectionResult.REJECTED_KEY))
-        val controller = controller(client = client)
+        val controller = controller(secrets = secrets, client = client)
 
-        controller.test("sk-wrong")
+        controller.connect("sk-wrong")
         advanceUntilIdle()
 
         assertEquals(
             ProviderResult.Failure(AppMessage.core(LlmConnectionResult.REJECTED_KEY)),
             controller.state.value.result,
         )
+        assertEquals(SecretResult.Absent, secrets.get(key(LlmProvider.OPENAI)))
         assertFalse(controller.state.value.testing)
     }
 
@@ -203,7 +228,8 @@ class ProviderControllerTest {
     fun `the controller state never carries the API key`() = runTest {
         val controller = controller()
 
-        controller.save("sk-top-secret")
+        controller.connect("sk-top-secret")
+        advanceUntilIdle()
 
         assertFalse(controller.state.value.toString().contains("sk-top-secret"))
         assertNotNull(controller.state.value.result)

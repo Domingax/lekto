@@ -40,6 +40,7 @@ ICONS=(
     trash           # delete
     chevron-left    # previous chapter
     chevron-right   # next chapter
+    info            # the vault's folder-sync caution
 )
 
 # Only these mirror in a right-to-left layout. Valkyrie's `--auto-mirror` is

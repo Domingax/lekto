@@ -14,7 +14,12 @@ import kotlinx.serialization.json.Json
  * opens rather than an empty section.
  */
 @Serializable
-data class SyncOutcome(val succeeded: Boolean, val message: String)
+data class SyncOutcome(
+    val succeeded: Boolean,
+    val message: String,
+    /** When the run finished, epoch milliseconds; `null` for a document written before the time was kept. */
+    val atMillis: Long? = null,
+)
 
 /**
  * The app-private home of the last [SyncOutcome] (issue #121), the same
