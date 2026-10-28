@@ -1,6 +1,5 @@
 package app.lekto.reader
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -65,6 +64,7 @@ import app.lekto.ui.icons.ArrowLeft
 import app.lekto.ui.icons.ChevronLeft
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.plainClickable
 import kotlinx.coroutines.yield
 import kotlin.math.roundToInt
 
@@ -762,8 +762,11 @@ private fun ReaderPageBar(
                 Modifier
                     .testTag(READER_POSITION_TAG)
                     .heightIn(min = LektoSpacing.TouchTarget)
-                    .clickable(onClick = onOpenChapters)
-                    .semantics { role = Role.Button }
+                    .handCursor()
+                    // No ripple and no Material hover box: the identity has no
+                    // animation, and the position is a quiet label that happens
+                    // to open the chapter list (docs/design.md §8).
+                    .plainClickable(role = Role.Button, onClick = onOpenChapters)
             } else {
                 Modifier.testTag(READER_POSITION_TAG)
             },

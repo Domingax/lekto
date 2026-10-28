@@ -2,7 +2,6 @@ package app.lekto.reader
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.LookupCloseButton
 import app.lekto.ui.handCursor
+import app.lekto.ui.plainClickable
 import app.lekto.ui.swallowTaps
 
 /** How much of the reader the chapter sheet may cover (ADR-0037, docs/design.md §7.2). */
@@ -160,11 +160,10 @@ private fun ChapterRow(entry: ReaderChapterEntry, current: Boolean, onClick: () 
             base
                 .testTag(tag)
                 .handCursor()
-                .clickable(onClick = onClick)
-                .semantics {
-                    role = Role.Button
-                    selected = current
-                }
+                // A selector row has no ripple and no hover box (docs/design.md
+                // §8), only the pointer and the selected ink.
+                .plainClickable(role = Role.Button, onClick = onClick)
+                .semantics { selected = current }
                 .padding(vertical = LektoSpacing.BetweenRelatedLines)
     }
     Text(
