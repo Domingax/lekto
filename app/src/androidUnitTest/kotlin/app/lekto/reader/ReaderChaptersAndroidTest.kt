@@ -61,7 +61,7 @@ class ReaderChaptersAndroidTest {
     fun theSheetListsTheChaptersAndAJumpShowsItsPage() {
         compose.setContent { Reader(book) }
 
-        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Chapter 1 · Page 1 of 2", substring = true)
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("One · Page 1 of 2", substring = true)
         compose.onNodeWithTag(READER_POSITION_TAG).performClick()
         compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertIsDisplayed()
         compose.onNodeWithTag(readerChapterRowTag(1)).assertTextContains("Two")
@@ -70,7 +70,7 @@ class ReaderChaptersAndroidTest {
 
         compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
         compose.onNodeWithText("Second body.", substring = true).assertIsDisplayed()
-        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Chapter 2 · Page 2 of 2", substring = true)
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Two · Page 2 of 2", substring = true)
     }
 
     @Composable

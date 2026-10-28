@@ -2,6 +2,9 @@ package app.lekto.reader
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -20,8 +23,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -33,7 +39,6 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.LookupCloseButton
 import app.lekto.ui.handCursor
-import app.lekto.ui.plainClickable
 import app.lekto.ui.swallowTaps
 
 /** How much of the reader the chapter sheet may cover (ADR-0037, docs/design.md §7.2). */
@@ -41,6 +46,9 @@ internal const val CHAPTER_SHEET_MAX_HEIGHT_FRACTION: Float = 0.6f
 
 /** The indent one level of the chapter hierarchy adds to its rows. */
 private val CHAPTER_INDENT = 16.dp
+
+/** How strongly the hovered chapter row tints with the accent ink. */
+private const val HOVER_WASH_ALPHA = 0.08f
 
 /** The sheet's drag handle: its bar's width and height. */
 private val HANDLE_WIDTH = 32.dp
@@ -149,8 +157,12 @@ private fun ChapterRow(entry: ReaderChapterEntry, current: Boolean, onClick: () 
     val theme = MaterialTheme.colorScheme
     val choice = entry.chapter.isReadingUnit
     val indent = CHAPTER_INDENT * entry.depth
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val wash = if (hovered) theme.primary.copy(alpha = HOVER_WASH_ALPHA) else Color.Transparent
     val base = Modifier
         .fillMaxWidth()
+        .background(wash)
         .padding(start = LektoSpacing.InsidePanel + indent, end = LektoSpacing.InsidePanel)
         .heightIn(min = LektoSpacing.TouchTarget)
     val modifier = when {
@@ -160,9 +172,14 @@ private fun ChapterRow(entry: ReaderChapterEntry, current: Boolean, onClick: () 
             base
                 .testTag(tag)
                 .handCursor()
-                // A selector row has no ripple and no hover box (docs/design.md
-                // §8), only the pointer and the selected ink.
-                .plainClickable(role = Role.Button, onClick = onClick)
+                // A selector row shows no ripple, and its hover is a tint of the
+                // accent ink rather than Material's grey box (docs/design.md §8).
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                )
                 .semantics { selected = current }
                 .padding(vertical = LektoSpacing.BetweenRelatedLines)
     }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -234,7 +236,7 @@ private fun ReaderBands(
             ReaderPageBar(
                 page = state.index,
                 total = state.total,
-                chapter = current?.number.takeIf { entries.size > 1 },
+                chapter = current?.chapter?.title?.takeIf { entries.size > 1 },
                 hasChapters = entries.size > 1,
                 onPrevious = state::previous,
                 onNext = state::next,
@@ -732,7 +734,7 @@ private fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () 
 private fun ReaderPageBar(
     page: Int,
     total: Int,
-    chapter: Int?,
+    chapter: String?,
     hasChapters: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
@@ -751,24 +753,12 @@ private fun ReaderPageBar(
             onClick = onPrevious,
             tag = READER_PREVIOUS_PAGE_TAG,
         )
-        Text(
-            text = when (chapter) {
-                null -> texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total))
-                else -> texts.message(AppMessage.of(TextKey.CHAPTER_POSITION, chapter, page + 1, total))
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = if (hasChapters) {
-                Modifier
-                    .testTag(READER_POSITION_TAG)
-                    .heightIn(min = LektoSpacing.TouchTarget)
-                    .handCursor()
-                    // No ripple and no Material hover box: the identity has no
-                    // animation, and the position is a quiet label that happens
-                    // to open the chapter list (docs/design.md §8).
-                    .plainClickable(role = Role.Button, onClick = onOpenChapters)
-            } else {
-                Modifier.testTag(READER_POSITION_TAG)
+        ReaderPosition(
+            page = page,
+            total = total,
+            chapter = chapter,
+            onOpenChapters = onOpenChapters.takeIf {
+                hasChapters
             },
         )
         TapZoneButton(
@@ -779,6 +769,39 @@ private fun ReaderPageBar(
             tag = READER_NEXT_PAGE_TAG,
         )
     }
+}
+
+/**
+ * The position line: the chapter's own title then the page, or the page alone
+ * when the book has one chapter or the page is before the first. With chapters
+ * it is also the control that opens the chapter list — a quiet label, so it
+ * takes the pointing hand and no ripple or Material hover box (docs/design.md
+ * §8, ADR-0039).
+ */
+@Composable
+private fun RowScope.ReaderPosition(page: Int, total: Int, chapter: String?, onOpenChapters: (() -> Unit)?) {
+    val texts = LocalAppTexts.current
+    Text(
+        text = when (chapter) {
+            null -> texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total))
+            else -> texts.message(AppMessage.of(TextKey.CHAPTER_POSITION, chapter, page + 1, total))
+        },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = if (onOpenChapters != null) {
+            Modifier
+                .weight(1f)
+                .testTag(READER_POSITION_TAG)
+                .heightIn(min = LektoSpacing.TouchTarget)
+                .handCursor()
+                .plainClickable(role = Role.Button, onClick = onOpenChapters)
+        } else {
+            Modifier.weight(1f).testTag(READER_POSITION_TAG)
+        },
+    )
 }
 
 /**

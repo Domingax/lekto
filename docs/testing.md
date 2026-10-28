@@ -1091,7 +1091,8 @@ pins the text file's one chapter, and `BookTextCacheTest` plus a
 `VaultBookLibraryTest` case pin that a missing or different cache `formatVersion`
 is a miss, so the original is re-parsed and rewritten. The reader's side is
 `ReaderChaptersTest` in `app/desktopTest` — a page break at every chapter start,
-`Chapter N · Page X of Y`, a one-chapter book keeping `Page X of Y`, the sheet's
+the chapter's title then the page (`XI · Page 285 of 405`), a one-chapter book
+keeping `Page X of Y`, the sheet's
 hierarchy and current row, a jump saving its chapter's first block, a jump to the
 current chapter writing nothing, Close and an outside tap dismissing the sheet,
 and opening the sheet dismissing an open lookup — with

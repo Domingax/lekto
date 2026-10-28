@@ -14,8 +14,9 @@ brings them back. With a screen reader, the page offers **Previous page** and
 ## Moving by chapter
 
 When a book declares chapters, the bottom bar tells you both where you are in
-the chapter and where you are in the book: `Chapter 4 · Page 99 of 357`. Every
-chapter starts on a new page.
+the chapter and where you are in the book: `XI · Page 285 of 405`. The first part
+is the chapter's own title, the same words the chapter list shows. Every chapter
+starts on a new page.
 
 Tap that position to open the chapter list. It keeps the book's hierarchy, marks
 the chapter you are reading and scrolls it into view. Choose a chapter to jump

@@ -25,33 +25,26 @@ data class ReaderText(
 
 /**
  * One row of the chapter list, ready for the reader: the [chapter], its [depth]
- * in the hierarchy, the character [startOffset] of its first block in the
- * rendered text, and the [number] the reader shows — `null` for a **Part** that
- * only groups, because it is not a reading unit (ADR-0037).
+ * in the hierarchy and the character [startOffset] of its first block in the
+ * rendered text. The reader names the chapter by its title, the same words the
+ * list shows (ADR-0039), so there is no invented number to disagree with the
+ * book's own.
  */
-data class ReaderChapterEntry(val chapter: Chapter, val depth: Int, val startOffset: Int, val number: Int?)
+data class ReaderChapterEntry(val chapter: Chapter, val depth: Int, val startOffset: Int)
 
 /**
- * The book's chapter list flattened to rows, numbered in reading order. A leaf
- * and a part with its own text are reading units and get a number; a part that
- * only groups does not. The offsets are into the same rendered text the reader
- * paginates, which is what lets a page name its chapter and a jump move to a
- * character.
+ * The book's chapter list flattened to rows in reading order. The offsets are
+ * into the same rendered text the reader paginates, which is what lets a page
+ * name its chapter and a jump move to a character.
  */
 fun ReaderText.chapterEntries(): List<ReaderChapterEntry> {
     if (chapters.isEmpty()) return emptyList()
     val starts = blockOffsets(blocks)
     val end = blocks.renderedLength()
-    var number = 0
 
     fun walk(list: List<Chapter>, depth: Int): List<ReaderChapterEntry> = list.flatMap { chapter ->
         val offset = starts.getOrElse(chapter.startBlock) { end }
-        val entry = ReaderChapterEntry(
-            chapter = chapter,
-            depth = depth,
-            startOffset = offset,
-            number = if (chapter.isReadingUnit) ++number else null,
-        )
+        val entry = ReaderChapterEntry(chapter = chapter, depth = depth, startOffset = offset)
         listOf(entry) + walk(chapter.children, depth + 1)
     }
 

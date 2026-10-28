@@ -76,12 +76,23 @@ class ReaderChaptersTest {
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         onNodeWithText("First body.", substring = true).assertIsDisplayed()
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Chapter 1 · Page 2 of 3", substring = true)
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("One · Page 2 of 3", substring = true)
 
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         onNodeWithText("Second body.", substring = true).assertIsDisplayed()
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Chapter 2 · Page 3 of 3", substring = true)
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Two · Page 3 of 3", substring = true)
+    }
+
+    @Test
+    fun theBarShowsTheBooksOwnChapterTitleNotAnInventedNumber() = runComposeUiTest {
+        // A printed book may number its chapters in Roman numerals, and front
+        // matter may still be a chapter: the bar repeats the book's title so it
+        // cannot disagree with the list (ADR-0039).
+        val roman = book.copy(chapters = listOf(Chapter("XI", startBlock = 1), Chapter("XII", startBlock = 3)))
+        setContent { Reader(roman, initialOffset = startOf(1)) }
+
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("XI · Page 2 of 3", substring = true)
     }
 
     @Test
@@ -125,7 +136,7 @@ class ReaderChaptersTest {
 
         onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
         onNodeWithText("First body.", substring = true).assertIsDisplayed()
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Chapter 1 · Page 2 of 3", substring = true)
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("One · Page 2 of 3", substring = true)
         assertEquals(startOf(FIRST_CHAPTER_BLOCK), saved, "a jump saves the chapter's first block")
     }
 
