@@ -39,6 +39,7 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ArrowLeft
+import app.lekto.ui.icons.Check
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.rowHover
@@ -232,6 +233,20 @@ internal fun Chevron(size: Dp = CHEVRON_SIZE) {
 
 /** The chevron's frame: 16 dp, small enough to sit beside a row's value (docs/design.md §7.5). */
 internal val CHEVRON_SIZE: Dp = 16.dp
+
+/** The check a chosen entry carries: 16 dp of ink, decorative because the row is already selected. */
+@Composable
+internal fun ChoiceCheck() {
+    Icon(
+        imageVector = LektoIcons.Check,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier.size(CHECK_SIZE),
+    )
+}
+
+/** The check's frame, the size the planche gives it. */
+private val CHECK_SIZE = 16.dp
 
 /** The group label above a form's block of rows, in the muted label style. */
 @Composable

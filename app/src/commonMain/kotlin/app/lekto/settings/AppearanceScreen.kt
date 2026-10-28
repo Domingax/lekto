@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,8 +37,6 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.appThemeScheme
 import app.lekto.ui.handCursor
-import app.lekto.ui.icons.Check
-import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.rowHover
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
@@ -115,7 +112,13 @@ private fun ThemeEntry(theme: AppTheme, selected: Boolean, onClick: () -> Unit) 
             .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
             .hoverable(interaction)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .selectable(
+                selected = selected,
+                interactionSource = interaction,
+                indication = null,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
             .padding(vertical = LektoSpacing.BetweenRows)
             .testTag(appearanceOptionTag(theme)),
         verticalAlignment = Alignment.CenterVertically,
@@ -134,14 +137,7 @@ private fun ThemeEntry(theme: AppTheme, selected: Boolean, onClick: () -> Unit) 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (selected) {
-            Icon(
-                imageVector = LektoIcons.Check,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(CHECK_SIZE),
-            )
-        }
+        if (selected) ChoiceCheck()
     }
 }
 
@@ -187,9 +183,6 @@ private fun Modifier.previewShape(): Modifier {
     val shape = MaterialTheme.shapes.extraSmall
     return clip(shape).border(1.dp, MaterialTheme.colorScheme.outline, shape)
 }
-
-/** The check's frame: 16 dp beside the chosen entry, the size the mockup gives it. */
-private val CHECK_SIZE = 16.dp
 
 /** The preview's size, the one `docs/design.md` §7.6 names. */
 private val PREVIEW_WIDTH = 48.dp

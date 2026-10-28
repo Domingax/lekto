@@ -10,12 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,14 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import app.lekto.core.language.AppLanguages
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.handCursor
-import app.lekto.ui.icons.Check
-import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.rowHover
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
@@ -97,9 +92,6 @@ fun AppLanguageScreen(
     }
 }
 
-/** The check's frame: 16 dp beside the chosen language, the size the mockup gives it. */
-private val CHECK_SIZE = 16.dp
-
 /** One language: its name, and the check that marks the chosen one. */
 @Composable
 private fun LanguageEntry(language: String, selected: Boolean, onClick: () -> Unit) {
@@ -113,7 +105,13 @@ private fun LanguageEntry(language: String, selected: Boolean, onClick: () -> Un
             .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
             .hoverable(interaction)
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .selectable(
+                selected = selected,
+                interactionSource = interaction,
+                indication = null,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
             .padding(vertical = LektoSpacing.BetweenRows)
             .testTag(appLanguageOptionTag(language)),
         verticalAlignment = Alignment.CenterVertically,
@@ -125,13 +123,6 @@ private fun LanguageEntry(language: String, selected: Boolean, onClick: () -> Un
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
-        if (selected) {
-            Icon(
-                imageVector = LektoIcons.Check,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(CHECK_SIZE),
-            )
-        }
+        if (selected) ChoiceCheck()
     }
 }
