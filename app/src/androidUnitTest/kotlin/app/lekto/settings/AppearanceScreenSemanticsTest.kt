@@ -66,7 +66,6 @@ class AppearanceScreenSemanticsTest {
         compose.setContent { Appearance(AppTheme.DARK) }
 
         compose.onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).assertIsSelected()
-        compose.onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -97,7 +96,6 @@ class AppearanceScreenSemanticsTest {
 
         compose.onNodeWithText("Apparence").assertIsDisplayed()
         compose.onNodeWithText("Sombre").assertIsDisplayed()
-        compose.onNodeWithText("Actuel").assertIsDisplayed()
     }
 
     @Composable

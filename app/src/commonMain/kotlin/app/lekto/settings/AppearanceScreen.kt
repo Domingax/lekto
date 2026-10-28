@@ -2,6 +2,9 @@ package app.lekto.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,22 +21,29 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.lekto.core.theme.AppTheme
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
 import app.lekto.theme.appThemeScheme
 import app.lekto.ui.handCursor
+import app.lekto.ui.rowHover
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
 internal const val APPEARANCE_BACK_TAG: String = "appearance-back"
+
+/** The test tag on the screen's title, so a test can tell the screen from the shell's bar. */
+internal const val APPEARANCE_TITLE_TAG: String = "appearance-title"
 
 /** The test tag on one **App theme** entry, so a UI test can choose exactly it. */
 internal fun appearanceOptionTag(theme: AppTheme): String = "appearance-${theme.name.lowercase()}"
@@ -52,9 +62,10 @@ data class AppearanceActions(val onSelect: (AppTheme) -> Unit = {}, val onBack: 
  * its dark one, because that is what it means.
  *
  * The current choice carries both the selectable state a screen reader reports and
- * a visible **Current** label, so it is marked without relying on colour. The
- * screen owns no state and raises [actions], so the whole surface is proved
- * through semantics.
+ * a visible check, so it is marked without relying on colour. The check is
+ * decorative — the selectable state is what announces it — so it carries no
+ * description of its own. The screen owns no state and raises [actions], so the
+ * whole surface is proved through semantics.
  */
 @Composable
 fun AppearanceScreen(
@@ -64,12 +75,20 @@ fun AppearanceScreen(
 ) {
     val texts = LocalAppTexts.current
     Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
-        Header(actions.onBack)
-        Text(texts[TextKey.APPEARANCE_DESCRIPTION], style = MaterialTheme.typography.bodyMedium)
-        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SettingsFormHeader(
+            title = texts[TextKey.SECTION_APPEARANCE],
+            backTag = APPEARANCE_BACK_TAG,
+            titleTag = APPEARANCE_TITLE_TAG,
+            onBack = actions.onBack,
+        )
+        Column(
+            Modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
             AppTheme.entries.forEach { theme ->
                 ThemeEntry(
                     theme = theme,
@@ -81,50 +100,44 @@ fun AppearanceScreen(
     }
 }
 
-@Composable
-private fun Header(onBack: () -> Unit) {
-    val texts = LocalAppTexts.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier.handCursor().testTag(APPEARANCE_BACK_TAG),
-        ) {
-            Text(texts[TextKey.SETTINGS])
-        }
-        Text(texts[TextKey.SECTION_APPEARANCE], style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
 /** One entry: its preview, its name and one-line description, and the current mark. */
 @Composable
 private fun ThemeEntry(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
     val texts = LocalAppTexts.current
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Row(
         Modifier
             .fillMaxWidth()
+            .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(vertical = 12.dp)
+            .hoverable(interaction)
+            .selectable(
+                selected = selected,
+                interactionSource = interaction,
+                indication = null,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .padding(vertical = LektoSpacing.BetweenRows)
             .testTag(appearanceOptionTag(theme)),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.InsidePanel),
     ) {
         ThemePreview(theme)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(texts.themeName(theme), style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
+            Text(
+                texts.themeName(theme),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            )
             Text(
                 texts.themeDescription(theme),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (selected) {
-            Text(
-                texts[TextKey.CURRENT_THEME],
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        if (selected) ChoiceCheck()
     }
 }
 

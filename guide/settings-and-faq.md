@@ -4,6 +4,11 @@ Settings holds the app-wide choices the rest of the guide points at, and this pa
 answers the common questions. Open it from the third section of the bar — the left
 column on a desktop.
 
+Settings is an **index**: one row per area, with the area's current value under
+its name. The rows are grouped **Reading**, **Data** and **Application**, and each
+one opens the screen where the value is changed — nothing is edited on the list
+itself.
+
 ## Settings
 
 - **Appearance** — how Lekto looks: **System** (follow the device's light or dark
@@ -17,6 +22,8 @@ column on a desktop.
   so it does not travel with your Vault between devices, and the whole interface
   follows it at once — no relaunch. The language your translations appear in is a
   separate choice, the **Translation language**.
+- **Reading languages** — the languages your books are in, most-read first. The row
+  names them; the **Languages** screen is one tap away.
 - **Languages** — the languages Lekto offers for reading, ordered by the ones you
   have most books in. Choose the **Translation language** you want translations in —
   only the languages Lekto publishes an offline dictionary for are offered, and your
@@ -35,6 +42,10 @@ column on a desktop.
 - **LLM provider** — a screen of its own, reached from Settings. Choose a provider,
   enter an API key, load and pick a model, and test the connection. See
   [LLM provider and privacy](/llm-provider).
+- **Attribution** — the licences and sources of the data you download and of the
+  icons the app draws.
+- **About** — the version of Lekto you are running, the licence it is released
+  under, and a link to its source code.
 
 ## Frequently asked questions
 

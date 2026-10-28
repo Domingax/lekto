@@ -37,6 +37,7 @@ import app.lekto.core.language.AppLanguages
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettingsStore
+import app.lekto.core.language.readingLanguagesOf
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -84,9 +85,14 @@ import app.lekto.reader.ReaderScreen
 import app.lekto.reader.ReaderText
 import app.lekto.reader.ReadingPreferencesController
 import app.lekto.reader.WordTap
+import app.lekto.settings.AboutActions
+import app.lekto.settings.AboutScreen
+import app.lekto.settings.AppLanguageActions
+import app.lekto.settings.AppLanguageScreen
 import app.lekto.settings.AppearanceActions
 import app.lekto.settings.AppearanceScreen
 import app.lekto.settings.AttributionScreen
+import app.lekto.settings.LEKTO_SOURCE_URL
 import app.lekto.settings.ProviderController
 import app.lekto.settings.ProviderSettingsScreen
 import app.lekto.settings.ProviderUiState
@@ -393,6 +399,7 @@ fun App(
             sync = syncState,
             appLanguage = languageSettings?.appLanguage ?: AppLanguages.ENGLISH,
             appTheme = appTheme?.theme ?: AppTheme.DEFAULT,
+            readingLanguages = readingLanguagesOf(state.books),
         ),
     )
 
@@ -490,15 +497,22 @@ private fun AppScreens(
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
         )
     } else {
+        // The clock the two settings screens read "2 minutes ago" against, taken
+        // once so the index and the vault screen cannot disagree within a frame.
+        val now = settings.sync?.now ?: Clock.System.now()
         // Every settings entry shares one action bundle: the same controllers, and
         // the same ways into the screens below Settings (issue #213). The screens
         // keep only the secret a field is typing; every persisted value comes from
         // these actions.
         val settingsActions = SettingsActions(
             onOpenAppearance = { stack = stack.push(Destination.Appearance) },
+            onOpenAppLanguage = { stack = stack.push(Destination.AppLanguage) },
             onOpenLanguages = { stack = stack.push(Destination.Languages) },
             onOpenProvider = { stack = stack.push(Destination.ProviderSettings) },
             onOpenVault = { stack = stack.push(Destination.VaultSettings) },
+            onOpenAttribution = { stack = stack.push(Destination.Attribution) },
+            onOpenAbout = { stack = stack.push(Destination.About) },
+            onOpenSource = { environment.openUrl(LEKTO_SOURCE_URL) },
             onSelectAppLanguage = { code -> settings.languageSettings?.chooseAppLanguage(code) },
             onExportVault = { settings.vaultTransfer?.export() },
             onImportVault = { settings.vaultTransfer?.import(controller::refresh) },
@@ -532,6 +546,22 @@ private fun AppScreens(
                 Destination.Settings -> SettingsScreen(
                     state = settings.state,
                     actions = settingsActions,
+                    now = now,
+                )
+
+                Destination.AppLanguage -> AppLanguageScreen(
+                    current = settings.state.appLanguage,
+                    actions = AppLanguageActions(
+                        onSelect = settingsActions.onSelectAppLanguage,
+                        onBack = { stack = stack.back() },
+                    ),
+                )
+
+                Destination.About -> AboutScreen(
+                    actions = AboutActions(
+                        onOpenSource = settingsActions.onOpenSource,
+                        onBack = { stack = stack.back() },
+                    ),
                 )
 
                 Destination.ProviderSettings -> ProviderSettingsScreen(
@@ -545,7 +575,7 @@ private fun AppScreens(
                     sync = settings.state.sync,
                     actions = settingsActions,
                     onBack = { stack = stack.back() },
-                    now = settings.sync?.now ?: Clock.System.now(),
+                    now = now,
                 )
 
                 Destination.Appearance -> AppearanceScreen(

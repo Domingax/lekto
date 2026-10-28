@@ -18,7 +18,6 @@ enum class TextKey {
     LANGUAGES,
     ATTRIBUTION,
     BACK,
-    OPEN,
     DISMISS,
     DELETE,
     CANCEL,
@@ -141,6 +140,27 @@ enum class TextKey {
     SECTION_SYNC,
     SECTION_LLM_PROVIDER,
 
+    /** The three group labels of the Settings index (issue #214; docs/design.md §7.5). */
+    SETTINGS_GROUP_READING,
+    SETTINGS_GROUP_DATA,
+    SETTINGS_GROUP_APPLICATION,
+
+    /** The index's **Reading languages** row and its empty value (issue #214). */
+    SETTINGS_READING_LANGUAGES,
+    SETTINGS_NO_READING_LANGUAGES,
+
+    /** A short value for a row whose screen is not wired in this build (issue #214). */
+    SETTINGS_NOT_AVAILABLE,
+
+    /** The value under **LLM provider** once a key is stored (issue #214). */
+    PROVIDER_CONFIGURED,
+
+    /** The **About** screen (issue #214). */
+    ABOUT,
+    ABOUT_VERSION,
+    ABOUT_LICENCE,
+    ABOUT_SOURCE,
+
     /** The **Vault and sync** screen's title (docs/design.md §7.6; issue #213). */
     VAULT_AND_SYNC,
     LANGUAGES_SECTION_DESCRIPTION,
@@ -161,7 +181,6 @@ enum class TextKey {
     APP_LANGUAGE_DESCRIPTION,
 
     // Appearance screen (ADR-0036).
-    APPEARANCE_DESCRIPTION,
     THEME_SYSTEM,
     THEME_SYSTEM_DESCRIPTION,
     THEME_LIGHT,
@@ -170,7 +189,6 @@ enum class TextKey {
     THEME_DARK_DESCRIPTION,
     THEME_SEPIA,
     THEME_SEPIA_DESCRIPTION,
-    CURRENT_THEME,
 
     // Sync section.
     SYNC_FOLDER_WARNING,

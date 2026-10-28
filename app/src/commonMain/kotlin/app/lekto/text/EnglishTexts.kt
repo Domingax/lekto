@@ -16,7 +16,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.LANGUAGES to "Languages",
     TextKey.ATTRIBUTION to "Attribution",
     TextKey.BACK to "Back",
-    TextKey.OPEN to "Open",
     TextKey.DISMISS to "Dismiss",
     TextKey.DELETE to "Delete",
     TextKey.CANCEL to "Cancel",
@@ -114,6 +113,18 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_LANGUAGES to "Languages",
     TextKey.SECTION_SYNC to "Sync",
     TextKey.SECTION_LLM_PROVIDER to "LLM provider",
+    TextKey.SETTINGS_GROUP_READING to "Reading",
+    TextKey.SETTINGS_GROUP_DATA to "Data",
+    TextKey.SETTINGS_GROUP_APPLICATION to "Application",
+    TextKey.SETTINGS_READING_LANGUAGES to "Reading languages",
+    TextKey.SETTINGS_NO_READING_LANGUAGES to "None yet",
+    TextKey.SETTINGS_NOT_AVAILABLE to "Not available",
+    TextKey.PROVIDER_CONFIGURED to "{0}, configured",
+    TextKey.ABOUT to "About",
+    TextKey.ABOUT_VERSION to "Version {0}",
+    TextKey.ABOUT_LICENCE to
+        "Lekto is free software, released under the GNU Affero General Public License v3.0.",
+    TextKey.ABOUT_SOURCE to "Source code",
     TextKey.VAULT_AND_SYNC to "Vault and sync",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
         "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
@@ -137,10 +148,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.REMOVE_KEY to "Remove key",
     TextKey.CONNECTION to "Connection",
     TextKey.APP_LANGUAGE_DESCRIPTION to "The language Lekto uses for its own texts.",
-    TextKey.APPEARANCE_DESCRIPTION to
-        "Choose how Lekto looks on this device. The theme recolours the whole app — never a book's " +
-        "text, which keeps its face, size and margins. Your choice stays on this device and never " +
-        "travels with your vault.",
     TextKey.THEME_SYSTEM to "System",
     TextKey.THEME_SYSTEM_DESCRIPTION to "Follows the device setting",
     TextKey.THEME_LIGHT to "Light",
@@ -149,7 +156,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.THEME_DARK_DESCRIPTION to "Warm night, light ink",
     TextKey.THEME_SEPIA to "Sepia",
     TextKey.THEME_SEPIA_DESCRIPTION to "Rag paper",
-    TextKey.CURRENT_THEME to "Current",
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to

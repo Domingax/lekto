@@ -68,6 +68,14 @@ sealed interface Destination {
         override val section: ShellSection = ShellSection.SETTINGS
     }
 
+    /**
+     * The **App language** screen (ADR-0034; issue #214): the languages the app
+     * ships, chosen a screen away from the index.
+     */
+    data object AppLanguage : Destination {
+        override val section: ShellSection = ShellSection.SETTINGS
+    }
+
     /** The **LLM provider** screen (issue #213): an entry inside **Settings**. */
     data object ProviderSettings : Destination {
         override val section: ShellSection = ShellSection.SETTINGS
@@ -80,9 +88,14 @@ sealed interface Destination {
 
     /**
      * The attribution screen (issue #149), reached from the **Languages** surface
-     * for the data it offers.
+     * for the data it offers and from the Settings index (issue #214).
      */
     data object Attribution : Destination {
+        override val section: ShellSection = ShellSection.SETTINGS
+    }
+
+    /** The **About** screen (issue #214): the version, the licence and the source. */
+    data object About : Destination {
         override val section: ShellSection = ShellSection.SETTINGS
     }
 

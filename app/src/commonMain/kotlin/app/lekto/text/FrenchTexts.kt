@@ -15,7 +15,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.LANGUAGES to "Langues",
     TextKey.ATTRIBUTION to "Attribution",
     TextKey.BACK to "Retour",
-    TextKey.OPEN to "Ouvrir",
     TextKey.DISMISS to "Fermer",
     TextKey.DELETE to "Supprimer",
     TextKey.CANCEL to "Annuler",
@@ -114,6 +113,18 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_LANGUAGES to "Langues",
     TextKey.SECTION_SYNC to "Synchronisation",
     TextKey.SECTION_LLM_PROVIDER to "Fournisseur LLM",
+    TextKey.SETTINGS_GROUP_READING to "Lecture",
+    TextKey.SETTINGS_GROUP_DATA to "Données",
+    TextKey.SETTINGS_GROUP_APPLICATION to "Application",
+    TextKey.SETTINGS_READING_LANGUAGES to "Langues de lecture",
+    TextKey.SETTINGS_NO_READING_LANGUAGES to "Aucune pour l'instant",
+    TextKey.SETTINGS_NOT_AVAILABLE to "Indisponible",
+    TextKey.PROVIDER_CONFIGURED to "{0}, configuré",
+    TextKey.ABOUT to "À propos",
+    TextKey.ABOUT_VERSION to "Version {0}",
+    TextKey.ABOUT_LICENCE to
+        "Lekto est un logiciel libre, publié sous la licence GNU Affero General Public License v3.0.",
+    TextKey.ABOUT_SOURCE to "Code source",
     TextKey.VAULT_AND_SYNC to "Coffre et synchronisation",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
         "Découvrez les langues que Lekto propose pour la lecture, classées selon celles où vous avez le " +
@@ -139,10 +150,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.REMOVE_KEY to "Supprimer la clé",
     TextKey.CONNECTION to "Connexion",
     TextKey.APP_LANGUAGE_DESCRIPTION to "La langue que Lekto utilise pour ses propres textes.",
-    TextKey.APPEARANCE_DESCRIPTION to
-        "Choisissez l'apparence de Lekto sur cet appareil. Le thème recolore toute l'application — " +
-        "jamais le texte d'un livre, qui garde sa police, sa taille et ses marges. Votre choix reste " +
-        "sur cet appareil et ne voyage jamais avec votre coffre.",
     TextKey.THEME_SYSTEM to "Système",
     TextKey.THEME_SYSTEM_DESCRIPTION to "Suit le réglage de l'appareil",
     TextKey.THEME_LIGHT to "Clair",
@@ -151,7 +158,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.THEME_DARK_DESCRIPTION to "Nuit chaude, encre claire",
     TextKey.THEME_SEPIA to "Sépia",
     TextKey.THEME_SEPIA_DESCRIPTION to "Papier chiffon",
-    TextKey.CURRENT_THEME to "Actuel",
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to

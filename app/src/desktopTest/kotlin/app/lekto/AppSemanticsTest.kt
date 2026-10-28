@@ -97,10 +97,17 @@ import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
 import app.lekto.reader.READING_PREFERENCES_TAG
+import app.lekto.settings.ABOUT_LINK_TAG
+import app.lekto.settings.ABOUT_SOURCE_TAG
+import app.lekto.settings.ABOUT_VERSION_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APPEARANCE_LINK_TAG
-import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
+import app.lekto.settings.APP_LANGUAGE_BACK_TAG
+import app.lekto.settings.APP_LANGUAGE_LINK_TAG
+import app.lekto.settings.ATTRIBUTION_BACK_TAG
+import app.lekto.settings.ATTRIBUTION_LINK_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
+import app.lekto.settings.LEKTO_SOURCE_URL
 import app.lekto.settings.MODEL_FIELD_TAG
 import app.lekto.settings.PROVIDER_CONNECT_TAG
 import app.lekto.settings.PROVIDER_LINK_TAG
@@ -353,7 +360,6 @@ class AppSemanticsTest {
         // paper: choosing one writes through and marks it, with no toast (ADR-0036).
         assertEquals(AppTheme.DARK, appTheme.load())
         onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).assertIsSelected()
-        onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -1083,6 +1089,26 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun theIndexReachesAttributionAndAboutInOneTap() = runComposeUiTest {
+        var opened: String? = null
+        setContent { App(environment(InMemoryLibrary(), openUrl = { url -> opened = url })) }
+
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(ATTRIBUTION_LINK_TAG).performScrollTo().performClick()
+        onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
+            .performScrollTo().assertIsDisplayed()
+        onNodeWithTag(ATTRIBUTION_BACK_TAG).performClick()
+
+        // The About row names the version, and its source opens where the platform
+        // sends a link (issue #214).
+        onNodeWithTag(ABOUT_LINK_TAG).performScrollTo().performClick()
+        onNodeWithTag(ABOUT_VERSION_TAG).assertTextEquals("Version 0.1.0")
+        onNodeWithTag(ABOUT_SOURCE_TAG).performScrollTo().performClick()
+
+        assertEquals(LEKTO_SOURCE_URL, opened)
+    }
+
+    @Test
     fun reachesTheLanguagesSurfaceFromSettings() = runComposeUiTest {
         setContent { App(environment(InMemoryLibrary(), languages = languageCatalog())) }
 
@@ -1095,8 +1121,7 @@ class AppSemanticsTest {
     fun theAppLanguageOffersTheLanguagesTheAppShips() = runComposeUiTest {
         setContent { App(environment(InMemoryLibrary(), languageSettings = InMemoryLanguageSettingsStore())) }
 
-        tapSection(ShellSection.SETTINGS)
-        onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        openAppLanguage()
 
         onNodeWithTag(appLanguageOptionTag("en")).assertIsDisplayed()
         onNodeWithTag(appLanguageOptionTag("fr")).assertIsDisplayed()
@@ -1109,13 +1134,14 @@ class AppSemanticsTest {
         val settings = InMemoryLanguageSettingsStore()
         setContent { App(environment(InMemoryLibrary(), languageSettings = settings)) }
 
-        tapSection(ShellSection.SETTINGS)
-        onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        openAppLanguage()
         onNodeWithTag(appLanguageOptionTag("fr")).performClick()
 
         assertEquals("fr", settings.load().appLanguage)
-        // Settings shows the choice without a relaunch — and the whole interface
-        // follows it into French (ADR-0034).
+        // The whole interface follows the choice without a relaunch (ADR-0034), and
+        // the index names it under **App language** once back on the list.
+        onNodeWithTag(APP_LANGUAGE_BACK_TAG).performClick()
+        onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
         onNodeWithText("français").assertIsDisplayed()
     }
 
@@ -1337,6 +1363,12 @@ class AppSemanticsTest {
     private fun ComposeUiTest.openLanguages() {
         tapSection(ShellSection.SETTINGS)
         onNodeWithTag(LANGUAGES_LINK_TAG).performScrollTo().performClick()
+    }
+
+    /** Reaches the **App language** screen from Settings and its row (issue #214). */
+    private fun ComposeUiTest.openAppLanguage() {
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(APP_LANGUAGE_LINK_TAG).performScrollTo().performClick()
     }
 
     /** Reaches the **LLM provider** screen from Settings and its doorway (issue #213). */

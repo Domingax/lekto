@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -33,7 +32,6 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
-import app.lekto.theme.hoverWash
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Trash
 import kotlinx.coroutines.launch
@@ -133,13 +131,13 @@ private fun DeleteRowFrame(
     val theme = MaterialTheme.colorScheme
     // The frame paints the paper over the swipe's red, so the action stays hidden
     // until the reader uncovers it. The hover wash is drawn over the paper, not
-    // under it, and it is square: a row is a band across the list, not a card
-    // (§8: the wash marks the row, it does not round it into a surface).
+    // under it, and it is a rounded band inset from the row's edges: it reads as
+    // the target under the pointer, not as a highlighted table cell (§8).
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(theme.background)
-            .background(if (hovered) hoverWash(theme.onBackground) else Color.Transparent)
+            .rowHover(hovered, theme.onBackground)
             .padding(vertical = LektoSpacing.BetweenRows)
             .hoverable(interaction),
         verticalAlignment = verticalAlignment,

@@ -243,7 +243,10 @@ two settings forms add one sheet, `settings-forms-light.png` (issue #213): the
 arrow and serif title, their printed-form rows — label, value, hairline — the one
 filled action per screen (`Connection` on the provider, `Sync now` on the vault),
 the vault's outlined `Connection`, and `Remove key` and `Disconnect` in the
-reserved red. The launcher
+reserved red. The Settings index adds `settings-index-<paper>.png` per paper
+(issue #214): the serif title, the three muted group labels, each row's title and
+current value as ink bars with its chevron, and the hairline that parts two rows of
+a group. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.
@@ -493,7 +496,7 @@ row and each demanded level to a red → green before the commit.
 The icon set (issue #184) is generated once and committed, so the Kotlin it adds
 is not hand-written and the generator is not run in tests. `LektoIconsTest` pins
 what a regeneration could silently change: the 24 dp grid, the 2-unit round
-stroke, the thirteen-name set, and the back arrow as the only icon that mirrors in
+stroke, the fourteen-name set, and the back arrow as the only icon that mirrors in
 a right-to-left layout.
 
 `VaultStore` is the first seam to use the pattern: `testkit` holds
@@ -847,10 +850,18 @@ crash — is a behaviour over the in-memory vault in
 export/import controls are UI semantics in `VaultSettingsScreenSemanticsTest`,
 and the same screen is re-proved on a simulated Android runtime in
 `app/androidUnitTest/.../settings/VaultSettingsScreenSemanticsTest` (issue #77).
-Since issue #213 the two forms are screens of their own, so `SettingsScreenSemanticsTest`
-keeps the index's own surfaces — the **Appearance** and **Languages** doorways,
-the **app language** picker, and the doorways to the provider and the vault — on
-both lanes, as the parity rule requires (issue #73). The
+Since issue #213 the two forms are screens of their own, and since issue #214 the
+index is all that is left: `SettingsScreenSemanticsTest` proves, on both lanes, the
+three named groups — **Reading**, **Data**, **Application** — one row per area,
+each row carrying its current value in its own semantics, each screen one tap away,
+and no control on the list itself. The **App language** and **About** screens the
+index opens have their own `AppLanguageScreenSemanticsTest` and
+`AboutScreenSemanticsTest`, on both lanes too (issue #73). The row's
+**Reading languages** value is a pure split, `ReadingLanguagesTest` in
+`app/desktopTest`: the languages the reader's books are in, most-read first, a
+subtag folded to its base and a book with no language left out. The version the
+**About** screen shows is declared by the app and by the Android build, so
+`AppVersionSynchronisationTest` in `architecture` fails when the two drift apart. The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
 (`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
@@ -1044,8 +1055,9 @@ or its export. `AppLanguagesTest` pins the languages the app ships and the
 app-language default; `TranslationLanguageChoicesTest` pins the translation
 languages a manifest publishes and the translation-language default;
 `LanguageSettingsControllerTest` pins that the two are chosen independently,
-written through and never overwritten by a default. The **Settings** surface's
-app-language picker is `SettingsScreenSemanticsTest` on both lanes, and the
+written through and never overwritten by a default. The **App language** screen,
+one tap from the Settings index's own row, is `AppLanguageScreenSemanticsTest` on
+both lanes; the row's current value is `SettingsScreenSemanticsTest`'s, and the
 **Languages** surface's translation-language picker is
 `LanguagesScreenSemanticsTest` on both lanes; choosing each and the first-launch
 defaults are `AppSemanticsTest` on both lanes, including the case this fixes — an
@@ -1153,11 +1165,11 @@ an unknown domain text passes through unchanged, and that a stored message
 round-trips so a kept sync outcome still reads after a restart. It also pins that
 the platform file dialogs keep only their titles, with no filter text the system
 dialog would never display (issue #219). The whole
-**Settings** screen re-rendered in French is `SettingsScreenSemanticsTest` on both
-lanes, as are the two screens it now opens,
-`ProviderSettingsScreenSemanticsTest` and `VaultSettingsScreenSemanticsTest`
-(issue #213), and the picker's re-render without a relaunch is `AppSemanticsTest`
-on both lanes.
+**Settings** index re-rendered in French is `SettingsScreenSemanticsTest` on both
+lanes, as are the screens it now opens — `AppLanguageScreenSemanticsTest`,
+`AboutScreenSemanticsTest`, `ProviderSettingsScreenSemanticsTest` and
+`VaultSettingsScreenSemanticsTest` (issues #213, #214) — and the language choice's
+re-render without a relaunch is `AppSemanticsTest` on both lanes.
 
 ## Naming and placement
 
