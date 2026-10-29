@@ -410,8 +410,19 @@ endpoint answered.
   carries a check rather than a word.
 - **App language** — the languages the app ships, by name, the current one checked; the choice
   re-renders the whole interface at once.
-- **Languages** — one row per **Reading language**, its state (word-difficulty data, offline
-  dictionary) and the download action when one is missing.
+- **Languages** — two sections. The **Translation language** is a printed-form row at the top, on its
+  own. A small `By language` label then opens the second section with a sentence explaining what the
+  two **Derived asset**s do: word difficulty colours each word by how hard it is for the reader's
+  level, and the offline dictionary looks words up with no network. The rows follow, one per
+  **Reading language**: its name in the body size, its **Reader level** picker, then each
+  **Derived asset**'s state in the muted ink with its download as a quiet text action —
+  `Download 12 MB` when the manifest names the compressed asset's size, plain `Download` when it
+  does not, `Download again`, or `Downloading…` while it runs. The level picker stays on
+  the row: the planche's summary must not lose the feature, and it fits one screen's width. It reads
+  `Level`, the current band and a chevron, and opens the six bands and **Not set**. A
+  corrupt or incompatible asset says so, and reads differently from one never installed. The
+  downloads are never full-width filled buttons, **Reload list** is the header's quiet action, and
+  the attribution link sits at the foot in the muted ink.
 - **LLM provider** — provider, key, model. The key is masked with a reveal, and the screen says
   where it is stored: the device's keychain, never the vault. `Connection` tests it and stores it
   only when the provider answered; a stored key shows masked dots rather than an empty field.
@@ -514,6 +525,13 @@ the page behind it.
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
   makes a missing one fail `./gradlew check` (§8). The reader page overrides descendants with
   `pointerHoverIcon` directly, because its `SelectionContainer` would otherwise keep the text cursor.
+- The sub-screen header — `app/src/commonMain/kotlin/app/lekto/ui/ScreenHeader.kt`: the `arrow-left`
+  and serif title every screen one tap below a section shares, with the quiet action a screen adds
+  at its edge (the **Languages** surface's **Reload list**) (§7.5, §7.6).
+- The row's quiet action — `app/src/commonMain/kotlin/app/lekto/ui/TextAction.kt`: a text action with
+  the 48 dp target, the hand and the row's hover wash, used where the identity wants a control
+  without a filled button (§7.5, §8). The **Languages** surface's downloads, **Reload list** and
+  **Reader level** picker are its callers.
 - The list row's delete — `app/src/commonMain/kotlin/app/lekto/ui/RowDelete.kt`: `DeletingRow` is
   the one gesture the Library's rows and the Vocabulary list's share (§7.1, §7.4) — a trailing
   swipe on touch, a trash in the row's wash on hover with a pointer, the slot always reserved and

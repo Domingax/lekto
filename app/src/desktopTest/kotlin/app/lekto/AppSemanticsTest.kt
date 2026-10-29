@@ -80,6 +80,7 @@ import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
+import app.lekto.language.LANGUAGES_BACK_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
 import app.lekto.language.TRANSLATION_LANGUAGE_PICKER_TAG
 import app.lekto.language.languageDifficultyDownloadTag
@@ -296,7 +297,7 @@ class AppSemanticsTest {
 
         typeSearch("zzz")
         openLanguages()
-        onNodeWithText("Back").performClick()
+        onNodeWithTag(LANGUAGES_BACK_TAG).performClick()
         tapSection(ShellSection.LIBRARY)
         onNodeWithText("No books match \"zzz\".").assertDoesNotExist()
     }
@@ -627,7 +628,7 @@ class AppSemanticsTest {
         }
 
         openLanguages()
-        onNodeWithText("English → French").assertIsDisplayed()
+        onNodeWithText("English → French", substring = true).assertIsDisplayed()
 
         onNodeWithTag(LANGUAGES_ATTRIBUTION_TAG).performClick()
 

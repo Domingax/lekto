@@ -35,6 +35,21 @@ class LanguageManifestReadTest :
             readLanguageManifest(testLanguageManifest(offered)) shouldBe LanguageManifestRead.Read(offered)
         }
 
+        test("reads each artefact's published size when the manifest carries it") {
+            val offered = listOf(
+                testOfferedLanguage(
+                    "en",
+                    difficulty = "lekto-difficulty-en.sqlite.gz",
+                    dictionaries = listOf(
+                        OfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz", sizeBytes = 5_678),
+                    ),
+                    difficultySizeBytes = 1_234,
+                ),
+            )
+
+            readLanguageManifest(testLanguageManifest(offered)) shouldBe LanguageManifestRead.Read(offered)
+        }
+
         test("a manifest whose format this build does not read is refused") {
             val bytes = testLanguageManifest(
                 listOf(testOfferedLanguage("en")),

@@ -18,6 +18,7 @@ import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ScreenHeader
 import app.lekto.ui.handCursor
 
 /** The test tag on the way back to Settings, so a UI test can click exactly it. */
@@ -55,7 +56,7 @@ fun AboutScreen(actions: AboutActions = AboutActions(), modifier: Modifier = Mod
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
-        SettingsFormHeader(
+        ScreenHeader(
             title = texts[TextKey.ABOUT],
             backTag = ABOUT_BACK_TAG,
             titleTag = ABOUT_TITLE_TAG,

@@ -20,10 +20,11 @@ data class OfferedLanguage(
     val displayName: String,
     val difficulty: String?,
     val dictionaries: List<OfferedDictionary>,
+    val difficultySizeBytes: Long? = null,
 )
 
 /** A **Dictionary pack** offered for a (Reading language × **Translation language**) pair. */
-data class OfferedDictionary(val translationLanguage: String, val name: String)
+data class OfferedDictionary(val translationLanguage: String, val name: String, val sizeBytes: Long? = null)
 
 /** What reading a **Language manifest**'s bytes produced. */
 sealed interface LanguageManifestRead {
@@ -72,18 +73,19 @@ private data class ManifestLanguage(
 )
 
 @Serializable
-private data class ManifestArtifact(val name: String)
+private data class ManifestArtifact(val name: String, val sizeBytes: Long? = null)
 
 @Serializable
-private data class ManifestDictionary(val translationLanguage: String, val name: String)
+private data class ManifestDictionary(val translationLanguage: String, val name: String, val sizeBytes: Long? = null)
 
 private fun ManifestLanguage.toOffered(): OfferedLanguage = OfferedLanguage(
     language = language,
     displayName = readingLanguageName(language),
     difficulty = difficulty?.name,
     dictionaries = dictionaries.map { dictionary ->
-        OfferedDictionary(dictionary.translationLanguage, dictionary.name)
+        OfferedDictionary(dictionary.translationLanguage, dictionary.name, dictionary.sizeBytes)
     },
+    difficultySizeBytes = difficulty?.sizeBytes,
 )
 
 private val manifestJson: Json = Json { ignoreUnknownKeys = true }

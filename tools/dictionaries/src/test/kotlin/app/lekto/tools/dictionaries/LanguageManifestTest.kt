@@ -20,6 +20,26 @@ class LanguageManifestTest {
     }
 
     @Test
+    fun `the manifest carries an artefact's published size when the release records it`() {
+        val manifest = LanguageManifest(
+            LanguageManifestFormat.VERSION,
+            listOf(
+                ManifestLanguage(
+                    language = "en",
+                    difficulty = ManifestArtifact("lekto-difficulty-en.sqlite.gz", sizeBytes = 1234),
+                    dictionaries = listOf(
+                        ManifestDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz", sizeBytes = 5678),
+                    ),
+                ),
+            ),
+        )
+
+        val json = manifest.canonicalJson()
+        assertTrue("\"sizeBytes\": 1234" in json)
+        assertTrue("\"sizeBytes\": 5678" in json)
+    }
+
+    @Test
     fun `a run without a difficulty table lists the pack alone and omits the table`() {
         val manifest = buildLanguageManifest(
             dictionaries = listOf(LanguagePair("en", "fr")),

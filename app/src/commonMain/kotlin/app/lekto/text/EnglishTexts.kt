@@ -127,8 +127,10 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.ABOUT_SOURCE to "Source code",
     TextKey.VAULT_AND_SYNC to "Vault and sync",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
-        "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
-        "Set your level and download the word-difficulty data and the offline dictionary for each there.",
+        "Word difficulty colours each word by how hard it is for your level, and the offline " +
+        "dictionary looks words up with no network. Set your level in a language, then download " +
+        "what it is missing.",
+    TextKey.LANGUAGES_BY_LANGUAGE to "By language",
     TextKey.VAULT_SECTION_DESCRIPTION to
         "The vault lives in the app's private storage. It holds your books, your vocabulary and " +
         "your positions.",
@@ -188,27 +190,28 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
         "Lekto hasn't loaded the list of languages it offers yet. Reload the list, or check your connection.",
     TextKey.LOADING_LANGUAGES to "Loading the language list…",
     TextKey.DIFFICULTY_NOT_PUBLISHED to "Lekto doesn't publish word-difficulty data for this language yet.",
-    TextKey.DOWNLOADING_DIFFICULTY to "Downloading word-difficulty data…",
+    TextKey.DOWNLOAD to "Download",
+    TextKey.DOWNLOAD_SIZE to "Download {0}",
+    TextKey.DOWNLOADING to "Downloading…",
     TextKey.DOWNLOAD_AGAIN to "Download again",
     TextKey.DOWNLOAD_DIFFICULTY to "Download word-difficulty data",
+    TextKey.DOWNLOAD_DICTIONARY to "Download the offline dictionary",
     TextKey.DICTIONARY_NOT_PUBLISHED to "Lekto doesn't publish an offline dictionary for this language yet.",
-    TextKey.DOWNLOADING_DICTIONARY to "Downloading the offline dictionary…",
-    TextKey.DOWNLOAD_DICTIONARY to "Download offline dictionary",
-    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to
-        "The offline dictionary isn't installed yet. Download it to look words up with no network.",
-    TextKey.DICTIONARY_STATUS_READY to "The offline dictionary is installed. Words are looked up with no network.",
+    TextKey.SIZE_KILOBYTES to "{0} KB",
+    TextKey.SIZE_MEGABYTES to "{0} MB",
+    TextKey.SIZE_GIGABYTES to "{0} GB",
+    TextKey.READER_LEVEL to "Level",
+    TextKey.SET_READER_LEVEL to "Set reader level",
+    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to "Offline dictionary isn't installed.",
+    TextKey.DICTIONARY_STATUS_READY to "Offline dictionary is installed.",
     TextKey.DICTIONARY_STATUS_INCOMPATIBLE to
-        "The installed dictionary is format {0}, but this app reads format {1}. Download it again.",
-    TextKey.DICTIONARY_STATUS_CORRUPT to
-        "The installed dictionary is damaged and couldn't be read. Download it again.",
-    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to
-        "Word-difficulty data isn't installed yet. Download it to colour words by how hard they are.",
-    TextKey.DIFFICULTY_STATUS_READY to
-        "Word-difficulty data is installed. Words are coloured by how hard they are for your level.",
+        "Offline dictionary is format {0}, but this app reads format {1}.",
+    TextKey.DICTIONARY_STATUS_CORRUPT to "Offline dictionary is damaged.",
+    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to "Word difficulty isn't installed.",
+    TextKey.DIFFICULTY_STATUS_READY to "Word difficulty is installed.",
     TextKey.DIFFICULTY_STATUS_INCOMPATIBLE to
-        "The installed word-difficulty data is format {0}, but this app reads format {1}. Download it again.",
-    TextKey.DIFFICULTY_STATUS_CORRUPT to
-        "The installed word-difficulty data is damaged and couldn't be read. Download it again.",
+        "Word difficulty is format {0}, but this app reads format {1}.",
+    TextKey.DIFFICULTY_STATUS_CORRUPT to "Word difficulty is damaged.",
 
     // Attribution.
     TextKey.ATTRIBUTION_DICTIONARY_GRANT to

@@ -411,15 +411,18 @@ The same run also writes a **language manifest**
 (`--language-manifest`, default `language-manifest.json` in the output directory):
 the catalogue of what the release offers for reading — each **Reading language**
 with the **Difficulty table** published for it and the **Dictionary pack**s
-published for its pairs, each pair naming its **Translation language** (issues
-#145, #161). It is built from the run's own output, so a run that published
-nothing yields an empty manifest and the catalogue can never advertise an artefact
-that was not built. The workflow uploads it under its own date-free name beside
-the assets, so the app can fetch one constant address,
+published for its pairs, each pair naming its **Translation language**, and each
+artefact carrying its compressed asset's size in bytes once the workflow has
+gzipped it (issues #145, #161, #215). It is built from the run's own output, so a
+run that published nothing yields an empty manifest and the catalogue can never
+advertise an artefact that was not built. The workflow compresses the assets,
+annotates the manifest with their sizes, then writes `SHA256SUMS` and uploads both
+under date-free names, so the app can fetch one constant address,
 `releases/latest/download/language-manifest.json`. Its format version is declared
 by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 `LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test
-(ADR-0013).
+(ADR-0013). The `sizeBytes` field is additive at that same version, so a build
+that predates it ignores it.
 
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
 each pair's alias into the device-local **derived store**, validates the format

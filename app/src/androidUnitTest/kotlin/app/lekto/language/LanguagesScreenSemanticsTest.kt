@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -61,6 +62,16 @@ class LanguagesScreenSemanticsTest {
     }
 
     @Test
+    fun theLanguagesSectionExplainsWhatTheDownloadsDo() {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("en"))))
+
+        compose.onNodeWithText("By language").assertIsDisplayed()
+        compose.onNodeWithText("Word difficulty colours each word", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("the offline dictionary looks words up with no network", substring = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun reloadingIsOfferedEvenWhenTheListIsShown() {
         var reloaded = false
         render(
@@ -112,7 +123,7 @@ class LanguagesScreenSemanticsTest {
         var backed = false
         render(LanguagesUiState(), onBack = { backed = true })
 
-        compose.onNodeWithText("Back").performClick()
+        compose.onNodeWithTag(LANGUAGES_BACK_TAG).performClick()
 
         assertTrue(backed)
     }
@@ -128,6 +139,71 @@ class LanguagesScreenSemanticsTest {
         compose.onNodeWithText("Not set").assertIsDisplayed()
         compose.onNodeWithTag(languageLevelPickerTag("fr")).assertIsDisplayed()
         compose.onNodeWithText("B2").assertIsDisplayed()
+    }
+
+    @Test
+    fun eachLanguageExposesItsStateAndItsAction() {
+        render(
+            LanguagesUiState(
+                languages = listOf(
+                    testOfferedLanguage("en", difficulty = DIFFICULTY, dictionaries = listOf(PAIR)),
+                ),
+            ),
+            difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
+            dictionaries = mapOf(DICTIONARY to DictionaryUiState(status = DictionaryPackState.NotInstalled)),
+        )
+
+        compose.onNodeWithTag(languageRowTag("en")).assertIsDisplayed()
+        compose.onNodeWithTag(languageDifficultyStateTag("en")).assertTextEquals("Word difficulty isn't installed.")
+        compose.onNodeWithText("English → French", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(languageDictionaryStateTag(DICTIONARY)).assertTextEquals(
+            "English → French · Offline dictionary isn't installed.",
+        )
+        compose.onNodeWithTag(languageDifficultyDownloadTag("en")).assertTextEquals("Download")
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download")
+    }
+
+    @Test
+    fun aDownloadShowsThePublishedSize() {
+        render(
+            LanguagesUiState(
+                languages = listOf(
+                    testOfferedLanguage(
+                        "en",
+                        difficulty = DIFFICULTY,
+                        dictionaries = listOf(
+                            OfferedDictionary("fr", DICTIONARY, sizeBytes = 2_000_000),
+                        ),
+                        difficultySizeBytes = 12_345_678,
+                    ),
+                ),
+            ),
+        )
+
+        compose.onNodeWithTag(languageDifficultyDownloadTag("en")).assertTextEquals("Download 12 MB")
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download 2 MB")
+    }
+
+    @Test
+    fun aMissingArtifactAndACorruptOneReadAndActDifferently() {
+        render(
+            LanguagesUiState(
+                languages = listOf(
+                    testOfferedLanguage("en", difficulty = DIFFICULTY, dictionaries = listOf(PAIR)),
+                ),
+            ),
+            difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
+            dictionaries = mapOf(
+                DICTIONARY to DictionaryUiState(status = DictionaryPackState.Corrupt("file is not a database")),
+            ),
+        )
+
+        compose.onNodeWithTag(languageDifficultyStateTag("en")).assertTextEquals("Word difficulty isn't installed.")
+        compose.onNodeWithTag(languageDifficultyDownloadTag("en")).assertTextEquals("Download")
+        compose.onNodeWithTag(languageDictionaryStateTag(DICTIONARY)).assertTextEquals(
+            "English → French · Offline dictionary is damaged.",
+        )
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download again")
     }
 
     @Test
@@ -212,7 +288,7 @@ class LanguagesScreenSemanticsTest {
             difficulty = mapOf("en" to DifficultyUiState(installing = true)),
         )
 
-        compose.onNodeWithText("Downloading word-difficulty data", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Downloading…").assertIsDisplayed()
         compose.onNodeWithTag(languageDifficultyDownloadTag("en")).assertIsNotEnabled()
     }
 
@@ -235,7 +311,7 @@ class LanguagesScreenSemanticsTest {
     fun eachPublishedDictionaryIsLabelledByItsPair() {
         render(LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))))
 
-        compose.onNodeWithText("English → French").assertIsDisplayed()
+        compose.onNodeWithText("English → French", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -261,6 +337,7 @@ class LanguagesScreenSemanticsTest {
         )
 
         compose.onNodeWithText("format 9", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download again")
     }
 
     @Test
@@ -306,7 +383,7 @@ class LanguagesScreenSemanticsTest {
             dictionaries = mapOf(DICTIONARY to DictionaryUiState(installing = true)),
         )
 
-        compose.onNodeWithText("Downloading the offline dictionary", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Downloading…").assertIsDisplayed()
         compose.onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertIsNotEnabled()
     }
 

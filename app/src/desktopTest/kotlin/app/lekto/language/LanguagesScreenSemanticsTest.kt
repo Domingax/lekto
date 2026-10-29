@@ -7,6 +7,7 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -46,6 +47,16 @@ class LanguagesScreenSemanticsTest {
         onNodeWithText("English").assertIsDisplayed()
         onNodeWithText("French").assertIsDisplayed()
         onNodeWithTag(LANGUAGES_RELOAD_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theLanguagesSectionExplainsWhatTheDownloadsDo() = runComposeUiTest {
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("en"))))
+
+        onNodeWithText("By language").assertIsDisplayed()
+        onNodeWithText("Word difficulty colours each word", substring = true).assertIsDisplayed()
+        onNodeWithText("the offline dictionary looks words up with no network", substring = true)
+            .assertIsDisplayed()
     }
 
     @Test
@@ -100,7 +111,7 @@ class LanguagesScreenSemanticsTest {
         var backed = false
         render(LanguagesUiState(), onBack = { backed = true })
 
-        onNodeWithText("Back").performClick()
+        onNodeWithTag(LANGUAGES_BACK_TAG).performClick()
 
         assertTrue(backed)
     }
@@ -116,6 +127,71 @@ class LanguagesScreenSemanticsTest {
         onNodeWithText("Not set").assertIsDisplayed()
         onNodeWithTag(languageLevelPickerTag("fr")).assertIsDisplayed()
         onNodeWithText("B2").assertIsDisplayed()
+    }
+
+    @Test
+    fun eachLanguageExposesItsStateAndItsAction() = runComposeUiTest {
+        render(
+            LanguagesUiState(
+                languages = listOf(
+                    testOfferedLanguage("en", difficulty = DIFFICULTY, dictionaries = listOf(PAIR)),
+                ),
+            ),
+            difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
+            dictionaries = mapOf(DICTIONARY to DictionaryUiState(status = DictionaryPackState.NotInstalled)),
+        )
+
+        onNodeWithTag(languageRowTag("en")).assertIsDisplayed()
+        onNodeWithTag(languageDifficultyStateTag("en")).assertTextEquals("Word difficulty isn't installed.")
+        onNodeWithText("English → French", substring = true).assertIsDisplayed()
+        onNodeWithTag(languageDictionaryStateTag(DICTIONARY)).assertTextEquals(
+            "English → French · Offline dictionary isn't installed.",
+        )
+        onNodeWithTag(languageDifficultyDownloadTag("en")).assertTextEquals("Download")
+        onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download")
+    }
+
+    @Test
+    fun aDownloadShowsThePublishedSize() = runComposeUiTest {
+        render(
+            LanguagesUiState(
+                languages = listOf(
+                    testOfferedLanguage(
+                        "en",
+                        difficulty = DIFFICULTY,
+                        dictionaries = listOf(
+                            OfferedDictionary("fr", DICTIONARY, sizeBytes = 2_000_000),
+                        ),
+                        difficultySizeBytes = 12_345_678,
+                    ),
+                ),
+            ),
+        )
+
+        onNodeWithTag(languageDifficultyDownloadTag("en")).assertTextEquals("Download 12 MB")
+        onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download 2 MB")
+    }
+
+    @Test
+    fun aMissingArtifactAndACorruptOneReadAndActDifferently() = runComposeUiTest {
+        render(
+            LanguagesUiState(
+                languages = listOf(
+                    testOfferedLanguage("en", difficulty = DIFFICULTY, dictionaries = listOf(PAIR)),
+                ),
+            ),
+            difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
+            dictionaries = mapOf(
+                DICTIONARY to DictionaryUiState(status = DictionaryPackState.Corrupt("file is not a database")),
+            ),
+        )
+
+        onNodeWithTag(languageDifficultyStateTag("en")).assertTextEquals("Word difficulty isn't installed.")
+        onNodeWithTag(languageDifficultyDownloadTag("en")).assertTextEquals("Download")
+        onNodeWithTag(languageDictionaryStateTag(DICTIONARY)).assertTextEquals(
+            "English → French · Offline dictionary is damaged.",
+        )
+        onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download again")
     }
 
     @Test
@@ -200,7 +276,7 @@ class LanguagesScreenSemanticsTest {
             difficulty = mapOf("en" to DifficultyUiState(installing = true)),
         )
 
-        onNodeWithText("Downloading word-difficulty data", substring = true).assertIsDisplayed()
+        onNodeWithText("Downloading…").assertIsDisplayed()
         onNodeWithTag(languageDifficultyDownloadTag("en")).assertIsNotEnabled()
     }
 
@@ -223,7 +299,7 @@ class LanguagesScreenSemanticsTest {
     fun eachPublishedDictionaryIsLabelledByItsPair() = runComposeUiTest {
         render(LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))))
 
-        onNodeWithText("English → French").assertIsDisplayed()
+        onNodeWithText("English → French", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -249,6 +325,7 @@ class LanguagesScreenSemanticsTest {
         )
 
         onNodeWithText("format 9", substring = true).assertIsDisplayed()
+        onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertTextEquals("Download again")
     }
 
     @Test
@@ -294,7 +371,7 @@ class LanguagesScreenSemanticsTest {
             dictionaries = mapOf(DICTIONARY to DictionaryUiState(installing = true)),
         )
 
-        onNodeWithText("Downloading the offline dictionary", substring = true).assertIsDisplayed()
+        onNodeWithText("Downloading…").assertIsDisplayed()
         onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertIsNotEnabled()
     }
 

@@ -127,9 +127,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.ABOUT_SOURCE to "Code source",
     TextKey.VAULT_AND_SYNC to "Coffre et synchronisation",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
-        "Découvrez les langues que Lekto propose pour la lecture, classées selon celles où vous avez le " +
-        "plus de livres. Définissez votre niveau et téléchargez les données de difficulté des mots et " +
-        "le dictionnaire hors ligne pour chacune.",
+        "La difficulté des mots colore chaque mot selon sa difficulté pour votre niveau, et le " +
+        "dictionnaire hors ligne cherche les mots sans réseau. Définissez votre niveau pour une " +
+        "langue, puis téléchargez ce qui lui manque.",
+    TextKey.LANGUAGES_BY_LANGUAGE to "Par langue",
     TextKey.VAULT_SECTION_DESCRIPTION to
         "Le coffre vit dans le stockage privé de l'application. Il contient vos livres, votre " +
         "vocabulaire et vos positions de lecture.",
@@ -193,34 +194,28 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.LOADING_LANGUAGES to "Chargement de la liste des langues…",
     TextKey.DIFFICULTY_NOT_PUBLISHED to
         "Lekto ne publie pas encore de données de difficulté des mots pour cette langue.",
-    TextKey.DOWNLOADING_DIFFICULTY to "Téléchargement des données de difficulté des mots…",
+    TextKey.DOWNLOAD to "Télécharger",
+    TextKey.DOWNLOAD_SIZE to "Télécharger {0}",
+    TextKey.DOWNLOADING to "Téléchargement…",
     TextKey.DOWNLOAD_AGAIN to "Télécharger à nouveau",
     TextKey.DOWNLOAD_DIFFICULTY to "Télécharger les données de difficulté des mots",
-    TextKey.DICTIONARY_NOT_PUBLISHED to "Lekto ne publie pas encore de dictionnaire hors ligne pour cette langue.",
-    TextKey.DOWNLOADING_DICTIONARY to "Téléchargement du dictionnaire hors ligne…",
     TextKey.DOWNLOAD_DICTIONARY to "Télécharger le dictionnaire hors ligne",
-    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to
-        "Le dictionnaire hors ligne n'est pas encore installé. Téléchargez-le pour chercher des mots " +
-        "sans réseau.",
-    TextKey.DICTIONARY_STATUS_READY to
-        "Le dictionnaire hors ligne est installé. Les mots sont cherchés sans réseau.",
+    TextKey.DICTIONARY_NOT_PUBLISHED to "Lekto ne publie pas encore de dictionnaire hors ligne pour cette langue.",
+    TextKey.SIZE_KILOBYTES to "{0} Ko",
+    TextKey.SIZE_MEGABYTES to "{0} Mo",
+    TextKey.SIZE_GIGABYTES to "{0} Go",
+    TextKey.READER_LEVEL to "Niveau",
+    TextKey.SET_READER_LEVEL to "Définir le niveau de lecture",
+    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to "Le dictionnaire hors ligne n'est pas installé.",
+    TextKey.DICTIONARY_STATUS_READY to "Le dictionnaire hors ligne est installé.",
     TextKey.DICTIONARY_STATUS_INCOMPATIBLE to
-        "Le dictionnaire installé est au format {0}, mais cette application lit le format {1}. " +
-        "Téléchargez-le à nouveau.",
-    TextKey.DICTIONARY_STATUS_CORRUPT to
-        "Le dictionnaire installé est endommagé et n'a pas pu être lu. Téléchargez-le à nouveau.",
-    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to
-        "Les données de difficulté des mots ne sont pas encore installées. Téléchargez-les pour " +
-        "colorer les mots selon leur difficulté.",
-    TextKey.DIFFICULTY_STATUS_READY to
-        "Les données de difficulté des mots sont installées. Les mots sont colorés selon leur " +
-        "difficulté pour votre niveau.",
+        "Le dictionnaire hors ligne est au format {0}, mais cette application lit le format {1}.",
+    TextKey.DICTIONARY_STATUS_CORRUPT to "Le dictionnaire hors ligne est endommagé.",
+    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to "Les données de difficulté ne sont pas installées.",
+    TextKey.DIFFICULTY_STATUS_READY to "Les données de difficulté sont installées.",
     TextKey.DIFFICULTY_STATUS_INCOMPATIBLE to
-        "Les données de difficulté des mots installées sont au format {0}, mais cette application lit " +
-        "le format {1}. Téléchargez-les à nouveau.",
-    TextKey.DIFFICULTY_STATUS_CORRUPT to
-        "Les données de difficulté des mots installées sont endommagées et n'ont pas pu être lues. " +
-        "Téléchargez-les à nouveau.",
+        "Les données de difficulté sont au format {0}, mais cette application lit le format {1}.",
+    TextKey.DIFFICULTY_STATUS_CORRUPT to "Les données de difficulté sont endommagées.",
 
     // Attribution.
     TextKey.ATTRIBUTION_DICTIONARY_GRANT to
