@@ -10,6 +10,12 @@ you touched in view, and that word stays highlighted. The page number does not
 change: the page is not split again, and the top of it is hidden for as long as
 the panel is open.
 
+On a desktop with a wide window the panel is not raised over the page at all: it
+takes the reader's right-hand column, and the page keeps its width. Its level name
+stands above the chips there, because five chips leave no room for the name beside
+them. Close it and the column returns to the chapter list. See
+[Reading](/reading#on-a-desktop).
+
 - The word in the reading serif, with its part of speech and pronunciation under
   it.
 - The word's **Lemma** when the form you touched is an inflection, so you can see

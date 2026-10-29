@@ -85,6 +85,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.MARK_AS_UNFINISHED to "Mark as unfinished",
     TextKey.BACK_TO_LIBRARY to "Back to Library",
     TextKey.CHAPTERS to "Chapters",
+    TextKey.NO_CHAPTERS to "This book has no chapter list.",
     TextKey.READING_PREFERENCES to "Aa",
     TextKey.READING_TEXT to "Text",
     TextKey.READING_FACE to "Text face",

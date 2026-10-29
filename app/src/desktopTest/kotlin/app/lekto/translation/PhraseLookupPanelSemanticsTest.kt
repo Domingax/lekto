@@ -174,6 +174,24 @@ class PhraseLookupPanelSemanticsTest {
         )
     }
 
+    @Test
+    fun theColumnShapeFillsTheColumnInsteadOfCappingItsHeight() = runComposeUiTest {
+        // In the reader's context column the panel is not a sheet raised from an
+        // edge, so the sheet's height cap does not apply (issue #199).
+        setContent {
+            Panel(inColumn = true, modifier = Modifier.size(width = 320.dp, height = 640.dp))
+        }
+
+        val panel = onNodeWithTag(PHRASE_PANEL_TAG).getUnclippedBoundsInRoot()
+        val height = panel.bottom.value - panel.top.value
+        val ceiling = 640f * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+
+        assertTrue(
+            height > ceiling + 1f,
+            "the column panel is $height dp tall, so it is still capped as a $ceiling dp sheet",
+        )
+    }
+
     @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide them.
     @Composable
     private fun Panel(
@@ -184,6 +202,7 @@ class PhraseLookupPanelSemanticsTest {
         onOpenSettings: () -> Unit = {},
         onDismiss: () -> Unit = {},
         modifier: Modifier = Modifier,
+        inColumn: Boolean = false,
     ) {
         MaterialTheme {
             PhraseLookupPanel(
@@ -193,6 +212,7 @@ class PhraseLookupPanelSemanticsTest {
                 translation = translation,
                 onOpenSettings = onOpenSettings,
                 modifier = modifier,
+                inColumn = inColumn,
             )
         }
     }

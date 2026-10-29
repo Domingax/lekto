@@ -120,6 +120,26 @@ a level for, nothing changes and every unsaved word stays highlighted.
 
 Tap a **Word token** to open the lookup panel. See [Word lookup](/word-lookup).
 
+## On a desktop
+
+A wide window keeps a column at the reader's right, and the page never moves when
+the column changes. With nothing touched, the column lists the book's chapters —
+the same list the bottom bar raises on a phone, with the chapter you are reading
+marked. Choose a chapter there and Lekto jumps to it and saves your place, just
+as it does from the phone's list. When a book has no chapter list, the column
+says so.
+
+Tap a word or select a phrase and the column shows it instead: the word's
+dictionary entry, or the phrase and its translation, with the same controls the
+phone's panel offers. Close it and the chapter list comes back — or tap the
+position in the bottom bar, which returns the column to the list without closing
+the word by hand. Because the column is part of the layout rather than a panel
+over the text, selecting a word never reflows the page or moves it sideways.
+
+In a narrow window — under about 1100 dp, so on any phone — there is no column:
+the chapter list opens from the position in the bottom bar, and the lookup panel
+is raised from the bottom over the page.
+
 ## Screenshots
 
 ### Desktop

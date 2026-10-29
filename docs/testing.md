@@ -1139,6 +1139,20 @@ and opening the sheet dismissing an open lookup — with
 `ReaderChaptersAndroidTest` re-proving the `LazyColumn` sheet on the Android host
 lane and `AndroidBackTest` pinning that Back closes the sheet before the reader.
 
+The desktop **context column** (issue #199) is the same list beside the page, so
+`ReaderContextColumnTest` in `app/desktopTest` runs the reader at the breakpoint
+and one dp below it: the column is reserved at 1100 dp and absent below, it lists
+the chapters with the current one selected, its empty state names a book with no
+list, a column choice jumps and saves exactly as a sheet choice does, a word
+selection swaps the column to the lookup and back while the page keeps its width,
+and the position returns the column to the list while a lookup is open.
+The reader hosts the panel rather than drawing it, so the test drives a stand-in
+and only the placement is the reader's. The same current-row semantics run in
+`ReaderChaptersTest` and its Android twin, and
+`reader-context-column-light.png` is the screenshot lane's planche of the shape —
+drawn from the same tokens, like every other planche, while the semantics above
+prove the component itself.
+
 The app's own **App theme** (issue #182; ADR-0036) — Light, Dark, Sepia, or System
 following the platform — is proved at its own levels too. `AppTheme.resolve` is
 the one resolution function, so `AppThemeTest` in `core/commonTest` pins that

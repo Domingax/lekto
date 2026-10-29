@@ -6,6 +6,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -19,6 +21,7 @@ import app.lekto.core.text.Chapter
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.testkit.WhitespaceTextSegmenter
+import app.lekto.testkit.blockStartOffset
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,6 +37,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
 class ReaderChaptersAndroidTest {
+
+    private companion object {
+        const val SECOND_CHAPTER_BLOCK = 2
+    }
 
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
@@ -58,6 +65,16 @@ class ReaderChaptersAndroidTest {
     )
 
     @Test
+    fun theCurrentChapterRowIsSelected() {
+        compose.setContent { Reader(book, initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK)) }
+
+        compose.onNodeWithTag(READER_POSITION_TAG).performClick()
+
+        compose.onNodeWithTag(readerChapterRowTag(0)).assertIsNotSelected()
+        compose.onNodeWithTag(readerChapterRowTag(1)).assertIsSelected()
+    }
+
+    @Test
     fun theSheetListsTheChaptersAndAJumpShowsItsPage() {
         compose.setContent { Reader(book) }
 
@@ -76,10 +93,10 @@ class ReaderChaptersAndroidTest {
     }
 
     @Composable
-    private fun Reader(text: ReaderText) {
+    private fun Reader(text: ReaderText, initialOffset: Int = 0) {
         MaterialTheme {
             ReaderScreen(
-                document = ReaderDocument(text, renderer),
+                document = ReaderDocument(text, renderer, initialOffset),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
                 actions = ReaderActions(onBack = {}),
             )

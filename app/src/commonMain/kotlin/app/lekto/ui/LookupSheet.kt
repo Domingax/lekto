@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -48,6 +49,11 @@ private val HandleHeight = 4.dp
  * handle. A panel, not an outlined card: the surface tone and a hairline stand in
  * for the shadows the identity forbids.
  *
+ * [inColumn] is the desktop shape (issue #199): the panel is the reserved context
+ * column, so it fills the room it is given, sits beside the page rather than over
+ * it, and drops the drag handle — it was not raised from an edge. The surface tone
+ * stays; the hairline is the column's own rule.
+ *
  * [content] is the panel's own body — a word and its senses, or a phrase and its
  * translation — so the word and phrase panels cannot drift apart. The sheet
  * swallows taps that land on it, so only a tap truly outside it — which its
@@ -58,8 +64,33 @@ private val HandleHeight = 4.dp
 internal fun LookupSheet(
     modifier: Modifier = Modifier,
     sheetModifier: Modifier = Modifier,
+    inColumn: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    if (inColumn) {
+        ColumnSheet(modifier, sheetModifier, content)
+    } else {
+        BottomSheet(modifier, sheetModifier, content)
+    }
+}
+
+/** The desktop shape: the panel fills the context column and has no edge to be raised from. */
+@Composable
+private fun ColumnSheet(modifier: Modifier, sheetModifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier.fillMaxSize().then(sheetModifier),
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.matchParentSize().swallowTaps())
+            Column(Modifier.fillMaxSize()) { content() }
+        }
+    }
+}
+
+/** The phone shape: a sheet raised from the bottom edge, capped so the page stays visible. */
+@Composable
+private fun BottomSheet(modifier: Modifier, sheetModifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val maxSheetHeight =
             if (constraints.hasBoundedHeight) maxHeight * LOOKUP_SHEET_MAX_HEIGHT_FRACTION else Dp.Infinity

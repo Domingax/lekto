@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -23,11 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.theme.Dark
@@ -76,6 +80,19 @@ class ReaderGoldenTest {
         onRoot().captureRoboImage("reader-text-panel-light.png")
     }
 
+    /**
+     * The desktop shape (issue #199; docs/design.md §6): the page and its two
+     * bands, and the reserved context column beside them with the chapter list —
+     * the heading, the hierarchy and the current row in ink.
+     */
+    @Test
+    fun lightContextColumn() = runSkikoComposeUiTest(
+        size = Size(CONTEXT_COLUMN_BREAKPOINT.value, CONTEXT_COLUMN_WINDOW_HEIGHT.value),
+    ) {
+        setContent { LektoTheme(theme = Light) { ContextColumnPreview() } }
+        onRoot().captureRoboImage("reader-context-column-light.png")
+    }
+
     private fun pageGolden(name: String, theme: ColorScheme) = runComposeUiTest {
         setContent { LektoTheme(theme = theme) { ReaderPreview(panelOpen = false) } }
         onRoot().captureRoboImage("reader-$name.png")
@@ -85,6 +102,9 @@ class ReaderGoldenTest {
 /** The preview's window, the size the planche draws a phone at. */
 private val READER_WIDTH = 360.dp
 private val READER_HEIGHT = 640.dp
+
+/** The desktop preview's height; its width is the context column's real breakpoint. */
+private val CONTEXT_COLUMN_WINDOW_HEIGHT = 720.dp
 
 /** A bar where a line of text would be: its height and the share of the width it takes. */
 private data class LineBar(val height: Dp, val share: Float)
@@ -273,6 +293,72 @@ private fun Chip(width: Dp, selected: Boolean) {
         contentAlignment = Alignment.Center,
     ) {
         Line(if (selected) theme.onPrimary else theme.onSurface, CHIP_LABEL_BAR)
+    }
+}
+
+/**
+ * The desktop reader's frame (issue #199; docs/design.md §6): the same page and
+ * bands as the phone, with the reserved context column beside them — parted by a
+ * 1 dp rule and filled with the surface tone. The column carries the **Chapters**
+ * heading and the book's hierarchy, the current row in ink and the others in the
+ * body ink, exactly where the live list puts them.
+ */
+@Composable
+private fun ContextColumnPreview() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        Modifier
+            .size(width = CONTEXT_COLUMN_BREAKPOINT, height = CONTEXT_COLUMN_WINDOW_HEIGHT)
+            .background(theme.background),
+    ) {
+        Column(Modifier.weight(1f)) {
+            ChromeBand()
+            PageLines()
+            PageBarBand()
+        }
+        ContextColumn()
+    }
+}
+
+/** The reserved column: a hairline rule, the surface tone, and the chapter list it shows when idle. */
+@Composable
+private fun ContextColumn() {
+    val theme = MaterialTheme.colorScheme
+    Row(Modifier.width(CONTEXT_COLUMN_WIDTH).fillMaxHeight()) {
+        Box(Modifier.width(1.dp).fillMaxHeight().background(theme.outline))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(theme.surface)
+                .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.InsidePanel),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
+        ) {
+            ChapterRowBar(depth = 0, current = false, heading = true)
+            ChapterRowBar(depth = 0, current = false)
+            ChapterRowBar(depth = 1, current = false)
+            ChapterRowBar(depth = 1, current = true)
+            ChapterRowBar(depth = 0, current = false)
+        }
+    }
+}
+
+/** One row of the chapter list as a bar: indented by its depth, in ink while it is the current chapter. */
+@Composable
+private fun ChapterRowBar(depth: Int, current: Boolean, heading: Boolean = false) {
+    val theme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = LektoSpacing.TouchTarget)
+            .padding(start = CHAPTER_INDENT * depth),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val colour = when {
+            heading -> theme.onBackground
+            current -> theme.primary
+            else -> theme.onSurface
+        }
+        Line(colour, if (heading) PANEL_TITLE_BAR else ROW_LABEL_BAR)
     }
 }
 
