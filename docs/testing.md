@@ -1143,8 +1143,9 @@ The desktop **context column** (issue #199) is the same list beside the page, so
 `ReaderContextColumnTest` in `app/desktopTest` runs the reader at the breakpoint
 and one dp below it: the column is reserved at 1100 dp and absent below, it lists
 the chapters with the current one selected, its empty state names a book with no
-list, a column choice jumps and saves exactly as a sheet choice does, and a word
-selection swaps the column to the lookup and back while the page keeps its width.
+list, a column choice jumps and saves exactly as a sheet choice does, a word
+selection swaps the column to the lookup and back while the page keeps its width,
+and the position returns the column to the list while a lookup is open.
 The reader hosts the panel rather than drawing it, so the test drives a stand-in
 and only the placement is the reader's. The same current-row semantics run in
 `ReaderChaptersTest` and its Android twin, and

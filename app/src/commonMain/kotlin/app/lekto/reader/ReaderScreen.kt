@@ -326,18 +326,10 @@ private fun ReaderBands(
                 page = state.index,
                 total = state.total,
                 chapter = current?.chapter?.title?.takeIf { chapters.isNotEmpty() },
-                // The list is already in the column at the breakpoint, so the
-                // position stays a label there and the column is the only way in
-                // (issue #199).
-                hasChapters = chapters.isNotEmpty() && !contextColumn,
+                hasChapters = positionOpensChapters(chapters, contextColumn, actions),
                 onPrevious = state::previous,
                 onNext = state::next,
-                onOpenChapters = {
-                    // The lookup panel and the chapter sheet are never open
-                    // together, so opening the list dismisses a lookup first.
-                    actions.onDismissOverlay?.invoke()
-                    state.openChapters()
-                },
+                onOpenChapters = { showChapters(state, actions, contextColumn) },
             )
         }
         if (state.chromeVisible && state.preferencesVisible) {
@@ -348,6 +340,29 @@ private fun ReaderBands(
             )
         }
     }
+}
+
+/**
+ * Whether the position is a control: always below the breakpoint, where it raises
+ * the chapter sheet; at the breakpoint only while a lookup is open, because the
+ * list is already the column's idle state, and the position is then the way back
+ * to it without closing the word by hand (issue #199). A lookup is open exactly
+ * when the caller offers a dismiss.
+ */
+private fun positionOpensChapters(
+    chapters: List<ReaderChapterEntry>,
+    contextColumn: Boolean,
+    actions: ReaderActions,
+): Boolean = chapters.isNotEmpty() && (!contextColumn || actions.onDismissOverlay != null)
+
+/**
+ * Brings the chapter list back: the list and a lookup are never shown together, so
+ * this closes one and reveals the other — the sheet below the breakpoint, the
+ * column's own list above it, where there is no sheet to raise.
+ */
+private fun showChapters(state: ReaderState, actions: ReaderActions, contextColumn: Boolean) {
+    actions.onDismissOverlay?.invoke()
+    if (!contextColumn) state.openChapters()
 }
 
 /**

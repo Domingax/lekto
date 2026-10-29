@@ -19,6 +19,7 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SkikoComposeUiTest
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -143,6 +144,22 @@ class ReaderContextColumnTest {
             "a column jump saves the chapter's first block, like the sheet",
         )
         onNodeWithTag(readerChapterRowTag(0)).assertIsSelected()
+    }
+
+    @Test
+    fun thePositionReturnsTheColumnToTheChaptersWhileALookupIsOpen() = columnTest(WIDE) {
+        setContent { Reader() }
+
+        tapFirstWord()
+        onNodeWithTag(FAKE_LOOKUP_TAG).assertIsDisplayed()
+        // With a word shown, the position is a control again: it is the way back
+        // to the list without closing the word first (issue #199).
+        onNodeWithTag(READER_POSITION_TAG).assertHasClickAction()
+
+        onNodeWithTag(READER_POSITION_TAG).performClick()
+
+        onNodeWithText("Chapters").assertIsDisplayed()
+        onNodeWithTag(FAKE_LOOKUP_TAG).assertDoesNotExist()
     }
 
     @Test

@@ -289,8 +289,9 @@ The chapter list is a bottom sheet over the page on a phone, up to about 60 % of
 the reserved context column on desktop (§6). It keeps the book's hierarchy, highlights the current
 chapter and scrolls it into view. It closes on a choice, a tap outside, its Close action, or Back.
 The lookup panel and the chapter list are never open together. In the column the list is always
-there, so the position stays a label and a column choice jumps exactly as a sheet choice does; a
-book with no list reads `No chapters in this book.` there.
+there, so the position is a label — except while a word or phrase is shown, when tapping it returns
+the column to the list rather than making the reader close the word first. A column choice jumps
+exactly as a sheet choice does; a book with no list reads `This book has no chapter list.` there.
 
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
 at once, and the page number and total update as pagination counts them.
