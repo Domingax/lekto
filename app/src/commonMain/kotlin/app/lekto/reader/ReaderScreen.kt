@@ -112,8 +112,8 @@ internal const val READER_CHAPTER_SHEET_SCRIM_TAG = "reader-chapter-sheet-scrim"
  * The reader's callbacks, bundled so the screen's signature stays small: a tap on
  * a word, a phrase selected by a long-press drag, a way back to the library, the
  * position a page turn lands on, a **Reading preference** change (ADR-0035) the
- * **Aa** panel raises, and — when a lookup panel is open above the reader — the
- * dismiss a tap on the page outside it runs.
+ * **Aa** panel raises, the dismiss a tap on the page outside a lookup panel runs,
+ * and the two declarations the end-of-book state raises (issue #200).
  */
 data class ReaderActions(
     val onWordTap: (WordTap) -> Unit = {},
@@ -127,6 +127,10 @@ data class ReaderActions(
      * word up or turning the page, so "tap outside to dismiss" never misfires.
      */
     val onDismissOverlay: (() -> Unit)? = null,
+    /** The reader declared the book **Finished** from the end-of-book state (ADR-0038). */
+    val onMarkFinished: () -> Unit = {},
+    /** The reader undid the declaration; only the fact is removed, never the position (ADR-0038). */
+    val onMarkUnfinished: () -> Unit = {},
 )
 
 /**
@@ -143,13 +147,19 @@ data class ReaderActions(
  *
  * [ReaderActions.onPositionChange] is called with the character offset of each
  * page the reader turns to, so the caller can persist the reading position.
+ *
+ * [initiallyFinished] is the declaration the session was opened with: it never
+ * changes where the book opens, and only seeds the end-of-book state's marked
+ * face (ADR-0038).
  */
+@Suppress("LongParameterList") // The document, its modifier, the reader's actions, the panel height and the seed fact.
 @Composable
 fun ReaderScreen(
     document: ReaderDocument,
     modifier: Modifier = Modifier,
     actions: ReaderActions = ReaderActions(),
     overlayHeightPx: Int = 0,
+    initiallyFinished: Boolean = false,
 ) {
     // The reader builds its typography from the preference (ADR-0035), so a change
     // recomposes the text and repaginates at once, the way a Reader level change
@@ -165,7 +175,9 @@ fun ReaderScreen(
     val entries = remember(document.text) { document.text.chapterEntries() }
     val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val state = remember(document.text) { ReaderState(actions.onPositionChange, document.initialOffset) }
+        val state = remember(document.text) {
+            ReaderState(actions.onPositionChange, document.initialOffset, initiallyFinished)
+        }
         val pages = rememberReaderPages(chapterText, styles, chapterStarts, state.paginationStart)
         state.bind(pages, chapterText.length, document.initialOffset)
         ReaderContent(document, chapterText, entries, styles, state, actions, overlayHeightPx)
@@ -195,13 +207,25 @@ private fun ReaderContent(
 ) {
     val current = state.page?.let { page -> entries.entryAt(page.start) }
     Box(Modifier.fillMaxSize()) {
-        ReaderBands(document, chapterText, entries, current, styles, state, actions, overlayHeightPx)
-        if (state.chaptersVisible) ChapterOverlay(entries, current, state)
+        if (state.endVisible) {
+            EndOfBookPanel(
+                title = document.text.title,
+                finished = state.finished,
+                actions = actions,
+                onShowFinished = state::showFinished,
+                onShowUnfinished = state::showUnfinished,
+            )
+        } else {
+            ReaderBands(document, chapterText, entries, current, styles, state, actions, overlayHeightPx)
+            if (state.chaptersVisible) ChapterOverlay(entries, current, state)
+        }
     }
     // Back closes the chapter sheet first, then the **Aa** panel, before the shell
-    // sees it (issues #185, #198).
+    // sees it (issues #185, #198). The end-of-book state is last, so while it is
+    // open Back returns to the last page rather than leaving the book (#200).
     PlatformBackHandler(enabled = state.chaptersVisible) { state.dismissChapters() }
     PlatformBackHandler(enabled = state.preferencesVisible) { state.dismissPreferences() }
+    PlatformBackHandler(enabled = state.endVisible) { state.dismissEnd() }
 }
 
 /** The page and its two bands, plus the **Aa** panel under them. */
@@ -298,7 +322,12 @@ private fun overlayDismiss(state: ReaderState, actions: ReaderActions): (() -> U
  * losing the reader's place (ADR-0035).
  */
 @Stable
-private class ReaderState(private val onPositionChange: (Int) -> Unit, initialOffset: Int) {
+@Suppress("TooManyFunctions") // One screen's state: page moves, chrome, and the end state it owns, kept in one anchor.
+private class ReaderState(
+    private val onPositionChange: (Int) -> Unit,
+    initialOffset: Int,
+    initiallyFinished: Boolean,
+) {
     var chromeVisible by mutableStateOf(true)
         private set
 
@@ -308,6 +337,18 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit, initialOf
 
     /** Whether the chapter sheet is open; it and the **Aa** panel are never both up. */
     var chaptersVisible by mutableStateOf(false)
+        private set
+
+    /**
+     * Whether the reader is on the full-screen end-of-book state (issue #200;
+     * ADR-0038). It opens only on a next tap at the last page, never on reaching
+     * it, and it hides the chrome.
+     */
+    var endVisible by mutableStateOf(false)
+        private set
+
+    /** Whether the reader has declared the book **Finished**; the end panel shows its marked face from it. */
+    var finished by mutableStateOf(initiallyFinished)
         private set
 
     /**
@@ -348,7 +389,43 @@ private class ReaderState(private val onPositionChange: (Int) -> Unit, initialOf
 
     fun previous() = goTo(index - 1)
 
-    fun next() = goTo(index + 1)
+    /**
+     * Advances one page, or — on the last page — raises the end-of-book state
+     * (issue #200). Reaching the last page by any other route never opens it:
+     * only this explicit next does, and it never declares the book finished by
+     * itself.
+     */
+    fun next() {
+        if (reached && index >= pages.lastIndex) {
+            openEnd()
+        } else {
+            goTo(index + 1)
+        }
+    }
+
+    /** Raises the full-screen end state, which hides the reader's chrome. */
+    private fun openEnd() {
+        chromeVisible = false
+        preferencesVisible = false
+        chaptersVisible = false
+        endVisible = true
+    }
+
+    /** Closes the end state and returns to the last page, the way system back does. */
+    fun dismissEnd() {
+        endVisible = false
+        chromeVisible = true
+    }
+
+    /** Shows the end state's marked face; the record write is the caller's action (ADR-0038). */
+    fun showFinished() {
+        finished = true
+    }
+
+    /** Shows the end state's unmarked face; the record removal is the caller's action (ADR-0038). */
+    fun showUnfinished() {
+        finished = false
+    }
 
     /** Applies a tap on the middle third: hide or show the chrome. */
     fun toggleChrome() {

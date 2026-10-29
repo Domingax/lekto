@@ -32,11 +32,13 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.BookProgress
+import app.lekto.core.book.FinishedBook
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.book.ReadingState
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.language.LanguageCatalog
@@ -89,10 +91,14 @@ import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.library.libraryStateTag
 import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
+import app.lekto.reader.READER_BACK_TO_LIBRARY_TAG
+import app.lekto.reader.READER_END_PANEL_TAG
+import app.lekto.reader.READER_MARK_FINISHED_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
@@ -246,6 +252,34 @@ class AppSemanticsTest {
         openBook()
 
         awaitPage(2)
+    }
+
+    @Test
+    fun declaringFinishedFromTheEndStateWritesTheFactAndTheLibraryFilterSeesIt() = runComposeUiTest {
+        val library = InMemoryLibrary().apply {
+            import("lantern.epub", byteArrayOf(1))
+            // Open on the last page, so the end state is one tap away.
+            readAt("b1", offset = Int.MAX_VALUE)
+        }
+        setContent { App(environment(library)) }
+        openBook()
+
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        // The declaration is a vault write off the app's dispatcher (issue #200).
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { library.finished("b1") != null }
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).performClick()
+
+        // The default filter is Unread and In progress, so the only book is
+        // hidden and the shelf says why (ADR-0038).
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText("All your books are finished.").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag(libraryStateTag(ReadingState.FINISHED)).performClick()
+        onNodeWithText("The Lantern Keeper").assertIsDisplayed()
+        onNodeWithText("EPUB · Finished").assertIsDisplayed()
     }
 
     @Test
@@ -1614,11 +1648,13 @@ private const val FIRST_FETCH_MILLIS: Long = 300
  * vault. Shared with `AppWindowInsetsSemanticsTest`, which needs a book to open
  * without standing a vault up.
  */
+@Suppress("TooManyFunctions") // It stands in for the whole BookLibrary seam; one function per member.
 internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val positions = mutableMapOf<String, Int>()
     private val lastRead = mutableMapOf<String, Long>()
+    private val finished = mutableMapOf<String, FinishedBook>()
     private var reads = 0L
 
     @Synchronized override fun books(): List<Book> = stored
@@ -1634,6 +1670,9 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
                 )
             }
         }.toMap(),
+        readingStateByBook = stored.associate { book ->
+            book.id to ReadingState.of(hasPosition = book.id in positions, finished = book.id in finished)
+        },
     )
 
     @Synchronized override fun measure(bookId: String): ReadingProgress? {
@@ -1660,6 +1699,7 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
             book = book,
             text = longText(book),
             position = positions[book.id]?.let { offset -> ReadingPosition(book.id, offset) },
+            finished = finished[book.id],
         )
     }
 
@@ -1667,11 +1707,23 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
         stored = stored.filterNot { book -> book.id == id }
         positions.remove(id)
         lastRead.remove(id)
+        finished.remove(id)
     }
 
     @Synchronized
     override fun position(bookId: String): ReadingPosition? =
         positions[bookId]?.let { offset -> ReadingPosition(bookId, offset) }
+
+    @Synchronized override fun finished(bookId: String): FinishedBook? = finished[bookId]
+
+    @Synchronized override fun markFinished(bookId: String) {
+        if (stored.none { book -> book.id == bookId }) return
+        finished[bookId] = FinishedBook(bookId, Instant.fromEpochMilliseconds(++reads))
+    }
+
+    @Synchronized override fun markUnfinished(bookId: String) {
+        finished.remove(bookId)
+    }
 
     @Synchronized override fun savePosition(position: ReadingPosition) {
         positions[position.bookId] = position.offset
@@ -1680,6 +1732,11 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
 
     /** The last offset written, so a test can wait for the asynchronous save. */
     @Synchronized fun savedOffset(): Int? = positions.values.firstOrNull()
+
+    /** Test hook: opens the book at [offset], so a test can resume on its last page. */
+    @Synchronized fun readAt(bookId: String, offset: Int) {
+        positions[bookId] = offset
+    }
 
     /** Enough paragraphs to span several pages at any test viewport. */
     private fun longText(book: Book): StructuredText = StructuredText(

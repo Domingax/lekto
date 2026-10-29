@@ -120,21 +120,37 @@ class JvmBookLibraryTest :
             library.open(book.id)?.position shouldBe ReadingPosition(book.id, 987)
         }
 
+        test("a finished declaration lands in its own file under progress and round-trips") {
+            val root = newRoot()
+            val library = libraryOver(root)
+            val book = library.import("awkward.epub", EpubFixtures.awkward())
+
+            library.markFinished(book.id)
+
+            root.resolve("progress/${FinishedBookRecord.idOf(book.id)}.json").isFile shouldBe true
+            root.resolve("progress/${ReadingPositionRecord.idOf(book.id)}.json").isFile shouldBe false
+            library.finished(book.id)?.bookId shouldBe book.id
+            library.open(book.id)?.finished?.bookId shouldBe book.id
+        }
+
         test("deleting a book removes its files on disk and writes both tombstones") {
             val root = newRoot()
             val tombstones = tombstonesBeside(root)
             val library = libraryOver(root, tombstones = tombstones)
             val book = library.import("awkward.epub", EpubFixtures.awkward())
             library.savePosition(ReadingPosition(book.id, offset = 12))
+            library.markFinished(book.id)
 
             library.delete(book.id)
 
             root.resolve("books/${book.id}.json").isFile shouldBe false
             root.resolve("_attachments/${book.id}").isFile shouldBe false
             root.resolve("progress/${ReadingPositionRecord.idOf(book.id)}.json").isFile shouldBe false
+            root.resolve("progress/${FinishedBookRecord.idOf(book.id)}.json").isFile shouldBe false
             File(root.parentFile, "${root.name}-derived/book-text/${book.id}.json").isFile shouldBe false
             library.books() shouldBe emptyList()
             tombstones.get(book.id) shouldNotBe null
             tombstones.get(ReadingPositionRecord.idOf(book.id)) shouldNotBe null
+            tombstones.get(FinishedBookRecord.idOf(book.id)) shouldNotBe null
         }
     })

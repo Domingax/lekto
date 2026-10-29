@@ -35,6 +35,7 @@ import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
 import app.lekto.theme.contentColorOn
+import app.lekto.ui.ChipFrame
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.SEARCH_ICON_SIZE
 import app.lekto.ui.icons.LektoIcons
@@ -129,6 +130,7 @@ private fun ShelfPreview() {
             Line(theme.onBackground, IMPORT_WORD_BAR)
         }
         SearchSurface()
+        FilterChips()
         SectionHeading(top = LektoSpacing.BetweenRelatedLines)
         PREVIEW_BOOKS.filter { book -> book.recentlyRead }.forEach { book -> PreviewRow(book) }
         SectionHeading(top = LektoSpacing.BetweenBlocks)
@@ -160,6 +162,36 @@ private fun SearchSurface() {
         Line(theme.onSurfaceVariant, SEARCH_PLACEHOLDER_BAR)
     }
 }
+
+/**
+ * The **Reading state** filter row (issue #200; docs/design.md §7.1): the same
+ * [ChipFrame] the rest of the app uses, two chips inked and one on the paper,
+ * with a bar where each label would be. The row is what the golden records; the
+ * words are the semantics suite's.
+ */
+@Composable
+private fun FilterChips() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines),
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        listOf(true, true, false).forEach { selected ->
+            ChipFrame(selected = selected) {
+                Box(
+                    Modifier
+                        .width(CHIP_BAR_WIDTH)
+                        .height(CHIP_BAR_HEIGHT)
+                        .background(if (selected) theme.onPrimary else theme.onSurfaceVariant, LektoRadii.Control),
+                )
+            }
+        }
+    }
+}
+
+/** The bars that stand in for a filter chip's word and its box. */
+private val CHIP_BAR_WIDTH = 28.dp
+private val CHIP_BAR_HEIGHT = 10.dp
 
 /** A group's heading: the serif section title, drawn as a bar, with the gap that parts the groups. */
 @Composable

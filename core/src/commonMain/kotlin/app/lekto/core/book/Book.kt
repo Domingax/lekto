@@ -27,5 +27,13 @@ data class Book(
  *
  * [position] is the saved reading position, or `null` when the book has never
  * been opened; the reader may restore it to open where the user left off.
+ * [finished] is the reader's declaration, or `null` when they have not made one:
+ * the reader shows its end-of-book state from the fact, and always opens at
+ * [position], never on that state (ADR-0038).
  */
-data class ReadingSession(val book: Book, val text: StructuredText, val position: ReadingPosition? = null)
+data class ReadingSession(
+    val book: Book,
+    val text: StructuredText,
+    val position: ReadingPosition? = null,
+    val finished: FinishedBook? = null,
+)

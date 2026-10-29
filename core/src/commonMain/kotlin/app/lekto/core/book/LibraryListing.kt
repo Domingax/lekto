@@ -28,10 +28,26 @@ data class LibraryListing(
      * **Derived asset** (ADR-0005).
      */
     val progressByBook: Map<String, BookProgress> = emptyMap(),
+
+    /**
+     * Each book's **Reading state**, keyed by book id (issue #200). A finished
+     * book is in the listing — it falls into the title-ordered rest — but never
+     * leads the **Library**, because that group is for books the reader can
+     * continue (ADR-0038).
+     */
+    val readingStateByBook: Map<String, ReadingState> = emptyMap(),
 ) {
 
     /** What [book]'s row says about its **Reading progress**, defaulting to `Not started`. */
     fun progressOf(book: Book): BookProgress = progressByBook[book.id] ?: BookProgress.NotStarted
+
+    /**
+     * [book]'s **Reading state**. A listing built before the states existed, or
+     * one whose map omits the book, falls back to the position it already knows:
+     * a book with progress is **In progress**, and one without is **Unread**.
+     * **Finished** is only ever the declared fact, never guessed.
+     */
+    fun readingStateOf(book: Book): ReadingState = stateOf(book.id, readingStateByBook, progressByBook)
 
     /**
      * The books whose title matches [query] (issue #173), in the order the screen
@@ -61,24 +77,33 @@ data class LibraryListing(
         /**
          * Splits [books] into the recently read and the rest.
          *
-         * A book is recently read when [lastReadByBook] carries its id. Both
-         * groups are ordered by title, ignoring case, so the result does not
-         * depend on the order [books] arrives in; the last-read group is then
-         * ordered by [lastReadByBook], most recent first. Equal last-read
-         * instants keep the title order, including the tie at [LAST_READ_LIMIT].
+         * A book is recently read when [lastReadByBook] carries its id and its
+         * [ReadingState] is not **Finished**: the leading group is for books the
+         * reader can continue, so a finished book falls into the title-ordered
+         * rest even if it was the last book read (ADR-0038). Both groups are
+         * ordered by title, ignoring case, so the result does not depend on the
+         * order [books] arrives in; the last-read group is then ordered by
+         * [lastReadByBook], most recent first. Equal last-read instants keep the
+         * title order, including the tie at [LAST_READ_LIMIT].
          *
          * [progressByBook] carries each book's **Reading progress** (issue #196);
          * an empty map leaves every row at `Not started`, which is what a vault
-         * with no positions holds.
+         * with no positions holds. [readingStateByBook] carries the
+         * declaration-derived state; a book missing from it falls back to the
+         * progress map ([readingStateOf]).
          */
         fun of(
             books: List<Book>,
             lastReadByBook: Map<String, Instant>,
             progressByBook: Map<String, BookProgress> = emptyMap(),
+            readingStateByBook: Map<String, ReadingState> = emptyMap(),
         ): LibraryListing {
             val byTitle = books.inTitleOrder()
             val lastRead = byTitle
-                .filter { book -> lastReadByBook.containsKey(book.id) }
+                .filter { book ->
+                    lastReadByBook.containsKey(book.id) &&
+                        stateOf(book.id, readingStateByBook, progressByBook) != ReadingState.FINISHED
+                }
                 .sortedWith(
                     compareByDescending<Book> { book -> lastReadByBook.getValue(book.id) }
                         .thenBy { book -> book.title.lowercase() },
@@ -89,6 +114,7 @@ data class LibraryListing(
                 lastRead = lastRead,
                 others = byTitle.filterNot { book -> book.id in lastReadIds },
                 progressByBook = progressByBook,
+                readingStateByBook = readingStateByBook,
             )
         }
     }
@@ -96,6 +122,14 @@ data class LibraryListing(
 
 /** The books in title order, ignoring case: the Library's order for everything but the last read. */
 internal fun List<Book>.inTitleOrder(): List<Book> = sortedBy { book -> book.title.lowercase() }
+
+/**
+ * The state a book with [id] is in, from its declared states or, for a listing
+ * built without one, from its **Reading position**: progress means **In progress**,
+ * and absent progress means **Unread**. **Finished** is only ever declared.
+ */
+private fun stateOf(id: String, states: Map<String, ReadingState>, progress: Map<String, BookProgress>): ReadingState =
+    states[id] ?: if (progress.containsKey(id)) ReadingState.IN_PROGRESS else ReadingState.UNREAD
 
 /**
  * The Latin letters an accented or ligated character folds to, so a reader who
