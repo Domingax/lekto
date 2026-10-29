@@ -45,9 +45,14 @@ private val HandleHeight = 4.dp
 /**
  * The shell both lookup panels share (docs/design.md §7.3; issues #210, #211):
  * a sheet raised from the bottom over the reader, square where it joins the edge,
- * capped at [LOOKUP_SHEET_MAX_HEIGHT_FRACTION] of the screen and marked by a drag
- * handle. A panel, not an outlined card: the surface tone and a hairline stand in
- * for the shadows the identity forbids.
+ * capped at [maxHeightFraction] of the screen and marked by a drag handle. A panel,
+ * not an outlined card: the surface tone and a hairline stand in for the shadows
+ * the identity forbids.
+ *
+ * The cap is a parameter because the reader's 45 % exists to keep the page and
+ * the washed word visible; a sheet over a list, where nothing behind must stay in
+ * view, may take more (the Vocabulary level sheet, issue #178). The sheet still
+ * wraps its content, so it is only as tall as it needs.
  *
  * [inColumn] is the desktop shape (issue #199): the panel is the reserved context
  * column, so it fills the room it is given, sits beside the page rather than over
@@ -65,12 +70,13 @@ internal fun LookupSheet(
     modifier: Modifier = Modifier,
     sheetModifier: Modifier = Modifier,
     inColumn: Boolean = false,
+    maxHeightFraction: Float = LOOKUP_SHEET_MAX_HEIGHT_FRACTION,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (inColumn) {
         ColumnSheet(modifier, sheetModifier, content)
     } else {
-        BottomSheet(modifier, sheetModifier, content)
+        BottomSheet(modifier, sheetModifier, maxHeightFraction, content)
     }
 }
 
@@ -90,10 +96,15 @@ private fun ColumnSheet(modifier: Modifier, sheetModifier: Modifier, content: @C
 
 /** The phone shape: a sheet raised from the bottom edge, capped so the page stays visible. */
 @Composable
-private fun BottomSheet(modifier: Modifier, sheetModifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
+private fun BottomSheet(
+    modifier: Modifier,
+    sheetModifier: Modifier,
+    maxHeightFraction: Float,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val maxSheetHeight =
-            if (constraints.hasBoundedHeight) maxHeight * LOOKUP_SHEET_MAX_HEIGHT_FRACTION else Dp.Infinity
+            if (constraints.hasBoundedHeight) maxHeight * maxHeightFraction else Dp.Infinity
         val theme = MaterialTheme.colorScheme
         Surface(
             modifier = Modifier

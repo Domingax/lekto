@@ -153,15 +153,18 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.testkit.inMemoryVocabulary
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
+import app.lekto.vocabulary.VOCABULARY_LEVEL_SHEET_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
 import app.lekto.vocabulary.vocabularyFilterTag
+import app.lekto.vocabulary.vocabularyLevelTag
 import app.lekto.vocabulary.vocabularyMasteryTag
 import app.lekto.vocabulary.vocabularyRowTag
 import org.junit.Assert.assertEquals
@@ -918,7 +921,8 @@ class AppSemanticsTest {
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("lanterne").assertIsDisplayed()
         compose.onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        compose.onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Learned")
+        compose.onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern")), useUnmergedTree = true)
+            .assertTextEquals("Learned")
     }
 
     @Test
@@ -1071,6 +1075,47 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("harbour").assertDoesNotExist()
+    }
+
+    @Test
+    fun changingALevelFromTheVocabularyListWritesItToTheVaultOnAndroid() {
+        // The same action on the touch runtime (issue #178): a tap on the row
+        // raises the level sheet, and one chip is the write.
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", translation = "lanterne", mastery = MasteryLevel.RECOGNIZED))
+        compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        compose.tapSection(ShellSection.VOCABULARY)
+        compose.onNodeWithTag(vocabularyRowTag(key)).performClick()
+        compose.onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.KNOWN
+        }
+        assertEquals("changing the level must not add a second entry", 1, vocabulary.all().size)
+        compose.onNodeWithTag(vocabularyMasteryTag(key), useUnmergedTree = true).assertTextEquals("Known")
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
+    }
+
+    @Test
+    fun aLevelOutsideTheActiveFilterLeavesTheListAndKeepsTheSheetOpenOnAndroid() {
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.UNKNOWN))
+        compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        compose.tapSection(ShellSection.VOCABULARY)
+        compose.onNodeWithTag(vocabularyFilterTag(MasteryLevel.UNKNOWN)).performScrollTo().performClick()
+        compose.onNodeWithTag(vocabularyRowTag(key)).performClick()
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(vocabularyRowTag(key)).fetchSemanticsNodes().isEmpty()
+        }
+        compose.onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
     }
 
     @Test
@@ -1517,10 +1562,6 @@ internal fun environment(
     llm = llm,
     sync = sync,
 )
-
-/** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
-private fun inMemoryVocabulary(): Vocabulary =
-    VaultVocabulary(InMemoryVaultStore(), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
 
 /**
  * Opens the one book every test imports and waits for its reader.

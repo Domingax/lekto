@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -29,7 +28,7 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
-import app.lekto.reader.MasteryChip
+import app.lekto.reader.MasterySelector
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
@@ -223,75 +222,15 @@ private fun Footer(
     inColumn: Boolean,
 ) {
     SheetDivider()
-    if (inColumn) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
-            horizontalAlignment = Alignment.Start,
-        ) {
-            LevelName(vocabulary.level)
-            MasterySelector(vocabulary)
-        }
-    } else {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LevelName(vocabulary.level, Modifier.weight(1f))
-            MasterySelector(vocabulary)
-        }
-    }
+    MasterySelector(
+        level = vocabulary.level,
+        onSelect = vocabulary.onSave,
+        chipTag = ::masteryTag,
+        levelTag = LOOKUP_LEVEL_TAG,
+        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
+        stacked = inColumn,
+    )
     References(shortcuts, onOpenShortcut)
-}
-
-/** The current level's name, in ordinary ink, so a chip's number is never the only signal. */
-@Composable
-private fun LevelName(level: MasteryLevel, modifier: Modifier = Modifier) {
-    val texts = LocalAppTexts.current
-    Column(
-        modifier = modifier.heightIn(min = LektoSpacing.TouchTarget).testTag(LOOKUP_LEVEL_TAG),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = texts[TextKey.MASTERY],
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(texts.masteryName(level), style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-/**
- * The five-point selector (issue #22): tapping a level saves the word there, or
- * moves an already-saved word, so mastery can be changed after saving. Each chip
- * carries its level's colour — the current one filled, the others ringed — so the
- * reader's text colours can be read straight off the selector. The chips are
- * compact, a number, so all five fit one row (docs/design.md, §7.3).
- */
-@Composable
-private fun MasterySelector(vocabulary: VocabularyPanel) {
-    // Each chip's 48 dp target already leaves 8 dp on each side of its 32 dp
-    // frame; a gap between targets would wrap the row on a 360 dp phone.
-    Row {
-        MasteryLevel.entries.forEach { level ->
-            MasteryChip(
-                level = level,
-                label = level.shortLabel(),
-                selected = level == vocabulary.level,
-                onClick = { vocabulary.onSave(level) },
-                modifier = Modifier.testTag(masteryTag(level)),
-                compact = true,
-            )
-        }
-    }
-}
-
-/** A selector chip's compact label: its number, and a check for the known level. */
-private fun MasteryLevel.shortLabel(): String = when (this) {
-    MasteryLevel.UNKNOWN -> "0"
-    MasteryLevel.RECOGNIZED -> "1"
-    MasteryLevel.FAMILIAR -> "2"
-    MasteryLevel.LEARNED -> "3"
-    MasteryLevel.KNOWN -> "4"
 }
 
 /**

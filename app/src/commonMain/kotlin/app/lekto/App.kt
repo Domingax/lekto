@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The composition root: one function per destination and per seam it wires.
+
 package app.lekto
 
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -116,6 +118,7 @@ import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
+import app.lekto.vocabulary.VocabularyLevelSheet
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
 import app.lekto.vocabulary.filterByMastery
@@ -417,7 +420,6 @@ fun App(
                     scope,
                     progress,
                     settings,
-                    vocabulary,
                     mastery,
                     language,
                     languageSettings,
@@ -444,7 +446,6 @@ private fun AppScreens(
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
     settings: Settings,
-    vocabulary: VocabularyController?,
     mastery: MasteryController?,
     language: LanguageController?,
     languageSettings: LanguageSettingsController?,
@@ -603,7 +604,7 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope)
+                Destination.Vocabulary -> VocabularyDestination(mastery, environment, languageSettings, scope)
 
                 Destination.Library -> LibraryDestination(
                     environment,
@@ -786,34 +787,95 @@ private fun LibraryDestination(
 }
 
 /**
- * The vocabulary list destination (issue #23): the reader's live vocabulary, the
- * search query the user has typed, and the delete that removes an entry from the
- * vault. The query is local to the screen; the delete is a blocking vault write,
- * so it runs on the environment's dispatcher, and the reader recolours through
+ * The vocabulary list destination (issue #23; the level sheet #178): the reader's
+ * live vocabulary, the search query the user has typed, the entry whose level
+ * sheet is open, and the delete that removes an entry from the vault. The query
+ * and the open word are local to the screen; the writes are blocking vault writes,
+ * so they run on the environment's dispatcher, and the reader recolours through
  * the controller's bumped revision.
  *
  * The translation each row shows is derived from the installed **Dictionary
- * packs** (issue #67; ADR-0032), not the one the entry froze at save time: the
- * whole list is queried once per entry set and **Translation language**, off the
- * UI thread because the pack read blocks, and an entry no pack answers falls back
- * to its stored translation. Nothing derived is written back to the vault, and the
- * search matches the resolved translation, because the list searches what it
- * shows.
+ * packs** (issue #67; ADR-0032), not the one the entry froze at save time, so the
+ * search matches the resolved translation — the list searches what it shows, and
+ * nothing derived is written back to the vault.
+ *
+ * The level sheet reads the **unfiltered** list, so a level the active filter
+ * excludes lets the row leave while the sheet stays open — and it saves through
+ * the **stored** entry, never the row's derived copy, so the derived translation
+ * never reaches the Vault.
  */
 @Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
 @Composable
 private fun VocabularyDestination(
-    vocabulary: VocabularyController?,
+    mastery: MasteryController?,
     environment: AppEnvironment,
     languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
-    val translationLanguage = languageSettings?.translationLanguage
-    val all = vocabulary?.all().orEmpty()
+    var openKey by remember { mutableStateOf<WordKey?>(null) }
+    val all = mastery?.all().orEmpty()
+    val derived = derivedTranslations(all, languageSettings?.translationLanguage, environment)
+    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
+    // The open word is resolved from the whole list, not the narrowed one, so a
+    // filter that excludes the chosen level cannot close the sheet.
+    val open = openKey?.let { key -> shown.firstOrNull { entry -> entry.key == key } }
+    val vanished = openKey != null && open == null
+    // A word a sync removed, or the reader deleted, closes its own sheet rather
+    // than leaving a stale one over the list.
+    LaunchedEffect(openKey, vanished) { if (vanished) openKey = null }
+
+    val state = if (all.isEmpty()) {
+        VocabularyUiState.Empty
+    } else {
+        VocabularyUiState.Results(
+            entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
+            query = query,
+            masteryLevel = masteryLevel,
+            // The count beside the title is the vocabulary's, not the narrowed list's
+            // (docs/design.md §7.4).
+            total = all.size,
+        )
+    }
+    Box(Modifier.fillMaxSize()) {
+        VocabularyScreen(
+            state = state,
+            actions = VocabularyActions(
+                onSearch = { text -> query = text },
+                onFilter = { chosen -> masteryLevel = chosen },
+                onClearSearch = { query = "" },
+                onDelete = { entry ->
+                    scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
+                },
+                onOpen = { entry -> openKey = entry.key },
+            ),
+        )
+        VocabularyLevelOverlay(open, mastery, environment, scope, onDismiss = { openKey = null })
+    }
+    // Back closes the sheet before the shell sees it, so dismissing a sheet never
+    // costs the reader their screen (docs/design.md §6).
+    PlatformBackHandler(enabled = open != null) { openKey = null }
+}
+
+/**
+ * The translation each row shows, derived from the installed **Dictionary packs**
+ * (issue #67; ADR-0032): the whole list is queried once per entry set and
+ * **Translation language**, off the UI thread because the pack read blocks, and an
+ * entry no pack answers falls back to its stored translation.
+ */
+@Composable
+private fun derivedTranslations(
+    all: List<VocabularyEntry>,
+    translationLanguage: String?,
+    environment: AppEnvironment,
+): Map<WordKey, String> {
     var derived by remember { mutableStateOf(emptyMap<WordKey, String>()) }
-    LaunchedEffect(all, translationLanguage, environment.dictionary) {
+    // Keyed on what the query reads, not on the entries themselves: a level change
+    // rewrites an entry, and re-querying every pack for the whole list to answer a
+    // question whose answer did not change would make each save cost a list.
+    val sources = all.map { entry -> entry.key to entry.translation }
+    LaunchedEffect(sources, translationLanguage, environment.dictionary) {
         // Each Reading language's pack is resolved here, on the composition thread
         // where the reader resolves its own, so the services' per-pair installer
         // cache is only ever written from one thread; only the blocking query moves
@@ -828,29 +890,36 @@ private fun VocabularyDestination(
             }
         }
     }
-    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
-    val state = if (all.isEmpty()) {
-        VocabularyUiState.Empty
-    } else {
-        VocabularyUiState.Results(
-            entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
-            query = query,
-            masteryLevel = masteryLevel,
-            // The count beside the title is the vocabulary's, not the narrowed list's
-            // (docs/design.md §7.4).
-            total = all.size,
-        )
-    }
-    VocabularyScreen(
-        state = state,
-        actions = VocabularyActions(
-            onSearch = { text -> query = text },
-            onFilter = { chosen -> masteryLevel = chosen },
-            onClearSearch = { query = "" },
-            onDelete = { entry ->
-                scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
-            },
-        ),
+    return derived
+}
+
+/**
+ * The level sheet over the list (issue #178): the open word, and the one write it
+ * raises. The save starts from the **stored** entry, never the row's derived copy,
+ * so a pack's translation never reaches the **Vault** (ADR-0032).
+ */
+@Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
+@Composable
+private fun VocabularyLevelOverlay(
+    entry: VocabularyEntry?,
+    mastery: MasteryController?,
+    environment: AppEnvironment,
+    scope: CoroutineScope,
+    onDismiss: () -> Unit,
+) {
+    if (entry == null) return
+    VocabularyLevelSheet(
+        entry = entry,
+        onSave = { level ->
+            val levelWriter = mastery
+            val stored = levelWriter?.entryFor(entry.key)
+            if (levelWriter != null && stored != null) {
+                scope.launch {
+                    withContext(environment.dispatcher) { levelWriter.save(stored.copy(mastery = level)) }
+                }
+            }
+        },
+        onDismiss = onDismiss,
     )
 }
 

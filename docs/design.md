@@ -364,7 +364,13 @@ search or a level narrowed the list to.
 
 A row is the **word in the serif** — it is the word as the book printed it — then its colour-dotted
 level and name, its translation, and the sentence it came from in the muted ink; a hairline parts
-two rows. The row's one tap is reserved for the word panel (#178).
+two rows. The row's one tap opens the word's **level sheet** (#178): the word, the same translation
+and sentence the row shows, and the five levels by number with the current one named and ringed. One
+tap on a level writes it and closes nothing — the marker moves, the row behind changes, and a level
+the active filter excludes simply leaves the list, which is the confirmation. The sheet carries no
+dictionary senses, no pronunciation and no references: a saved word already holds what it needs, so
+opening it never asks for a **Dictionary pack**. On a wide window it keeps a column's width, centred,
+rather than stretching to the edges.
 
 **Delete never sits on the row as a red word.** A row deletes the way a Library row does (§7.1): a
 swipe from the trailing edge on a touch screen, and a muted-ink trash on the row's first line when a
@@ -525,7 +531,8 @@ the page behind it.
   `LauncherIconTest` the wiring.
 - The screens — one file per screen, as today, with each list's row beside it: the Library's in
   `library/LibraryRow.kt` (issue #208) and the Vocabulary list's in `vocabulary/VocabularyRow.kt`
-  (issue #212). A new screen follows §7's shape and §4's spacing.
+  (issue #212), whose level sheet is `vocabulary/VocabularyLevelSheet.kt` (issue #178). A new screen
+  follows §7's shape and §4's spacing.
 
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
@@ -547,6 +554,9 @@ the page behind it.
 - The choice chip — `app/src/commonMain/kotlin/app/lekto/ui/Chip.kt`: one chip, used by the **Aa**
   panel's values and by the Vocabulary list's level filters, so a chip looks the same wherever it
   chooses something (§7.2, §7.4).
+- The mastery selector — `app/src/commonMain/kotlin/app/lekto/reader/MasterySelector.kt`: the level
+  named beside the five numbered chips, shared by the reader's lookup footer (§7.3) and the
+  Vocabulary list's level sheet (§7.4), so the two never drift into two selectors (#178).
 - The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,
   each naming the section it belongs to) and `BackStack` (the history as a value). The platform's own

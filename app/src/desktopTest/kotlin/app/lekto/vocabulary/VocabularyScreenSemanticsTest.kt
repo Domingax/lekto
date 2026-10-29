@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -99,7 +100,7 @@ class VocabularyScreenSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("lanterne").assertIsDisplayed()
         onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        onNodeWithTag(vocabularyMasteryTag(lantern.key)).assertTextEquals("Learned")
+        onNodeWithTag(vocabularyMasteryTag(lantern.key), useUnmergedTree = true).assertTextEquals("Learned")
     }
 
     @Test
@@ -199,6 +200,42 @@ class VocabularyScreenSemanticsTest {
     }
 
     @Test
+    fun tappingARowRaisesTheWordToOpen() = runComposeUiTest {
+        // The row's one tap is the level sheet (issue #178): it raises the word,
+        // and the composition root resolves the live entry from it.
+        var opened: VocabularyEntry? = null
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), ""), onOpen = { opened = it }) }
+
+        onNodeWithTag(vocabularyRowTag(lantern.key)).performClick()
+
+        assertEquals(lantern, opened)
+    }
+
+    @Test
+    fun aRowTapDeletesNothing() = runComposeUiTest {
+        // Opening the word panel and deleting the word are two gestures, and the
+        // tap must never reach the delete (issue #178; docs/design.md §7.4).
+        var deleted: VocabularyEntry? = null
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), ""), onDelete = { deleted = it }) }
+
+        onNodeWithTag(vocabularyRowTag(lantern.key)).performClick()
+        onNodeWithText("Delete « lantern »?").assertDoesNotExist()
+        assertNull(deleted)
+    }
+
+    @Test
+    fun theRowNamesTheLevelActionToAccessibility() = runComposeUiTest {
+        // A screen reader hears what the tap does, in the reader's language: the
+        // word names the row and the action's label names the change (issue #178).
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), "")) }
+
+        val onClick = onNodeWithTag(vocabularyRowTag(lantern.key))
+            .fetchSemanticsNode().config[SemanticsActions.OnClick]
+
+        assertEquals("Change level", onClick.label)
+    }
+
+    @Test
     fun theDeleteSitsOnTheWordsLine() = runComposeUiTest {
         // The trash belongs to the row's first line, not to the gap between the
         // word and its translation: it is the word's action (issue #212).
@@ -292,6 +329,7 @@ class VocabularyScreenSemanticsTest {
         onFilter: (MasteryLevel?) -> Unit = {},
         onClearSearch: () -> Unit = {},
         onDelete: (VocabularyEntry) -> Unit = {},
+        onOpen: (VocabularyEntry) -> Unit = {},
     ) {
         MaterialTheme {
             VocabularyScreen(
@@ -301,6 +339,7 @@ class VocabularyScreenSemanticsTest {
                     onFilter = onFilter,
                     onClearSearch = onClearSearch,
                     onDelete = onDelete,
+                    onOpen = onOpen,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )

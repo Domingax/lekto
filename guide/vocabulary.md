@@ -26,6 +26,17 @@ You can search the list by spelling, lemma, translation or context sentence, and
 filter it by **Mastery level**. A search that finds nothing says which words it
 looked at and offers to clear itself.
 
+## Changing a word's level
+
+Tap a word in the list — anywhere on the row — and a sheet opens with the word,
+its translation, the sentence you met it in, and the five **Mastery level**s.
+Tap the level the word has reached: the sheet stays open on the new level and the
+row behind it changes. If a level filter is on and the word no longer matches it,
+the row leaves the list, which tells you the change landed.
+
+This is the same level the reader writes, so the word's colour in the book changes
+too, and the change syncs like any other vocabulary edit.
+
 Deleting an entry returns the word to unsaved in the reader. There is no undo, so
 the delete asks first: swipe the row to the left on Android, or move the pointer
 over it on desktop and use the bin that appears, then confirm.

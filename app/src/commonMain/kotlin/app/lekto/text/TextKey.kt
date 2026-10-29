@@ -106,6 +106,9 @@ enum class TextKey {
     DELETE_WORD_TITLE,
     DELETE_WORD_MESSAGE,
 
+    /** What a row's tap does, for a screen reader: it opens the word's level sheet. */
+    CHANGE_LEVEL,
+
     // Reader.
     PREVIOUS_PAGE,
     NEXT_PAGE,
