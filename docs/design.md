@@ -204,8 +204,10 @@ Three sections, and no fourth:
   book kept behind the link would reopen where it was opened, not where the reader had got to.
 - **Desktop**: the same three sections become a fixed left column. In the reader, the right side is
   a **context column** — the chapter list when nothing is touched, the word when something is. It
-  is reserved rather than overlaid, so the page never moves. Below roughly **1100 dp** the column
-  has no room and the reader falls back to the phone's bottom sheet.
+  is reserved rather than overlaid, so the page never moves. It is about **320 dp** wide, a surface
+  parted from the page by a 1 dp rule; a book with no chapter list says so in it rather than
+  leaving it blank. Below roughly **1100 dp** the column has no room and the reader falls back to
+  the phone's bottom sheet.
 
 ## 7. Screen anatomy
 
@@ -286,7 +288,9 @@ label. A book with one chapter has no list, so its position stays a label (ADR-0
 The chapter list is a bottom sheet over the page on a phone, up to about 60 % of the height, and
 the reserved context column on desktop (§6). It keeps the book's hierarchy, highlights the current
 chapter and scrolls it into view. It closes on a choice, a tap outside, its Close action, or Back.
-The lookup panel and the chapter list are never open together.
+The lookup panel and the chapter list are never open together. In the column the list is always
+there, so the position stays a label and a column choice jumps exactly as a sheet choice does; a
+book with no list reads `No chapters in this book.` there.
 
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
 at once, and the page number and total update as pagination counts them.
@@ -319,7 +323,8 @@ top of the page is clipped for as long as the sheet is open — a transient stat
 A panel, not an outlined card: square where it joins the bottom edge like the **Aa** panel, the
 surface tone and a hairline inset to the content, and a drag handle marks where it was raised
 from. On desktop it is the context column instead, and closing the word returns the column to the
-chapter list.
+chapter list. There the level's name stands above its chips rather than beside them: five chips
+leave no room for a name in the column.
 
 A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
 inflection, its parts of speech and pronunciation, the speaker and the close action; then the

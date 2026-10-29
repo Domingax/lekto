@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.DismissScrim
 import app.lekto.ui.LookupCloseButton
 import app.lekto.ui.handCursor
 import app.lekto.ui.swallowTaps
@@ -45,7 +47,7 @@ import app.lekto.ui.swallowTaps
 internal const val CHAPTER_SHEET_MAX_HEIGHT_FRACTION: Float = 0.6f
 
 /** The indent one level of the chapter hierarchy adds to its rows. */
-private val CHAPTER_INDENT = 16.dp
+internal val CHAPTER_INDENT = 16.dp
 
 /** How strongly the hovered chapter row tints with the accent ink. */
 private const val HOVER_WASH_ALPHA = 0.08f
@@ -97,6 +99,30 @@ internal fun ChapterSheet(
     }
 }
 
+/**
+ * The sheet over the page, behind its dismiss scrim, low enough to keep the book
+ * visible. It is the phone's way into the chapter list; at the context column's
+ * breakpoint the list is always in the column instead (issue #199).
+ */
+@Composable
+internal fun ChapterSheetOverlay(
+    entries: List<ReaderChapterEntry>,
+    current: ReaderChapterEntry?,
+    onChoose: (ReaderChapterEntry) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Box(Modifier.fillMaxSize()) {
+        DismissScrim(onDismiss = onDismiss, modifier = Modifier.testTag(READER_CHAPTER_SHEET_SCRIM_TAG))
+        ChapterSheet(
+            entries = entries,
+            current = current,
+            onChoose = onChoose,
+            onDismiss = onDismiss,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
 @Composable
 private fun ChapterSheetBody(
     entries: List<ReaderChapterEntry>,
@@ -104,41 +130,90 @@ private fun ChapterSheetBody(
     onChoose: (ReaderChapterEntry) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val texts = LocalAppTexts.current
+    Column(Modifier.fillMaxWidth()) {
+        DragHandle()
+        ChapterList(
+            entries = entries,
+            current = current,
+            onChoose = onChoose,
+            trailing = { ChapterSheetClose(onDismiss) },
+        )
+    }
+}
+
+/**
+ * The chapter list itself (ADR-0037): the book's hierarchy, the current chapter
+ * marked and scrolled into view, under its **Chapters** heading. One component
+ * renders it in the phone's sheet and in the desktop's context column (issue
+ * #199), so the two cannot drift apart; [trailing] is the sheet's **Close**, and
+ * a list with nothing to show says so instead of standing empty.
+ */
+@Composable
+internal fun ChapterList(
+    entries: List<ReaderChapterEntry>,
+    current: ReaderChapterEntry?,
+    onChoose: (ReaderChapterEntry) -> Unit,
+    trailing: @Composable (() -> Unit)? = null,
+) {
     val listState = rememberLazyListState()
     val currentIndex = entries.indexOfFirst { entry -> entry === current }
     LaunchedEffect(currentIndex) {
         if (currentIndex >= 0) listState.scrollToItem(currentIndex)
     }
     Column(Modifier.fillMaxWidth()) {
-        DragHandle()
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(
-                start = LektoSpacing.InsidePanel,
-                end = LektoSpacing.InsideLabelPair,
-                top = LektoSpacing.InsideLabelPair,
-                bottom = LektoSpacing.BetweenRelatedLines,
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = texts[TextKey.CHAPTERS],
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-            )
-            ChapterSheetClose(onDismiss)
-        }
-        LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
-            itemsIndexed(entries) { index, entry ->
-                ChapterRow(
-                    entry = entry,
-                    current = entry === current,
-                    onClick = { onChoose(entry) },
-                    tag = readerChapterRowTag(index),
-                )
+        ChapterListHeading(trailing)
+        if (entries.isEmpty()) {
+            NoChapters()
+        } else {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
+                itemsIndexed(entries) { index, entry ->
+                    ChapterRow(
+                        entry = entry,
+                        current = entry === current,
+                        onClick = { onChoose(entry) },
+                        tag = readerChapterRowTag(index),
+                    )
+                }
             }
         }
     }
+}
+
+/** The list's **Chapters** heading, and the sheet's **Close** when it is the sheet drawing it. */
+@Composable
+private fun ChapterListHeading(trailing: @Composable (() -> Unit)?) {
+    val texts = LocalAppTexts.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(
+            start = LektoSpacing.InsidePanel,
+            end = LektoSpacing.InsideLabelPair,
+            top = LektoSpacing.InsideLabelPair,
+            bottom = LektoSpacing.BetweenRelatedLines,
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = texts[TextKey.CHAPTERS],
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        trailing?.invoke()
+    }
+}
+
+/** What a book with no chapter list says in the column, instead of standing empty (issue #199). */
+@Composable
+private fun NoChapters() {
+    Text(
+        text = LocalAppTexts.current[TextKey.NO_CHAPTERS],
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(
+            start = LektoSpacing.InsidePanel,
+            end = LektoSpacing.InsidePanel,
+            bottom = LektoSpacing.InsidePanel,
+        ),
+    )
 }
 
 /** The sheet's close action, named so a screen reader meets a control. */

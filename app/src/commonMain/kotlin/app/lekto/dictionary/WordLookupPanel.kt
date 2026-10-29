@@ -98,7 +98,8 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * #210. It opens on the word the reader tapped with the offline result already in
  * it, and always offers the external references beside that result — so with no
  * pack and no network it still degrades to the references and an honest message
- * rather than an empty panel.
+ * rather than an empty panel. On desktop it is the reader's context column instead
+ * (issue #199), which is what [inColumn] asks of the shared [LookupSheet].
  *
  * The sheet covers at most [app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION] of the
  * screen, so the page stays visible and the touched word stays washed above it.
@@ -123,13 +124,15 @@ fun WordLookupPanel(
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
+    inColumn: Boolean = false,
 ) {
     LookupSheet(
         modifier = modifier,
         sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
+        inColumn = inColumn,
     ) {
         SheetContent(term, result, pronunciation, actions.onDismiss)
-        Footer(shortcuts, actions.onOpenShortcut, vocabulary)
+        Footer(shortcuts, actions.onOpenShortcut, vocabulary, inColumn)
     }
 }
 
@@ -207,20 +210,35 @@ private fun Meta(entries: List<DictionaryEntry>) {
  * so the numbers never need a legend, and one tap on a chip stores the word at
  * that level. In the fixed footer the two stay reachable however long the senses
  * run.
+ *
+ * In the context column there is no room for the name beside five chips (issue
+ * #199), so it stands above them: the same two blocks, stacked, rather than a
+ * name broken mid-word.
  */
 @Composable
 private fun Footer(
     shortcuts: List<DictionaryShortcut>,
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     vocabulary: VocabularyPanel,
+    inColumn: Boolean,
 ) {
     SheetDivider()
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LevelName(vocabulary.level, Modifier.weight(1f))
-        MasterySelector(vocabulary)
+    if (inColumn) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            LevelName(vocabulary.level)
+            MasterySelector(vocabulary)
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LevelName(vocabulary.level, Modifier.weight(1f))
+            MasterySelector(vocabulary)
+        }
     }
     References(shortcuts, onOpenShortcut)
 }

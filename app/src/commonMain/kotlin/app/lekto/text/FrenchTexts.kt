@@ -85,6 +85,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.MARK_AS_UNFINISHED to "Marquer comme non terminé",
     TextKey.BACK_TO_LIBRARY to "Retour à la bibliothèque",
     TextKey.CHAPTERS to "Chapitres",
+    TextKey.NO_CHAPTERS to "Ce livre n'a pas de liste de chapitres.",
     TextKey.READING_PREFERENCES to "Aa",
     TextKey.READING_TEXT to "Texte",
     TextKey.READING_FACE to "Police du texte",

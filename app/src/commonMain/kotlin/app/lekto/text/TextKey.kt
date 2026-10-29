@@ -119,6 +119,9 @@ enum class TextKey {
 
     /** The chapter sheet's heading. */
     CHAPTERS,
+
+    /** What the desktop context column says for a book with no chapter list (issue #199). */
+    NO_CHAPTERS,
     READING_PREFERENCES,
     READING_TEXT,
     READING_FACE,

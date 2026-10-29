@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.click
@@ -18,12 +19,12 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
-import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.Chapter
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.testkit.WhitespaceTextSegmenter
+import app.lekto.testkit.blockStartOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -92,7 +93,7 @@ class ReaderChaptersTest {
         // matter may still be a chapter: the bar repeats the book's title so it
         // cannot disagree with the list (ADR-0039).
         val roman = book.copy(chapters = listOf(Chapter("XI", startBlock = 1), Chapter("XII", startBlock = 3)))
-        setContent { Reader(roman, initialOffset = startOf(1)) }
+        setContent { Reader(roman, initialOffset = blockStartOffset(blocks, 1)) }
 
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("XI", substring = true)
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 2 of 3", substring = true)
@@ -116,7 +117,7 @@ class ReaderChaptersTest {
 
     @Test
     fun tappingThePositionOpensTheSheetAndHighlightsTheCurrentChapter() = runComposeUiTest {
-        setContent { Reader(book, initialOffset = startOf(SECOND_CHAPTER_BLOCK)) }
+        setContent { Reader(book, initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK)) }
 
         onNodeWithText("Second body.", substring = true).assertIsDisplayed()
         onNodeWithTag(READER_POSITION_TAG).performClick()
@@ -128,10 +129,24 @@ class ReaderChaptersTest {
     }
 
     @Test
+    fun theCurrentChapterRowIsSelected() = runComposeUiTest {
+        setContent { Reader(book, initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK)) }
+
+        onNodeWithTag(READER_POSITION_TAG).performClick()
+
+        onNodeWithTag(readerChapterRowTag(0)).assertIsNotSelected()
+        onNodeWithTag(readerChapterRowTag(1)).assertIsSelected()
+    }
+
+    @Test
     fun choosingAChapterSavesItsFirstBlockAndShowsItAtOnce() = runComposeUiTest {
         var saved = -1
         setContent {
-            Reader(book, initialOffset = startOf(SECOND_CHAPTER_BLOCK), onPositionChange = { offset -> saved = offset })
+            Reader(
+                book,
+                initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK),
+                onPositionChange = { offset -> saved = offset },
+            )
         }
 
         onNodeWithTag(READER_POSITION_TAG).performClick()
@@ -141,14 +156,22 @@ class ReaderChaptersTest {
         onNodeWithText("First body.", substring = true).assertIsDisplayed()
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 2 of 3", substring = true)
-        assertEquals(startOf(FIRST_CHAPTER_BLOCK), saved, "a jump saves the chapter's first block")
+        assertEquals(
+            blockStartOffset(blocks, FIRST_CHAPTER_BLOCK),
+            saved,
+            "a jump saves the chapter's first block",
+        )
     }
 
     @Test
     fun choosingTheCurrentChapterOnlyClosesTheSheet() = runComposeUiTest {
         var saved = -1
         setContent {
-            Reader(book, initialOffset = startOf(SECOND_CHAPTER_BLOCK), onPositionChange = { offset -> saved = offset })
+            Reader(
+                book,
+                initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK),
+                onPositionChange = { offset -> saved = offset },
+            )
         }
 
         onNodeWithTag(READER_POSITION_TAG).performClick()
@@ -200,10 +223,6 @@ class ReaderChaptersTest {
         onNodeWithTag(readerChapterRowTag(0)).assertHasNoClickAction()
         onNodeWithTag(readerChapterRowTag(1)).assertTextContains("One")
     }
-
-    /** The character offset where [blockIndex]'s block starts in the rendered text. */
-    private fun startOf(blockIndex: Int): Int =
-        blocks.take(blockIndex).sumOf { block -> block.text.length + BLOCK_SEPARATOR.length }
 
     @Composable
     @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.

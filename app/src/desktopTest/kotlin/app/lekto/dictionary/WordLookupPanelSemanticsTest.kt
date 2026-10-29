@@ -282,6 +282,20 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun theColumnShapeStacksTheLevelNameAboveItsChips() = runComposeUiTest {
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), inColumn = true) }
+
+        val label = onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
+        val chip = onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).getUnclippedBoundsInRoot()
+
+        onNodeWithText("Recognized").assertIsDisplayed()
+        assertTrue(
+            label.bottom.value <= chip.top.value + 1f,
+            "the level name ends at ${label.bottom} dp, past the chips' ${chip.top} dp; it must stand above them",
+        )
+    }
+
+    @Test
     fun theLevelLabelIsCentredWithTheChips() = runComposeUiTest {
         setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
 
@@ -338,6 +352,7 @@ class WordLookupPanelSemanticsTest {
         onSpeak: () -> Unit = {},
         onSave: (MasteryLevel) -> Unit = {},
         onDismiss: () -> Unit = {},
+        inColumn: Boolean = false,
     ) {
         LektoTheme {
             WordLookupPanel(
@@ -348,6 +363,7 @@ class WordLookupPanelSemanticsTest {
                 pronunciation = Pronunciation(onSpeak = onSpeak, result = speech),
                 vocabulary = VocabularyPanel(entry = entry, onSave = onSave),
                 modifier = Modifier.size(width = PANEL_WIDTH, height = PANEL_HEIGHT),
+                inColumn = inColumn,
             )
         }
     }

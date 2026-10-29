@@ -2,7 +2,6 @@ package app.lekto
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
@@ -17,7 +16,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
@@ -79,6 +77,7 @@ import app.lekto.navigation.PlatformBackHandler
 import app.lekto.reader.MasteryController
 import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
+import app.lekto.reader.ReaderContext
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
@@ -982,52 +981,64 @@ private fun ReaderSession(
     // The word sheet's measured height, so the page can lift under it and keep
     // the touched word visible without repaginating (issue #210).
     var wordPanelHeightPx by remember { mutableStateOf(0) }
-    Box(Modifier.fillMaxSize()) {
-        ReaderScreen(
-            document = ReaderDocument(
-                text = text,
-                renderer = ReaderRenderer(
-                    segmenter = environment.segmenter,
-                    mastery = mastery,
-                    lemmas = lemmas,
-                ),
-                initialOffset = session.position?.offset ?: 0,
-                selectedRange = lookup.selection?.let { selected ->
-                    selected.tap.token.start..selected.tap.token.end
-                } ?: lookup.phrase?.range,
-                masteryRevision = masteryRevision,
-                preferences = readingPreferences?.preferences ?: ReadingPreferences.DEFAULT,
+    ReaderScreen(
+        document = ReaderDocument(
+            text = text,
+            renderer = ReaderRenderer(
+                segmenter = environment.segmenter,
+                mastery = mastery,
+                lemmas = lemmas,
             ),
-            actions = ReaderActions(
-                onWordTap = lookup.onWordTap,
-                onPhraseSelected = lookup.onPhraseSelected,
-                onBack = onBack,
-                onPositionChange = onPositionChange,
-                onReadingPreferencesChange = { next -> readingPreferences?.update(next) },
-                // A lookup panel is open above the reader: a tap on the page outside
-                // it closes it, rather than looking a word up or turning the page.
-                onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
-                onMarkFinished = onMarkFinished,
-                onMarkUnfinished = onMarkUnfinished,
-            ),
-            overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
-            initiallyFinished = session.finished != null,
-        )
-        LookupOverlays(
-            lookup = lookup,
-            language = session.book.language,
-            openUrl = environment.openUrl,
-            onWordPanelHeight = { height -> wordPanelHeightPx = height },
-        )
-    }
+            initialOffset = session.position?.offset ?: 0,
+            selectedRange = lookup.selection?.let { selected ->
+                selected.tap.token.start..selected.tap.token.end
+            } ?: lookup.phrase?.range,
+            masteryRevision = masteryRevision,
+            preferences = readingPreferences?.preferences ?: ReadingPreferences.DEFAULT,
+        ),
+        actions = ReaderActions(
+            onWordTap = lookup.onWordTap,
+            onPhraseSelected = lookup.onPhraseSelected,
+            onBack = onBack,
+            onPositionChange = onPositionChange,
+            onReadingPreferencesChange = { next -> readingPreferences?.update(next) },
+            // A lookup sheet is open above the page on a phone: a tap on the page
+            // outside it closes it, rather than looking a word up or turning the
+            // page. In the context column the reader ignores this, because the
+            // panel is beside the page rather than over it (issue #199).
+            onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
+            onMarkFinished = onMarkFinished,
+            onMarkUnfinished = onMarkUnfinished,
+        ),
+        overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
+        initiallyFinished = session.finished != null,
+        // The word or phrase panel is the reader's to place (issue #199): the
+        // context column on desktop, the bottom sheet on a phone.
+        context = ReaderContext(
+            isLookupOpen = lookup.hasPanel,
+            panel = { modifier, inColumn ->
+                LookupOverlays(
+                    lookup = lookup,
+                    language = session.book.language,
+                    openUrl = environment.openUrl,
+                    inColumn = inColumn,
+                    modifier = modifier,
+                    onWordPanelHeight = { height -> wordPanelHeightPx = height },
+                )
+            },
+        ),
+    )
 }
 
-/** The panel for the open word or phrase, bottom-aligned over the reader. */
+/** The panel for the open word or phrase, in the context column or bottom-aligned over the reader. */
+@Suppress("LongParameterList") // The lookup, its host and its measured height are independent inputs.
 @Composable
-private fun BoxScope.LookupOverlays(
+private fun LookupOverlays(
     lookup: Lookup,
     language: String?,
     openUrl: (String) -> Unit,
+    inColumn: Boolean,
+    modifier: Modifier,
     onWordPanelHeight: (Int) -> Unit,
 ) {
     lookup.selection?.let { selected ->
@@ -1039,7 +1050,8 @@ private fun BoxScope.LookupOverlays(
             openUrl = openUrl,
             onDismiss = lookup.onDismiss,
             onPanelHeight = onWordPanelHeight,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            inColumn = inColumn,
+            modifier = modifier,
         )
     }
     lookup.phrase?.let { phrase ->
@@ -1051,7 +1063,8 @@ private fun BoxScope.LookupOverlays(
             translation = lookup.translation,
             onOpenSettings = lookup.onOpenSettings,
             onDismiss = lookup.onDismiss,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            inColumn = inColumn,
+            modifier = modifier,
         )
     }
 }
@@ -1067,6 +1080,7 @@ private fun LookupPanel(
     openUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     onPanelHeight: (Int) -> Unit,
+    inColumn: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val token = selected.tap.token
@@ -1085,6 +1099,7 @@ private fun LookupPanel(
         pronunciation = pronunciation,
         vocabulary = vocabulary,
         modifier = modifier.onSizeChanged { size -> onPanelHeight(size.height) },
+        inColumn = inColumn,
     )
 }
 
@@ -1103,6 +1118,7 @@ private fun PhrasePanel(
     translation: PhraseTranslationUiState,
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
+    inColumn: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val shortcut = remember(phrase, language, translationLanguage) {
@@ -1122,6 +1138,7 @@ private fun PhrasePanel(
         translation = translation,
         onOpenSettings = onOpenSettings,
         modifier = modifier,
+        inColumn = inColumn,
     )
 }
 

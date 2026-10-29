@@ -83,10 +83,12 @@ fun PhraseLookupPanel(
     translation: PhraseTranslationUiState = PhraseTranslationUiState(),
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
+    inColumn: Boolean = false,
 ) {
     LookupSheet(
         modifier = modifier,
         sheetModifier = Modifier.testTag(PHRASE_PANEL_TAG),
+        inColumn = inColumn,
     ) {
         // The phrase and the answer share one scroll and sit under the sheet's
         // cap; the shortcut stays pinned below it, so the one answer that needs
