@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -25,12 +26,14 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -204,6 +207,18 @@ class ReaderContextColumnTest {
             "closing the lookup must not widen the page",
         )
         assertEquals(before.left, during.left, "the page must not move sideways")
+    }
+
+    @Test
+    fun theEndOfTheBookTakesTheWholeWindow() = columnTest(WIDE) {
+        setContent { Reader(initialOffset = Int.MAX_VALUE) }
+        onNodeWithTag(READER_CONTEXT_COLUMN_TAG).assertIsDisplayed()
+
+        // The end state is full-screen, so it leaves no room for the column.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_CONTEXT_COLUMN_TAG).assertDoesNotExist()
     }
 
     @Test
