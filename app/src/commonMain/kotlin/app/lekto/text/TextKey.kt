@@ -51,6 +51,16 @@ enum class TextKey {
     /** What the skeleton rows say to a screen reader while the shelf is being read. */
     LIBRARY_LOADING,
 
+    /** The three **Reading state** filter chips under the search field (issue #200). */
+    READING_STATE_UNREAD,
+    READING_STATE_IN_PROGRESS,
+    READING_STATE_FINISHED,
+
+    /** The empty shelf when the filter hides every book, and the action that clears it (issue #200). */
+    LIBRARY_ALL_FINISHED,
+    LIBRARY_NO_BOOKS_IN_STATE,
+    SHOW_ALL_BOOKS,
+
     CONTINUE_READING,
 
     /** The heading over the books that did not lead: what is left to read. */
@@ -69,6 +79,9 @@ enum class TextKey {
     LIBRARY_ROW_NOT_STARTED,
     LIBRARY_ROW_MEASURING,
     LIBRARY_ROW_MEASURING_DESCRIPTION,
+
+    /** A finished book's row: `FORMAT · Finished`, with no progress rule (issue #200). */
+    LIBRARY_ROW_FINISHED,
 
     // Vocabulary.
     VOCABULARY_EMPTY_TITLE,
@@ -97,6 +110,12 @@ enum class TextKey {
     PREVIOUS_PAGE,
     NEXT_PAGE,
     PAGE_OF,
+
+    /** The end-of-book state: `THE END`, its two actions and the marked state (issue #200). */
+    END_OF_BOOK,
+    MARK_AS_FINISHED,
+    MARK_AS_UNFINISHED,
+    BACK_TO_LIBRARY,
 
     /** The chapter sheet's heading. */
     CHAPTERS,

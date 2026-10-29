@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +40,6 @@ internal fun ChoiceChip(
     modifier: Modifier = Modifier,
     leading: (@Composable () -> Unit)? = null,
 ) {
-    val theme = MaterialTheme.colorScheme
     Box(
         modifier = modifier
             .heightIn(min = LektoSpacing.TouchTarget)
@@ -54,18 +54,60 @@ internal fun ChoiceChip(
         contentAlignment = Alignment.Center,
     ) {
         ChipFrame(selected = selected) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
-            ) {
-                leading?.invoke()
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (selected) theme.onPrimary else theme.onSurface,
-                )
-            }
+            ChipLabel(label, selected, leading)
         }
+    }
+}
+
+/**
+ * The same chip as a **multi-select** control (issue #200): the Library's
+ * **Reading state** filters are a set, so the chip toggles instead of choosing
+ * one of a group. Its shape, touch target and ink are [ChoiceChip]'s; only the
+ * announced role differs — a checkbox, not a radio button — so a screen reader
+ * hears "checked" rather than "selected".
+ */
+@Suppress("LongParameterList") // The chip's word, its state, its tap and its optional mark are independent.
+@Composable
+internal fun ToggleChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier
+            .heightIn(min = LektoSpacing.TouchTarget)
+            .handCursor()
+            .toggleable(
+                value = selected,
+                interactionSource = null,
+                indication = null,
+                role = Role.Checkbox,
+                onValueChange = { onClick() },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        ChipFrame(selected = selected) {
+            ChipLabel(label, selected, leading)
+        }
+    }
+}
+
+/** A chip's visible words: the optional mark, then the label in the ink its state calls for. */
+@Composable
+private fun ChipLabel(label: String, selected: Boolean, leading: (@Composable () -> Unit)?) {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        leading?.invoke()
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (selected) theme.onPrimary else theme.onSurface,
+        )
     }
 }
 

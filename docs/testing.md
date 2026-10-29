@@ -164,6 +164,34 @@ pins that a refresh reports it while the vault is read, so the skeleton is real
 state and not a still. The golden lane records the frame on four books across
 three languages, one sheet per paper.
 
+Declaring a book **Finished** (issue #200; ADR-0038) is a second vault fact beside
+the reading position, so it is proved at its own levels. `FinishedBookRecord` is
+a serialise/parse invariant, so `FinishedBookRecordPropertyTest` in
+`core/commonTest` round-trips an arbitrary book id and instant and pins the
+derived `<bookId>-finished` id under the `progress` kind, while
+`FinishedBookLibraryTest` — split from `VaultBookLibraryTest` so the fact stands
+alone — proves that marking writes the record without touching the position's
+`updatedAt`, that an undo removes it and leaves a tombstone, that a finished book
+is excluded from the leading group even when it was read last, that `delete`
+removes the declaration and leaves its tombstone, and that a vault with no record
+reads **Unread** or **In progress**, never **Finished**.
+`JvmBookLibraryTest` pins the real file under `progress/` and its removal on a
+directory-backed vault. The state partition is `LibraryListingTest`'s: **Finished**
+wins, a position means **In progress**, and the rest is **Unread**. The filter is
+view state, so `LibraryControllerTest` pins the default two states, the toggle
+whose last chip cannot be turned off, the two narrowings applying together, and
+`Show all books` clearing both; `LibraryScreenSemanticsTest` on both lanes pins
+the chips' on-and-off state, the finished row (`FORMAT · Finished`, a check, no
+rule), the three empty states, and that the browse list itself hides a finished
+row until its chip is on, while `AppSemanticsTest` runs the whole loop — the end
+state's `Mark as finished`, the record it writes, the Library's
+`All your books are finished.` on return, and the row once **Finished** is
+selected. The reader's end state is a UI behaviour: `ReaderScreenSemanticsTest`
+on both lanes pins that reaching the last page does not raise it, a next tap does,
+mark and undo flip it, marking never reports a position, and `Back to Library`
+leaves; `AndroidBackTest` pins that system back closes it onto the last page. The
+goldens add the filter row's frame to the shelf's three papers.
+
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
 record, its original, its derived text and its reading position and leaves a

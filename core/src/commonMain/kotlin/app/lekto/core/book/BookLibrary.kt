@@ -17,8 +17,10 @@ interface BookLibrary {
 
     /**
      * The books in the vault split the way the Library screen shows them: the
-     * three most recently read first, most recent first, then every other book
-     * by title (CONTEXT.md, "Library"; issue #188).
+     * three most recently read unfinished books first, most recent first, then
+     * every other book by title (CONTEXT.md, "Library"; issues #188 and #200).
+     * Each book carries its [ReadingState], so the screen can filter without a
+     * second read.
      */
     fun listing(): LibraryListing
 
@@ -33,9 +35,10 @@ interface BookLibrary {
 
     /**
      * Removes the book with [id] from the vault — its record, its original
-     * attachment, its cached parsed text and its reading position — and leaves a
-     * **Tombstone** for the book and for its position (ADR-0015), so neither
-     * resurrects on the next sync. An unknown [id] is a no-op (issue #131).
+     * attachment, its cached parsed text, its reading position and its finished
+     * declaration — and leaves a **Tombstone** for the book, for its position and
+     * for its declaration (ADR-0015, ADR-0038), so none resurrects on the next
+     * sync. An unknown [id] is a no-op (issue #131).
      *
      * The steps are ordered so a failure never leaves a half-deleted book
      * visible: the derived cache goes first, the reading position next, and the
@@ -55,6 +58,29 @@ interface BookLibrary {
 
     /** Where the user left off in the book with [bookId], or `null` when unread. */
     fun position(bookId: String): ReadingPosition?
+
+    /**
+     * The reader's declaration that the book with [bookId] is **Finished**, or
+     * `null` when they have not declared it (ADR-0038). The absence of a record
+     * is what "not declared" means, so no migration is needed.
+     */
+    fun finished(bookId: String): FinishedBook?
+
+    /**
+     * Declares the book with [bookId] **Finished**, stamped with the clock's
+     * now. It writes the separate finished record and never touches the
+     * [ReadingPosition] or **Last read**: a declaration is not a page turn
+     * (ADR-0038). An unknown book is a no-op.
+     */
+    fun markFinished(bookId: String)
+
+    /**
+     * Undoes the declaration for the book with [bookId]: the record is removed
+     * and a **Tombstone** marks the deletion, so a device that has not seen the
+     * undo cannot copy the declaration back (ADR-0015, ADR-0038). The
+     * [ReadingPosition] and vocabulary are untouched.
+     */
+    fun markUnfinished(bookId: String)
 
     /**
      * Measures the rendered length of the book with [bookId] and caches it beside

@@ -11,6 +11,8 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -25,6 +27,7 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.LibraryListing
+import app.lekto.core.book.ReadingState
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
@@ -392,6 +395,112 @@ class LibraryScreenSemanticsTest {
     private fun stateWith(progress: BookProgress): LibraryUiState =
         LibraryUiState(listing = LibraryListing(others = listOf(book), progressByBook = mapOf(book.id to progress)))
 
+    @Test
+    fun theReadingStateChipsOpenOnUnreadAndInProgress() {
+        compose.setContent { Library(books(book)) }
+
+        compose.onNodeWithTag(libraryStateTag(ReadingState.UNREAD)).assertIsOn()
+        compose.onNodeWithTag(libraryStateTag(ReadingState.IN_PROGRESS)).assertIsOn()
+        compose.onNodeWithTag(libraryStateTag(ReadingState.FINISHED)).assertIsOff()
+    }
+
+    @Test
+    fun tappingAChipRaisesTheToggle() {
+        var toggled: ReadingState? = null
+        compose.setContent { Library(books(book), onToggleState = { state -> toggled = state }) }
+
+        compose.onNodeWithTag(libraryStateTag(ReadingState.FINISHED)).performClick()
+
+        assertEquals(ReadingState.FINISHED, toggled)
+    }
+
+    @Test
+    fun aFinishedRowIsHiddenUntilTheFinishedChipIsSelected() {
+        val state = LibraryUiState(
+            listing = LibraryListing(
+                others = listOf(book, otherBook),
+                readingStateByBook = mapOf(
+                    book.id to ReadingState.FINISHED,
+                    otherBook.id to ReadingState.UNREAD,
+                ),
+            ),
+        )
+        compose.setContent { Library(state) }
+
+        compose.onNodeWithText(book.title).assertDoesNotExist()
+        compose.onNodeWithText(otherBook.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun aFinishedRowSaysFinishedWithACheckAndNoProgressRule() {
+        compose.setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(
+                        others = listOf(book),
+                        progressByBook = mapOf(book.id to BookProgress.Measured(MEASURED_PERCENT)),
+                        readingStateByBook = mapOf(book.id to ReadingState.FINISHED),
+                    ),
+                    selectedStates = ReadingState.entries.toSet(),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("EPUB · Finished").assertIsDisplayed()
+        compose.onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("EPUB · $MEASURED_PERCENT %").assertDoesNotExist()
+    }
+
+    @Test
+    fun aShelfWhoseBooksAreAllFinishedSaysSoAndOffersShowAll() {
+        var shownAll = false
+        compose.setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(
+                        others = listOf(book),
+                        readingStateByBook = mapOf(book.id to ReadingState.FINISHED),
+                    ),
+                ),
+                onShowAllBooks = { shownAll = true },
+            )
+        }
+
+        compose.onNodeWithText("All your books are finished.").assertIsDisplayed()
+        compose.onNodeWithTag(LIBRARY_SHOW_ALL_TAG).assertIsDisplayed().performClick()
+
+        assertTrue(shownAll)
+    }
+
+    @Test
+    fun aFilterThatMatchesNothingSaysSoAndOffersShowAll() {
+        compose.setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(
+                        others = listOf(book),
+                        readingStateByBook = mapOf(book.id to ReadingState.UNREAD),
+                    ),
+                    selectedStates = setOf(ReadingState.FINISHED),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("No books in this state.").assertIsDisplayed()
+        compose.onNodeWithTag(LIBRARY_SHOW_ALL_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun aSearchWithNoMatchOffersClearSearchAndShowAll() {
+        compose.setContent {
+            Library(LibraryUiState(listing = LibraryListing(others = listOf(book)), query = "zzz"))
+        }
+
+        compose.onNodeWithText("No books match \"zzz\".").assertIsDisplayed()
+        compose.onNodeWithText("Clear search").assertIsDisplayed()
+        compose.onNodeWithTag(LIBRARY_SHOW_ALL_TAG).assertIsDisplayed()
+    }
+
     @Composable
     @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.
     private fun Library(
@@ -402,6 +511,8 @@ class LibraryScreenSemanticsTest {
         onDismissError: () -> Unit = {},
         onSearch: (String) -> Unit = {},
         onClearSearch: () -> Unit = {},
+        onToggleState: (ReadingState) -> Unit = {},
+        onShowAllBooks: () -> Unit = {},
     ) {
         MaterialTheme {
             LibraryScreen(
@@ -413,6 +524,8 @@ class LibraryScreenSemanticsTest {
                     onDismissError = onDismissError,
                     onSearch = onSearch,
                     onClearSearch = onClearSearch,
+                    onToggleState = onToggleState,
+                    onShowAllBooks = onShowAllBooks,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )

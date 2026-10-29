@@ -43,7 +43,7 @@ import kotlin.test.assertTrue
  * so the sample spans several pages deterministically and the chrome fits.
  */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("MagicNumber") // The tap coordinates and the thirds of the width are the test's parameters.
+@Suppress("MagicNumber", "TooManyFunctions") // The tap coordinates, and one test per behaviour the reader owns.
 class ReaderScreenSemanticsTest {
 
     private val renderer = ReaderRenderer(
@@ -166,6 +166,98 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
+    fun reachingTheLastPageDoesNotOpenTheEndState() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
+
+        onNodeWithTag(READER_END_PANEL_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun nextOnTheLastPageOpensTheEndState() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsNotEnabled()
+
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        onNodeWithText("THE END").assertIsDisplayed()
+        onNodeWithText(SampleChapter.chapter.title).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
+        // The state hides the reader's chrome.
+        onNodeWithTag(READER_POSITION_TAG).assertDoesNotExist()
+        onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun markingFinishedKeepsThePanelOpenAndUndoFlipsItBack() = runComposeUiTest {
+        var marked = 0
+        var undone = 0
+        setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                onMarkFinished = { marked++ },
+                onMarkUnfinished = { undone++ },
+            )
+        }
+        openEndState()
+
+        onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        assertEquals(1, marked)
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        onNodeWithText("Finished").assertIsDisplayed()
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_FINISHED_TAG).assertDoesNotExist()
+
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).performClick()
+
+        assertEquals(1, undone)
+        onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aFinishedSessionOpensTheEndStateAlreadyMarked() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, initiallyFinished = true) }
+        openEndState()
+
+        onNodeWithText("Finished").assertIsDisplayed()
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun markingFinishedNeverMovesThePosition() = runComposeUiTest {
+        val reported = mutableListOf<Int>()
+        setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                onPositionChange = { offset -> reported += offset },
+                onMarkFinished = {},
+            )
+        }
+        openEndState()
+
+        onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        assertTrue(reported.isEmpty(), "declaring finished is not a page turn: $reported")
+    }
+
+    @Test
+    fun backToLibraryLeavesTheReader() = runComposeUiTest {
+        var left = false
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, onBack = { left = true }) }
+        openEndState()
+
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).performClick()
+
+        assertTrue(left, "Back to Library leaves for the Library")
+    }
+
+    @Test
     fun aPageTurnReportsItsPosition() = runComposeUiTest {
         var reported = -1
         setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
@@ -212,8 +304,12 @@ class ReaderScreenSemanticsTest {
         renderer: ReaderRenderer,
         chapter: ReaderText = SampleChapter.chapter,
         initialOffset: Int = 0,
+        initiallyFinished: Boolean = false,
+        onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
+        onMarkFinished: () -> Unit = {},
+        onMarkUnfinished: () -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
@@ -221,11 +317,20 @@ class ReaderScreenSemanticsTest {
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
                 actions = ReaderActions(
                     onPhraseSelected = onPhraseSelected,
-                    onBack = {},
+                    onBack = onBack,
                     onPositionChange = onPositionChange,
+                    onMarkFinished = onMarkFinished,
+                    onMarkUnfinished = onMarkUnfinished,
                 ),
+                initiallyFinished = initiallyFinished,
             )
         }
+    }
+
+    /** Taps the next zone on the last page, which is the only way the end state opens. */
+    private fun ComposeUiTest.openEndState() {
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
     }
 }
 

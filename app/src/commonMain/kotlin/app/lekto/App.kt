@@ -483,6 +483,7 @@ private fun AppScreens(
 
     val current = destination
     if (current is Destination.Reading) {
+        val bookId = current.session.book.id
         ReaderDestination(
             current.session,
             environment,
@@ -495,6 +496,12 @@ private fun AppScreens(
             lemmas,
             onBack = { stack = stack.back() },
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
+            onMarkFinished = {
+                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markFinished)
+            },
+            onMarkUnfinished = {
+                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markUnfinished)
+            },
         )
     } else {
         // The clock the two settings screens read "2 minutes ago" against, taken
@@ -632,6 +639,8 @@ private fun ReaderDestination(
     lemmas: LemmaLookup,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
+    onMarkFinished: () -> Unit,
+    onMarkUnfinished: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
@@ -682,6 +691,8 @@ private fun ReaderDestination(
         lookup = lookup,
         readingPreferences = readingPreferences,
         onBack = onBack,
+        onMarkFinished = onMarkFinished,
+        onMarkUnfinished = onMarkUnfinished,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
 }
@@ -909,10 +920,39 @@ private fun libraryActions(
     onDismissError = controller::dismissError,
     onSearch = controller::search,
     onClearSearch = controller::clearSearch,
+    onToggleState = controller::toggleState,
+    onShowAllBooks = controller::showAllBooks,
 )
 
 /** Where the library's taps lead, bundled so [libraryActions] stays within the parameter bound. */
 private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
+
+/**
+ * Declares or undoes a book's **Finished** fact from the reader (issue #200;
+ * ADR-0038). The vault write is blocking, so it runs on the environment's
+ * dispatcher; the record then raises the discrete local-change signal so sync
+ * pushes it, and the Library is re-listed so its filter sees the new state on
+ * return. A failed write is swallowed like a failed position save: losing one
+ * declaration is better than bringing the reader down.
+ */
+@Suppress("LongParameterList") // The caller's wiring and the fact it records; a bundle would only hide them.
+private fun setFinished(
+    environment: AppEnvironment,
+    controller: LibraryController,
+    changes: LocalChanges,
+    scope: CoroutineScope,
+    bookId: String,
+    write: (BookLibrary, String) -> Unit,
+) {
+    scope.launch {
+        runCatching {
+            withContext(environment.dispatcher) { write(environment.library, bookId) }
+        }.onSuccess {
+            changes.contentChanged()
+            controller.refresh()
+        }
+    }
+}
 
 /** The reader over an opened [session], with a way back to the library and the lookup panel. */
 @Suppress("LongParameterList", "LongMethod") // The reader's independent inputs and its one wiring.
@@ -926,6 +966,8 @@ private fun ReaderSession(
     lookup: Lookup,
     readingPreferences: ReadingPreferencesController?,
     onBack: () -> Unit,
+    onMarkFinished: () -> Unit,
+    onMarkUnfinished: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
     // The reader shows the whole book and its chapter list; the chrome carries
@@ -965,8 +1007,11 @@ private fun ReaderSession(
                 // A lookup panel is open above the reader: a tap on the page outside
                 // it closes it, rather than looking a word up or turning the page.
                 onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
+                onMarkFinished = onMarkFinished,
+                onMarkUnfinished = onMarkUnfinished,
             ),
             overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
+            initiallyFinished = session.finished != null,
         )
         LookupOverlays(
             lookup = lookup,

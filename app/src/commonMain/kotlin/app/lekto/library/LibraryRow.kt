@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookProgress
+import app.lekto.core.book.ReadingState
 import app.lekto.core.text.baseLanguage
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
@@ -38,6 +41,8 @@ import app.lekto.theme.contentColorOn
 import app.lekto.ui.DeleteAction
 import app.lekto.ui.DeletingRow
 import app.lekto.ui.handCursor
+import app.lekto.ui.icons.Check
+import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.plainClickable
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
@@ -52,6 +57,9 @@ internal fun libraryRowTag(bookId: String): String = "library-row-$bookId"
 /** The rule's thickness: 3 dp (docs/design.md §7.1). */
 internal val PROGRESS_RULE_HEIGHT = 3.dp
 
+/** The finished line's check: the row's own small mark, not a control (docs/design.md §7.1). */
+private val FINISHED_CHECK_SIZE = 16.dp
+
 /** The language vignette's frame: 44 × 60 dp, the place a cover would go (§7.1). */
 internal val LANGUAGE_VIGNETTE_WIDTH = 44.dp
 internal val LANGUAGE_VIGNETTE_HEIGHT = 60.dp
@@ -61,8 +69,9 @@ internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Bo
 
 /**
  * One library row: the frame §7.1 gives it (issue #208) — the **Reading
- * language**'s vignette, the title beside it, its **Reading progress** line and
- * rule — the tap that opens it and the way to delete it (issue #196).
+ * language**'s vignette, the title beside it, its **Reading state** line (the
+ * progress and rule, or `Finished` with a check) — the tap that opens it and the
+ * way to delete it (issues #196, #200).
  *
  * There are no covers: a **Book** has no cover image in its record, and a shelf
  * with covers for some books and none for others reads as broken. The vignette is
@@ -80,9 +89,9 @@ internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Bo
  * book, so it survives only in import errors and the delete confirmation.
  */
 @Composable
-internal fun BookRow(book: Book, progress: BookProgress, actions: BookRowActions) {
+internal fun BookRow(book: Book, progress: BookProgress, state: ReadingState, actions: BookRowActions) {
     DeletingRow(DeleteAction(tag = libraryDeleteTag(book.id), onDelete = { actions.onDelete(book) })) { content ->
-        BookFrame(book, progress, actions, modifier = content)
+        BookFrame(book, progress, state, actions, modifier = content)
     }
 }
 
@@ -91,8 +100,15 @@ internal fun BookRow(book: Book, progress: BookProgress, actions: BookRowActions
  * delete as an accessibility action too, because a screen reader cannot swipe a
  * row the way a thumb does.
  */
+@Suppress("LongParameterList") // The row's book, its two facts, its actions and the frame's modifier are independent.
 @Composable
-private fun BookFrame(book: Book, progress: BookProgress, actions: BookRowActions, modifier: Modifier) {
+private fun BookFrame(
+    book: Book,
+    progress: BookProgress,
+    state: ReadingState,
+    actions: BookRowActions,
+    modifier: Modifier,
+) {
     val texts = LocalAppTexts.current
     Row(
         modifier = modifier
@@ -117,7 +133,7 @@ private fun BookFrame(book: Book, progress: BookProgress, actions: BookRowAction
             verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         ) {
             Text(book.title, style = MaterialTheme.typography.titleSmall)
-            ProgressLine(book, progress)
+            StateLine(book, progress, state)
         }
     }
 }
@@ -151,7 +167,41 @@ private fun LanguageVignette(language: String?) {
 /** A **Reading language**'s two-letter code: `en-GB` reads `EN`. */
 internal fun languageCode(language: String?): String = baseLanguage(language.orEmpty()).take(2).uppercase()
 
-/** The row's second line: a measured percentage with its rule, or one of the two unmeasured states. */
+/**
+ * The row's second line: `FORMAT · Finished` with a check and no rule, or a
+ * measured percentage with its rule, or one of the two unmeasured states
+ * (docs/design.md §7.1; issues #196, #200). A declaration is not a percentage,
+ * so a finished book never shows the progress rule (ADR-0038).
+ */
+@Composable
+private fun StateLine(book: Book, progress: BookProgress, state: ReadingState) {
+    if (state == ReadingState.FINISHED) {
+        FinishedLine(book)
+    } else {
+        ProgressLine(book, progress)
+    }
+}
+
+/** The finished book's line: the check marks the declaration, and there is no rule under it. */
+@Composable
+private fun FinishedLine(book: Book) {
+    val texts = LocalAppTexts.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = LektoIcons.Check,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(FINISHED_CHECK_SIZE),
+        )
+        Spacer(Modifier.width(LektoSpacing.InsideLabelPair))
+        Text(
+            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_FINISHED, book.format.name)),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+/** The row's second line when the book is not finished: a percentage with its rule, or an unmeasured state. */
 @Composable
 private fun ProgressLine(book: Book, progress: BookProgress) {
     val texts = LocalAppTexts.current

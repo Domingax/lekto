@@ -2,12 +2,14 @@ package app.lekto.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import app.lekto.core.book.Book
+import app.lekto.core.book.ReadingState
 import app.lekto.text.AppMessage
 import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
@@ -43,6 +47,7 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.ui.ConfirmationDialog
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.SearchField
+import app.lekto.ui.ToggleChip
 import app.lekto.ui.handCursor
 import app.lekto.ui.plainClickable
 
@@ -51,6 +56,12 @@ internal const val LIBRARY_SEARCH_TAG: String = "library-search"
 
 /** The test tag on the empty shelf's filled import action (issue #208). */
 internal const val LIBRARY_EMPTY_IMPORT_TAG: String = "library-empty-import"
+
+/** The test tag on a **Reading state** filter chip (issue #200). */
+internal fun libraryStateTag(state: ReadingState): String = "library-state-${state.name}"
+
+/** The test tag on the action that clears both the filter and the search. */
+internal const val LIBRARY_SHOW_ALL_TAG: String = "library-show-all"
 
 /** The lazy item key of the "Continue reading" heading, which is not a book. */
 private const val CONTINUE_READING_KEY: String = "continue-reading"
@@ -106,6 +117,11 @@ fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryAction
                     .padding(top = LektoSpacing.InsidePanel)
                     .testTag(LIBRARY_SEARCH_TAG),
             )
+            StateFilters(
+                selected = state.selectedStates,
+                onToggle = actions.onToggleState,
+                modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+            )
         }
 
         state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
@@ -150,7 +166,7 @@ private fun ColumnScope.LibraryBody(state: LibraryUiState, actions: LibraryActio
 
         state.vaultEmpty -> LibraryEmpty(onImport = actions.onImport)
 
-        state.visibleBooks.isEmpty() -> LibraryNoMatches(state.query, actions.onClearSearch)
+        state.visibleBooks.isEmpty() -> LibraryNoMatches(state, actions)
 
         else -> LibraryList(state, onOpen = actions.onOpen, onDelete = onDelete)
     }
@@ -189,23 +205,70 @@ private fun LibraryEmpty(onImport: () -> Unit) {
 }
 
 /**
- * Why the search found nothing: the query is named back, and the reader can
- * clear it (issue #173). `Show all books` joins it with the reading-state filter
- * (#200).
+ * Why nothing is shown: the query is named back, or the **Reading state** filter
+ * explains itself (issues #173, #200). A search offers `Clear search` as well as
+ * `Show all books`, because the reader may want to keep the filter; `Show all
+ * books` clears both narrowings and is the way back to the whole shelf.
  */
 @Composable
-private fun LibraryNoMatches(query: String, onClearSearch: () -> Unit) {
+private fun LibraryNoMatches(state: LibraryUiState, actions: LibraryActions) {
     val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenSections)) {
+        val message = when {
+            state.queryMatchesNothing -> AppMessage.of(TextKey.NO_BOOKS_MATCH_QUERY, state.query.trim())
+            state.everyBookIsFinished -> AppMessage.of(TextKey.LIBRARY_ALL_FINISHED)
+            else -> AppMessage.of(TextKey.LIBRARY_NO_BOOKS_IN_STATE)
+        }
         Text(
-            text = texts.message(AppMessage.of(TextKey.NO_BOOKS_MATCH_QUERY, query.trim())),
+            text = texts.message(message),
             style = MaterialTheme.typography.bodyLarge,
         )
-        TextButton(onClick = onClearSearch, modifier = Modifier.handCursor()) {
-            Text(texts[TextKey.CLEAR_SEARCH])
+        if (state.searching) {
+            TextButton(onClick = actions.onClearSearch, modifier = Modifier.handCursor()) {
+                Text(texts[TextKey.CLEAR_SEARCH])
+            }
+        }
+        TextButton(
+            onClick = actions.onShowAllBooks,
+            modifier = Modifier.handCursor().testTag(LIBRARY_SHOW_ALL_TAG),
+        ) {
+            Text(texts[TextKey.SHOW_ALL_BOOKS])
         }
     }
 }
+
+/**
+ * The **Reading state** filter (docs/design.md §7.1; issue #200): one row of
+ * multi-select chips under the search field, scrolled horizontally when a
+ * translation overflows it. A chip carries no count — the shelf is not a
+ * dashboard — and the controller keeps the last selected one from being turned
+ * off.
+ */
+@Composable
+private fun StateFilters(selected: Set<ReadingState>, onToggle: (ReadingState) -> Unit, modifier: Modifier = Modifier) {
+    val texts = LocalAppTexts.current
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        ReadingState.entries.forEach { state ->
+            ToggleChip(
+                label = texts[state.textKey],
+                selected = state in selected,
+                onClick = { onToggle(state) },
+                modifier = Modifier.testTag(libraryStateTag(state)),
+            )
+        }
+    }
+}
+
+/** The text a **Reading state** chip carries, in the reader's app language. */
+private val ReadingState.textKey: TextKey
+    get() = when (this) {
+        ReadingState.UNREAD -> TextKey.READING_STATE_UNREAD
+        ReadingState.IN_PROGRESS -> TextKey.READING_STATE_IN_PROGRESS
+        ReadingState.FINISHED -> TextKey.READING_STATE_FINISHED
+    }
 
 /**
  * The scrollable book list (issue #188; docs/design.md §7.1): the recently read
@@ -236,8 +299,8 @@ private fun LazyListScope.shelfGroups(
     onOpen: (Book) -> Unit,
     onDelete: (Book) -> Unit,
 ) {
-    val recent = state.listing.lastRead
-    val rest = state.listing.others
+    val recent = state.visibleLastRead
+    val rest = state.visibleOthers
     if (recent.isNotEmpty()) {
         headingItem(CONTINUE_READING_KEY, texts[TextKey.CONTINUE_READING], top = LektoSpacing.BetweenRelatedLines)
         bookItems(recent, state, onOpen, onDelete)
@@ -266,7 +329,7 @@ private fun LazyListScope.bookItems(
 ) {
     val actions = BookRowActions(onOpen = onOpen, onDelete = onDelete)
     items(books, key = { book -> book.id }) { book ->
-        BookRow(book, state.listing.progressOf(book), actions)
+        BookRow(book, state.listing.progressOf(book), state.listing.readingStateOf(book), actions)
     }
 }
 

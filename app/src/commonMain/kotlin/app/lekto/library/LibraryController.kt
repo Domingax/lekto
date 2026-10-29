@@ -6,6 +6,7 @@ import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
+import app.lekto.core.book.ReadingState
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,10 +31,14 @@ import kotlinx.coroutines.sync.withLock
  * state that never reaches the vault (issue #173). [loading] is true while a
  * re-read of the vault is in flight, so an empty shelf shows skeleton rows
  * rather than the empty message it would claim (issue #208; docs/design.md §8).
+ * [selectedStates] is the **Reading state** filter (issue #200): a multi-select
+ * view state that opens on Unread and In progress, survives leaving the Library
+ * and returning, resets on app restart, and never reaches the vault.
  */
 data class LibraryUiState(
     val listing: LibraryListing = LibraryListing(),
     val query: String = "",
+    val selectedStates: Set<ReadingState> = DEFAULT_STATES,
     val loading: Boolean = false,
     val importing: Boolean = false,
     val progress: Float = 0f,
@@ -41,29 +46,53 @@ data class LibraryUiState(
 ) {
     /**
      * Every book the vault lists, in the order it hands them over. Stays the whole
-     * set whatever the query says: it is what the Languages surface counts, and a
-     * search must not narrow it (issue #173).
+     * set whatever the query or the filter says: it is what the Languages surface
+     * counts, and a filter must not hide the search field (issues #173, #200).
      */
     val books: List<Book> get() = listing.lastRead + listing.others
 
     /**
-     * The books the screen shows: the query's matches when it has one, else the
-     * vault's listing unchanged.
+     * The books the screen shows: the query's matches, then the **Reading state**
+     * filter. The two apply together, so a book the filter hides stays hidden by
+     * a query that matches it (#173, #200).
      */
-    val visibleBooks: List<Book> get() = listing.matching(query)
+    val visibleBooks: List<Book>
+        get() = listing.matching(query).filter { book -> listing.readingStateOf(book) in selectedStates }
+
+    /** The leading **Continue reading** group after the filter, so a hidden book takes no heading with it. */
+    val visibleLastRead: List<Book>
+        get() = listing.lastRead.filter { book -> listing.readingStateOf(book) in selectedStates }
+
+    /** The title-ordered rest after the filter, finished books included when their chip is on. */
+    val visibleOthers: List<Book>
+        get() = listing.others.filter { book -> listing.readingStateOf(book) in selectedStates }
 
     /** Whether a query narrows the list, so the screen drops the `Continue reading` split. */
     val searching: Boolean get() = query.isNotBlank()
 
+    /** Whether the query matches no title at all, whatever the filter would then hide. */
+    val queryMatchesNothing: Boolean get() = searching && listing.matching(query).isEmpty()
+
+    /** Whether every listed book is **Finished**, which is why the filter hides them all. */
+    val everyBookIsFinished: Boolean
+        get() = books.isNotEmpty() && books.all { book -> listing.readingStateOf(book) == ReadingState.FINISHED }
+
     /**
      * Whether the vault holds no book at all — a query cannot have emptied it.
      *
-     * It reads the vault's own listing, not a narrowed view: when the
-     * **Reading state** filter lands (#200), the state must keep this reading of
-     * the whole vault rather than of the filtered list, or a filter that hides
-     * every book would hide the search field too.
+     * It reads the vault's own listing, not a narrowed view: a filter that hides
+     * every book must not hide the search field too.
      */
     val vaultEmpty: Boolean get() = listing.lastRead.isEmpty() && listing.others.isEmpty()
+
+    companion object {
+
+        /**
+         * What the Library opens on: what is still to read, not the books already
+         * finished (docs/design.md §7.1; ADR-0038).
+         */
+        val DEFAULT_STATES: Set<ReadingState> = setOf(ReadingState.UNREAD, ReadingState.IN_PROGRESS)
+    }
 }
 
 /**
@@ -142,6 +171,34 @@ class LibraryController(
     /** Empties the query, restoring the vault's own listing (issue #173). */
     fun clearSearch() {
         search("")
+    }
+
+    /**
+     * Adds [state] to the filter or removes it (issue #200). The last selected
+     * state cannot be turned off, so the shelf never shows nothing because of a
+     * tap that was meant to narrow it: the reader uses **Show all books** to see
+     * everything. The filter is view state and never reaches the vault.
+     */
+    fun toggleState(state: ReadingState) {
+        _state.update { current ->
+            val next = if (state in current.selectedStates) {
+                current.selectedStates - state
+            } else {
+                current.selectedStates + state
+            }
+            if (next.isEmpty()) current else current.copy(selectedStates = next)
+        }
+    }
+
+    /**
+     * Clears both narrowings at once (issue #200; docs/design.md §7.1): every
+     * **Reading state** is selected and the query is emptied, so the shelf shows
+     * the whole vault again. It is what the empty and no-match states offer.
+     */
+    fun showAllBooks() {
+        _state.update { current ->
+            current.copy(selectedStates = ReadingState.entries.toSet(), query = "")
+        }
     }
 
     /**

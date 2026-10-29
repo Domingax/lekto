@@ -5,6 +5,7 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.BookProgress
+import app.lekto.core.book.FinishedBook
 import app.lekto.core.book.ImportException
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.ImportStage
@@ -12,6 +13,7 @@ import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.book.ReadingState
 import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -344,6 +346,86 @@ class LibraryControllerTest {
         assertTrue(content.isEmpty(), "a derived write is not a content change")
         assertTrue(progress.isEmpty(), "a derived write is not a reading change")
     }
+
+    @Test
+    fun theLibraryOpensOnUnreadAndInProgress() = runTest {
+        val controller = LibraryController(FakeLibrary(), LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        // What is still to read leads; finished books appear when the reader adds
+        // the state (issue #200; docs/design.md §7.1).
+        assertEquals(setOf(ReadingState.UNREAD, ReadingState.IN_PROGRESS), controller.state.value.selectedStates)
+    }
+
+    @Test
+    fun aFinishedBookIsHiddenByDefaultAndShownWhenFinishedIsSelected() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1", "Lantern"))
+            recognize(book("b2", "Smaller"))
+            recognize(book("b3", "Read"))
+            markFinished("b3")
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        assertEquals(listOf("b1", "b2"), controller.state.value.visibleBooks.map { book -> book.id })
+
+        controller.toggleState(ReadingState.FINISHED)
+
+        assertEquals(listOf("b1", "b3", "b2"), controller.state.value.visibleBooks.map { book -> book.id })
+    }
+
+    @Test
+    fun aStateCanBeTurnedOffButTheLastSelectedOneCannot() = runTest {
+        val controller = LibraryController(FakeLibrary(), LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        controller.toggleState(ReadingState.IN_PROGRESS)
+        assertEquals(setOf(ReadingState.UNREAD), controller.state.value.selectedStates)
+
+        controller.toggleState(ReadingState.UNREAD)
+
+        // The shelf never shows nothing because a narrowing tap went one too far;
+        // Show all books is the way back to everything (issue #200).
+        assertEquals(setOf(ReadingState.UNREAD), controller.state.value.selectedStates)
+    }
+
+    @Test
+    fun showAllBooksSelectsEveryStateAndClearsTheQuery() = runTest {
+        val library = FakeLibrary().apply { recognize(book("b1", "Lantern")) }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+        controller.search("lant")
+        controller.toggleState(ReadingState.UNREAD)
+
+        controller.showAllBooks()
+
+        assertEquals(ReadingState.entries.toSet(), controller.state.value.selectedStates)
+        assertEquals("", controller.state.value.query)
+    }
+
+    @Test
+    fun theFilterAndTheQueryApplyTogether() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1", "The Lantern Keeper"))
+            recognize(book("b2", "A Smaller Book"))
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        controller.toggleState(ReadingState.UNREAD)
+        controller.search("smaller")
+
+        assertEquals(emptyList(), controller.state.value.visibleBooks)
+        assertFalse(controller.state.value.everyBookIsFinished)
+    }
+
+    @Test
+    fun aShelfWhoseBooksAreAllFinishedSaysSoWhenTheFilterHidesThem() = runTest {
+        val library = FakeLibrary().apply {
+            recognize(book("b1", "Lantern"))
+            markFinished("b1")
+        }
+        val controller = LibraryController(library, LocalChanges(), StandardTestDispatcher(testScheduler), this)
+
+        assertEquals(emptyList(), controller.state.value.visibleBooks)
+        assertTrue(controller.state.value.everyBookIsFinished)
+    }
 }
 
 /** A book with [id] and [title], so a controller test has something to list and delete. */
@@ -362,6 +444,7 @@ private const val KNOWN_PERCENT = 25
 private const val MEASURED_OFFSET = 280
 private const val MEASURED_PERCENT = 28
 
+@Suppress("TooManyFunctions") // A fake of the whole BookLibrary seam; one function per member.
 private class FakeLibrary(
     private val progress: Float = 0f,
     private val failure: Exception? = null,
@@ -373,6 +456,7 @@ private class FakeLibrary(
     private val lastRead = mutableMapOf<String, Long>()
     private val positions = mutableMapOf<String, Int>()
     private val lengths = mutableMapOf<String, Int>()
+    private val finishedBooks = mutableMapOf<String, FinishedBook>()
 
     /** The books whose length the controller asked to measure, so a test can pin the background work. */
     val measured: MutableList<String> = mutableListOf()
@@ -394,6 +478,12 @@ private class FakeLibrary(
             lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
             progressByBook = positions.mapValues { (id, offset) ->
                 BookProgress.forPosition(ReadingPosition(id, offset), lengths[id])
+            },
+            readingStateByBook = stored.associate { book ->
+                book.id to ReadingState.of(
+                    hasPosition = book.id in positions,
+                    finished = book.id in finishedBooks,
+                )
             },
         )
     }
@@ -432,11 +522,22 @@ private class FakeLibrary(
     override fun delete(id: String) {
         deleteFailure?.let { throw it }
         stored = stored.filterNot { book -> book.id == id }
+        finishedBooks.remove(id)
     }
 
     override fun open(id: String): ReadingSession? = null
 
     override fun position(bookId: String): ReadingPosition? = null
+
+    override fun finished(bookId: String): FinishedBook? = finishedBooks[bookId]
+
+    override fun markFinished(bookId: String) {
+        finishedBooks[bookId] = FinishedBook(bookId, Instant.fromEpochMilliseconds(++reads))
+    }
+
+    override fun markUnfinished(bookId: String) {
+        finishedBooks.remove(bookId)
+    }
 
     override fun savePosition(position: ReadingPosition) = Unit
 }

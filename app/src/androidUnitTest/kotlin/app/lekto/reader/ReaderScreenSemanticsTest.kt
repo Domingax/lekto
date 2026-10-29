@@ -64,7 +64,7 @@ private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("MagicNumber") // The tap coordinates and the thirds of the width are the test's parameters.
+@Suppress("MagicNumber", "TooManyFunctions") // The tap coordinates, and one test per behaviour the reader owns.
 class ReaderScreenSemanticsTest {
 
     @get:Rule
@@ -212,6 +212,100 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
+    fun reachingTheLastPageDoesNotOpenTheEndState() {
+        compose.setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
+
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun nextOnTheLastPageOpensTheEndState() {
+        compose.setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsNotEnabled()
+
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+            click(Offset(visibleSize.width - 4f, center.y))
+        }
+
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithText("THE END").assertIsDisplayed()
+        compose.onNodeWithText(LONG_CHAPTER.title).assertIsDisplayed()
+        compose.onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
+        // The state hides the reader's chrome.
+        compose.onNodeWithTag(READER_POSITION_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun markingFinishedKeepsThePanelOpenAndUndoFlipsItBack() {
+        var marked = 0
+        var undone = 0
+        compose.setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                onMarkFinished = { marked++ },
+                onMarkUnfinished = { undone++ },
+            )
+        }
+        compose.openEndState()
+
+        compose.onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        assertEquals(1, marked)
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithText("Finished").assertIsDisplayed()
+        compose.onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_MARK_FINISHED_TAG).assertDoesNotExist()
+
+        compose.onNodeWithTag(READER_MARK_UNFINISHED_TAG).performClick()
+
+        assertEquals(1, undone)
+        compose.onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aFinishedSessionOpensTheEndStateAlreadyMarked() {
+        compose.setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, initiallyFinished = true) }
+        compose.openEndState()
+
+        compose.onNodeWithText("Finished").assertIsDisplayed()
+        compose.onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun markingFinishedNeverMovesThePosition() {
+        val reported = mutableListOf<Int>()
+        compose.setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                onPositionChange = { offset -> reported += offset },
+                onMarkFinished = {},
+            )
+        }
+        compose.openEndState()
+
+        compose.onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        assertTrue("declaring finished is not a page turn: $reported", reported.isEmpty())
+    }
+
+    @Test
+    fun backToLibraryLeavesTheReader() {
+        var left = false
+        compose.setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, onBack = { left = true }) }
+        compose.openEndState()
+
+        compose.onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).performClick()
+
+        assertTrue("Back to Library leaves for the Library", left)
+    }
+
+    @Test
     fun aPageTurnReportsItsPosition() {
         var reported = -1
         compose.setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
@@ -266,8 +360,12 @@ class ReaderScreenSemanticsTest {
         renderer: ReaderRenderer,
         chapter: ReaderText = LONG_CHAPTER,
         initialOffset: Int = 0,
+        initiallyFinished: Boolean = false,
+        onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
+        onMarkFinished: () -> Unit = {},
+        onMarkUnfinished: () -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
@@ -275,11 +373,20 @@ class ReaderScreenSemanticsTest {
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
                 actions = ReaderActions(
                     onPhraseSelected = onPhraseSelected,
-                    onBack = {},
+                    onBack = onBack,
                     onPositionChange = onPositionChange,
+                    onMarkFinished = onMarkFinished,
+                    onMarkUnfinished = onMarkUnfinished,
                 ),
+                initiallyFinished = initiallyFinished,
             )
         }
+    }
+
+    /** Taps the next zone on the last page, which is the only way the end state opens. */
+    private fun ComposeTestRule.openEndState() {
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
     }
 }
 

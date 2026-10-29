@@ -44,6 +44,28 @@ The reader fills the screen: the arrow at its top left returns to the Library, a
 so does the system back gesture on Android. Back closes a lookup panel or the
 **Aa** panel first, so it never costs you your page.
 
+## Finishing a book
+
+Lekto never decides on its own that you have finished a book, and reaching its
+last page is not the same as having read it. When you are on the last page, tap
+the right third once more and a full-screen state opens. It says **THE END**,
+then the book's title, and offers **Mark as finished** and **Back to Library**.
+
+**Mark as finished** declares the book finished and leaves the state open: a
+check and **Finished** appear, the main action becomes **Back to Library**, and
+**Mark as unfinished** is offered below it. Marking never moves your **Reading
+position**, so reopening the book still takes you where you stopped.
+
+If you marked a book by mistake, **Mark as unfinished** removes only the
+declaration. Your Reading position, your last-read time and your vocabulary stay
+as they were.
+
+A book you declared finished stays finished when you reopen it or read it again;
+only an explicit **Mark as unfinished** changes that. The state closes on
+**Back to Library**, or with the system back gesture on Android, which returns
+you to the last page. The Library shows finished books when you select the
+**Finished** filter; see [Library](/library).
+
 ## Changing how the text looks
 
 Tap **Aa** in the reader's top bar to open the **Aa** panel. The panel sits under

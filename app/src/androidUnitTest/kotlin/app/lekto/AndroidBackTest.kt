@@ -1,10 +1,12 @@
 package app.lekto
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import app.lekto.language.LANGUAGES_RELOAD_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
 import app.lekto.navigation.SHELL_NAV_TAG
@@ -22,6 +25,7 @@ import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
 import app.lekto.reader.READER_CHAPTER_SHEET_TAG
+import app.lekto.reader.READER_END_PANEL_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
@@ -156,6 +160,29 @@ class AndroidBackTest {
         // page stays where it was; the reader is still in front of the shell.
         compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
         compose.onNodeWithTag(READER_PAGE_TAG).assertIsDisplayed()
+        assertTrue("back does not leave the reader while it is open", !compose.activity.isFinishing)
+    }
+
+    @Test
+    fun backClosesTheEndStateBeforeLeavingTheBook() {
+        val library = InMemoryLibrary().apply {
+            import("lantern.epub", byteArrayOf(1))
+            readAt("b1", offset = Int.MAX_VALUE)
+        }
+        compose.setContent { App(environment(library)) }
+        openBook()
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+            click(Offset(visibleSize.width - 4f, center.y))
+        }
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+
+        pressBack()
+
+        // The end state closes onto the last page it was raised from, and the
+        // reader stays in front of the shell (issue #200).
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(READER_PAGE_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         assertTrue("back does not leave the reader while it is open", !compose.activity.isFinishing)
     }
 
