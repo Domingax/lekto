@@ -274,7 +274,14 @@ the vault's outlined `Connection`, and `Remove key` and `Disconnect` in the
 reserved red. The Settings index adds `settings-index-<paper>.png` per paper
 (issue #214): the serif title, the three muted group labels, each row's title and
 current value as ink bars with its chevron, and the hairline that parts two rows of
-a group. The launcher
+a group. The **Languages** screen adds `languages-<paper>.png` per paper
+(issue #215): the back arrow and serif title with **Reload list** at the edge, the
+printed-form **Translation language** row, then the `By language` label and the
+short explanation of the two derived assets, then one row per language with its
+name and level picker, each **Derived asset**'s muted state and its
+trailing text action, the hairline that parts two languages, and the attribution at
+the foot in the muted ink — three rows standing for one ready, one missing both
+derived assets and one with a corrupt dictionary. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.
@@ -1043,7 +1050,8 @@ does not — and the whole loop, download to shown as installed, runs through
 The **Languages** surface and its **Language manifest** (issues #146, #147) are proved at
 their own levels. Reading a manifest is a pure function from bytes to a
 catalogue, so `LanguageManifestReadTest` in `core/commonTest` pins that the
-offered languages and their artefacts are read, that a manifest whose format this
+offered languages and their artefacts are read — including each artefact's
+published size when the manifest carries it — that a manifest whose format this
 build does not read is refused rather than misread, that malformed bytes are not
 mistaken for an empty catalogue, and a write/read round-trip over generated
 languages. `LanguageCatalog`'s lifecycle is a `core/commonTest` behaviour over the
@@ -1061,7 +1069,11 @@ language with no books last. The state holder is `LanguageControllerTest` in
 **Difficulty table**'s per-language state, download, honest no-table line,
 progress and failure (issue #148), and the **Dictionary pack**'s per-pair state,
 download, pair label ("English → French"), honest no-pack line, progress and
-failure (issue #149); and
+failure (issue #149). Since issue #215 the same suite pins that every language row
+exposes its state and its text action together, that a download shows the
+manifest's published size, and that a missing artifact and a corrupt one read
+differently and offer a different action; the row's visual anatomy is
+`LanguagesGoldenTest`'s sheet. And
 the two ways in — the library's header and Settings — the always-visible reload
 after a failed first fetch, setting and clearing a level through the surface,
 downloading a difficulty table, and downloading a dictionary pack and reaching

@@ -87,7 +87,15 @@ fun testLanguageManifest(
             languages.map { offered ->
                 buildJsonObject {
                     put("language", offered.language)
-                    offered.difficulty?.let { name -> put("difficulty", buildJsonObject { put("name", name) }) }
+                    offered.difficulty?.let { name ->
+                        put(
+                            "difficulty",
+                            buildJsonObject {
+                                put("name", name)
+                                offered.difficultySizeBytes?.let { bytes -> put("sizeBytes", bytes) }
+                            },
+                        )
+                    }
                     put(
                         "dictionaries",
                         buildJsonArray {
@@ -96,6 +104,7 @@ fun testLanguageManifest(
                                     buildJsonObject {
                                         put("translationLanguage", dictionary.translationLanguage)
                                         put("name", dictionary.name)
+                                        dictionary.sizeBytes?.let { bytes -> put("sizeBytes", bytes) }
                                     },
                                 )
                             }
@@ -112,9 +121,11 @@ fun testOfferedLanguage(
     language: String,
     difficulty: String? = null,
     dictionaries: List<OfferedDictionary> = emptyList(),
+    difficultySizeBytes: Long? = null,
 ): OfferedLanguage = OfferedLanguage(
     language = language,
     displayName = app.lekto.core.language.readingLanguageName(language),
     difficulty = difficulty,
     dictionaries = dictionaries,
+    difficultySizeBytes = difficultySizeBytes,
 )

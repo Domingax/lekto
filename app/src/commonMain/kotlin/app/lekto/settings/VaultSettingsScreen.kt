@@ -32,6 +32,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ScreenHeader
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.Info
 import app.lekto.ui.icons.LektoIcons
@@ -85,7 +86,7 @@ fun VaultSettingsScreen(
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
-        SettingsFormHeader(
+        ScreenHeader(
             title = texts[TextKey.VAULT_AND_SYNC],
             backTag = VAULT_BACK_TAG,
             titleTag = VAULT_SETTINGS_TITLE_TAG,

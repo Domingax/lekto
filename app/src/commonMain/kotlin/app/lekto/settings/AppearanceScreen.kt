@@ -36,6 +36,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.appThemeScheme
+import app.lekto.ui.ScreenHeader
 import app.lekto.ui.handCursor
 import app.lekto.ui.rowHover
 
@@ -79,7 +80,7 @@ fun AppearanceScreen(
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
-        SettingsFormHeader(
+        ScreenHeader(
             title = texts[TextKey.SECTION_APPEARANCE],
             backTag = APPEARANCE_BACK_TAG,
             titleTag = APPEARANCE_TITLE_TAG,

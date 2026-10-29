@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,45 +32,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.lekto.text.LocalAppTexts
-import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
-import app.lekto.ui.icons.ArrowLeft
 import app.lekto.ui.icons.Check
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.rowHover
 import app.lekto.ui.touchClient
-
-/**
- * The header the two settings screens share (docs/design.md §7.5, §7.6): the
- * way back as the `arrow-left` icon, then the screen's title in the reading
- * serif. The shell keeps **Settings** current while the screen is open, and the
- * icon and the platform's Back both walk the one back stack.
- */
-@Composable
-internal fun SettingsFormHeader(title: String, backTag: String, titleTag: String, onBack: () -> Unit) {
-    val texts = LocalAppTexts.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
-    ) {
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.handCursor().testTag(backTag),
-        ) {
-            Icon(imageVector = LektoIcons.ArrowLeft, contentDescription = texts[TextKey.BACK])
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.testTag(titleTag),
-        )
-    }
-}
 
 /**
  * One field of a printed form (docs/design.md §7.5): the label in the small

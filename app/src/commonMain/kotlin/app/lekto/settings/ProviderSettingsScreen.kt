@@ -30,6 +30,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ScreenHeader
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
@@ -75,7 +76,7 @@ fun ProviderSettingsScreen(
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
-        SettingsFormHeader(
+        ScreenHeader(
             title = texts[TextKey.SECTION_LLM_PROVIDER],
             backTag = PROVIDER_BACK_TAG,
             titleTag = PROVIDER_SETTINGS_TITLE_TAG,

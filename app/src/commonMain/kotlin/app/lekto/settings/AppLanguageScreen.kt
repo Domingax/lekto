@@ -28,6 +28,7 @@ import app.lekto.core.language.AppLanguages
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ScreenHeader
 import app.lekto.ui.handCursor
 import app.lekto.ui.rowHover
 
@@ -69,7 +70,7 @@ fun AppLanguageScreen(
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
-        SettingsFormHeader(
+        ScreenHeader(
             title = texts[TextKey.SECTION_APP_LANGUAGE],
             backTag = APP_LANGUAGE_BACK_TAG,
             titleTag = APP_LANGUAGE_TITLE_TAG,

@@ -16,6 +16,7 @@ import app.lekto.core.difficulty.DifficultyMetadata
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ScreenHeader
 
 /** The test tag on the way back, so a UI test can click exactly it. */
 internal const val ATTRIBUTION_BACK_TAG: String = "attribution-back"
@@ -53,7 +54,7 @@ fun AttributionScreen(
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
-        SettingsFormHeader(
+        ScreenHeader(
             title = LocalAppTexts.current[TextKey.ATTRIBUTION],
             backTag = ATTRIBUTION_BACK_TAG,
             titleTag = ATTRIBUTION_TITLE_TAG,

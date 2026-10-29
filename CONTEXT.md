@@ -36,7 +36,8 @@ _Avoid_: Frequency list, word list, difficulty pack
 The catalogue of what Lekto offers for reading: each **Reading language** and the
 artefacts published for it — a **Difficulty table** per reading language, and a
 **Dictionary pack** per (Reading language × **Translation language**) pair, each
-naming its translation language. A **Derived asset**, versioned so a reader can
+naming its translation language and, once the release is compressed, the asset's
+size in bytes. A **Derived asset**, versioned so a reader can
 refuse one it does not understand, and never authored by the user.
 _Avoid_: Catalog, index, registry
 
