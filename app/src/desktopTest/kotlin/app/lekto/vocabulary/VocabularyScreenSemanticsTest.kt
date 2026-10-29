@@ -8,16 +8,21 @@ import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
@@ -233,6 +238,31 @@ class VocabularyScreenSemanticsTest {
             .fetchSemanticsNode().config[SemanticsActions.OnClick]
 
         assertEquals("Change level", onClick.label)
+    }
+
+    @Test
+    fun theHoverWashIsOneBandAcrossTheWholeRow() = runComposeUiTest {
+        // The row's wash is `DeletingRow`'s, one 5 % band over the whole row. A
+        // Material click on the row would paint its own 8 % hover layer over the
+        // content only, so the text would sit in a darker patch than the delete's
+        // slot (issue #178) — a colour a hand-drawn golden cannot catch.
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), "")) }
+        onNodeWithTag(vocabularyRowTag(lantern.key)).performMouseInput { moveTo(center) }
+        waitForIdle()
+
+        val row = onNodeWithTag(vocabularyRowTag(lantern.key)).getUnclippedBoundsInRoot()
+        val delete = onNodeWithTag(vocabularyDeleteTag(lantern.key)).getUnclippedBoundsInRoot()
+        val root = onRoot().getUnclippedBoundsInRoot()
+        val image = onRoot().captureToImage().toPixelMap()
+        val scale = image.width / (root.right - root.left).value
+        // Two blank points on the same line: the content's trailing edge, and the
+        // delete's slot under its icon. Both are the row's wash, or one is darker.
+        val y = ((delete.bottom - 4.dp).value * scale).toInt()
+        val inContent = image[((row.right - 40.dp).value * scale).toInt(), y]
+        val inDeleteSlot = image[((delete.left + 24.dp).value * scale).toInt(), y]
+
+        assertEquals(inDeleteSlot, inContent, "one wash spans the row, delete slot included")
+        assertTrue(inContent != Color.Transparent, "the row is hovered, so a wash is drawn")
     }
 
     @Test

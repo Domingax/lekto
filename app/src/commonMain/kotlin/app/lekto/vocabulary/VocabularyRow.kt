@@ -1,7 +1,6 @@
 package app.lekto.vocabulary
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import app.lekto.ui.DeleteAction
 import app.lekto.ui.DeletingRow
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
+import app.lekto.ui.plainClickable
 
 /** The test tag on an entry's delete button, so a UI test can click exactly one. */
 internal fun vocabularyDeleteTag(key: WordKey): String = "vocabulary-delete-${key.language.orEmpty()}-${key.key}"
@@ -78,7 +78,7 @@ internal fun VocabularyRow(
                 modifier = content
                     .testTag(vocabularyRowTag(entry.key))
                     .handCursor()
-                    .clickable(role = Role.Button, onClickLabel = texts[TextKey.CHANGE_LEVEL]) { onOpen(entry) }
+                    .plainClickable(role = Role.Button, onClickLabel = texts[TextKey.CHANGE_LEVEL]) { onOpen(entry) }
                     .semantics {
                         customActions = listOf(
                             CustomAccessibilityAction(texts[TextKey.DELETE]) {
