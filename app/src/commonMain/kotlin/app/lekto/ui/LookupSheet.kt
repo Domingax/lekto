@@ -65,6 +65,7 @@ private val HandleHeight = 4.dp
  * [DismissScrim] handles — dismisses it; a tap on the reader behind it then
  * never turns the page or opens another lookup.
  */
+@Suppress("LongParameterList") // The frame, its test tag, the shape and the cap: four independent choices.
 @Composable
 internal fun LookupSheet(
     modifier: Modifier = Modifier,

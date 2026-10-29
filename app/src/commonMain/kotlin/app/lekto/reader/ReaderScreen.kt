@@ -45,6 +45,7 @@ import app.lekto.core.reading.ReadingPreferences
 import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.ui.DismissScrim
 import kotlinx.coroutines.yield
 import kotlin.math.roundToInt
@@ -111,7 +112,7 @@ data class ReaderActions(
  * changes where the book opens, and only seeds the end-of-book state's marked
  * face (ADR-0038).
  *
- * At [CONTEXT_COLUMN_BREAKPOINT] and above the reader reserves the right-hand
+ * At [WIDE_WINDOW_BREAKPOINT] and above the reader reserves the right-hand
  * **context column** ([ReaderContext]): the chapter list when nothing is touched,
  * the open lookup when something is (issue #199). The column is part of the
  * layout, not an overlay, so the page keeps its width while a word is selected and
@@ -141,7 +142,7 @@ fun ReaderScreen(
     val entries = remember(document.text) { document.text.chapterEntries() }
     val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val contextColumn = maxWidth >= CONTEXT_COLUMN_BREAKPOINT
+        val contextColumn = maxWidth >= WIDE_WINDOW_BREAKPOINT
         // The page paginates against the width it is actually given: at the
         // breakpoint the column takes its own share of the window.
         val pageWidth = if (contextColumn) maxWidth - CONTEXT_COLUMN_WIDTH else maxWidth

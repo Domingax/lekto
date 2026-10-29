@@ -13,15 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
-/**
- * The width at which the reader reserves the right-hand **context column**
- * (docs/design.md §6): below it the column has no room, and the phone's chapter
- * sheet and bottom lookup sheet are used instead. The reader leaves the shell and
- * fills the window, so the shape follows the room the window gives it rather than
- * the platform it runs on.
- */
-internal val CONTEXT_COLUMN_BREAKPOINT = 1100.dp
-
 /** The context column's width: a chapter list or a lookup panel, with its own edge. */
 internal val CONTEXT_COLUMN_WIDTH = 320.dp
 

@@ -20,6 +20,7 @@ import app.lekto.core.MasteryLevel
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasterySelector
 import app.lekto.theme.LektoSpacing
+import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.ui.DismissScrim
 import app.lekto.ui.LookupCloseButton
 import app.lekto.ui.LookupHeader
@@ -49,11 +50,10 @@ internal fun vocabularyLevelTag(level: MasteryLevel): String = "vocabulary-level
 internal const val VOCABULARY_LEVEL_SHEET_MAX_HEIGHT_FRACTION: Float = 0.8f
 
 /**
- * The width at which a window has room to spare (`docs/design.md` §6), and the
- * width the sheet keeps once it does. A sheet stretching the full width of a
- * desktop window reads as a bar, not as something raised for one word.
+ * The width the sheet keeps once the window has room to spare: a sheet stretching
+ * the full width of a desktop window reads as a bar, not as something raised for
+ * one word.
  */
-internal val WideWindowBreakpoint = 1100.dp
 internal val WideSheetWidth = 560.dp
 
 /**
@@ -81,7 +81,7 @@ fun VocabularyLevelSheet(
 ) {
     BoxWithConstraints(modifier.fillMaxSize()) {
         DismissScrim(onDismiss, Modifier.testTag(VOCABULARY_LEVEL_SCRIM_TAG))
-        val wide = maxWidth >= WideWindowBreakpoint
+        val wide = maxWidth >= WIDE_WINDOW_BREAKPOINT
         LookupSheet(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
