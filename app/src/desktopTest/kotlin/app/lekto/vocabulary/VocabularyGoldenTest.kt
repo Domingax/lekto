@@ -1,7 +1,11 @@
-@file:Suppress("MagicNumber") // The preview lays out a phone's frame in design tokens and fixed heights.
+@file:Suppress(
+    "MagicNumber", // The preview lays out the sheet's fixed bands, chips and bars as a planche does.
+    "TooManyFunctions", // The planches and the previews each draws; one file, one surface.
+)
 
 package app.lekto.vocabulary
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,10 +21,16 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -38,17 +49,22 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
+import app.lekto.theme.WIDE_COLUMN_WIDTH
+import app.lekto.theme.contentColorOn
 import app.lekto.theme.hoverWash
 import app.lekto.ui.ChipFrame
 import app.lekto.ui.DELETE_ICON_SIZE
 import app.lekto.ui.FIRST_LINE_INSET
 import app.lekto.ui.HAIRLINE_THICKNESS
+import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import app.lekto.ui.SEARCH_ICON_SIZE
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.Search
 import app.lekto.ui.icons.Trash
+import app.lekto.ui.icons.X
 import io.github.takahirom.roborazzi.captureRoboImage
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 /**
  * The Vocabulary list's visual anatomy in the screenshot lane, one sheet per
@@ -95,6 +111,32 @@ class VocabularyGoldenTest {
     fun lightConfirmation() = runComposeUiTest {
         setContent { LektoTheme(theme = Light) { ConfirmationPreview() } }
         onRoot().captureRoboImage("vocabulary-delete-light.png")
+    }
+
+    @Test
+    fun theLevelSheetOnEveryPaper() = runComposeUiTest {
+        // One planche per App theme, in one test: the sheet is the same frame,
+        // repainted, and three tests would draw the same preview three times.
+        var paper by mutableStateOf(Light)
+        setContent { LektoTheme(theme = paper) { LevelSheetPreview() } }
+
+        listOf("light" to Light, "dark" to Dark, "sepia" to Sepia).forEach { (name, theme) ->
+            paper = theme
+            onRoot().captureRoboImage("vocabulary-level-sheet-$name.png")
+        }
+    }
+
+    @Test
+    fun lightLevelColumn() = runComposeUiTest {
+        setContent { LektoTheme(theme = Light) { LevelColumnPreview() } }
+        onRoot().captureRoboImage("vocabulary-level-column-light.png")
+    }
+
+    @Test
+    fun theLevelSheetMayTakeMoreOfTheScreenThanTheLookupPanels() {
+        // The reader's cap keeps the page and the washed word visible; a sheet over
+        // a list has nothing to keep in view (issue #178).
+        assertTrue(VOCABULARY_LEVEL_SHEET_MAX_HEIGHT_FRACTION > LOOKUP_SHEET_MAX_HEIGHT_FRACTION)
     }
 
     private fun listGolden(name: String, theme: ColorScheme) = runComposeUiTest {
@@ -363,3 +405,211 @@ private val ACTION_BAR = LineBar(height = 13.dp, width = 46.dp)
 
 /** The scrim's opacity, as Material's dialogue draws it. */
 private const val SCRIM_ALPHA = 0.32f
+
+/** The drag handle's bar, as the sheet shell draws it. */
+private val LEVEL_HANDLE_WIDTH = 32.dp
+private val LEVEL_HANDLE_HEIGHT = 4.dp
+
+/** A level chip's visible frame inside its 48 dp target, and the ink ring of the current one. */
+private val LEVEL_CHIP_WIDTH = 32.dp
+private val LEVEL_CHIP_HEIGHT = 32.dp
+private val LEVEL_CHIP_RING = 2.dp
+
+/** The bars that stand in for the level sheet's words. */
+private val LEVEL_WORD_BAR = LineBar(height = 22.dp, width = 96.dp)
+private val LEVEL_TRANSLATION_BAR = LineBar(height = 12.dp, width = 88.dp)
+private val LEVEL_SENTENCE_BAR = LineBar(height = 10.dp, width = 220.dp)
+private val LEVEL_LABEL_BAR = LineBar(height = 8.dp, width = 40.dp)
+private val LEVEL_SHEET_NAME_BAR = LineBar(height = 12.dp, width = 56.dp)
+private val LEVEL_CHIP_LABEL_BAR = LineBar(height = 9.dp, width = 8.dp)
+
+/**
+ * The level sheet's frame over the list it was raised from (issue #178): the
+ * scrim, then the shared sheet — its drag handle, the word in the title's size,
+ * the close icon, the translation and the muted sentence, a hairline, and the
+ * reader's five chips with the current level ringed and named.
+ *
+ * Every frame here is redrawn, as the Library's golden redraws its own: the
+ * handle, the title band and the chip row copy the sheet's own values, and only
+ * the words are bars, because glyphs are the one thing a golden cannot pin.
+ */
+@Composable
+private fun LevelSheetPreview() {
+    val theme = MaterialTheme.colorScheme
+    Box(Modifier.size(width = LIST_WIDTH, height = LIST_HEIGHT).background(theme.background)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = EDGE, vertical = LektoSpacing.InsidePanel),
+        ) {
+            HeaderLine()
+            SearchSurface()
+            FilterRow()
+            PREVIEW_ENTRIES.take(2).forEach { entry -> PreviewRow(entry, hovered = false) }
+        }
+        Box(Modifier.fillMaxSize().background(theme.scrim.copy(alpha = SCRIM_ALPHA)))
+        Surface(
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            color = theme.surface,
+            border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                LevelSheetHandle()
+                LevelSheetHeader()
+                LevelSheetMeaning()
+                LevelSheetDivider()
+                LevelSheetSelector()
+            }
+        }
+    }
+}
+
+/** The grabber that says the sheet was raised from the bottom edge. */
+@Composable
+private fun LevelSheetHandle() {
+    Box(
+        Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .width(LEVEL_HANDLE_WIDTH)
+                .height(LEVEL_HANDLE_HEIGHT)
+                .background(MaterialTheme.colorScheme.outline, CircleShape),
+        )
+    }
+}
+
+/** The word in the serif and the close action, on the sheet's own header band. */
+@Composable
+private fun LevelSheetHeader() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(
+            start = LektoSpacing.InsidePanel,
+            end = LektoSpacing.InsideLabelPair,
+            top = LektoSpacing.InsideLabelPair,
+        ),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Line(theme.onBackground, LEVEL_WORD_BAR)
+        Spacer(Modifier.weight(1f))
+        Icon(
+            imageVector = LektoIcons.X,
+            contentDescription = null,
+            tint = theme.onBackground,
+            modifier = Modifier.padding(horizontal = LektoSpacing.BetweenRows).size(24.dp),
+        )
+    }
+}
+
+/** What the row says about the word: its translation, then the sentence in the muted ink. */
+@Composable
+private fun LevelSheetMeaning() {
+    val theme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel).padding(
+            bottom = LektoSpacing.BetweenRows,
+        ),
+    ) {
+        Line(theme.onSurface, LEVEL_TRANSLATION_BAR)
+        Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
+        Line(theme.onSurfaceVariant, LEVEL_SENTENCE_BAR)
+    }
+}
+
+/** The hairline that parts the word from its levels, inset to the content. */
+@Composable
+private fun LevelSheetDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
+        color = MaterialTheme.colorScheme.outline,
+    )
+}
+
+/** The level named beside the five chips, as the reader's footer draws them. */
+@Composable
+private fun LevelSheetSelector() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(
+            horizontal = LektoSpacing.InsidePanel,
+            vertical = LektoSpacing.BetweenRows,
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f).heightIn(min = LektoSpacing.TouchTarget),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Line(theme.onSurfaceVariant, LEVEL_LABEL_BAR)
+            Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
+            Line(theme.onBackground, LEVEL_SHEET_NAME_BAR)
+        }
+        LevelSheetChips()
+    }
+}
+
+/**
+ * The word's reserved column (issue #178; docs/design.md §6): the reader's column
+ * shape — a surface beside the content, parted by a hairline — with the word,
+ * what the row says about it, and the level stacked above the chips, because
+ * 320 dp has no room for both on one line.
+ */
+@Composable
+private fun LevelColumnPreview() {
+    val theme = MaterialTheme.colorScheme
+    Row(Modifier.size(width = WIDE_COLUMN_WIDTH, height = LIST_HEIGHT).background(theme.surface)) {
+        Box(Modifier.width(HAIRLINE_THICKNESS).fillMaxHeight().background(theme.outline))
+        Column(Modifier.fillMaxWidth()) {
+            LevelSheetHeader()
+            LevelSheetMeaning()
+            LevelSheetDivider()
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(
+                    horizontal = LektoSpacing.InsidePanel,
+                    vertical = LektoSpacing.BetweenRows,
+                ),
+            ) {
+                Line(theme.onSurfaceVariant, LEVEL_LABEL_BAR)
+                Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
+                Line(theme.onBackground, LEVEL_SHEET_NAME_BAR)
+                Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
+                LevelSheetChips()
+            }
+        }
+    }
+}
+
+/** The five chip frames, filled with each level's colour; the current one keeps an ink ring. */
+@Composable
+private fun LevelSheetChips() {
+    val theme = MaterialTheme.colorScheme
+    val ramp = MasteryPalette.of(theme)
+    val levels = listOf(ramp.unknown, ramp.recognized, ramp.familiar, ramp.learned, null)
+    Row {
+        levels.forEachIndexed { index, colour ->
+            // The sheet opens on the saved level, so the planche rings that one.
+            val selected = index == MasteryLevel.LEARNED.ordinal
+            val fill = colour ?: theme.outline
+            Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .width(LEVEL_CHIP_WIDTH)
+                        .height(LEVEL_CHIP_HEIGHT)
+                        .background(fill, LektoRadii.Control)
+                        .then(
+                            if (selected) {
+                                Modifier.border(LEVEL_CHIP_RING, theme.onBackground, LektoRadii.Control)
+                            } else {
+                                Modifier
+                            },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Line(contentColorOn(fill), LEVEL_CHIP_LABEL_BAR)
+                }
+            }
+        }
+    }
+}

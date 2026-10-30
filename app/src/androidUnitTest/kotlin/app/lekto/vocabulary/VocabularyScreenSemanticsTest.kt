@@ -163,6 +163,28 @@ class VocabularyScreenSemanticsTest {
     }
 
     @Test
+    fun aRowTapRaisesTheWordAndNotTheSwipeOnAndroid() {
+        // The touch lane's two gestures: a tap opens the word's level sheet, a
+        // swipe still only asks to delete (issue #178; docs/design.md §7.4).
+        var opened: VocabularyEntry? = null
+        var deleted: VocabularyEntry? = null
+        compose.setContent {
+            MaterialTheme {
+                VocabularyScreen(
+                    state = VocabularyUiState.Results(listOf(lantern), ""),
+                    actions = VocabularyActions(onDelete = { deleted = it }, onOpen = { opened = it }),
+                )
+            }
+        }
+
+        compose.onNodeWithTag(vocabularyRowTag(lantern.key)).performClick()
+
+        assertEquals(lantern, opened)
+        compose.onNodeWithText("Delete « lantern »?").assertDoesNotExist()
+        assertNull(deleted)
+    }
+
+    @Test
     fun theCountPluralisesOnAndroid() {
         val harbour = testVocabularyEntry(surface = "harbour")
 

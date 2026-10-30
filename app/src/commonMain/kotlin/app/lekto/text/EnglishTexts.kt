@@ -75,6 +75,8 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.DELETE_WORD_TITLE to "Delete « {0} »?",
     TextKey.DELETE_WORD_MESSAGE to
         "This removes the entry from your vocabulary. The word can be saved again by tapping it in the book.",
+    TextKey.CHANGE_LEVEL to "Change level",
+    TextKey.VOCABULARY_LEVEL_HINT to "Choose a word to change its level.",
 
     // Reader.
     TextKey.PREVIOUS_PAGE to "Previous page",

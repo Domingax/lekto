@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,8 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.ui.DeleteAction
 import app.lekto.ui.DeletingRow
 import app.lekto.ui.HAIRLINE_THICKNESS
+import app.lekto.ui.handCursor
+import app.lekto.ui.plainClickable
 
 /** The test tag on an entry's delete button, so a UI test can click exactly one. */
 internal fun vocabularyDeleteTag(key: WordKey): String = "vocabulary-delete-${key.language.orEmpty()}-${key.key}"
@@ -50,16 +53,21 @@ internal val MASTERY_DOT_GAP = 6.dp
 /**
  * One entry (§7.4; issue #212): the word in the book's serif — the word as the
  * book printed it — with its colour-dotted level beside it, then the translation,
- * then the sentence it came from in the muted ink. The row is one tap target
- * reserved for the word panel (#178), and the delete is the shared row gesture
+ * then the sentence it came from in the muted ink. The row is one tap target that
+ * opens the word's level sheet (#178), and the delete is the shared row gesture
  * ([DeletingRow]): a swipe on Android, a trash on hover with a pointer, and the
  * confirmation either way.
  *
  * The row also carries the delete as an accessibility action, because a screen
- * reader cannot swipe a row the way a thumb does.
+ * reader cannot swipe a row the way a thumb does, and the tap names itself so it
+ * is not announced as an anonymous click.
  */
 @Composable
-internal fun VocabularyRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -> Unit) {
+internal fun VocabularyRow(
+    entry: VocabularyEntry,
+    onDelete: (VocabularyEntry) -> Unit,
+    onOpen: (VocabularyEntry) -> Unit,
+) {
     val texts = LocalAppTexts.current
     Column {
         DeletingRow(
@@ -69,6 +77,8 @@ internal fun VocabularyRow(entry: VocabularyEntry, onDelete: (VocabularyEntry) -
             Column(
                 modifier = content
                     .testTag(vocabularyRowTag(entry.key))
+                    .handCursor()
+                    .plainClickable(role = Role.Button, onClickLabel = texts[TextKey.CHANGE_LEVEL]) { onOpen(entry) }
                     .semantics {
                         customActions = listOf(
                             CustomAccessibilityAction(texts[TextKey.DELETE]) {

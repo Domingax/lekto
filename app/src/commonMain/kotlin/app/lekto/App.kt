@@ -1,8 +1,13 @@
+@file:Suppress("TooManyFunctions") // The composition root: one function per destination and per seam it wires.
+
 package app.lekto
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -109,6 +114,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
 import app.lekto.theme.LektoTheme
+import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.theme.appThemeScheme
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
@@ -116,6 +122,8 @@ import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
+import app.lekto.vocabulary.VocabularyLevelColumn
+import app.lekto.vocabulary.VocabularyLevelSheet
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
 import app.lekto.vocabulary.filterByMastery
@@ -417,7 +425,6 @@ fun App(
                     scope,
                     progress,
                     settings,
-                    vocabulary,
                     mastery,
                     language,
                     languageSettings,
@@ -444,7 +451,6 @@ private fun AppScreens(
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
     settings: Settings,
-    vocabulary: VocabularyController?,
     mastery: MasteryController?,
     language: LanguageController?,
     languageSettings: LanguageSettingsController?,
@@ -603,7 +609,7 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope)
+                Destination.Vocabulary -> VocabularyDestination(mastery, environment, languageSettings, scope)
 
                 Destination.Library -> LibraryDestination(
                     environment,
@@ -786,34 +792,174 @@ private fun LibraryDestination(
 }
 
 /**
- * The vocabulary list destination (issue #23): the reader's live vocabulary, the
- * search query the user has typed, and the delete that removes an entry from the
- * vault. The query is local to the screen; the delete is a blocking vault write,
- * so it runs on the environment's dispatcher, and the reader recolours through
+ * The vocabulary list destination (issue #23; the level sheet #178): the reader's
+ * live vocabulary, the search query the user has typed, the entry whose level
+ * sheet is open, and the delete that removes an entry from the vault. The query
+ * and the open word are local to the screen; the writes are blocking vault writes,
+ * so they run on the environment's dispatcher, and the reader recolours through
  * the controller's bumped revision.
  *
  * The translation each row shows is derived from the installed **Dictionary
- * packs** (issue #67; ADR-0032), not the one the entry froze at save time: the
- * whole list is queried once per entry set and **Translation language**, off the
- * UI thread because the pack read blocks, and an entry no pack answers falls back
- * to its stored translation. Nothing derived is written back to the vault, and the
- * search matches the resolved translation, because the list searches what it
- * shows.
+ * packs** (issue #67; ADR-0032), not the one the entry froze at save time, so the
+ * search matches the resolved translation — the list searches what it shows, and
+ * nothing derived is written back to the vault.
+ *
+ * The open word is read from the **unfiltered** list, so a level the active filter
+ * excludes lets the row leave while the panel stays open, and the write goes
+ * through the **stored** entry (see [raiseLevel]).
  */
 @Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
 @Composable
 private fun VocabularyDestination(
-    vocabulary: VocabularyController?,
+    mastery: MasteryController?,
     environment: AppEnvironment,
     languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
-    val translationLanguage = languageSettings?.translationLanguage
-    val all = vocabulary?.all().orEmpty()
+    var openKey by remember { mutableStateOf<WordKey?>(null) }
+    val all = mastery?.all().orEmpty()
+    val derived = derivedTranslations(all, languageSettings?.translationLanguage, environment)
+    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
+    // The open word is resolved from the whole list, not the narrowed one, so a
+    // filter that excludes the chosen level cannot close the sheet.
+    val open = openKey?.let { key -> shown.firstOrNull { entry -> entry.key == key } }
+    val vanished = openKey != null && open == null
+    // A word a sync removed, or the reader deleted, closes its own sheet rather
+    // than leaving a stale one over the list.
+    LaunchedEffect(openKey, vanished) { if (vanished) openKey = null }
+
+    val state = vocabularyState(shown, query, masteryLevel, all.size)
+    val actions = VocabularyActions(
+        onSearch = { text -> query = text },
+        onFilter = { chosen -> masteryLevel = chosen },
+        onClearSearch = { query = "" },
+        onDelete = { entry ->
+            scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
+        },
+        onOpen = { entry -> openKey = entry.key },
+    )
+    val raise: (VocabularyEntry, MasteryLevel) -> Unit = { entry, level ->
+        raiseLevel(mastery, environment, scope, entry, level)
+    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val list = VocabularyList(state, actions, open, raise, onDismiss = { openKey = null })
+        if (maxWidth >= WIDE_WINDOW_BREAKPOINT) WideVocabulary(list) else NarrowVocabulary(list)
+    }
+    // Back closes the open word before the shell sees it, so dismissing it never
+    // costs the reader their screen (docs/design.md §6).
+    PlatformBackHandler(enabled = open != null) { openKey = null }
+}
+
+/**
+ * Saves [level] onto [entry]'s **stored** record (issue #178): the same save the
+ * reader's panel makes, so the change signal fires and sync pushes it (ADR-0028),
+ * and it starts from the stored entry, never the row's pack-derived copy, so a
+ * derived translation never reaches the **Vault** (ADR-0032).
+ */
+@Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
+private fun raiseLevel(
+    mastery: MasteryController?,
+    environment: AppEnvironment,
+    scope: CoroutineScope,
+    entry: VocabularyEntry,
+    level: MasteryLevel,
+) {
+    val levelWriter = mastery ?: return
+    val stored = levelWriter.entryFor(entry.key) ?: return
+    scope.launch { withContext(environment.dispatcher) { levelWriter.save(stored.copy(mastery = level)) } }
+}
+
+/**
+ * The list's state: the search and the level filter applied to [shown], and the
+ * vocabulary's own count beside the title — the count is not the narrowed list's
+ * (docs/design.md §7.4).
+ */
+private fun vocabularyState(
+    shown: List<VocabularyEntry>,
+    query: String,
+    masteryLevel: MasteryLevel?,
+    total: Int,
+): VocabularyUiState = if (total == 0) {
+    VocabularyUiState.Empty
+} else {
+    VocabularyUiState.Results(
+        entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
+        query = query,
+        masteryLevel = masteryLevel,
+        total = total,
+    )
+}
+
+/**
+ * The list's live pieces, so its two shapes take one input rather than five: the
+ * state it renders, the taps it raises, the open word, the write that word's level
+ * takes, and the dismissal. A plain class, not a data class: a composable lambda
+ * has no value equality, so a `copy` would compare two different ones as different.
+ */
+private class VocabularyList(
+    val state: VocabularyUiState,
+    val actions: VocabularyActions,
+    val open: VocabularyEntry?,
+    val raise: (VocabularyEntry, MasteryLevel) -> Unit,
+    val onDismiss: () -> Unit,
+)
+
+/**
+ * The desktop shape of the list (issue #178; docs/design.md §6): the rows, and the
+ * open word in the same reserved column the reader shows its lookup in, so opening
+ * a word never narrows the list under the reader's eye.
+ */
+@Composable
+private fun WideVocabulary(list: VocabularyList) {
+    Row(Modifier.fillMaxSize()) {
+        VocabularyScreen(
+            state = list.state,
+            actions = list.actions,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        )
+        VocabularyLevelColumn(
+            entry = list.open,
+            onSave = { level -> list.open?.let { entry -> list.raise(entry, level) } },
+            onDismiss = list.onDismiss,
+        )
+    }
+}
+
+/** The phone shape: the sheet raised from the bottom edge over the rows. */
+@Composable
+private fun NarrowVocabulary(list: VocabularyList) {
+    Box(Modifier.fillMaxSize()) {
+        VocabularyScreen(state = list.state, actions = list.actions)
+        list.open?.let { entry ->
+            VocabularyLevelSheet(
+                entry = entry,
+                onSave = { level -> list.raise(entry, level) },
+                onDismiss = list.onDismiss,
+            )
+        }
+    }
+}
+
+/**
+ * The translation each row shows, derived from the installed **Dictionary packs**
+ * (issue #67; ADR-0032): the whole list is queried once per entry set and
+ * **Translation language**, off the UI thread because the pack read blocks, and an
+ * entry no pack answers falls back to its stored translation.
+ */
+@Composable
+private fun derivedTranslations(
+    all: List<VocabularyEntry>,
+    translationLanguage: String?,
+    environment: AppEnvironment,
+): Map<WordKey, String> {
     var derived by remember { mutableStateOf(emptyMap<WordKey, String>()) }
-    LaunchedEffect(all, translationLanguage, environment.dictionary) {
+    // Keyed on what the query reads, not on the entries themselves: a level change
+    // rewrites an entry, and re-querying every pack for the whole list to answer a
+    // question whose answer did not change would make each save cost a list.
+    val sources = all.map { entry -> entry.key to entry.translation }
+    LaunchedEffect(sources, translationLanguage, environment.dictionary) {
         // Each Reading language's pack is resolved here, on the composition thread
         // where the reader resolves its own, so the services' per-pair installer
         // cache is only ever written from one thread; only the blocking query moves
@@ -828,30 +974,7 @@ private fun VocabularyDestination(
             }
         }
     }
-    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
-    val state = if (all.isEmpty()) {
-        VocabularyUiState.Empty
-    } else {
-        VocabularyUiState.Results(
-            entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
-            query = query,
-            masteryLevel = masteryLevel,
-            // The count beside the title is the vocabulary's, not the narrowed list's
-            // (docs/design.md §7.4).
-            total = all.size,
-        )
-    }
-    VocabularyScreen(
-        state = state,
-        actions = VocabularyActions(
-            onSearch = { text -> query = text },
-            onFilter = { chosen -> masteryLevel = chosen },
-            onClearSearch = { query = "" },
-            onDelete = { entry ->
-                scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
-            },
-        ),
-    )
+    return derived
 }
 
 /**

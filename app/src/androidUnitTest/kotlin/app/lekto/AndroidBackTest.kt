@@ -18,6 +18,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
+import app.lekto.core.MasteryLevel
+import app.lekto.core.text.WordKey
+import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.language.LANGUAGES_RELOAD_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
 import app.lekto.navigation.SHELL_NAV_TAG
@@ -30,7 +33,10 @@ import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.SETTINGS_TITLE_TAG
+import app.lekto.testkit.inMemoryVocabulary
+import app.lekto.vocabulary.VOCABULARY_LEVEL_SHEET_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
+import app.lekto.vocabulary.vocabularyRowTag
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -184,6 +190,25 @@ class AndroidBackTest {
         compose.onNodeWithTag(READER_PAGE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         assertTrue("back does not leave the reader while it is open", !compose.activity.isFinishing)
+    }
+
+    @Test
+    fun backClosesTheVocabularyLevelSheetBeforeTheSection() {
+        // The level sheet is what is open over the list, so Back closes it before
+        // the shell sees it, exactly as the reader's panels do (issue #178).
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.RECOGNIZED))
+        compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+        compose.onNodeWithTag(shellSectionTag(ShellSection.VOCABULARY)).performClick()
+        compose.onNodeWithTag(vocabularyRowTag(key)).performClick()
+        compose.onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+
+        pressBack()
+
+        compose.onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(VOCABULARY_TITLE_TAG).assertIsDisplayed()
+        assertTrue("back does not leave the section while the sheet is open", !compose.activity.isFinishing)
     }
 
     @Test

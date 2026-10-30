@@ -40,6 +40,8 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
+import app.lekto.theme.WIDE_COLUMN_WIDTH
+import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.ui.icons.ALargeSmall
 import app.lekto.ui.icons.ArrowLeft
 import app.lekto.ui.icons.ChevronLeft
@@ -87,7 +89,7 @@ class ReaderGoldenTest {
      */
     @Test
     fun lightContextColumn() = runSkikoComposeUiTest(
-        size = Size(CONTEXT_COLUMN_BREAKPOINT.value, CONTEXT_COLUMN_WINDOW_HEIGHT.value),
+        size = Size(WIDE_WINDOW_BREAKPOINT.value, CONTEXT_COLUMN_WINDOW_HEIGHT.value),
     ) {
         setContent { LektoTheme(theme = Light) { ContextColumnPreview() } }
         onRoot().captureRoboImage("reader-context-column-light.png")
@@ -308,7 +310,7 @@ private fun ContextColumnPreview() {
     val theme = MaterialTheme.colorScheme
     Row(
         Modifier
-            .size(width = CONTEXT_COLUMN_BREAKPOINT, height = CONTEXT_COLUMN_WINDOW_HEIGHT)
+            .size(width = WIDE_WINDOW_BREAKPOINT, height = CONTEXT_COLUMN_WINDOW_HEIGHT)
             .background(theme.background),
     ) {
         Column(Modifier.weight(1f)) {
@@ -324,7 +326,7 @@ private fun ContextColumnPreview() {
 @Composable
 private fun ContextColumn() {
     val theme = MaterialTheme.colorScheme
-    Row(Modifier.width(CONTEXT_COLUMN_WIDTH).fillMaxHeight()) {
+    Row(Modifier.width(WIDE_COLUMN_WIDTH).fillMaxHeight()) {
         Box(Modifier.width(1.dp).fillMaxHeight().background(theme.outline))
         Column(
             modifier = Modifier

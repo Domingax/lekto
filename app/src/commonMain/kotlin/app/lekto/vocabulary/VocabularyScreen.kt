@@ -85,14 +85,15 @@ sealed interface VocabularyUiState {
 /**
  * The vocabulary list's actions (issue #23, filter #66, clear-search #212): change
  * the search query, change the mastery level filter (`null` is every level), empty
- * the query, and delete an entry. It is a section of the shell now, so the bar
- * replaces its back action (issue #185).
+ * the query, delete an entry, and open an entry's level sheet (issue #178). It is
+ * a section of the shell now, so the bar replaces its back action (issue #185).
  */
 data class VocabularyActions(
     val onSearch: (String) -> Unit = {},
     val onFilter: (MasteryLevel?) -> Unit = {},
     val onClearSearch: () -> Unit = {},
     val onDelete: (VocabularyEntry) -> Unit = {},
+    val onOpen: (VocabularyEntry) -> Unit = {},
 )
 
 /**
@@ -133,7 +134,13 @@ fun VocabularyScreen(
         Header(total)
         when (state) {
             VocabularyUiState.Empty -> EmptyVocabulary()
-            is VocabularyUiState.Results -> Results(state, actions, onDelete = { target -> pendingDelete = target })
+
+            is VocabularyUiState.Results -> Results(
+                state,
+                actions,
+                onDelete = { target -> pendingDelete = target },
+                onOpen = actions.onOpen,
+            )
         }
     }
 
@@ -189,6 +196,7 @@ private fun ColumnScope.Results(
     state: VocabularyUiState.Results,
     actions: VocabularyActions,
     onDelete: (VocabularyEntry) -> Unit,
+    onOpen: (VocabularyEntry) -> Unit,
 ) {
     SearchField(
         query = state.query,
@@ -202,16 +210,20 @@ private fun ColumnScope.Results(
     if (state.entries.isEmpty()) {
         NoWords(state, onClearSearch = actions.onClearSearch)
     } else {
-        VocabularyList(state.entries, onDelete)
+        VocabularyList(state.entries, onDelete, onOpen)
     }
 }
 
 /** The rows, each keyed by its word so the lazy list can reuse it, and parted by a hairline (§4). */
 @Composable
-private fun ColumnScope.VocabularyList(entries: List<VocabularyEntry>, onDelete: (VocabularyEntry) -> Unit) {
+private fun ColumnScope.VocabularyList(
+    entries: List<VocabularyEntry>,
+    onDelete: (VocabularyEntry) -> Unit,
+    onOpen: (VocabularyEntry) -> Unit,
+) {
     LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.BetweenRelatedLines)) {
         items(entries, key = { entry -> entry.key.rowKey() }) { entry ->
-            VocabularyRow(entry, onDelete)
+            VocabularyRow(entry, onDelete, onOpen)
         }
     }
 }

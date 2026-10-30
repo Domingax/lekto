@@ -1,11 +1,13 @@
 package app.lekto
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
@@ -24,6 +26,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
@@ -152,16 +155,20 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.testkit.inMemoryVocabulary
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
+import app.lekto.vocabulary.VOCABULARY_LEVEL_COLUMN_TAG
+import app.lekto.vocabulary.VOCABULARY_LEVEL_SHEET_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
 import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
+import app.lekto.vocabulary.vocabularyLevelTag
 import app.lekto.vocabulary.vocabularyMasteryTag
 import app.lekto.vocabulary.vocabularyRowTag
 import kotlinx.coroutines.runBlocking
@@ -919,7 +926,8 @@ class AppSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("lanterne").assertIsDisplayed()
         onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Learned")
+        onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern")), useUnmergedTree = true)
+            .assertTextEquals("Learned")
     }
 
     @Test
@@ -1058,6 +1066,33 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun aWordOpensInTheContextColumnAtAWideWindow() = runSkikoComposeUiTest(size = Size(1400f, 900f)) {
+        // At 1100 dp the word takes the reader's reserved column instead of a sheet
+        // floating over the rows (issue #178, docs/design.md §6), and the write is
+        // the same seam (ADR-0028).
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", translation = "lanterne", mastery = MasteryLevel.RECOGNIZED))
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        tapSection(ShellSection.VOCABULARY)
+        onNodeWithTag(vocabularyRowTag(key)).performClick()
+
+        onNodeWithTag(VOCABULARY_LEVEL_COLUMN_TAG).assertIsDisplayed()
+        onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertDoesNotExist()
+        // The row and the column both name the word: the column is the one the
+        // sheet's own suite proves the content of.
+        onAllNodesWithText("lanterne").assertCountEquals(2)
+
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.KNOWN
+        }
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
+    }
+
+    @Test
     fun theVocabularyCanBeFilteredByMastery() = runComposeUiTest {
         val vocabulary = inMemoryVocabulary()
         vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern", mastery = MasteryLevel.LEARNED))
@@ -1072,6 +1107,84 @@ class AppSemanticsTest {
 
         onNodeWithText("lantern").assertIsDisplayed()
         onNodeWithText("harbour").assertDoesNotExist()
+    }
+
+    @Test
+    fun changingALevelFromTheVocabularyListWritesItToTheVault() = runComposeUiTest {
+        // The action a vocabulary list exists for (issue #178): a reader who now
+        // knows a word promotes it without finding it again in the text.
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", translation = "lanterne", mastery = MasteryLevel.RECOGNIZED))
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        tapSection(ShellSection.VOCABULARY)
+        onNodeWithTag(vocabularyRowTag(key)).performClick()
+        onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.KNOWN
+        }
+        assertEquals(1, vocabulary.all().size, "changing the level must not add a second entry")
+        // The row behind says the new level, and the sheet stays open on it, so a
+        // reader can correct twice.
+        onNodeWithTag(vocabularyMasteryTag(key), useUnmergedTree = true).assertTextEquals("Known")
+        onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
+    }
+
+    @Test
+    fun changingALevelFromTheVocabularyListKeepsTheStoredTranslation() = runComposeUiTest {
+        // The row shows the pack's derived gloss; the save must start from the
+        // stored entry, or the derived translation is written back to the Vault
+        // (ADR-0032, issue #178).
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "blorple")
+        vocabulary.save(VocabularyEntry(key, "blorpled", translation = "lanterne", mastery = MasteryLevel.RECOGNIZED))
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    dictionary = installedDictionary(),
+                    vocabulary = vocabulary,
+                    languageSettings = frenchTranslations(),
+                ),
+            )
+        }
+
+        tapSection(ShellSection.VOCABULARY)
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText("blorper").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag(vocabularyRowTag(key)).performClick()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.KNOWN
+        }
+        assertEquals("lanterne", vocabulary.all().single().translation)
+    }
+
+    @Test
+    fun aLevelOutsideTheActiveFilterLeavesTheListAndKeepsTheSheetOpen() = runComposeUiTest {
+        // The row vanishing from a narrowed list is the confirmation; there is no
+        // toast, and the sheet must not close under the reader's finger (#178).
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.UNKNOWN))
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        tapSection(ShellSection.VOCABULARY)
+        onNodeWithTag(vocabularyFilterTag(MasteryLevel.UNKNOWN)).performClick()
+        onNodeWithTag(vocabularyRowTag(key)).performClick()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithTag(vocabularyRowTag(key)).fetchSemanticsNodes().isEmpty()
+        }
+        onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
     }
 
     @Test
@@ -1519,10 +1632,6 @@ internal fun environment(
     llm = llm,
     sync = sync,
 )
-
-/** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
-private fun inMemoryVocabulary(): Vocabulary =
-    VaultVocabulary(InMemoryVaultStore(), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
 
 /**
  * Sync services over [vault] and [target], turned on with a stored password, so
