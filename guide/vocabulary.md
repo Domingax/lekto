@@ -37,6 +37,9 @@ the row leaves the list, which tells you the change landed.
 This is the same level the reader writes, so the word's colour in the book changes
 too, and the change syncs like any other vocabulary edit.
 
+On a wide desktop window the word opens in a column beside the list, the same shape
+the reader uses for its lookup, so the list never narrows under your eyes.
+
 Deleting an entry returns the word to unsaved in the reader. There is no undo, so
 the delete asks first: swipe the row to the left on Android, or move the pointer
 over it on desktop and use the bin that appears, then confirm.

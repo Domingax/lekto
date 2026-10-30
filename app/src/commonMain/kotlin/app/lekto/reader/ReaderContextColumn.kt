@@ -11,10 +11,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
-
-/** The context column's width: a chapter list or a lookup panel, with its own edge. */
-internal val CONTEXT_COLUMN_WIDTH = 320.dp
+import app.lekto.theme.WIDE_COLUMN_WIDTH
 
 /** The test tag on the reserved column, so a UI test can tell it is there in both states. */
 internal const val READER_CONTEXT_COLUMN_TAG = "reader-context-column"
@@ -61,7 +58,7 @@ internal fun ReaderContextColumn(
     Row(
         modifier = Modifier
             .fillMaxHeight()
-            .width(CONTEXT_COLUMN_WIDTH)
+            .width(WIDE_COLUMN_WIDTH)
             .background(MaterialTheme.colorScheme.surface)
             .testTag(READER_CONTEXT_COLUMN_TAG),
     ) {

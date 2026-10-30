@@ -4,7 +4,10 @@ package app.lekto
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -111,6 +114,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
 import app.lekto.theme.LektoTheme
+import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.theme.appThemeScheme
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
@@ -118,6 +122,7 @@ import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
+import app.lekto.vocabulary.VocabularyLevelColumn
 import app.lekto.vocabulary.VocabularyLevelSheet
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
@@ -799,10 +804,9 @@ private fun LibraryDestination(
  * search matches the resolved translation — the list searches what it shows, and
  * nothing derived is written back to the vault.
  *
- * The level sheet reads the **unfiltered** list, so a level the active filter
- * excludes lets the row leave while the sheet stays open — and it saves through
- * the **stored** entry, never the row's derived copy, so the derived translation
- * never reaches the Vault.
+ * The open word is read from the **unfiltered** list, so a level the active filter
+ * excludes lets the row leave while the panel stays open, and the write goes
+ * through the **stored** entry (see [raiseLevel]).
  */
 @Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
 @Composable
@@ -826,36 +830,116 @@ private fun VocabularyDestination(
     // than leaving a stale one over the list.
     LaunchedEffect(openKey, vanished) { if (vanished) openKey = null }
 
-    val state = if (all.isEmpty()) {
-        VocabularyUiState.Empty
-    } else {
-        VocabularyUiState.Results(
-            entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
-            query = query,
-            masteryLevel = masteryLevel,
-            // The count beside the title is the vocabulary's, not the narrowed list's
-            // (docs/design.md §7.4).
-            total = all.size,
-        )
+    val state = vocabularyState(shown, query, masteryLevel, all.size)
+    val actions = VocabularyActions(
+        onSearch = { text -> query = text },
+        onFilter = { chosen -> masteryLevel = chosen },
+        onClearSearch = { query = "" },
+        onDelete = { entry ->
+            scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
+        },
+        onOpen = { entry -> openKey = entry.key },
+    )
+    val raise: (VocabularyEntry, MasteryLevel) -> Unit = { entry, level ->
+        raiseLevel(mastery, environment, scope, entry, level)
     }
-    Box(Modifier.fillMaxSize()) {
-        VocabularyScreen(
-            state = state,
-            actions = VocabularyActions(
-                onSearch = { text -> query = text },
-                onFilter = { chosen -> masteryLevel = chosen },
-                onClearSearch = { query = "" },
-                onDelete = { entry ->
-                    scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
-                },
-                onOpen = { entry -> openKey = entry.key },
-            ),
-        )
-        VocabularyLevelOverlay(open, mastery, environment, scope, onDismiss = { openKey = null })
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val list = VocabularyList(state, actions, open, raise, onDismiss = { openKey = null })
+        if (maxWidth >= WIDE_WINDOW_BREAKPOINT) WideVocabulary(list) else NarrowVocabulary(list)
     }
-    // Back closes the sheet before the shell sees it, so dismissing a sheet never
+    // Back closes the open word before the shell sees it, so dismissing it never
     // costs the reader their screen (docs/design.md §6).
     PlatformBackHandler(enabled = open != null) { openKey = null }
+}
+
+/**
+ * Saves [level] onto [entry]'s **stored** record (issue #178): the same save the
+ * reader's panel makes, so the change signal fires and sync pushes it (ADR-0028),
+ * and it starts from the stored entry, never the row's pack-derived copy, so a
+ * derived translation never reaches the **Vault** (ADR-0032).
+ */
+@Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
+private fun raiseLevel(
+    mastery: MasteryController?,
+    environment: AppEnvironment,
+    scope: CoroutineScope,
+    entry: VocabularyEntry,
+    level: MasteryLevel,
+) {
+    val levelWriter = mastery ?: return
+    val stored = levelWriter.entryFor(entry.key) ?: return
+    scope.launch { withContext(environment.dispatcher) { levelWriter.save(stored.copy(mastery = level)) } }
+}
+
+/**
+ * The list's state: the search and the level filter applied to [shown], and the
+ * vocabulary's own count beside the title — the count is not the narrowed list's
+ * (docs/design.md §7.4).
+ */
+private fun vocabularyState(
+    shown: List<VocabularyEntry>,
+    query: String,
+    masteryLevel: MasteryLevel?,
+    total: Int,
+): VocabularyUiState = if (total == 0) {
+    VocabularyUiState.Empty
+} else {
+    VocabularyUiState.Results(
+        entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
+        query = query,
+        masteryLevel = masteryLevel,
+        total = total,
+    )
+}
+
+/**
+ * The list's live pieces, so its two shapes take one input rather than five: the
+ * state it renders, the taps it raises, the open word, the write that word's level
+ * takes, and the dismissal. A plain class, not a data class: a composable lambda
+ * has no value equality, so a `copy` would compare two different ones as different.
+ */
+private class VocabularyList(
+    val state: VocabularyUiState,
+    val actions: VocabularyActions,
+    val open: VocabularyEntry?,
+    val raise: (VocabularyEntry, MasteryLevel) -> Unit,
+    val onDismiss: () -> Unit,
+)
+
+/**
+ * The desktop shape of the list (issue #178; docs/design.md §6): the rows, and the
+ * open word in the same reserved column the reader shows its lookup in, so opening
+ * a word never narrows the list under the reader's eye.
+ */
+@Composable
+private fun WideVocabulary(list: VocabularyList) {
+    Row(Modifier.fillMaxSize()) {
+        VocabularyScreen(
+            state = list.state,
+            actions = list.actions,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        )
+        VocabularyLevelColumn(
+            entry = list.open,
+            onSave = { level -> list.open?.let { entry -> list.raise(entry, level) } },
+            onDismiss = list.onDismiss,
+        )
+    }
+}
+
+/** The phone shape: the sheet raised from the bottom edge over the rows. */
+@Composable
+private fun NarrowVocabulary(list: VocabularyList) {
+    Box(Modifier.fillMaxSize()) {
+        VocabularyScreen(state = list.state, actions = list.actions)
+        list.open?.let { entry ->
+            VocabularyLevelSheet(
+                entry = entry,
+                onSave = { level -> list.raise(entry, level) },
+                onDismiss = list.onDismiss,
+            )
+        }
+    }
 }
 
 /**
@@ -891,36 +975,6 @@ private fun derivedTranslations(
         }
     }
     return derived
-}
-
-/**
- * The level sheet over the list (issue #178): the open word, and the one write it
- * raises. The save starts from the **stored** entry, never the row's derived copy,
- * so a pack's translation never reaches the **Vault** (ADR-0032).
- */
-@Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
-@Composable
-private fun VocabularyLevelOverlay(
-    entry: VocabularyEntry?,
-    mastery: MasteryController?,
-    environment: AppEnvironment,
-    scope: CoroutineScope,
-    onDismiss: () -> Unit,
-) {
-    if (entry == null) return
-    VocabularyLevelSheet(
-        entry = entry,
-        onSave = { level ->
-            val levelWriter = mastery
-            val stored = levelWriter?.entryFor(entry.key)
-            if (levelWriter != null && stored != null) {
-                scope.launch {
-                    withContext(environment.dispatcher) { levelWriter.save(stored.copy(mastery = level)) }
-                }
-            }
-        },
-        onDismiss = onDismiss,
-    )
 }
 
 /**

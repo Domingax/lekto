@@ -45,6 +45,7 @@ import app.lekto.core.reading.ReadingPreferences
 import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.WIDE_COLUMN_WIDTH
 import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.ui.DismissScrim
 import kotlinx.coroutines.yield
@@ -145,7 +146,7 @@ fun ReaderScreen(
         val contextColumn = maxWidth >= WIDE_WINDOW_BREAKPOINT
         // The page paginates against the width it is actually given: at the
         // breakpoint the column takes its own share of the window.
-        val pageWidth = if (contextColumn) maxWidth - CONTEXT_COLUMN_WIDTH else maxWidth
+        val pageWidth = if (contextColumn) maxWidth - WIDE_COLUMN_WIDTH else maxWidth
         val state = remember(document.text) {
             ReaderState(actions.onPositionChange, document.initialOffset, initiallyFinished)
         }

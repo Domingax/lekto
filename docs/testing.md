@@ -268,7 +268,10 @@ slot reserved for it is recorded too. Its level sheet adds
 `vocabulary-level-sheet-<paper>.png` per paper (issue #178): the scrim over the
 list, then the shared sheet's drag handle, the word in the title's size with the
 close icon, the translation and the muted sentence, a hairline, and the level named
-beside the five filled chip frames with the current one ringed in ink.
+beside the five filled chip frames with the current one ringed in ink. The desktop
+column adds one sheet, `vocabulary-level-column-light.png` (issue #178): the same
+panel in the 320 dp reserved column, its hairline rule at the edge, the word and
+its close on the title band, and the level stacked above the chips.
 The confirmation sheet records the scrim,
 the 16 dp dialogue, its title and message, and `Delete` in the reserved red. The
 two settings forms add one sheet, `settings-forms-light.png` (issue #213): the

@@ -1,12 +1,10 @@
 package app.lekto.vocabulary
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -22,23 +20,20 @@ import app.lekto.core.MasteryLevel
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.testkit.testVocabularyEntry
 import app.lekto.theme.LektoSpacing
+import app.lekto.theme.WIDE_COLUMN_WIDTH
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** The test tag on the window the wide-sheet test lays out, past the breakpoint. */
-private const val WIDE_WINDOW_TAG: String = "vocabulary-level-window"
-
-/** The phone's width, where the cap cannot bind: the sheet fills it. */
-private const val NARROW_WINDOW_WIDTH: Float = 360f
-
 /**
- * The level sheet the Vocabulary list raises (issue #178): the saved word, the
- * translation and the sentence the row shows, and the reader's own five-level
- * selector with the current level marked — the one place a level is written
- * outside the reader.
+ * The level panel the Vocabulary list raises (issue #178), in both shapes: the
+ * phone's sheet, and the reserved right-hand column a wide window gives the word
+ * (docs/design.md §6). Both carry the saved word, the translation and the sentence
+ * the row shows, and the reader's own five-level selector with the current level
+ * marked — the one place a level is written outside the reader.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One behaviour per test, in both shapes: splitting hides the panel.
 class VocabularyLevelSheetSemanticsTest {
 
     private val lantern = testVocabularyEntry()
@@ -124,38 +119,36 @@ class VocabularyLevelSheetSemanticsTest {
     }
 
     @Test
-    fun aWideWindowCapsTheSheetAndCentresIt() = runComposeUiTest {
-        // A sheet stretching the whole width of a desktop window reads as a bar,
-        // not as something raised for one word (docs/design.md §6, issue #178).
-        setContent {
-            MaterialTheme {
-                Box(Modifier.requiredSize(width = 1400.dp, height = 900.dp).testTag(WIDE_WINDOW_TAG)) {
-                    VocabularyLevelSheet(entry = lantern, onSave = {}, onDismiss = {})
-                }
-            }
-        }
+    fun theColumnShowsTheSamePanelAndNotTheSheet() = runComposeUiTest {
+        // A wide window reserves the word's column instead of floating a sheet
+        // over the rows (issue #178, docs/design.md §6).
+        setContent { Column(lantern) }
 
-        val sheet = onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).getUnclippedBoundsInRoot()
-        val window = onNodeWithTag(WIDE_WINDOW_TAG).getUnclippedBoundsInRoot()
-
-        assertEquals(WideSheetWidth.value, (sheet.right - sheet.left).value, 1f)
-        // Centred in the window, not merely narrower than it: the days of the
-        // window's own edges are equal on both sides.
-        assertEquals(
-            (window.left.value + window.right.value) / 2,
-            (sheet.left.value + sheet.right.value) / 2,
-            1f,
-            "the sheet is centred",
-        )
+        onNodeWithTag(VOCABULARY_LEVEL_COLUMN_TAG).assertIsDisplayed()
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("lanterne").assertIsDisplayed()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.LEARNED)).assertIsSelected()
+        onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertDoesNotExist()
     }
 
     @Test
-    fun aNarrowWindowKeepsTheSheetFullWidth() = runComposeUiTest {
-        setContent { Sheet(lantern) }
+    fun theColumnSaysWhatItIsForWhileNoWordIsOpen() = runComposeUiTest {
+        setContent { Column(null) }
 
-        val sheet = onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).getUnclippedBoundsInRoot()
+        onNodeWithText("Choose a word to change its level.").assertIsDisplayed()
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.LEARNED)).assertDoesNotExist()
+    }
 
-        assertEquals(NARROW_WINDOW_WIDTH, (sheet.right - sheet.left).value, 1f)
+    @Test
+    fun theColumnStacksTheLevelAboveItsChips() = runComposeUiTest {
+        // 320 dp has no room for the name beside five chips, so it stands above
+        // them — the same arrangement the reader's column uses (issue #199).
+        setContent { Column(lantern) }
+
+        val name = onNodeWithTag(VOCABULARY_LEVEL_NAME_TAG).getUnclippedBoundsInRoot()
+        val chips = onNodeWithTag(vocabularyLevelTag(MasteryLevel.UNKNOWN)).getUnclippedBoundsInRoot()
+
+        assertTrue(name.bottom <= chips.top, "the name sits above the chips: $name then $chips")
     }
 
     @Composable
@@ -167,6 +160,15 @@ class VocabularyLevelSheetSemanticsTest {
                 onDismiss = onDismiss,
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )
+        }
+    }
+
+    @Composable
+    private fun Column(entry: VocabularyEntry?, onSave: (MasteryLevel) -> Unit = {}, onDismiss: () -> Unit = {}) {
+        MaterialTheme {
+            Box(Modifier.size(width = WIDE_COLUMN_WIDTH, height = 640.dp)) {
+                VocabularyLevelColumn(entry = entry, onSave = onSave, onDismiss = onDismiss)
+            }
         }
     }
 }

@@ -76,6 +76,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "L'entrée sera retirée de votre vocabulaire. " +
         "Le mot pourra être enregistré de nouveau en le touchant dans le livre.",
     TextKey.CHANGE_LEVEL to "Changer le niveau",
+    TextKey.VOCABULARY_LEVEL_HINT to "Choisissez un mot pour changer son niveau.",
 
     // Reader.
     TextKey.PREVIOUS_PAGE to "Page précédente",

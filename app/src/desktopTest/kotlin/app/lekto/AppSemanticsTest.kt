@@ -1,11 +1,13 @@
 package app.lekto
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
@@ -24,6 +26,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
@@ -159,6 +162,7 @@ import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
+import app.lekto.vocabulary.VOCABULARY_LEVEL_COLUMN_TAG
 import app.lekto.vocabulary.VOCABULARY_LEVEL_SHEET_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
@@ -1059,6 +1063,33 @@ class AppSemanticsTest {
 
         onNodeWithText("harbour").assertIsDisplayed()
         onNodeWithText("lantern").assertDoesNotExist()
+    }
+
+    @Test
+    fun aWordOpensInTheContextColumnAtAWideWindow() = runSkikoComposeUiTest(size = Size(1400f, 900f)) {
+        // At 1100 dp the word takes the reader's reserved column instead of a sheet
+        // floating over the rows (issue #178, docs/design.md §6), and the write is
+        // the same seam (ADR-0028).
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", translation = "lanterne", mastery = MasteryLevel.RECOGNIZED))
+        setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        tapSection(ShellSection.VOCABULARY)
+        onNodeWithTag(vocabularyRowTag(key)).performClick()
+
+        onNodeWithTag(VOCABULARY_LEVEL_COLUMN_TAG).assertIsDisplayed()
+        onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertDoesNotExist()
+        // The row and the column both name the word: the column is the one the
+        // sheet's own suite proves the content of.
+        onAllNodesWithText("lanterne").assertCountEquals(2)
+
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.KNOWN
+        }
+        onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
     }
 
     @Test

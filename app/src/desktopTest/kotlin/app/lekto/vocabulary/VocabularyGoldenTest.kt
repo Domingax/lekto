@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,6 +49,7 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
+import app.lekto.theme.WIDE_COLUMN_WIDTH
 import app.lekto.theme.contentColorOn
 import app.lekto.theme.hoverWash
 import app.lekto.ui.ChipFrame
@@ -122,6 +124,12 @@ class VocabularyGoldenTest {
             paper = theme
             onRoot().captureRoboImage("vocabulary-level-sheet-$name.png")
         }
+    }
+
+    @Test
+    fun lightLevelColumn() = runComposeUiTest {
+        setContent { LektoTheme(theme = Light) { LevelColumnPreview() } }
+        onRoot().captureRoboImage("vocabulary-level-column-light.png")
     }
 
     @Test
@@ -539,6 +547,37 @@ private fun LevelSheetSelector() {
             Line(theme.onBackground, LEVEL_SHEET_NAME_BAR)
         }
         LevelSheetChips()
+    }
+}
+
+/**
+ * The word's reserved column (issue #178; docs/design.md §6): the reader's column
+ * shape — a surface beside the content, parted by a hairline — with the word,
+ * what the row says about it, and the level stacked above the chips, because
+ * 320 dp has no room for both on one line.
+ */
+@Composable
+private fun LevelColumnPreview() {
+    val theme = MaterialTheme.colorScheme
+    Row(Modifier.size(width = WIDE_COLUMN_WIDTH, height = LIST_HEIGHT).background(theme.surface)) {
+        Box(Modifier.width(HAIRLINE_THICKNESS).fillMaxHeight().background(theme.outline))
+        Column(Modifier.fillMaxWidth()) {
+            LevelSheetHeader()
+            LevelSheetMeaning()
+            LevelSheetDivider()
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(
+                    horizontal = LektoSpacing.InsidePanel,
+                    vertical = LektoSpacing.BetweenRows,
+                ),
+            ) {
+                Line(theme.onSurfaceVariant, LEVEL_LABEL_BAR)
+                Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
+                Line(theme.onBackground, LEVEL_SHEET_NAME_BAR)
+                Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
+                LevelSheetChips()
+            }
+        }
     }
 }
 
