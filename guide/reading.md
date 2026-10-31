@@ -129,6 +129,9 @@ marked. Choose a chapter there and Lekto jumps to it and saves your place, just
 as it does from the phone's list. When a book has no chapter list, the column
 says so.
 
+On a keyboard, the left and right arrow keys turn the page. They stand down while
+a panel or the end of the book is open, so the keys stay with what is open.
+
 Tap a word or select a phrase and the column shows it instead: the word's
 dictionary entry, or the phrase and its translation, with the same controls the
 phone's panel offers. Close it and the chapter list comes back — or tap the
