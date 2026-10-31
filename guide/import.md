@@ -11,7 +11,7 @@ Lekto imports three kinds of file, with different strengths:
 | Format | Support | What it gives you |
 | ------ | ------- | ----------------- |
 | EPUB   | First-class | The book's headings, chapters and reading order are preserved, so it renders the way its author structured it. |
-| TXT    | First-class | Plain text, read as one continuous book from start to end. |
+| TXT    | First-class | Plain text. Lekto reads the chapter headings the text carries — `Chapter 4`, `Chapitre IV`, `Partie 2` — so you can jump between chapters; a text with no recognisable heading reads as one continuous book. |
 | PDF    | Best-effort extraction | Lekto reads the text the file already carries. A scan, or a page that is one image, has no text to extract. |
 
 Extraction depends on the text layer inside the PDF; Lekto does not do optical

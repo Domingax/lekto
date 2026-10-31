@@ -69,7 +69,14 @@ Project Gutenberg book — read through `TestResources` in `testkit`, and the
 pure-Kotlin `TxtParser` (ticket #15), whose tests run in `core/commonTest`. The
 extraction goldens in `resources/golden/` pin the EPUB parser's output; a change
 that alters the text fails until the golden is deliberately updated. See
-`docs/research/epub-to-tokens-spike.md`. The block walk has its own guard,
+`docs/research/epub-to-tokens-spike.md`. The `TxtParser`'s unit cases stay in
+`core/commonTest`, and the structure it infers — the title, the heading blocks and
+the chapter list — is pinned the way the parser row of
+[the test levels](#test-levels) demands: `TxtGoldenTest` in `core/jvmTest` records
+a generated corpus and one awkward real book,
+`resources/txt/les-trois-mousquetaires.txt` (CRLF, a packed table of contents,
+headings written on two lines), against `resources/golden/txt-*.txt` (ADR-0041).
+The block walk has its own guard,
 `XhtmlBlocksTest` in `core/jvmTest`: a heading that writes its anchor
 self-closing leaves the HTML parser with an `<a>` it never closes, and the rest
 of the chapter lands inside it, which imported three real books as their table
@@ -1148,8 +1155,9 @@ chapters at the right block starts, the nav wins over an NCX that names the same
 entries differently, the NCX is read when no nav exists and ordered by the spine
 rather than `playOrder`, a label falls back to the first heading, an unresolved
 fragment to its document's start, an entry outside the spine is dropped, and a
-book with no usable TOC yields one chapter per spine document. `TxtParserTest`
-pins the text file's one chapter, and `BookTextCacheTest` plus a
+book with no usable TOC yields one chapter per spine document. `TxtGoldenTest` in `core/jvmTest` pins the structure a TXT infers — its title, its
+heading blocks and its chapter list — over a generated corpus and a real French
+book, and `BookTextCacheTest` plus a
 `VaultBookLibraryTest` case pin that a missing or different cache `formatVersion`
 is a miss, so the original is re-parsed and rewritten. The reader's side is
 `ReaderChaptersTest` in `app/desktopTest` — a page break at every chapter start,

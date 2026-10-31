@@ -49,7 +49,8 @@ fallback is the single chapter that already works.
 
 **Consequences**: `TxtParser` grows the heading heuristic and the title guess and
 returns more than one `Chapter`; the parsed-text cache bumps its `formatVersion`,
-so every TXT re-parses once; `BookLibrary.import` accepts a title and a reading
-language that override what the parser found; `CONTEXT.md`'s **Chapter list**
-no longer says the chapters are only the ones the file declares. PDF inherits the
-same seam when it lands, and is expected to infer its chapters the same way.
+so every TXT re-parses once; `CONTEXT.md`'s **Chapter list** no longer says the
+chapters are only the ones the file declares. `BookLibrary.import` grows the title
+and reading-language overrides that the **Import** sheet asks for, which lands
+with that sheet rather than with the inference. PDF inherits the same seam when it
+lands, and is expected to infer its chapters the same way.

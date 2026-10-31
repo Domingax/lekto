@@ -47,6 +47,17 @@ class BookTextCacheTest :
             cache.textOf("book") shouldBe null
         }
 
+        test("a text cached before chapters were inferred is a cache miss") {
+            // Version 1 is the shape ADR-0041 supersedes: a TXT cached as one
+            // chapter must be re-parsed, or a Vault imported before the change
+            // never grows a chapter list.
+            val (cache, derived) = cache()
+            val bare = VaultCodec.json.encodeToString(StructuredText.serializer(), text)
+            derived.put("book-text/book.json", """{"formatVersion":1,"text":$bare}""".encodeToByteArray())
+
+            cache.textOf("book") shouldBe null
+        }
+
         test("an unversioned entry is a cache miss") {
             val (cache, derived) = cache()
             val bare = VaultCodec.json.encodeToString(StructuredText.serializer(), text)

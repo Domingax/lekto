@@ -78,12 +78,23 @@ class VaultBookLibraryTest :
             val vault = InMemoryVaultStore()
             val library = newLibrary(vault)
 
-            val book = library.import("Article.txt", "Un\n\ntexte.".encodeToByteArray())
+            val book = library.import("Article.txt", "Un texte.\n\nLa suite.".encodeToByteArray())
 
             library.books() shouldContainExactly listOf(book)
             book.title shouldBe "Article"
             book.format shouldBe BookFormat.TXT
             book.language shouldBe null
+        }
+
+        test("a title the text reads as wins over the file name") {
+            val library = newLibrary()
+
+            val book = library.import(
+                "mousquetaires.txt",
+                "Les Trois Mousquetaires\n\nChapter I\n\nUn texte.".encodeToByteArray(),
+            )
+
+            book.title shouldBe "Les Trois Mousquetaires"
         }
 
         test("opening a book starts a reading session with its parsed text") {
@@ -223,10 +234,12 @@ class VaultBookLibraryTest :
             val book = library.import("Lantern.epub", byteArrayOf(1))
             val stale = StructuredText(title = "Stale", language = null, blocks = emptyList())
             val json = VaultCodec.json.encodeToString(StructuredText.serializer(), stale)
-            derived.put("book-text/${book.id}.json", """{"formatVersion":0,"text":$json}""".encodeToByteArray())
+            val previous = BookTextCache.FORMAT_VERSION - 1
+            derived.put("book-text/${book.id}.json", """{"formatVersion":$previous,"text":$json}""".encodeToByteArray())
 
             library.open(book.id)?.text shouldBe epubText
-            derived.get("book-text/${book.id}.json")?.decodeToString()?.contains("\"formatVersion\": 1") shouldBe true
+            derived.get("book-text/${book.id}.json")?.decodeToString()
+                ?.contains("\"formatVersion\": ${BookTextCache.FORMAT_VERSION}") shouldBe true
         }
 
         test("the parsed-text cache writes and removes the rendered length with the text") {
@@ -360,7 +373,7 @@ class VaultBookLibraryTest :
         test("books are listed ordered by title regardless of import order") {
             val library = newLibrary()
             library.import("Zeta.epub", byteArrayOf(1))
-            library.import("Alpha.txt", "text".encodeToByteArray())
+            library.import("Alpha.txt", "Text.".encodeToByteArray())
 
             library.books().map { it.title } shouldContainExactly listOf("Alpha", "An EPUB")
         }
