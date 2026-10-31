@@ -9,15 +9,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -144,12 +142,12 @@ class ReadingPreferencesPanelSemanticsTest {
     @Test
     fun openingThePanelDoesNotRepaginateTheBook() = runComposeUiTest {
         setContent { PreferencesReader(renderer) }
-        val before = wordLinkCount()
+        val before = pageWords()
 
         onNodeWithTag(READING_PREFERENCES_TAG).performClick()
 
         onNodeWithTag(READING_PREFERENCES_PANEL_TAG).assertIsDisplayed()
-        assertEquals(before, wordLinkCount(), "the panel must not change the page's words")
+        assertEquals(before, pageWords(), "the panel must not change the page's words")
     }
 
     /**
@@ -220,13 +218,13 @@ class ReadingPreferencesPanelSemanticsTest {
         setContent { PreferencesReader(renderer) { next -> changed = next } }
 
         onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
-        val before = wordLinkCount()
+        val before = pageWords()
 
         onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         repeat(5) { onNodeWithTag(READING_LARGER_TAG).performClick() }
 
         assertEquals(ReadingPreferences.MAX_SIZE, assertNotNull(changed).size)
-        assertNotEquals(before, wordLinkCount(), "a bigger text must repaginate the open book into fewer words")
+        assertNotEquals(before, pageWords(), "a bigger text must repaginate the open book into fewer words")
     }
 }
 
@@ -259,8 +257,8 @@ private fun PreferencesReader(
     }
 }
 
-/** How many tappable words the page holds, so a test can tell one pagination from another. */
+/** The words the page shows, so a test can tell one pagination from another. */
 @OptIn(ExperimentalTestApi::class)
-private fun ComposeUiTest.wordLinkCount(): Int = onAllNodes(
-    hasClickAction() and hasAnyAncestor(hasTestTag(READER_PAGE_TAG)),
-).fetchSemanticsNodes().size
+private fun ComposeUiTest.pageWords(): String = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    .config[SemanticsProperties.Text]
+    .joinToString(" ") { line -> line.text }
