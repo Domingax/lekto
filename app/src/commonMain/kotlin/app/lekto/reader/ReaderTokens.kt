@@ -2,9 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -48,13 +46,11 @@ fun buildReaderTokens(
     renderer: ReaderRenderer,
     styles: ReaderStyles,
     selected: IntRange? = null,
-    onWordTap: (WordTap) -> Unit = {},
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, styles)
-    val text = chapter.blocks.joinToString(separator = BLOCK_SEPARATOR) { block -> block.text }
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, styles, selected, onWordTap, offset = 0, text = text)
+    val writer = WordWriter(builder, styles, selected)
     chapter.blocks.forEachIndexed { index, block ->
         tokenise(block.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
@@ -99,12 +95,11 @@ fun buildPageTokens(
     chapter: ReaderText,
     styles: ReaderStyles,
     selected: IntRange? = null,
-    onWordTap: (WordTap) -> Unit = {},
 ): ReaderTokens {
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
     val words = mutableListOf<WordToken>()
-    val writer = WordWriter(builder, styles, selected, onWordTap, page.start, chapterText.text)
+    val writer = WordWriter(builder, styles, selected)
     tokenise(slice.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
         words += token
         writer.write(token, renderer.mastery.levelOf(token.key))
@@ -158,52 +153,42 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
 }
 
 /**
- * Colours and links one word at a time. Highlighted words (levels 0–3) get a
- * colour span and an underline; a known word (level 4) gets neither, so it reads
- * as normal text. A word inside the [selected] range is additionally washed with
+ * Paints one word's mastery: its colour, its underline and, while it is being
+ * selected, its wash. Highlighted words (levels 0–3) get a colour span and an
+ * underline; a known word (level 4) gets neither, so it reads as normal text. A
+ * word inside the [selected] range is additionally washed with
  * [selectionHighlight], so a tapped word — or every word of a selected phrase —
- * stays visible behind the open lookup panel. The link carries the same colour so
- * the platform's default link tint never overrides the mastery palette.
+ * stays visible behind the open lookup panel.
  *
- * [offset] maps the local word to the chapter's coordinates for the tap and the
- * selection test, while the span and link stay local; [text] is the chapter,
- * used to cut the tapped word's context sentence (issue #22).
+ * The word carries **no link**: a link per word is ~55 ms of text layout on
+ * Android, paid on every page turn, so the page hit-tests the tap instead
+ * ([readerSurfaceTap], ADR-0007).
  */
-@Suppress("LongParameterList") // The writer's inputs are the builder's state; a bundle would only hide that.
 private class WordWriter(
     private val builder: AnnotatedString.Builder,
     private val styles: ReaderStyles,
     private val selected: IntRange?,
-    private val onWordTap: (WordTap) -> Unit,
-    private val offset: Int,
-    private val text: String,
 ) {
     fun write(word: WordToken, level: MasteryLevel) {
         val colour = level.readerColorOr(styles.body.color, styles.mastery)
         val decoration = level.readerDecoration()
-        val globalStart = word.start + offset
-        val globalEnd = word.end + offset
-        val washed = selected != null && globalStart >= selected.first && globalEnd <= selected.last
+        val washed = selected != null && word.start >= selected.first && word.end <= selected.last
         val background = if (washed) selectionHighlight(styles.body.color) else Color.Unspecified
-        val span = SpanStyle(color = colour, textDecoration = decoration, background = background)
-        builder.addStyle(span, word.start, word.end)
-        builder.addLink(
-            LinkAnnotation.Clickable(
-                tag = "word:${word.start}",
-                styles = TextLinkStyles(style = span),
-                linkInteractionListener = {
-                    onWordTap(
-                        WordTap(
-                            token = word.shifted(offset),
-                            contextSentence = contextSentence(text, globalStart, globalEnd),
-                        ),
-                    )
-                },
-            ),
+        builder.addStyle(
+            SpanStyle(color = colour, textDecoration = decoration, background = background),
             word.start,
             word.end,
         )
     }
+}
+
+/** The lookup a tap on [word] opens, with the sentence it sits in ([pageStart] is the page's offset). */
+internal fun wordTapOf(word: WordToken, pageStart: Int, chapterText: String): WordTap {
+    val start = word.start + pageStart
+    return WordTap(
+        token = word.shifted(pageStart),
+        contextSentence = contextSentence(chapterText, start, start + word.surface.length),
+    )
 }
 
 /** The span-level fields of a block style, so a heading can be applied to a range. */

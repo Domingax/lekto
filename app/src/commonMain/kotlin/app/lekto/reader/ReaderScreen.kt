@@ -66,6 +66,9 @@ private val GAP_ABOVE_PANEL = 8.dp
 /** The test tag on the page, so the UI tests can inject a tap at a zone's coordinates. */
 internal const val READER_PAGE_TAG = "reader-page"
 
+/** The test tag on the page's text itself, so a test can read the words it shows. */
+internal const val READER_PAGE_TEXT_TAG = "reader-page-text"
+
 /** The test tag on the chapter sheet, so a UI test can tell it is open. */
 internal const val READER_CHAPTER_SHEET_TAG = "reader-chapter-sheet"
 
@@ -655,7 +658,7 @@ private fun ColumnScope.ReaderPage(
     // they are picked; the open panel's range is the fallback once it ends.
     var dragRange by remember { mutableStateOf<IntRange?>(null) }
     val selected = dragRange ?: document.selectedRange
-    val tokens = rememberPageTokens(document, chapterText, styles, state.page, selected, onWordTap)
+    val tokens = rememberPageTokens(document, chapterText, styles, state.page, selected)
     val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     var pageHeightPx by remember { mutableStateOf(0) }
@@ -671,7 +674,12 @@ private fun ColumnScope.ReaderPage(
         gapPx = with(density) { GAP_ABOVE_PANEL.toPx() },
     )
     val latestTap = rememberUpdatedState(
-        readerSurfaceTap(marginPx, tokens, layout, state, enabled = dismissOverlay == null, liftPx = liftPx),
+        readerSurfaceTap(
+            page = PageTap(marginPx, tokens, layout, chapterText.text, onWordTap),
+            state = state,
+            enabled = dismissOverlay == null,
+            liftPx = liftPx,
+        ),
     )
     Box(
         modifier = Modifier
@@ -719,7 +727,7 @@ private fun ColumnScope.ReaderPage(
  * above the page bar, which is why the visible bottom subtracts that bar.
  */
 @Suppress("LongParameterList") // The layout, the page and the overlay are independent inputs.
-private fun pageLift(
+internal fun pageLift(
     layout: TextLayoutResult?,
     page: ReaderPage?,
     selected: IntRange?,
@@ -765,6 +773,7 @@ private fun PageText(
                     style = styles.body,
                     modifier = Modifier
                         .fillMaxSize()
+                        .testTag(READER_PAGE_TEXT_TAG)
                         .semantics {
                             customActions = listOf(
                                 CustomAccessibilityAction(texts[TextKey.PREVIOUS_PAGE]) {
@@ -793,32 +802,38 @@ private fun rememberPageTokens(
     styles: ReaderStyles,
     page: ReaderPage?,
     selected: IntRange?,
-    onWordTap: (WordTap) -> Unit,
-): ReaderTokens? {
-    val latestTap = rememberUpdatedState(onWordTap)
-    return remember(
-        chapterText,
-        page,
-        document.text,
-        document.renderer,
-        styles,
-        selected,
-        document.masteryRevision,
-    ) {
-        page?.let { slice ->
-            buildPageTokens(chapterText, slice, document.renderer, document.text, styles, selected) { word ->
-                latestTap.value(word)
-            }
-        }
+): ReaderTokens? = remember(
+    chapterText,
+    page,
+    document.text,
+    document.renderer,
+    styles,
+    selected,
+    document.masteryRevision,
+) {
+    page?.let { slice ->
+        buildPageTokens(chapterText, slice, document.renderer, document.text, styles, selected)
     }
 }
 
-/** The tap the page handles: a word's link wins, otherwise the tap's zone decides. */
-@Suppress("LongParameterList") // The tap's inputs are the page's own geometry; a bundle would only hide them.
+/** What a tap needs from the page it lands on: where its words are, and who to tell. */
+private class PageTap(
+    val marginPx: Int,
+    val tokens: ReaderTokens?,
+    val layout: TextLayoutResult?,
+    val chapterText: String,
+    val onWordTap: (WordTap) -> Unit,
+)
+
+/**
+ * The tap the page handles: a word wins wherever it lands, otherwise the tap's
+ * zone decides. The word is found by hit-testing the page's tokens against its
+ * layout; the words carry no link of their own, because one annotation per word
+ * costs ~55 ms of text layout on Android and the reader pays it on every page
+ * turn (ADR-0007, issue #251).
+ */
 private fun readerSurfaceTap(
-    marginPx: Int,
-    tokens: ReaderTokens?,
-    layout: TextLayoutResult?,
+    page: PageTap,
     state: ReaderState,
     enabled: Boolean,
     liftPx: Float,
@@ -828,11 +843,11 @@ private fun readerSurfaceTap(
     // word up or turn the page.
     if (enabled) {
         val zone = readerTapZone(position.x, width.toInt())
-        // A tap on a word is left to the word's link, wherever it lands. The text
-        // is lifted with the page, so its layout coordinates are that much lower.
-        val onWord = wordAt(Offset(position.x, position.y + liftPx), marginPx, tokens?.words.orEmpty(), layout) != null
+        // The text is lifted with the page, so its layout coordinates are that much lower.
+        val local = Offset(position.x, position.y + liftPx)
+        val word = wordAt(local, page.marginPx, page.tokens?.words.orEmpty(), page.layout)
         when {
-            onWord -> Unit
+            word != null -> page.onWordTap(wordTapOf(word, state.page?.start ?: 0, page.chapterText))
             zone == ReaderTapZone.CHROME -> state.toggleChrome()
             zone == ReaderTapZone.PREVIOUS -> state.previous()
             zone == ReaderTapZone.NEXT -> state.next()
@@ -841,12 +856,10 @@ private fun readerSurfaceTap(
 }
 
 /**
- * Pages the whole book incrementally: a fresh list is filled by a coroutine in
- * this composable's scope, so the first page appears before the last is
- * measured. Pages never cross a chapter start (ADR-0037), and the segment
- * holding [focus] is measured first, so a jump shows its chapter at once while
- * the rest of the book is counted behind it. The list's snapshot reads drive
- * recomposition as pages arrive.
+ * The page window around [anchor]: a list filled by a coroutine in this
+ * composable's scope, starting at the anchor's chapter and stopping a few pages
+ * past it, so a jump or an open costs one chapter rather than the book
+ * (ADR-0040). The list's snapshot reads drive recomposition as pages arrive.
  *
  * [pageWidth] is the room the page actually gets: at the context column's
  * breakpoint the reserved column takes its share of the window, so measuring the

@@ -395,7 +395,7 @@ that (issue #69). The desktop lane keeps a Bundle-strict saveable-state registry
 in `VocabularyScreenSemanticsTest` as its own guard.
 
 The reader's page — a `SelectionContainer` over an `AnnotatedString` whose
-words are clickable `LinkAnnotation`s, paginated by the platform text stack — is
+words the page hit-tests, paginated by the platform text stack — is
 also proved on this lane (issue #75): `ReaderScreenSemanticsTest`
 opens at a saved offset, turns pages by tapping the zones, and toggles the chrome
 on the runtime Android uses. Robolectric lays glyphs out far more tightly
@@ -409,9 +409,9 @@ vocabulary list with its search and filter, settings and attribution, and the
 vault export/import loop all run under Robolectric through the same `App()`
 composable. The book's text is built from one-line paragraphs, because
 Robolectric lays glyphs out far more tightly than a device font, and a page
-boundary then always falls between paragraphs. A word link is activated through
-its semantics action rather than a synthetic tap, because a tap on Robolectric's
-tiny measured glyphs lands between them and the reader turns the page instead;
+boundary then always falls between paragraphs. A word is tapped at a point taken
+from the text's own layout (`GetTextLayoutResult`) rather than at a guessed pixel,
+because Robolectric measures glyphs far more tightly than a device font;
 the raw tap zones and paging are proved on this lane by the reader's own twin
 (issue #75).
 
