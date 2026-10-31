@@ -644,9 +644,12 @@ private fun ColumnScope.ReaderPage(
     onPhraseSelected: (PhraseSelection) -> Unit,
 ) {
     // The range the current long-press drag covers, so the chosen words wash as
-    // they are picked; the open panel's range is the fallback once it ends.
+    // they are picked; the open panel's range is the fallback once it ends. The
+    // drag is page-local; the committed range is not, so it is moved onto the page
+    // before the wash compares them (issue #244).
     var dragRange by remember { mutableStateOf<IntRange?>(null) }
-    val selected = dragRange ?: document.selectedRange
+    val pageStart = state.page?.start ?: 0
+    val selected = washedRange(dragRange, document.selectedRange, pageStart)
     val tokens = rememberPageTokens(document, chapterText, styles, state.page, selected)
     val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -692,7 +695,7 @@ private fun ColumnScope.ReaderPage(
                 layout = { layout },
                 marginPx = marginPx,
                 chapter = chapterText.text,
-                pageStart = state.page?.start ?: 0,
+                pageStart = pageStart,
                 onSelecting = { range -> dragRange = range },
                 onSelected = { phrase ->
                     dragRange = null
