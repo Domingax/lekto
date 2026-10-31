@@ -4,6 +4,7 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.text.WordToken
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * The pure half of phrase selection (issue #87): the range a long-press drag
@@ -64,5 +65,22 @@ class PhraseSelectionTest {
         val selection = phraseInChapter("the lantern glows", pageStart = 0, range = 4..11)
 
         assertEquals("the lantern glows", selection.sentence)
+    }
+
+    @Test
+    fun theLiveDragIsAlreadyInThePagesCoordinates() {
+        assertEquals(4..11, washedRange(drag = 4..11, committed = null, pageStart = 100))
+    }
+
+    @Test
+    fun theCommittedSelectionIsBroughtOntoThePage() {
+        // The panel's range is a chapter range; the wash compares the page's own
+        // offsets, so it is moved by the page start (issue #244).
+        assertEquals(4..11, washedRange(drag = null, committed = 104..111, pageStart = 100))
+    }
+
+    @Test
+    fun nothingIsWashedWhenNoRangeIsLive() {
+        assertNull(washedRange(drag = null, committed = null, pageStart = 100))
     }
 }

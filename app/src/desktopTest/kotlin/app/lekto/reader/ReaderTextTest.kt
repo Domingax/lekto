@@ -242,6 +242,27 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aPagePastTheFirstWashesASelectionInThePagesCoordinates() {
+        // The wash compares the page's own offsets, so a page that starts later
+        // still matches a range the reader has moved onto it (issue #244).
+        val chapterText = buildChapterText(chapter, styles)
+        val words = buildPageTokens(chapterText, ReaderPage(0, chapterText.length), renderer, chapter, styles).words
+        val lantern = words.first { it.surface == "lantern" }
+        val page = ReaderPage(lantern.start, chapterText.length)
+
+        val tokens = buildPageTokens(
+            chapterText,
+            page,
+            renderer,
+            chapter,
+            styles,
+            selected = 0..lantern.surface.length,
+        )
+
+        assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "lantern").background)
+    }
+
+    @Test
     fun aTokenCarriesTheLemmaKeyWhenTheLemmaLookupKnowsIt() {
         val lemmas = InMemoryLemmaLookup(mapOf("lanterns" to "lantern"))
         val lemmaRenderer = ReaderRenderer(WhitespaceTextSegmenter(), renderer.mastery, lemmas)
