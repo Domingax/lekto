@@ -69,7 +69,12 @@ internal class BookTextCache(private val derived: DerivedAssetStore) {
     private data class CachedText(val formatVersion: Int, val text: StructuredText)
 
     companion object {
-        /** The shape of [CachedText] this build writes and accepts; anything else is a miss. */
-        const val FORMAT_VERSION = 1
+        /**
+         * The shape of [CachedText] this build writes and accepts; anything else
+         * is a miss. Version 2 is ADR-0041's: a TXT's cached text now carries the
+         * chapter list inferred from its text, so a text cached by version 1 is
+         * re-parsed and grows one.
+         */
+        const val FORMAT_VERSION = 2
     }
 }

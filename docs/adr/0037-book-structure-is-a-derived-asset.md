@@ -1,9 +1,14 @@
 ---
 status: accepted
-superseded in part by ADR-0040
+superseded in part by ADR-0040, ADR-0041
 ---
 
 # Book structure is a derived asset, read from the book's table of contents
+
+> The rule that a TXT has one chapter "because there is no structure to invent" is
+> superseded by [ADR-0041](0041-chapters-are-inferred-when-the-file-declares-none.md):
+> a book whose file declares no structure now infers one from its text. The rest
+> of this ADR stands.
 
 > The whole-book pagination and the page count below are superseded by
 > [ADR-0040](0040-reader-paginates-one-chapter-and-shows-progress.md): the reader

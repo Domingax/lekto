@@ -1,0 +1,4 @@
+# The TXT parser's real fixture keeps the line endings its source file carries,
+# so the golden proves the parser normalises CRLF rather than the checkout
+# laundering it first. See `core/src/commonTest/resources/txt/README.md`.
+core/src/commonTest/resources/txt/*.txt -text

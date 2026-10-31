@@ -52,10 +52,10 @@ data class StructuredText(
     val language: String?,
     val blocks: List<TextBlock>,
     /**
-     * The book's **Chapter list**, nested as the original declares it (ADR-0037).
-     * It is a derived asset beside the blocks. An empty list means the source
-     * declared no structure — a TXT before the one-chapter rule, or a parser
-     * that has not learned chapters yet.
+     * The book's **Chapter list**: the chapters its original file declares, or the
+     * ones inferred from its text when it declares none (ADR-0037, ADR-0041). It
+     * is a derived asset beside the blocks. An empty list means the source
+     * declared no structure and the parser has not learned to infer one.
      */
     val chapters: List<Chapter> = emptyList(),
 ) {

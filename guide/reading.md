@@ -31,8 +31,10 @@ away, because it only lays out the chapter you are reading. Close the list with
 **Close**, by tapping outside it, or with the system back gesture; back closes the
 list before it closes the reader.
 
-A book with one chapter — and every text file — has no chapter list. Its
-position stays a label and reads `42%`.
+A book with one chapter has no chapter list. Its position stays a label and reads
+`42%`. A text file is one chapter unless its text carries chapter headings —
+`Chapter 4`, `Chapitre IV`, `Partie 2` — which Lekto reads as chapters, so the
+list appears like it does for an EPUB.
 
 ## Resuming where you left off
 

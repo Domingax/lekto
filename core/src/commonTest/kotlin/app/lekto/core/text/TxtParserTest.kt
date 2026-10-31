@@ -6,7 +6,9 @@ import io.kotest.matchers.shouldBe
 
 /**
  * The TXT parser: line endings, blank-line paragraphs and whitespace are
- * normalised, and no title or language is invented (issue #15).
+ * normalised, and no language is invented (issue #15). It infers the structure a
+ * plain text carries — chapter headings and a title — because the file declares
+ * neither (ADR-0041).
  */
 class TxtParserTest :
     FunSpec({
@@ -29,23 +31,142 @@ class TxtParserTest :
             TxtParser().parse(ByteArray(0)).blocks shouldBe emptyList()
         }
 
-        test("a text file carries no title or language") {
-            val text = TxtParser().parse("Bonjour le monde.".encodeToByteArray())
-
-            text.title shouldBe null
-            text.language shouldBe null
-            text.plainText() shouldBe "Bonjour le monde."
+        test("a text file carries no language") {
+            TxtParser().parse("Bonjour le monde.".encodeToByteArray()).language shouldBe null
         }
 
-        test("a text file is one chapter covering the whole text") {
-            val text = TxtParser().parse("Un\n\nDeux".encodeToByteArray())
+        test("a text file with no recognisable heading is one chapter covering the whole text") {
+            val text = TxtParser().parse("Bonjour le monde.\n\nComment vas-tu ?".encodeToByteArray())
 
             text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+            text.blocks.none { block -> block.kind == BlockKind.HEADING } shouldBe true
         }
 
         test("a multi-byte character survives decoding") {
             val text = TxtParser().parse("日本語の文章です。".encodeToByteArray())
 
             text.plainText() shouldBe "日本語の文章です。"
+        }
+
+        test("numbered headings become chapters and heading blocks") {
+            val text = TxtParser().parse(
+                "Chapter I\n\nIt begins.\n\nChapter II\n\nIt continues.\n\nChapter III\n\nIt ends."
+                    .encodeToByteArray(),
+            )
+
+            text.chapters shouldContainExactly listOf(
+                Chapter("Chapter I", startBlock = 0),
+                Chapter("Chapter II", startBlock = 2),
+                Chapter("Chapter III", startBlock = 4),
+            )
+            text.blocks.filter { block -> block.kind == BlockKind.HEADING }
+                .map { block -> block.text } shouldContainExactly
+                listOf("Chapter I", "Chapter II", "Chapter III")
+            text.blocks.filter { block -> block.kind == BlockKind.HEADING }
+                .all { block -> block.headingLevel == 1 } shouldBe true
+        }
+
+        test("the blocks keep their count and their text, only the kind changes") {
+            val text = TxtParser().parse("Chapter I\n\nFirst.\n\nChapter II\n\nSecond.".encodeToByteArray())
+
+            text.blocks.map { block -> block.text } shouldContainExactly
+                listOf("Chapter I", "First.", "Chapter II", "Second.")
+        }
+
+        test("French chapter headings and roman numerals are recognised") {
+            val text = TxtParser().parse("Chapitre II\n\nUn.\n\nChapitre III\n\nDeux.".encodeToByteArray())
+
+            text.chapters.map { chapter -> chapter.title } shouldContainExactly listOf("Chapitre II", "Chapitre III")
+        }
+
+        test("a heading whose title is hard-wrapped into the same paragraph stays one chapter") {
+            val text = TxtParser().parse(
+                "Chapter II.\nThe Carpet-Bag.\n\nA.\n\nChapter III.\nAnother.\n\nB.".encodeToByteArray(),
+            )
+
+            text.chapters.map { chapter -> chapter.title } shouldContainExactly
+                listOf("Chapter II. The Carpet-Bag.", "Chapter III. Another.")
+        }
+
+        test("the word chapter inside a sentence is not a chapter") {
+            val text = TxtParser().parse("The next chapter is long.\n\nIt is.".encodeToByteArray())
+
+            text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+        }
+
+        test("a long paragraph that opens with a chapter word is not a heading") {
+            val text = TxtParser().parse(
+                (
+                    "Chapter 1 recounts a long argument that runs on well past what a heading " +
+                        "would ever be, and it is prose."
+                    ).encodeToByteArray(),
+            )
+
+            text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+            text.blocks.single().kind shouldBe BlockKind.PARAGRAPH
+        }
+
+        test("headings whose numbering does not increase are not a chapter list") {
+            val text = TxtParser().parse("Chapter 3\n\nA.\n\nChapter 2\n\nB.".encodeToByteArray())
+
+            text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+        }
+
+        test("a single heading is not a chapter list") {
+            val text = TxtParser().parse("Chapter I\n\nIts only chapter.".encodeToByteArray())
+
+            text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+            text.blocks.map { block -> block.kind } shouldContainExactly
+                listOf(BlockKind.PARAGRAPH, BlockKind.PARAGRAPH)
+        }
+
+        test("a bare numeral series counts from one and steps by one") {
+            val text = TxtParser().parse("1\n\nUn.\n\n2\n\nDeux.".encodeToByteArray())
+
+            text.chapters.map { chapter -> chapter.title } shouldContainExactly listOf("1", "2")
+        }
+
+        test("lowercase roman numerals count the same as uppercase ones") {
+            val text = TxtParser().parse("i\n\nUn.\n\nii\n\nDeux.".encodeToByteArray())
+
+            text.chapters.map { chapter -> chapter.title } shouldContainExactly listOf("i", "ii")
+        }
+
+        test("scraped page numbers are not a chapter list") {
+            val text = TxtParser().parse("12\n\nA.\n\n13\n\nB.".encodeToByteArray())
+
+            text.chapters shouldContainExactly listOf(Chapter("", startBlock = 0))
+        }
+
+        test("the first line is the title when it reads like one") {
+            TxtParser().parse("Les Trois Mousquetaires\n\nChapter I\n\nText.".encodeToByteArray()).title shouldBe
+                "Les Trois Mousquetaires"
+        }
+
+        test("the title is the first line, not the paragraph it opens") {
+            val text = TxtParser().parse(
+                "Les Trois Mousquetaires\npar Alexandre Dumas\n\nChapter I\n\nText.".encodeToByteArray(),
+            )
+
+            text.title shouldBe "Les Trois Mousquetaires"
+        }
+
+        test("a first line that ends a sentence is not a title") {
+            TxtParser().parse("Il était une fois.\n\nLa suite.".encodeToByteArray()).title shouldBe null
+        }
+
+        test("a first line that is a chapter heading is not a title") {
+            TxtParser().parse("Chapter I\n\nText.".encodeToByteArray()).title shouldBe null
+        }
+
+        test("a first line that opens a chapter without a numeral is not a title") {
+            TxtParser().parse("CHAPITRE PREMIER\n\nText.\n\nCHAPITRE II\n\nSuite.".encodeToByteArray()).title shouldBe
+                null
+        }
+
+        test("a long first paragraph is not a title") {
+            val paragraph = "Ce paragraphe commence le récit et continue bien au-delà de ce qu'un titre occupe"
+
+            TxtParser().parse("$paragraph\n\nLa suite.".encodeToByteArray()).title shouldBe null
         }
     })
