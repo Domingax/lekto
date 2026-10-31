@@ -191,7 +191,7 @@ Three sections, and no fourth:
 - **Import is not a section.** It is the Library's action, written as a word beside the title, and
   as a filled button in the empty state. A tab that opens a file picker is not a place.
 - **The reader leaves the shell** and is full-screen. Its chrome is two bands, 48 dp and 64 dp,
-  and a tap on the middle third hides both.
+  always visible: there is no "just the content" mode.
 - **A bar's controls reach the window's edge.** The reader's top band and every sub-screen header
   inset what sits at the edge by `BarInset` (4 dp), Material's app-bar inset, while the screen's
   text and rows keep `ScreenEdge` (24 dp). The reader's bottom band keeps the content margin, so
@@ -279,8 +279,14 @@ a bordered block in the list, with a way to dismiss it.
 
 `arrow-left` · book title · `Aa` | the page | `‹` · position · `›`.
 
-The chevrons mark the three tap zones (previous third, chrome third, next third) and turn the
-page when tapped; a chevron disabled at a bound stays visible but faded. The position reads the current chapter's
+The chevrons turn the page. On a touch screen a horizontal swipe turns it too — leftward for
+the next page, rightward for the previous. The page has no tap zones: a tap on a word is the
+lookup, and a tap anywhere else does nothing, so reaching for the text never turns a page by
+accident. The bands never hide; there is no "just the content" mode. A chevron disabled at a
+bound stays visible but faded, and the next chevron stays live on the last page, where it raises
+the end of the book. A long press on a word selects a phrase (§7.3).
+
+The position reads the current chapter's
 title above the **Reading progress** — `XI` over `46%` — so it uses the same words as the chapter
 list (ADR-0039), and measures the book rather than the screen (ADR-0040). The two lines are centred in the band; the title takes one line and ellipsises.
 Before the first chapter, and in a book with one chapter, the progress line stands alone and no
@@ -319,8 +325,8 @@ rather than a hole in it. The panel sets the face, the size and the margins, and
 there is no button to confirm a reading preference. The App theme is **not** here — it recolours
 the app, not the book, and it lives in Settings ▸ Appearance (ADR-0035, ADR-0036).
 
-**The end of the book** is a full-screen reader state, not a page. Tapping the next zone on the
-last page raises it; reaching the last page does not. Reaching the panel never declares the book
+**The end of the book** is a full-screen reader state, not a page. The next chevron, or a
+leftward swipe, on the last page raises it; reaching the last page does not. Reaching the panel never declares the book
 finished by itself. `THE END` is set in the interface's small caps, the book's title in the
 reading serif, then `Mark as finished` as the filled action and `Back to Library` as the text
 action. Declaring finished keeps the panel open: the check and the word `Finished` appear, the
@@ -523,7 +529,7 @@ the page behind it.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.
 - The reader's page also carries the two page turns as accessibility actions, beside the two
-  chevrons: a screen-reader or switch user keeps a way through the book.
+  chevrons and the swipe: a screen-reader or switch user keeps a way through the book.
 - The language vignette's colour is decoration; its two letters are the information.
 - Every icon either carries a `contentDescription` or sits beside a label that names it.
 - The reading text honours the platform's font scale, and the **Reading preference**'s size stays
@@ -558,8 +564,8 @@ the page behind it.
 
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
-  makes a missing one fail `./gradlew check` (§8). The reader page overrides descendants with
-  `pointerHoverIcon` directly, because its `SelectionContainer` would otherwise keep the text cursor.
+  makes a missing one fail `./gradlew check` (§8). The reader's page is text, not a clickable
+  surface, so it keeps the text cursor its `SelectionContainer` asks for.
 - The sub-screen header — `app/src/commonMain/kotlin/app/lekto/ui/ScreenHeader.kt`: the `arrow-left`
   and serif title every screen one tap below a section shares, with the quiet action a screen adds
   at its edge (the **Languages** surface's **Reload list**) (§7.5, §7.6). Its controls take

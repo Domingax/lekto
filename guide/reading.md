@@ -5,11 +5,16 @@ one page at a time.
 
 ## Moving through a book
 
-Turn pages by tapping the left and right thirds of the page, or the two chevrons
-in the bottom bar. The chevrons also show where those zones are. Tapping the
-middle of the page hides both bars so the text fills the screen; tapping again
-brings them back. With a screen reader, the page offers **Previous page** and
-**Next page** as actions, so you can move through the book from the page itself.
+Turn pages with a horizontal swipe — leftward for the next page, rightward for the
+previous — or with the two chevrons in the bottom bar. A tap that is not on a word
+does nothing, so reaching for the text never turns a page by accident. The two
+bars stay on screen while you read. With a screen reader, the page offers
+**Previous page** and **Next page** as actions, so you can move through the book
+from the page itself.
+
+To look up more than one word, press and hold a word, then drag to the last word
+of the phrase and let go. The words wash as you drag, and the translation panel
+opens when you release.
 
 ## Moving by chapter
 
@@ -48,7 +53,8 @@ so does the system back gesture on Android. Back closes a lookup panel or the
 
 Lekto never decides on its own that you have finished a book, and reaching its
 last page is not the same as having read it. When you are on the last page, tap
-the right third once more and a full-screen state opens. It says **THE END**,
+the next chevron once more, or swipe leftward, and a full-screen state opens. It
+says **THE END**,
 then the book's title, and offers **Mark as finished** and **Back to Library**.
 
 **Mark as finished** declares the book finished and leaves the state open: a

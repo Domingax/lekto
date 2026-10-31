@@ -103,10 +103,10 @@ internal fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: ()
 }
 
 /**
- * The bottom band (docs/design.md §6, §7.2): two chevrons that mark where the
- * page's tap zones are **and** turn the page when tapped, and the position in the
- * theme's muted ink. A chevron disabled at a bound stays visible but faded, so the
- * band keeps its shape as the reader moves.
+ * The bottom band (docs/design.md §6, §7.2): two chevrons that turn the page, and
+ * the position in the theme's muted ink. A chevron disabled at a bound stays
+ * visible but faded, so the band keeps its shape as the reader moves. The next
+ * chevron stays live on the last page, where it raises the end of the book.
  *
  * The position is the **Chapter**'s own title and the **Reading progress**, not a
  * page number: a page count measures the screen and the font, so it changes when
@@ -134,7 +134,7 @@ internal fun ReaderPageBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TapZoneButton(
+        PageTurnButton(
             imageVector = LektoIcons.ChevronLeft,
             contentDescription = texts[TextKey.PREVIOUS_PAGE],
             enabled = canPrevious,
@@ -148,7 +148,7 @@ internal fun ReaderPageBar(
                 hasChapters
             },
         )
-        TapZoneButton(
+        PageTurnButton(
             imageVector = LektoIcons.ChevronRight,
             contentDescription = texts[TextKey.NEXT_PAGE],
             enabled = canNext,
@@ -204,13 +204,13 @@ private fun RowScope.ReaderPosition(progress: Int, chapter: String?, onOpenChapt
 }
 
 /**
- * One chevron marking a tap zone and turning the page: muted ink, and faded while
- * it is disabled at a bound. Its description names the turn, so a screen reader
- * meets a control rather than a decorative glyph.
+ * One chevron turning the page: muted ink, and faded while it is disabled at a
+ * bound. Its description names the turn, so a screen reader meets a control
+ * rather than a decorative glyph.
  */
 @Suppress("LongParameterList") // The icon, its spoken name, its state and its tap are independent.
 @Composable
-private fun TapZoneButton(
+private fun PageTurnButton(
     imageVector: ImageVector,
     contentDescription: String,
     enabled: Boolean,
