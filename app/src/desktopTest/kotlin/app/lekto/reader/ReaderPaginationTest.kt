@@ -1,5 +1,7 @@
 package app.lekto.reader
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -124,5 +126,54 @@ class ReaderPaginationTest {
             "a bigger text must take more pages: ${smallPages.size} at ${ReadingPreferences.MIN_SIZE} vs " +
                 "${largePages.size} at ${ReadingPreferences.MAX_SIZE}",
         )
+    }
+
+    /**
+     * The blank-page regression (issue #239): the reader paginated the whole book
+     * before the composition could draw, so a long book stayed empty for as long
+     * as its pagination took. The frame the reader needs is the one that covers
+     * the reading anchor; the rest of the book may follow afterwards.
+     */
+    @Test
+    fun theFrameIsAwaitedOnceTheAnchorPageIsMeasured() = runComposeUiTest {
+        val book = AnnotatedString(
+            buildString {
+                repeat(400) { append("the quick brown fox jumps over the lazy dog and then keeps going. ") }
+            },
+        )
+        val anchor = book.length / 2
+        var pagesWhenCovered = -1
+        var frames = 0
+        var total = -1
+
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            val layout = ReaderLayout(measurer, defaultStyles.body, width, height)
+            LaunchedEffect(Unit) {
+                val pages = mutableStateListOf<ReaderPage>()
+                fillPages(
+                    text = book,
+                    layout = layout,
+                    chapterStarts = emptySet(),
+                    paginationStart = anchor,
+                    pages = pages,
+                ) {
+                    frames++
+                    if (pagesWhenCovered == -1 && pages.last().end > anchor) pagesWhenCovered = pages.size
+                }
+                total = pages.size
+            }
+        }
+        waitForIdle()
+
+        assertTrue(
+            pagesWhenCovered in 1 until total,
+            "the frame that covers the anchor must come before the whole book: " +
+                "covered=$pagesWhenCovered frames=$frames total=$total anchor=$anchor",
+        )
+        assertTrue(frames > 1, "the loop keeps handing frames back, so the reader stays responsive")
     }
 }
