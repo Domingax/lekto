@@ -285,6 +285,9 @@ chapter is current.
 Tapping the position opens the chapter list, which is why the position is a control rather than a
 label. A book with one chapter has no list, so its position stays a label (ADR-0037).
 
+The `←` and `→` keys turn the page on a keyboard, through the same two calls the chevrons make.
+They stand down while a panel or the end state is open, so the keys stay theirs (issue #246).
+
 The chapter list is a bottom sheet over the page on a phone, up to about 60 % of the height, and
 the reserved context column on desktop (§6). It keeps the book's hierarchy, highlights the current
 chapter and scrolls it into view. It closes on a choice, a tap outside, its Close action, or Back.
