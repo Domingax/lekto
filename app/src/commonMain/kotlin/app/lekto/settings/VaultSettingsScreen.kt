@@ -83,7 +83,7 @@ fun VaultSettingsScreen(
     val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         ScreenHeader(
@@ -92,13 +92,18 @@ fun VaultSettingsScreen(
             titleTag = VAULT_SETTINGS_TITLE_TAG,
             onBack = onBack,
         )
-        Text(
-            texts[TextKey.VAULT_SECTION_DESCRIPTION],
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        VaultTransfer(vault, actions)
-        SyncForm(sync, actions, now)
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
+        ) {
+            Text(
+                texts[TextKey.VAULT_SECTION_DESCRIPTION],
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            VaultTransfer(vault, actions)
+            SyncForm(sync, actions, now)
+        }
     }
 }
 

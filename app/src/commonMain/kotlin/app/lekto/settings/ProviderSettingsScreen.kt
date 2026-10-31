@@ -63,7 +63,8 @@ internal const val PROVIDER_SETTINGS_TITLE_TAG: String = "provider-settings-titl
  * keychain, never the vault.
  */
 @Composable
-@Suppress("LongMethod") // The screen's fields read top to bottom in the order docs/design.md §7.6 names them.
+// The fields read top to bottom; the nested content column is the header's bleed.
+@Suppress("LongMethod", "CognitiveComplexMethod")
 fun ProviderSettingsScreen(
     state: ProviderUiState,
     actions: SettingsActions = SettingsActions(),
@@ -73,7 +74,7 @@ fun ProviderSettingsScreen(
     val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         ScreenHeader(
@@ -82,51 +83,56 @@ fun ProviderSettingsScreen(
             titleTag = PROVIDER_SETTINGS_TITLE_TAG,
             onBack = onBack,
         )
-        Text(
-            texts[TextKey.PROVIDER_SECTION_DESCRIPTION],
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        if (!state.available) {
-            Text(texts[TextKey.PROVIDER_UNAVAILABLE], style = MaterialTheme.typography.bodyMedium)
-            return@Column
-        }
-
-        // The fields are one block: their labels and hairlines read as a form, not
-        // as six unrelated blocks (docs/design.md §7.5; issue #213).
-        Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
-            ProviderPicker(state.providers, state.selectedProvider, actions.onSelectProvider)
-            val chosen = state.selectedProvider ?: return@Column
-
-            if (chosen == LlmProvider.CUSTOM) {
-                FormField(
-                    value = state.config.customBaseUrl,
-                    onValueChange = actions.onBaseUrlChange,
-                    label = texts[TextKey.BASE_URL],
-                    modifier = Modifier.fillMaxWidth().testTag(BASE_URL_FIELD_TAG),
-                )
-            }
-            // A key typed for one provider must not survive a switch to another, so the
-            // field resets with the provider; a keyless Ollama shows no field at all.
-            var apiKey by remember(state.config.provider) { mutableStateOf("") }
-            if (chosen.requiresKey) {
-                SecretField(
-                    value = apiKey,
-                    onValueChange = { typed -> apiKey = typed },
-                    label = texts[TextKey.API_KEY],
-                    modifier = Modifier.fillMaxWidth().testTag(API_KEY_FIELD_TAG),
-                    hasStoredSecret = state.hasStoredKey,
-                )
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
+        ) {
+            Text(
+                texts[TextKey.PROVIDER_SECTION_DESCRIPTION],
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (!state.available) {
+                Text(texts[TextKey.PROVIDER_UNAVAILABLE], style = MaterialTheme.typography.bodyMedium)
+                return@Column
             }
 
-            ModelField(state, apiKey, actions)
-            // The action, its answer and the way to undo it are one group, so the
-            // result and Remove key sit right under the button (issue #213).
-            Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
-                StoredKey(state)
-                ProviderActions(state, apiKey, actions)
-                ProviderStatus(state)
-                RemoveKey(state, actions)
+            // The fields are one block: their labels and hairlines read as a form, not
+            // as six unrelated blocks (docs/design.md §7.5; issue #213).
+            Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
+                ProviderPicker(state.providers, state.selectedProvider, actions.onSelectProvider)
+                val chosen = state.selectedProvider ?: return@Column
+
+                if (chosen == LlmProvider.CUSTOM) {
+                    FormField(
+                        value = state.config.customBaseUrl,
+                        onValueChange = actions.onBaseUrlChange,
+                        label = texts[TextKey.BASE_URL],
+                        modifier = Modifier.fillMaxWidth().testTag(BASE_URL_FIELD_TAG),
+                    )
+                }
+                // A key typed for one provider must not survive a switch to another, so the
+                // field resets with the provider; a keyless Ollama shows no field at all.
+                var apiKey by remember(state.config.provider) { mutableStateOf("") }
+                if (chosen.requiresKey) {
+                    SecretField(
+                        value = apiKey,
+                        onValueChange = { typed -> apiKey = typed },
+                        label = texts[TextKey.API_KEY],
+                        modifier = Modifier.fillMaxWidth().testTag(API_KEY_FIELD_TAG),
+                        hasStoredSecret = state.hasStoredKey,
+                    )
+                }
+
+                ModelField(state, apiKey, actions)
+                // The action, its answer and the way to undo it are one group, so the
+                // result and Remove key sit right under the button (issue #213).
+                Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
+                    StoredKey(state)
+                    ProviderActions(state, apiKey, actions)
+                    ProviderStatus(state)
+                    RemoveKey(state, actions)
+                }
             }
         }
     }

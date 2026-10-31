@@ -9,6 +9,7 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -19,6 +20,7 @@ import app.lekto.APP_VERSION
 import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -78,6 +80,22 @@ class AboutScreenSemanticsTest {
         onNodeWithText("À propos").assertIsDisplayed()
         onNodeWithText("Version $APP_VERSION").assertIsDisplayed()
         onNodeWithText("Code source").assertIsDisplayed()
+    }
+
+    @Test
+    @Suppress("MagicNumber") // The 16 dp gap and the half-dp tolerance are the assertion's own.
+    fun theHeaderReachesTheEdgeWhileTheTextKeepsItsMargin() = runComposeUiTest {
+        about()
+
+        // The back control sits where a bar's does — 8 dp from the window edge —
+        // while the screen's text keeps the 24 dp content margin, so the two are
+        // 16 dp apart (issue #245).
+        val back = onNodeWithTag(ABOUT_BACK_TAG).getUnclippedBoundsInRoot()
+        val version = onNodeWithTag(ABOUT_VERSION_TAG).getUnclippedBoundsInRoot()
+        assertTrue(
+            abs((version.left - back.left).value - 16f) <= 0.5f,
+            "the header's control sits ${version.left - back.left} from the content edge",
+        )
     }
 
     /** Renders the screen in the app theme, sized like a phone. */

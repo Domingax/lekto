@@ -77,7 +77,7 @@ fun AppearanceScreen(
     val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
         ScreenHeader(
@@ -87,7 +87,7 @@ fun AppearanceScreen(
             onBack = actions.onBack,
         )
         Column(
-            Modifier.selectableGroup(),
+            Modifier.selectableGroup().padding(horizontal = LektoSpacing.ScreenEdge),
             verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
         ) {
             AppTheme.entries.forEach { theme ->

@@ -161,7 +161,7 @@ private fun ChromeBand() {
         modifier = Modifier
             .fillMaxWidth()
             .height(CHROME_HEIGHT)
-            .padding(horizontal = LektoSpacing.ScreenEdge),
+            .padding(horizontal = LektoSpacing.BarInset),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BandIcon(LektoIcons.ArrowLeft, theme.onBackground)
@@ -194,8 +194,8 @@ private fun ColumnScope.PageLines() {
 }
 
 /**
- * The 64 dp bottom band: the two chevrons marking the thirds and turning the
- * page, and the position in muted ink. The preview opens on page one, so the left
+ * The 64 dp bottom band: the two chevrons turning the page, and the position in
+ * muted ink. The preview opens on page one, so the left
  * chevron is faded as its disabled control would be.
  */
 @Composable
