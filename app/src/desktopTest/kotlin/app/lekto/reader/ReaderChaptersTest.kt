@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -30,12 +32,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The reader's chapters end to end (ADR-0037, issue #198): a page break at every
- * chapter start, the `Chapter N · Page X of Y` position, the chapter sheet, and a
- * jump that saves its place and shows the target at once.
+ * The reader's chapters end to end (ADR-0037, ADR-0039, ADR-0040, issue #198): a
+ * page break at every chapter start, the `Chapter title · 42%` position, the
+ * chapter sheet, and a jump that saves its place and shows the target at once.
  *
  * The book is short on purpose: each chapter segment fits one page, so the pages
- * and their numbers are deterministic at a phone viewport.
+ * and the progress they report are deterministic at a phone viewport.
  */
 @OptIn(ExperimentalTestApi::class)
 @Suppress("TooManyFunctions") // One test per reader-chapter behaviour; splitting hides the surface.
@@ -70,21 +72,22 @@ class ReaderChaptersTest {
     fun aChapterAlwaysStartsANewPageAndThePositionNamesIt() = runComposeUiTest {
         setContent { Reader(book) }
 
-        // Text before the first chapter has no chapter: the position is the page alone.
+        // Text before the first chapter has no chapter: the position is the progress alone.
         onNodeWithText("Intro before chapters.", substring = true).assertIsDisplayed()
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of 3", substring = true)
+        assertEquals(0, progressPercent())
 
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         onNodeWithText("First body.", substring = true).assertIsDisplayed()
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 2 of 3", substring = true)
+        val one = progressPercent()
+        assertTrue(one > 0, "the first chapter is past the start of the book")
 
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         onNodeWithText("Second body.", substring = true).assertIsDisplayed()
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("Two", substring = true)
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 3 of 3", substring = true)
+        assertTrue(progressPercent() > one, "the second chapter is further than the first")
     }
 
     @Test
@@ -96,7 +99,20 @@ class ReaderChaptersTest {
         setContent { Reader(roman, initialOffset = blockStartOffset(blocks, 1)) }
 
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("XI", substring = true)
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 2 of 3", substring = true)
+        assertTrue(progressPercent() > 0, "a saved position inside the book is past the start")
+    }
+
+    @Test
+    fun goingBackFromAChapterStartLandsOnTheChapterBefore() = runComposeUiTest {
+        setContent { Reader(book, initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK)) }
+        onNodeWithText("Second body.", substring = true).assertIsDisplayed()
+
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).performClick()
+
+        // The page before a chapter's first page is the last page of the chapter
+        // before it, and the reader measures that chapter rather than the book.
+        onNodeWithText("First body.", substring = true).assertIsDisplayed()
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
     }
 
     @Test
@@ -109,7 +125,7 @@ class ReaderChaptersTest {
         )
         setContent { Reader(single) }
 
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of 1")
+        onNodeWithTag(READER_POSITION_TAG).assertTextContains("0%")
         onNodeWithTag(READER_POSITION_TAG).performClick()
 
         onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
@@ -155,7 +171,7 @@ class ReaderChaptersTest {
         onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
         onNodeWithText("First body.", substring = true).assertIsDisplayed()
         onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 2 of 3", substring = true)
+        assertTrue(progressPercent() > 0, "the chosen chapter is past the start of the book")
         assertEquals(
             blockStartOffset(blocks, FIRST_CHAPTER_BLOCK),
             saved,
@@ -248,4 +264,14 @@ class ReaderChaptersTest {
     private fun heading(text: String) = TextBlock(BlockKind.HEADING, listOf(TextRun(text)), headingLevel = 2)
 
     private fun paragraph(text: String) = TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(text)))
+}
+
+/** The **Reading progress** the position line shows, as a whole percentage. */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeUiTest.progressPercent(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        ?: error("no percentage in the position: $text")
 }

@@ -22,7 +22,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import app.lekto.core.book.ReadingProgress
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.LocalAppTexts
@@ -50,9 +50,6 @@ import app.lekto.theme.WIDE_COLUMN_WIDTH
 import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.ui.DismissScrim
 import kotlin.math.roundToInt
-
-/** How many pages to lay out between yields, so the first page is shown at once. */
-private const val PAGE_YIELD_EVERY = 8
 
 /** The breathing room kept between the lifted word and the sheet's top edge. */
 private val GAP_ABOVE_PANEL = 8.dp
@@ -150,7 +147,7 @@ fun ReaderScreen(
         val state = remember(document.text) {
             ReaderState(actions.onPositionChange, document.initialOffset, initiallyFinished)
         }
-        val pages = rememberReaderPages(chapterText, styles, chapterStarts, state.paginationStart, pageWidth)
+        val pages = rememberReaderPages(chapterText, styles, chapterStarts, state.anchor, pageWidth)
         state.bind(pages, chapterText.length, document.initialOffset)
         ReaderContent(document, chapterText, entries, styles, state, actions, overlayHeightPx, contextColumn, context)
     }
@@ -160,8 +157,8 @@ fun ReaderScreen(
  * The reader's chrome, page and **Aa** panel. The panel is part of the column, not
  * an overlay: opening it lifts the bottom band and shortens the visible page, so
  * it never covers the text (docs/design.md §7.2). The page itself is not
- * repaginated — the panel is a temporary display, so the page number and the page
- * count stay put, and the page is whole again as soon as the panel closes. A tap
+ * repaginated — the panel is a temporary display, so the page and the **Reading
+ * progress** stay put, and the page is whole again as soon as the panel closes. A tap
  * on the page closes whatever panel is open — the **Aa** panel below it or a
  * lookup above it — and the page scrim keeps that tap from looking a word up or
  * turning the page. The chrome stays usable.
@@ -325,10 +322,11 @@ private fun ReaderBands(
         )
         if (state.chromeVisible && state.page != null) {
             ReaderPageBar(
-                page = state.index,
-                total = state.total,
+                progress = state.progress,
                 chapter = current?.chapter?.title?.takeIf { chapters.isNotEmpty() },
                 hasChapters = positionOpensChapters(chapters, contextColumn, actions),
+                canPrevious = state.canPrevious,
+                canNext = state.canNext,
                 onPrevious = state::previous,
                 onNext = state::next,
                 onOpenChapters = { showChapters(state, actions, contextColumn) },
@@ -387,7 +385,7 @@ private fun overlayDismiss(state: ReaderState, actions: ReaderActions, contextCo
  */
 @Stable
 @Suppress("TooManyFunctions") // One screen's state: page moves, chrome, and the end state it owns, kept in one anchor.
-private class ReaderState(
+internal class ReaderState(
     private val onPositionChange: (Int) -> Unit,
     initialOffset: Int,
     initiallyFinished: Boolean,
@@ -416,23 +414,30 @@ private class ReaderState(
         private set
 
     /**
-     * Where pagination starts: the saved position when the book opens, then the
-     * chapter a jump chose. Changing it restarts the pages with the segment the
-     * reader is looking at, so a jump shows its chapter without waiting for the
-     * pages before it (ADR-0037).
+     * Where the reader is: a character offset into the rendered text, chosen so
+     * the place survives a reflow onto another screen or font (ADR-0035). It is
+     * the only position the reader keeps; the page under it is derived from the
+     * measured window (ADR-0040, issue #241).
      */
-    var paginationStart by mutableStateOf(initialOffset)
+    var anchor by mutableStateOf(initialOffset)
         private set
 
     private var pages: List<ReaderPage> = emptyList()
     private var textLength: Int = 0
-    private var anchor by mutableStateOf(initialOffset)
     private var opened = false
 
     /**
-     * Points the state at the latest pagination. The first [bind] — opening the
-     * book — takes the saved [initialOffset]; a later one only re-reads the pages,
-     * so a preference change repaginates around the same anchor.
+     * The page last drawn. A chapter jump or a step across a boundary starts a
+     * new window, and the pager measures it from its start; until that reaches
+     * the anchor the reader keeps this page on screen rather than showing a
+     * blank page and no bar (ADR-0040).
+     */
+    private var shown: ReaderPage? = null
+
+    /**
+     * Points the state at the latest window. The first [bind] — opening the book
+     * — takes the saved [initialOffset]; a later one only re-reads the pages, so
+     * a preference change repaginates around the same anchor.
      */
     fun bind(pages: List<ReaderPage>, textLength: Int, initialOffset: Int) {
         this.pages = pages
@@ -441,17 +446,41 @@ private class ReaderState(
             anchor = initialOffset.coerceIn(0, textLength)
             opened = true
         }
+        if (reached) pages.getOrNull(index)?.let { drawn -> shown = drawn }
     }
 
     /** True once the page holding the anchor is measured, so a resumed session never flashes past its place. */
     private val reached: Boolean
         get() = pages.lastOrNull()?.let { last -> last.end > anchor || last.end >= textLength } == true
 
-    val index: Int get() = if (reached) pageIndexFor(pages, anchor) else 0
-    val total: Int get() = pages.size
-    val page: ReaderPage? get() = if (reached) pages.getOrNull(index) else null
+    private val index: Int get() = if (reached) pageIndexFor(pages, anchor) else 0
 
-    fun previous() = goTo(index - 1)
+    /** The page under the anchor, or the last one drawn while its replacement is measured. */
+    val page: ReaderPage? get() = if (reached) pages.getOrNull(index) else shown
+
+    /** How far through the book the reader is, the same share the Library row shows. */
+    val progress: Int get() = ReadingProgress(anchor, textLength).percent
+
+    /** Whether there is a page before this one, in this chapter or the one before it. */
+    val canPrevious: Boolean get() = (page?.start ?: 0) > 0
+
+    /** Whether there is text after this page; the last page turns to the end state instead. */
+    val canNext: Boolean get() = page?.let { current -> current.end < textLength } == true
+
+    /**
+     * Moves to the page before. Inside a chapter it is already measured, so the
+     * anchor lands on its first character; across a boundary the window holds
+     * nothing before the chapter start, so the anchor steps just behind it and
+     * the pager measures the chapter before (ADR-0040).
+     */
+    fun previous() {
+        val current = page ?: return
+        val before = pages.getOrNull(index - 1)
+        when {
+            before != null && before.end == current.start -> moveTo(before.start)
+            current.start > 0 -> moveTo(current.start - 1)
+        }
+    }
 
     /**
      * Advances one page, or — on the last page — raises the end-of-book state
@@ -460,11 +489,8 @@ private class ReaderState(
      * itself.
      */
     fun next() {
-        if (reached && index >= pages.lastIndex) {
-            openEnd()
-        } else {
-            goTo(index + 1)
-        }
+        val current = page ?: return
+        if (current.end >= textLength) openEnd() else moveTo(current.end)
     }
 
     /** Raises the full-screen end state, which hides the reader's chrome. */
@@ -526,15 +552,13 @@ private class ReaderState(
 
     /**
      * Moves to [offset] — a chapter's first block — and saves it at once, so
-     * **Last read** moves and the target is shown without waiting for the whole
-     * book to be counted (ADR-0037).
+     * **Last read** moves and the target is shown without waiting for the book to
+     * be counted (ADR-0037, ADR-0040).
      */
     fun jumpTo(offset: Int) {
         chaptersVisible = false
         preferencesVisible = false
-        anchor = offset.coerceIn(0, textLength)
-        paginationStart = anchor
-        onPositionChange(anchor)
+        moveTo(offset)
     }
 
     /**
@@ -550,9 +574,9 @@ private class ReaderState(
         }
     }
 
-    private fun goTo(target: Int) {
-        if (pages.isEmpty()) return
-        anchor = pages[target.coerceIn(0, pages.lastIndex)].start
+    /** Puts the anchor at [offset] and records it as the book's **Reading position**. */
+    private fun moveTo(offset: Int) {
+        anchor = offset.coerceIn(0, textLength)
         onPositionChange(anchor)
     }
 }
@@ -777,7 +801,7 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
     chapterText: AnnotatedString,
     styles: ReaderStyles,
     chapterStarts: Set<Int>,
-    paginationStart: Int,
+    anchor: Int,
     pageWidth: Dp,
 ): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
@@ -786,91 +810,20 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
         (pageWidth - styles.horizontalMargin * 2).roundToPx()
     }.coerceAtLeast(0)
     val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
-    val pages =
-        remember(chapterText, contentWidth, contentHeight, density.density, density.fontScale, paginationStart) {
-            mutableStateListOf<ReaderPage>()
-        }
+    // The window belongs to a chapter: a page turn inside it keeps what is
+    // already measured, while crossing a boundary starts the next one's window
+    // (ADR-0037, ADR-0040).
+    val windowStart = remember(anchor, chapterStarts) { chapterStartAt(anchor, chapterStarts) }
     val layout = remember(measurer, styles, contentWidth, contentHeight) {
         ReaderLayout(measurer, styles.body, contentWidth, contentHeight)
     }
-    LaunchedEffect(layout, chapterStarts, paginationStart) {
-        fillPages(chapterText, layout, chapterStarts, paginationStart, pages) { withFrameNanos { } }
+    // A new layout is a new pagination: the font, the margin and the viewport all
+    // change where a page breaks, so the window starts over with the new one.
+    val pages = remember(chapterText, layout, windowStart) {
+        mutableStateListOf<ReaderPage>()
+    }
+    LaunchedEffect(layout, chapterStarts, anchor, pages) {
+        fillWindow(chapterText, layout, chapterStarts, anchor, pages) { withFrameNanos { } }
     }
     return pages
-}
-
-/**
- * Appends pages until the book ends, yielding every [PAGE_YIELD_EVERY] so the
- * UI stays live. The segments are the chapter starts: the one holding [focus]
- * is measured first, then the later ones, then the earlier ones, and the list is
- * kept in reading order throughout.
- */
-@Suppress("LongParameterList") // The paginator's inputs are the text, its layout and its state list.
-internal suspend fun fillPages(
-    text: AnnotatedString,
-    layout: ReaderLayout,
-    chapterStarts: Set<Int>,
-    paginationStart: Int,
-    pages: SnapshotStateList<ReaderPage>,
-    awaitFrame: suspend () -> Unit,
-) {
-    val boundaries = (chapterStarts + 0 + text.length)
-        .filter { offset -> offset in 0..text.length }
-        .distinct()
-        .sorted()
-    val segments = boundaries.zipWithNext().filter { (start, end) -> end > start }
-    val anchorFrame = AnchorFrame(paginationStart, text.length, pages, awaitFrame)
-    if (segments.isEmpty()) {
-        paginateChapter(text, layout).forEach { page ->
-            pages += page
-            anchorFrame.afterPage()
-        }
-        return
-    }
-    val focusIndex = segments.indexOfLast { (start, _) -> start <= paginationStart }.coerceAtLeast(0)
-    val ordered = segments.drop(focusIndex) + segments.take(focusIndex)
-    var sinceYield = 0
-    for ((start, end) in ordered) {
-        for (page in paginateChapter(text.subSequence(start, end), layout)) {
-            pages += ReaderPage(page.start + start, page.end + start)
-            anchorFrame.afterPage()
-            sinceYield++
-            if (sinceYield == PAGE_YIELD_EVERY) {
-                sinceYield = 0
-                awaitFrame()
-            }
-        }
-        pages.sortWith(compareBy { page -> page.start })
-    }
-}
-
-/**
- * The one frame the reader needs before it can show anything: the page holding
- * the reading anchor must reach the composition, and nothing after it may wait.
- *
- * `yield` does not reach the frame clock on Android, so a book paginated in a
- * single effect stayed blank for as long as its pagination took (issue #239).
- * Asking the frame clock here — once, as soon as the anchor is covered — is what
- * turns 15 s of blank page into a page drawn at once. The loop asks for a frame
- * every [PAGE_YIELD_EVERY] pages for the same reason: a page of text on screen
- * is not enough if the thread that draws it never gets a turn, and the platform
- * reports that as "Lekto ne répond pas".
- */
-private class AnchorFrame(
-    private val anchor: Int,
-    private val textLength: Int,
-    private val pages: List<ReaderPage>,
-    private val awaitFrame: suspend () -> Unit,
-) {
-    private var awaited = false
-
-    /** Waits for the frame once the pages measured so far cover [anchor]. */
-    suspend fun afterPage() {
-        if (awaited) return
-        val last = pages.lastOrNull() ?: return
-        if (last.end > anchor || last.end >= textLength) {
-            awaited = true
-            awaitFrame()
-        }
-    }
 }

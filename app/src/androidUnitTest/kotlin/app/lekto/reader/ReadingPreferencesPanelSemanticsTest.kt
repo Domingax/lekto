@@ -10,11 +10,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -149,17 +151,17 @@ class ReadingPreferencesPanelSemanticsTest {
 
     /**
      * The panel is a temporary display: opening it must not repaginate the book,
-     * so the page number and the page count stay put (issue #209 review).
+     * so the page keeps the same words (issue #209 review).
      */
     @Test
     fun openingThePanelDoesNotRepaginateTheBook() {
         compose.setContent { PreferencesReader(renderer) }
-        val before = compose.pageBarText()
+        val before = compose.wordLinkCount()
 
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
 
         compose.onNodeWithTag(READING_PREFERENCES_PANEL_TAG).assertIsDisplayed()
-        assertEquals("the panel must not change the page or the page count", before, compose.pageBarText())
+        assertEquals("the panel must not change the page's words", before, compose.wordLinkCount())
     }
 
     /**
@@ -234,8 +236,8 @@ class ReadingPreferencesPanelSemanticsTest {
         var changed: ReadingPreferences? = null
         compose.setContent { PreferencesReader(renderer) { next -> changed = next } }
 
-        compose.onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        val before = compose.pageBarText()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+        val before = compose.wordLinkCount()
 
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         repeat(5) { compose.onNodeWithTag(READING_LARGER_TAG).performClick() }
@@ -243,7 +245,7 @@ class ReadingPreferencesPanelSemanticsTest {
         val chosen = changed
         assertNotNull("the panel must raise a change", chosen)
         assertEquals(ReadingPreferences.MAX_SIZE, chosen!!.size)
-        assertNotEquals(before, compose.pageBarText(), "a bigger text must repaginate the open book")
+        assertNotEquals("a bigger text must repaginate into fewer words", before, compose.wordLinkCount())
     }
 }
 
@@ -286,7 +288,7 @@ private fun PreferencesReader(
     }
 }
 
-/** The page bar's text, so a test can tell one pagination from another. */
-private fun ComposeTestRule.pageBarText(): String = onNodeWithText("Page 1 of", substring = true).fetchSemanticsNode()
-    .config[SemanticsProperties.Text]
-    .joinToString(" ") { text -> text.text }
+/** How many tappable words the page holds, so a test can tell one pagination from another. */
+private fun ComposeTestRule.wordLinkCount(): Int = onAllNodes(
+    hasClickAction() and hasAnyAncestor(hasTestTag(READER_PAGE_TAG)),
+).fetchSemanticsNodes().size

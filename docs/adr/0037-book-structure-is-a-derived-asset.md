@@ -1,8 +1,15 @@
 ---
 status: accepted
+superseded in part by ADR-0040
 ---
 
 # Book structure is a derived asset, read from the book's table of contents
+
+> The whole-book pagination and the page count below are superseded by
+> [ADR-0040](0040-reader-paginates-one-chapter-and-shows-progress.md): the reader
+> measures one chapter and shows **Reading progress**, not `Page X of Y`. The
+> chapter model, the page break at every chapter start and the immediate jump
+> still stand.
 
 A book is flattened to one run of text today: the EPUB parser turns the spine into blocks and
 drops the structure the file already carries. The reader can only say "Page 99 of 357", and a

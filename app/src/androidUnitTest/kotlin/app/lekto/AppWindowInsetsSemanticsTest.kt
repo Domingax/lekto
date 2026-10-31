@@ -4,7 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.library.LIBRARY_TITLE_TAG
 import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.reader.READER_BACK_TAG
+import app.lekto.reader.READER_POSITION_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -61,7 +62,7 @@ class AppWindowInsetsSemanticsTest {
 
         compose.onNodeWithText("The Lantern Keeper").performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            compose.onAllNodesWithText("Page 1 of", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(READER_POSITION_TAG).fetchSemanticsNodes().isNotEmpty()
         }
 
         assertTrue(

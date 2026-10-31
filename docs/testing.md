@@ -216,10 +216,12 @@ two bands — live in
 `app/desktopTest/.../ReaderScreenSemanticsTest`, injected with the Compose test
 API's pointer injection (`performTouchInput`), and the whole loop (open, turn,
 leave, reopen at the same page) in `AppSemanticsTest` against an in-memory
-library. Pagination is lazy and tokenisation is per page: `paginateChapter`
-yields one page at a time and `buildPageTokens` colours only the visible page, so
-opening a book lays out and tokenises its first page and not its every page;
-`LongChapterPerformanceTest` pins the shape on a book sized to 300 pages, and
+library. Pagination is bounded by the chapter and tokenisation is per page:
+`paginateChapter` yields one page at a time, `fillWindow` measures the chapter
+holding the anchor and a few pages past it, and `buildPageTokens` colours only the
+visible page, so opening a book neither lays out the book nor tokenises every
+word; `LongChapterPerformanceTest` pins the shape on a book sized to 300 pages,
+and
 `ReadingProgressWriterTest` pins that rapid page turns coalesce to one vault
 write rather than racing it.
 
@@ -939,7 +941,7 @@ no separate Save control exists, that the current level is named beside the
 chips, and that the sheet covers at most 45 % of the screen. `AppSemanticsTest`
 also drives the reader's lift: a word at the bottom of the page is tapped, the
 sheet opens, and the word's bounds are asserted above the sheet's top while the
-page number stays put — the page rises under the sheet without repaginating.
+page's words stay put — the page rises under the sheet without repaginating.
 The whole loop — tap a word, choose a level so it is saved with its context,
 change the level afterwards, and find an earlier session's entry already at its
 level — runs
@@ -1151,8 +1153,8 @@ pins the text file's one chapter, and `BookTextCacheTest` plus a
 `VaultBookLibraryTest` case pin that a missing or different cache `formatVersion`
 is a miss, so the original is re-parsed and rewritten. The reader's side is
 `ReaderChaptersTest` in `app/desktopTest` — a page break at every chapter start,
-the chapter's title above the page (`XI`, then `Page 285 of 405`), a one-chapter
-book keeping `Page X of Y`, the sheet's
+the chapter's title above the **Reading progress** (`XI`, then `46%`), a
+one-chapter book keeping that label, the sheet's
 hierarchy and current row, a jump saving its chapter's first block, a jump to the
 current chapter writing nothing, Close and an outside tap dismissing the sheet,
 and opening the sheet dismissing an open lookup — with

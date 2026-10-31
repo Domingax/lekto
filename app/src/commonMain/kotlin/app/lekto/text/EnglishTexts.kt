@@ -81,7 +81,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     // Reader.
     TextKey.PREVIOUS_PAGE to "Previous page",
     TextKey.NEXT_PAGE to "Next page",
-    TextKey.PAGE_OF to "Page {0} of {1}",
+    TextKey.READING_PROGRESS to "{0}%",
     TextKey.END_OF_BOOK to "THE END",
     TextKey.MARK_AS_FINISHED to "Mark as finished",
     TextKey.MARK_AS_UNFINISHED to "Mark as unfinished",

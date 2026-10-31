@@ -14,20 +14,20 @@ brings them back. With a screen reader, the page offers **Previous page** and
 ## Moving by chapter
 
 When a book declares chapters, the bottom bar tells you both where you are in
-the chapter and where you are in the book. The chapter's own title sits above the
-page — `XI`, then `Page 285 of 405` — so it uses the same words the chapter list
-shows. A long title is shortened with `…` to keep the page visible. Every chapter
-starts on a new page.
+the chapter and how far through the book you are. The chapter's own title sits
+above the percentage — `XI`, then `46%` — so it uses the same words the chapter
+list shows. A long title is shortened with `…` to keep the text visible. Every
+chapter starts on a new page.
 
 Tap that position to open the chapter list. It keeps the book's hierarchy, marks
 the chapter you are reading and scrolls it into view. Choose a chapter to jump
-there: the reader saves your new place at once and shows the chapter without
-waiting for the rest of the book to be counted, so the page number catches up a
-moment later. Close the list with **Close**, by tapping outside it, or with the
-system back gesture; back closes the list before it closes the reader.
+there: the reader saves your new place at once and shows the chapter straight
+away, because it only lays out the chapter you are reading. Close the list with
+**Close**, by tapping outside it, or with the system back gesture; back closes the
+list before it closes the reader.
 
 A book with one chapter — and every text file — has no chapter list. Its
-position stays a label and reads `Page 99 of 357`.
+position stays a label and reads `42%`.
 
 ## Resuming where you left off
 
@@ -70,7 +70,7 @@ you to the last page. The Library shows finished books when you select the
 
 Tap **Aa** in the reader's top bar to open the **Aa** panel. The panel sits under
 the page and the bottom bar, so the bottom of the page is hidden while it is
-open. The page number does not change: the panel is temporary, and the whole page
+open. The percentage does not change: the panel is temporary, and the whole page
 comes back when you close it. Its chips set the text face (serif or sans-serif),
 the text size, and how wide the page margins are. There is nothing to confirm:
 the book repaginates as you tap a chip, so you see the effect straight away and

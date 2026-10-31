@@ -13,7 +13,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
@@ -95,15 +94,15 @@ class ReaderScreenSemanticsTest {
         onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
         onNodeWithTag(READER_TITLE_TAG).assertTextEquals(SampleChapter.chapter.title)
         onNodeWithTag(READING_PREFERENCES_TAG).assertIsDisplayed()
-        onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of", substring = true)
+        assertEquals(0, progressPercent())
         onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsDisplayed().assertIsNotEnabled()
         onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsDisplayed().assertIsEnabled()
 
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
-        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        assertTrue(progressPercent() > 0, "page two is further through the book than page one")
 
         onNodeWithTag(READER_PREVIOUS_PAGE_TAG).performClick()
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        assertEquals(0, progressPercent())
     }
 
     /**
@@ -125,31 +124,32 @@ class ReaderScreenSemanticsTest {
     @Test
     fun theRightZoneTurnsThePageAndTheLeftZoneTurnsItBack() = runComposeUiTest {
         setContent { Reader(renderer) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        assertEquals(0, progressPercent())
 
         // A tap in the right third advances; in the left third it goes back.
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
+        val second = progressPercent()
+        assertTrue(second > 0, "the right zone turns forward")
 
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(4f, center.y)) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        assertEquals(0, progressPercent())
     }
 
     @Test
     fun tappingTheCentreRecedesAndReturnsTheChrome() = runComposeUiTest {
         setContent { Reader(renderer, chapter = SHORT_CHAPTER) }
         onNodeWithText("Hello.").assertIsDisplayed()
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
 
         // The short chapter leaves the middle of the page free of glyphs, so the
         // centre tap is a chrome toggle rather than a word lookup.
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
-        onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
+        onNodeWithTag(READER_POSITION_TAG).assertDoesNotExist()
         onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
         onNodeWithText("Hello.").assertIsDisplayed()
 
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
     }
 
@@ -159,7 +159,7 @@ class ReaderScreenSemanticsTest {
         // the first: a resumed session is exactly where the user left it.
         setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
 
-        onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
+        assertTrue(progressPercent() >= 90, "a session saved at the end opens near the end")
         onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsEnabled()
         onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsNotEnabled()
@@ -261,7 +261,7 @@ class ReaderScreenSemanticsTest {
     fun aPageTurnReportsItsPosition() = runComposeUiTest {
         var reported = -1
         setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
 
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
 
@@ -332,6 +332,16 @@ class ReaderScreenSemanticsTest {
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
         onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
     }
+}
+
+/** The **Reading progress** the position line shows, as a whole percentage. */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeUiTest.progressPercent(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        ?: error("no percentage in the position: $text")
 }
 
 /** The first word link's centre, in the reader page's coordinates. */

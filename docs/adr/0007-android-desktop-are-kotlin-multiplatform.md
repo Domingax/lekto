@@ -129,8 +129,9 @@ ADR-0007 substrate:
 
 - **Pagination is lazy.** `paginateChapter` returns a `Sequence<ReaderPage>` and
   finds each page by measuring a bounded run from the previous page's end, so
-  opening a book lays out its **first page**, not its every page. A background
-  fill lays out the rest for the page counter, one yield every few pages.
+  opening a book lays out its **first page**, not its every page. The background
+  fill and the page counter it fed were removed by ADR-0040: the reader measures
+  the chapter holding the anchor and a few pages past it.
 - **The word layer is per page.** The chapter is built once **unstyled by
   mastery** (a colour or a link does not change a glyph's width), pagination
   measures that, and only the visible page is tokenised and coloured. Opening a
