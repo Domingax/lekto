@@ -618,14 +618,10 @@ private fun ColumnScope.ReaderPage(
     )
     val latestTap = rememberUpdatedState(
         readerSurfaceTap(
-            marginPx = marginPx,
-            tokens = tokens,
-            layout = layout,
+            page = PageTap(marginPx, tokens, layout, chapterText.text, onWordTap),
             state = state,
             enabled = dismissOverlay == null,
             liftPx = liftPx,
-            chapterText = chapterText.text,
-            onWordTap = onWordTap,
         ),
     )
     Box(
@@ -763,23 +759,27 @@ private fun rememberPageTokens(
     }
 }
 
+/** What a tap needs from the page it lands on: where its words are, and who to tell. */
+private class PageTap(
+    val marginPx: Int,
+    val tokens: ReaderTokens?,
+    val layout: TextLayoutResult?,
+    val chapterText: String,
+    val onWordTap: (WordTap) -> Unit,
+)
+
 /**
  * The tap the page handles: a word wins wherever it lands, otherwise the tap's
  * zone decides. The word is found by hit-testing the page's tokens against its
  * layout; the words carry no link of their own, because one annotation per word
  * costs ~55 ms of text layout on Android and the reader pays it on every page
- * turn (ADR-0007, issue #243).
+ * turn (ADR-0007, issue #251).
  */
-@Suppress("LongParameterList") // The tap's inputs are the page's own geometry; a bundle would only hide them.
 private fun readerSurfaceTap(
-    marginPx: Int,
-    tokens: ReaderTokens?,
-    layout: TextLayoutResult?,
+    page: PageTap,
     state: ReaderState,
     enabled: Boolean,
     liftPx: Float,
-    chapterText: String,
-    onWordTap: (WordTap) -> Unit,
 ): (Offset, Float) -> Unit = { position, width ->
     // While a panel is open above the page (the **Aa** panel or a lookup), a tap on
     // the page only dismisses it — through the page scrim — and must not look a
@@ -787,9 +787,10 @@ private fun readerSurfaceTap(
     if (enabled) {
         val zone = readerTapZone(position.x, width.toInt())
         // The text is lifted with the page, so its layout coordinates are that much lower.
-        val word = wordAt(Offset(position.x, position.y + liftPx), marginPx, tokens?.words.orEmpty(), layout)
+        val local = Offset(position.x, position.y + liftPx)
+        val word = wordAt(local, page.marginPx, page.tokens?.words.orEmpty(), page.layout)
         when {
-            word != null -> onWordTap(wordTapOf(word, state.page?.start ?: 0, chapterText))
+            word != null -> page.onWordTap(wordTapOf(word, state.page?.start ?: 0, page.chapterText))
             zone == ReaderTapZone.CHROME -> state.toggleChrome()
             zone == ReaderTapZone.PREVIOUS -> state.previous()
             zone == ReaderTapZone.NEXT -> state.next()
