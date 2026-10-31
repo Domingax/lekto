@@ -192,6 +192,10 @@ Three sections, and no fourth:
   as a filled button in the empty state. A tab that opens a file picker is not a place.
 - **The reader leaves the shell** and is full-screen. Its chrome is two bands, 48 dp and 64 dp,
   and a tap on the middle third hides both.
+- **A bar's controls reach the window's edge.** The reader's top band and every sub-screen header
+  inset what sits at the edge by `BarInset` (4 dp), Material's app-bar inset, while the screen's
+  text and rows keep `ScreenEdge` (24 dp). The reader's bottom band keeps the content margin, so
+  its chevrons stay where they were (issue #245).
 - **Languages and Appearance are entries inside Settings**, not sections (ADR-0034, ADR-0036).
 - **The back stack is real**, and Android's back button walks it (issue #185). Opening a section or
   a screen pushes it, and Back drops it: back from Settings returns to the section it came from, and
@@ -281,6 +285,11 @@ title above the **Reading progress** — `XI` over `46%` — so it uses the same
 list (ADR-0039), and measures the book rather than the screen (ADR-0040). The two lines are centred in the band; the title takes one line and ellipsises.
 Before the first chapter, and in a book with one chapter, the progress line stands alone and no
 chapter is current.
+
+Both bands inset their controls by 4 dp — Material's app-bar inset, not the screen's 24 dp
+edge — so the back arrow and the **Aa** control sit near the window's edge instead of floating
+inward (issue #245). The bottom band keeps the content margin, so the two chevrons stay where they
+were. Each control keeps its 48 × 48 dp target (§9).
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
 label. A book with one chapter has no list, so its position stays a label (ADR-0037).
@@ -553,7 +562,9 @@ the page behind it.
   `pointerHoverIcon` directly, because its `SelectionContainer` would otherwise keep the text cursor.
 - The sub-screen header — `app/src/commonMain/kotlin/app/lekto/ui/ScreenHeader.kt`: the `arrow-left`
   and serif title every screen one tap below a section shares, with the quiet action a screen adds
-  at its edge (the **Languages** surface's **Reload list**) (§7.5, §7.6).
+  at its edge (the **Languages** surface's **Reload list**) (§7.5, §7.6). Its controls take
+  `BarInset` (4 dp) while the screen's text keeps `ScreenEdge`, so a screen pads its content and
+  never its header.
 - The row's quiet action — `app/src/commonMain/kotlin/app/lekto/ui/TextAction.kt`: a text action with
   the 48 dp target, the hand and the row's hover wash, used where the identity wants a control
   without a filled button (§7.5, §8). The **Languages** surface's downloads, **Reload list** and

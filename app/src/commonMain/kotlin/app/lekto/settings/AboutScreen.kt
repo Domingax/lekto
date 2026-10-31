@@ -3,6 +3,7 @@ package app.lekto.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -53,7 +54,7 @@ fun AboutScreen(actions: AboutActions = AboutActions(), modifier: Modifier = Mod
     val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
         ScreenHeader(
@@ -62,22 +63,27 @@ fun AboutScreen(actions: AboutActions = AboutActions(), modifier: Modifier = Mod
             titleTag = ABOUT_TITLE_TAG,
             onBack = actions.onBack,
         )
-        Text(
-            texts.message(AppMessage.of(TextKey.ABOUT_VERSION, version)),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.testTag(ABOUT_VERSION_TAG),
-        )
-        Text(
-            texts[TextKey.ABOUT_LICENCE],
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        TextButton(
-            onClick = actions.onOpenSource,
-            modifier = Modifier.handCursor().testTag(ABOUT_SOURCE_TAG),
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
         ) {
-            Text(texts[TextKey.ABOUT_SOURCE])
+            Text(
+                texts.message(AppMessage.of(TextKey.ABOUT_VERSION, version)),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.testTag(ABOUT_VERSION_TAG),
+            )
+            Text(
+                texts[TextKey.ABOUT_LICENCE],
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(
+                onClick = actions.onOpenSource,
+                modifier = Modifier.handCursor().testTag(ABOUT_SOURCE_TAG),
+            ) {
+                Text(texts[TextKey.ABOUT_SOURCE])
+            }
         }
     }
 }

@@ -76,11 +76,11 @@ private fun ScreenFrame(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .width(SCREEN_WIDTH)
-            .padding(LektoSpacing.ScreenEdge),
+            .padding(vertical = LektoSpacing.ScreenEdge),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         HeaderBar()
-        content()
+        Column(Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge)) { content() }
     }
 }
 
@@ -88,7 +88,10 @@ private fun ScreenFrame(content: @Composable () -> Unit) {
 @Composable
 private fun HeaderBar() {
     Row(
-        modifier = Modifier.fillMaxWidth().height(LektoSpacing.TouchTarget),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(LektoSpacing.TouchTarget)
+            .padding(horizontal = LektoSpacing.BarInset),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {

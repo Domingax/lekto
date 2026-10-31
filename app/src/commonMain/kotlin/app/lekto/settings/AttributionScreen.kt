@@ -3,6 +3,7 @@ package app.lekto.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -51,7 +52,7 @@ fun AttributionScreen(
 ) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
         ScreenHeader(
@@ -60,9 +61,14 @@ fun AttributionScreen(
             titleTag = ATTRIBUTION_TITLE_TAG,
             onBack = onBack,
         )
-        DictionaryAttribution(metadata)
-        DifficultyAttribution(difficulty)
-        IconAttribution()
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
+        ) {
+            DictionaryAttribution(metadata)
+            DifficultyAttribution(difficulty)
+            IconAttribution()
+        }
     }
 }
 

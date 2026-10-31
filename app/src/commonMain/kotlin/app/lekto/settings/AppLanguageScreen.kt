@@ -67,7 +67,7 @@ fun AppLanguageScreen(
     val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
     ) {
         ScreenHeader(
@@ -76,18 +76,23 @@ fun AppLanguageScreen(
             titleTag = APP_LANGUAGE_TITLE_TAG,
             onBack = actions.onBack,
         )
-        Text(
-            texts[TextKey.APP_LANGUAGE_DESCRIPTION],
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Column(Modifier.selectableGroup()) {
-            AppLanguages.SUPPORTED.forEach { language ->
-                LanguageEntry(
-                    language = language,
-                    selected = language == current,
-                    onClick = { actions.onSelect(language) },
-                )
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.ScreenEdge),
+        ) {
+            Text(
+                texts[TextKey.APP_LANGUAGE_DESCRIPTION],
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Column(Modifier.selectableGroup()) {
+                AppLanguages.SUPPORTED.forEach { language ->
+                    LanguageEntry(
+                        language = language,
+                        selected = language == current,
+                        onClick = { actions.onSelect(language) },
+                    )
+                }
             }
         }
     }

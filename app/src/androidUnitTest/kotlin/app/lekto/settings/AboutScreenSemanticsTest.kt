@@ -8,6 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -24,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.math.abs
 
 /**
  * The **About** screen on a **simulated Android runtime** (issue #214): the
@@ -85,6 +87,21 @@ class AboutScreenSemanticsTest {
         compose.onNodeWithText("À propos").assertIsDisplayed()
         compose.onNodeWithText("Version $APP_VERSION").assertIsDisplayed()
         compose.onNodeWithText("Code source").assertIsDisplayed()
+    }
+
+    @Test
+    fun theHeaderReachesTheEdgeWhileTheTextKeepsItsMargin() {
+        render()
+
+        // The back control sits where a bar's does — 8 dp from the window edge —
+        // while the screen's text keeps the 24 dp content margin, so the two are
+        // 16 dp apart (issue #245).
+        val back = compose.onNodeWithTag(ABOUT_BACK_TAG).getUnclippedBoundsInRoot()
+        val version = compose.onNodeWithTag(ABOUT_VERSION_TAG).getUnclippedBoundsInRoot()
+        assertTrue(
+            "the header's control sits ${version.left - back.left} from the content edge",
+            abs((version.left - back.left).value - 16f) <= 0.5f,
+        )
     }
 
     /** Renders the screen in the app theme, sized like a phone. */

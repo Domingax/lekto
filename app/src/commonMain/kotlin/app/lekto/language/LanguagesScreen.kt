@@ -117,7 +117,8 @@ data class LanguagesActions(
  * semantics.
  */
 @Composable
-@Suppress("LongParameterList", "LongMethod") // The surface's inputs, and its composition reads in one order.
+// The surface reads in one order; the nested content column is the header's bleed.
+@Suppress("LongParameterList", "LongMethod", "CognitiveComplexMethod")
 fun LanguagesScreen(
     state: LanguagesUiState,
     levels: Map<String, CefrLevel> = emptyMap(),
@@ -131,7 +132,7 @@ fun LanguagesScreen(
     val texts = LocalAppTexts.current
     Column(
         modifier.fillMaxSize()
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
     ) {
         ScreenHeader(
             title = texts[TextKey.LANGUAGES],
@@ -140,33 +141,35 @@ fun LanguagesScreen(
             onBack = actions.onBack,
             trailing = { ReloadAction(onReload = actions.onReload, reloading = state.reloading) },
         )
-        if (state.reloading) Reloading()
-        state.error?.let { message -> Error(texts.message(message)) }
+        Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
+            if (state.reloading) Reloading()
+            state.error?.let { message -> Error(texts.message(message)) }
 
-        LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.ScreenEdge)) {
-            if (state.languages.isEmpty()) {
-                item { EmptyState(available = state.available) }
-            } else {
-                if (translationLanguages.isNotEmpty()) {
-                    item { TranslationLanguageField(translationLanguage, translationLanguages, actions) }
+            LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.ScreenEdge)) {
+                if (state.languages.isEmpty()) {
+                    item { EmptyState(available = state.available) }
+                } else {
+                    if (translationLanguages.isNotEmpty()) {
+                        item { TranslationLanguageField(translationLanguage, translationLanguages, actions) }
+                    }
+                    item { LanguagesSection(afterTranslationLanguage = translationLanguages.isNotEmpty()) }
+                    itemsIndexed(state.languages, key = { _, offered -> offered.language }) { index, offered ->
+                        // The level and the table are keyed by the language's base tag,
+                        // as the ordering and naming already reduce the offered tag
+                        // (CONTEXT.md, "Reading language"); a dictionary is keyed by the
+                        // pair's manifest artifact name.
+                        LanguageRow(
+                            offered = offered,
+                            level = levels[baseLanguage(offered.language)],
+                            difficulty = difficulty[baseLanguage(offered.language)],
+                            dictionaries = dictionaries,
+                            actions = actions,
+                            last = index == state.languages.lastIndex,
+                        )
+                    }
                 }
-                item { LanguagesSection(afterTranslationLanguage = translationLanguages.isNotEmpty()) }
-                itemsIndexed(state.languages, key = { _, offered -> offered.language }) { index, offered ->
-                    // The level and the table are keyed by the language's base tag,
-                    // as the ordering and naming already reduce the offered tag
-                    // (CONTEXT.md, "Reading language"); a dictionary is keyed by the
-                    // pair's manifest artifact name.
-                    LanguageRow(
-                        offered = offered,
-                        level = levels[baseLanguage(offered.language)],
-                        difficulty = difficulty[baseLanguage(offered.language)],
-                        dictionaries = dictionaries,
-                        actions = actions,
-                        last = index == state.languages.lastIndex,
-                    )
-                }
+                item { AttributionLink(actions.onOpenAttribution) }
             }
-            item { AttributionLink(actions.onOpenAttribution) }
         }
     }
 }

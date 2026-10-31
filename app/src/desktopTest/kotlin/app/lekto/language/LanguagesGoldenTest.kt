@@ -123,21 +123,23 @@ private fun LanguagesPreview() {
             .width(SCREEN_WIDTH)
             .height(SCREEN_HEIGHT)
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            .padding(vertical = LektoSpacing.InsidePanel),
     ) {
         HeaderPreview()
-        Column(Modifier.padding(top = LektoSpacing.ScreenEdge)) {
-            TranslationRowPreview()
-            LanguagesSectionPreview()
-            PREVIEW_LANGUAGES.forEachIndexed { index, language ->
-                LanguageRowPreview(language, last = index == PREVIEW_LANGUAGES.lastIndex)
+        Column(Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge)) {
+            Column(Modifier.padding(top = LektoSpacing.ScreenEdge)) {
+                TranslationRowPreview()
+                LanguagesSectionPreview()
+                PREVIEW_LANGUAGES.forEachIndexed { index, language ->
+                    LanguageRowPreview(language, last = index == PREVIEW_LANGUAGES.lastIndex)
+                }
             }
+            Line(
+                colour = MaterialTheme.colorScheme.onSurfaceVariant,
+                bar = Bar(height = 12.dp, width = 66.dp),
+                modifier = Modifier.padding(top = LektoSpacing.BetweenRows),
+            )
         }
-        Line(
-            colour = MaterialTheme.colorScheme.onSurfaceVariant,
-            bar = Bar(height = 12.dp, width = 66.dp),
-            modifier = Modifier.padding(top = LektoSpacing.BetweenRows),
-        )
     }
 }
 
@@ -146,7 +148,7 @@ private fun LanguagesPreview() {
 private fun HeaderPreview() {
     val theme = MaterialTheme.colorScheme
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.BarInset),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {

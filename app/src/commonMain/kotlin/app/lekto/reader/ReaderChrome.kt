@@ -66,7 +66,7 @@ private const val DISABLED_ALPHA = 0.38f
 internal fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: () -> Unit) {
     val texts = LocalAppTexts.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(CHROME_HEIGHT).padding(horizontal = LektoSpacing.ScreenEdge),
+        modifier = Modifier.fillMaxWidth().height(CHROME_HEIGHT).padding(horizontal = LektoSpacing.BarInset),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // `arrow-left`, not a word: the reader's band is an icon, a title and the

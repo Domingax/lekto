@@ -3,6 +3,7 @@ package app.lekto.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,11 @@ import app.lekto.ui.icons.LektoIcons
  * serif. [trailing] carries a screen's own quiet action at the edge — the
  * **Languages** surface's **Reload list** — so the header stays one row.
  *
+ * The header takes [LektoSpacing.BarInset], not the screen's [LektoSpacing.ScreenEdge]:
+ * a bar's icon belongs near the window's edge, the way an app bar's does, while
+ * the screen's text and rows keep the content margin. A screen therefore pads its
+ * content, never its header (issue #245).
+ *
  * The shell keeps the section current while the screen is open, and the icon and
  * the platform's Back both walk the one back stack.
  */
@@ -36,7 +42,9 @@ internal fun ScreenHeader(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = LektoSpacing.BarInset),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
