@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -48,7 +49,6 @@ import app.lekto.text.TextKey
 import app.lekto.theme.WIDE_COLUMN_WIDTH
 import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.ui.DismissScrim
-import kotlinx.coroutines.yield
 import kotlin.math.roundToInt
 
 /** How many pages to lay out between yields, so the first page is shown at once. */
@@ -794,7 +794,7 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
         ReaderLayout(measurer, styles.body, contentWidth, contentHeight)
     }
     LaunchedEffect(layout, chapterStarts, paginationStart) {
-        fillPages(chapterText, layout, chapterStarts, paginationStart, pages)
+        fillPages(chapterText, layout, chapterStarts, paginationStart, pages) { withFrameNanos { } }
     }
     return pages
 }
@@ -806,20 +806,25 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
  * kept in reading order throughout.
  */
 @Suppress("LongParameterList") // The paginator's inputs are the text, its layout and its state list.
-private suspend fun fillPages(
+internal suspend fun fillPages(
     text: AnnotatedString,
     layout: ReaderLayout,
     chapterStarts: Set<Int>,
     paginationStart: Int,
     pages: SnapshotStateList<ReaderPage>,
+    awaitFrame: suspend () -> Unit,
 ) {
     val boundaries = (chapterStarts + 0 + text.length)
         .filter { offset -> offset in 0..text.length }
         .distinct()
         .sorted()
     val segments = boundaries.zipWithNext().filter { (start, end) -> end > start }
+    val anchorFrame = AnchorFrame(paginationStart, text.length, pages, awaitFrame)
     if (segments.isEmpty()) {
-        paginateChapter(text, layout).forEach { page -> pages += page }
+        paginateChapter(text, layout).forEach { page ->
+            pages += page
+            anchorFrame.afterPage()
+        }
         return
     }
     val focusIndex = segments.indexOfLast { (start, _) -> start <= paginationStart }.coerceAtLeast(0)
@@ -828,12 +833,44 @@ private suspend fun fillPages(
     for ((start, end) in ordered) {
         for (page in paginateChapter(text.subSequence(start, end), layout)) {
             pages += ReaderPage(page.start + start, page.end + start)
+            anchorFrame.afterPage()
             sinceYield++
             if (sinceYield == PAGE_YIELD_EVERY) {
                 sinceYield = 0
-                yield()
+                awaitFrame()
             }
         }
         pages.sortWith(compareBy { page -> page.start })
+    }
+}
+
+/**
+ * The one frame the reader needs before it can show anything: the page holding
+ * the reading anchor must reach the composition, and nothing after it may wait.
+ *
+ * `yield` does not reach the frame clock on Android, so a book paginated in a
+ * single effect stayed blank for as long as its pagination took (issue #239).
+ * Asking the frame clock here — once, as soon as the anchor is covered — is what
+ * turns 15 s of blank page into a page drawn at once. The loop asks for a frame
+ * every [PAGE_YIELD_EVERY] pages for the same reason: a page of text on screen
+ * is not enough if the thread that draws it never gets a turn, and the platform
+ * reports that as "Lekto ne répond pas".
+ */
+private class AnchorFrame(
+    private val anchor: Int,
+    private val textLength: Int,
+    private val pages: List<ReaderPage>,
+    private val awaitFrame: suspend () -> Unit,
+) {
+    private var awaited = false
+
+    /** Waits for the frame once the pages measured so far cover [anchor]. */
+    suspend fun afterPage() {
+        if (awaited) return
+        val last = pages.lastOrNull() ?: return
+        if (last.end > anchor || last.end >= textLength) {
+            awaited = true
+            awaitFrame()
+        }
     }
 }
