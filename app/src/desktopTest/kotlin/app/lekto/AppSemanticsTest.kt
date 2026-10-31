@@ -99,6 +99,7 @@ import app.lekto.reader.READER_BACK_TAG
 import app.lekto.reader.READER_BACK_TO_LIBRARY_TAG
 import app.lekto.reader.READER_END_PANEL_TAG
 import app.lekto.reader.READER_MARK_FINISHED_TAG
+import app.lekto.reader.READER_NEXT_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TEXT_TAG
 import app.lekto.reader.READER_POSITION_TAG
@@ -251,7 +252,7 @@ class AppSemanticsTest {
         setContent { App(environment(library)) }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         val leftAt = awaitPastTheFirstPage()
         // Opening records the first page and the turn records the second,
         // both off the UI thread; wait for the second before leaving the book.
@@ -273,7 +274,7 @@ class AppSemanticsTest {
         setContent { App(environment(library)) }
         openBook()
 
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
         onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
 
@@ -298,7 +299,7 @@ class AppSemanticsTest {
 
         onNodeWithText("Continue reading").assertDoesNotExist()
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         // Leave at once: the position write is still in flight, and the library
         // still has to re-read when it lands (issue #188).
         leaveReader()
@@ -450,7 +451,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         val atPageTwo = awaitPastTheFirstPage()
 
         tapFirstWord()
@@ -470,7 +471,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         val atPageTwo = awaitPastTheFirstPage()
 
         tapFirstWord()
@@ -499,7 +500,7 @@ class AppSemanticsTest {
         }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         awaitPastTheFirstPage()
 
         // Long-press and drag across the page's words to select a phrase.
@@ -526,7 +527,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         awaitPastTheFirstPage()
 
         selectFirstPhrase()
@@ -561,7 +562,7 @@ class AppSemanticsTest {
         }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         awaitPastTheFirstPage()
 
         selectFirstPhrase()
@@ -584,7 +585,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, dictionary = dictionaryServices())) }
 
         openBook()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         awaitPastTheFirstPage()
 
         selectFirstPhrase()
@@ -875,7 +876,7 @@ class AppSemanticsTest {
 
         // The word panel is open over the page bar; close it before turning the page.
         onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         tapFirstWord()
         // The same word (page two starts with "On.", so its key is "on"), so its
         // entry updates in place rather than adding a second one.

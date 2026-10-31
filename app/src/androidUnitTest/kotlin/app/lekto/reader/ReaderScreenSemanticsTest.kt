@@ -20,6 +20,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -30,6 +32,7 @@ import app.lekto.core.text.TextRun
 import app.lekto.testkit.WhitespaceTextSegmenter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -50,8 +53,9 @@ private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
  * parity rule (issue #73) can see the two lanes together. The reader's page is a
  * `SelectionContainer` over an `AnnotatedString` whose words the page hit-tests
  * (ADR-0007) and whose pages are cut by the platform text stack, so resume,
- * paging (by button and by tap zone) and the receding chrome run here on the
- * runtime that ultimately renders them, not only on the desktop JVM.
+ * paging (by the chevrons and by the horizontal swipe) and the reader's fixed
+ * chrome run here on the runtime that ultimately renders them, not only on the
+ * desktop JVM.
  *
  * The long-press drag that selects a phrase stays on the desktop lane: its
  * timeout is driven by the host clock, which this runtime does not advance
@@ -131,8 +135,8 @@ class ReaderScreenSemanticsTest {
     /**
      * The reader's two bands (docs/design.md §7.2): the back arrow, the book's
      * title and the **Aa** control above; the two chevrons and the position below.
-     * The chevrons mark the tap zones and are controls too, disabled at a bound,
-     * so a tap turns the page like the zone under them.
+     * The chevrons are controls, disabled at a bound except the next one on the
+     * last page, which raises the end of the book.
      */
     @Test
     fun theBandsCarryTheBackTitleAaAndThePosition() {
@@ -172,36 +176,50 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
-    fun theRightZoneTurnsThePageAndTheLeftZoneTurnsItBack() {
+    fun aLeftwardSwipeTurnsThePageAndARightwardOneTurnsItBack() {
         compose.setContent { Reader(renderer) }
         assertEquals(0, compose.progressPercent())
 
-        // A tap in the right third advances; in the left third it goes back.
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
-            click(Offset(visibleSize.width - 4f, center.y))
-        }
-        assertTrue("the right zone turns forward", compose.progressPercent() > 0)
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { swipeLeft() }
+        assertTrue("a leftward swipe turns forward", compose.progressPercent() > 0)
 
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(4f, center.y)) }
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { swipeRight() }
         assertEquals(0, compose.progressPercent())
     }
 
     @Test
-    fun tappingTheCentreRecedesAndReturnsTheChrome() {
+    fun aTapThatMissesAWordChangesNothing() {
         compose.setContent { Reader(renderer, chapter = SHORT_CHAPTER) }
-        compose.onNodeWithText("Hello.").assertIsDisplayed()
+        assertEquals(0, compose.progressPercent())
         compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
 
-        // The short chapter leaves the middle of the page free of glyphs, so the
-        // centre tap is a chrome toggle rather than a word lookup.
+        // The short chapter leaves the middle of the page free of glyphs. A tap
+        // there used to recede the chrome or turn the page; now it does nothing.
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
-        compose.onNodeWithTag(READER_POSITION_TAG).assertDoesNotExist()
-        compose.onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
-        compose.onNodeWithText("Hello.").assertIsDisplayed()
 
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
+        assertEquals(0, compose.progressPercent())
         compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         compose.onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun aSwipeIsIgnoredWhileTheTextPanelIsOpen() {
+        compose.setContent { Reader(renderer) }
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        val before = compose.progressPercent()
+
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { swipeLeft() }
+
+        assertEquals(before, compose.progressPercent())
+    }
+
+    @Test
+    fun aSwipeIsHorizontalAndCoversEnoughOfThePage() {
+        val width = 400f
+        assertEquals(PageSwipe.NEXT, pageSwipe(dx = -120f, dy = 8f, width = width))
+        assertEquals(PageSwipe.PREVIOUS, pageSwipe(dx = 120f, dy = 8f, width = width))
+        assertNull(pageSwipe(dx = -40f, dy = 8f, width = width))
+        assertNull(pageSwipe(dx = -120f, dy = 200f, width = width))
     }
 
     @Test
@@ -213,7 +231,8 @@ class ReaderScreenSemanticsTest {
         assertTrue("a session saved at the end opens near the end", compose.progressPercent() >= 90)
         compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         compose.onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsEnabled()
-        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsNotEnabled()
+        // The last page still offers a next action: it raises the end of the book.
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsEnabled()
     }
 
     @Test
@@ -226,18 +245,16 @@ class ReaderScreenSemanticsTest {
     @Test
     fun nextOnTheLastPageOpensTheEndState() {
         compose.setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
-        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsEnabled()
 
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
-            click(Offset(visibleSize.width - 4f, center.y))
-        }
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
         compose.onNodeWithText("THE END").assertIsDisplayed()
         compose.onNodeWithText(LONG_CHAPTER.title).assertIsDisplayed()
         compose.onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
         compose.onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
-        // The state hides the reader's chrome.
+        // The state replaces the reader's chrome with its own panel.
         compose.onNodeWithTag(READER_POSITION_TAG).assertDoesNotExist()
         compose.onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
     }
@@ -316,21 +333,9 @@ class ReaderScreenSemanticsTest {
         compose.setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
         compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
 
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
-            click(Offset(visibleSize.width - 4f, center.y))
-        }
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         assertTrue("turning to page two must report a non-zero character offset", reported > 0)
-    }
-
-    @Test
-    fun theTapZonesAreThirdsOfTheWidth() {
-        val width = 300
-        assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(0f, width))
-        assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(99f, width))
-        assertEquals(ReaderTapZone.CHROME, readerTapZone(150f, width))
-        assertEquals(ReaderTapZone.NEXT, readerTapZone(201f, width))
-        assertEquals(ReaderTapZone.NEXT, readerTapZone(300f, width))
     }
 
     @Composable
@@ -366,7 +371,7 @@ class ReaderScreenSemanticsTest {
 
     /** Taps the next zone on the last page, which is the only way the end state opens. */
     private fun ComposeTestRule.openEndState() {
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
     }
 }

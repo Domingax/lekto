@@ -211,7 +211,7 @@ class ReaderContextColumnTest {
         onNodeWithTag(READER_CONTEXT_COLUMN_TAG).assertIsDisplayed()
 
         // The end state is full-screen, so it leaves no room for the column.
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
         onNodeWithTag(READER_CONTEXT_COLUMN_TAG).assertDoesNotExist()

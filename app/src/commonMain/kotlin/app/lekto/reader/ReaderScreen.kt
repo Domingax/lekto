@@ -36,8 +36,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -106,14 +104,19 @@ data class ReaderActions(
 /**
  * The reader screen: a book paginated to the viewport, every word coloured by
  * mastery and tappable, with page navigation in both directions, resumed at the
- * saved [ReaderDocument.initialOffset], and chrome that recedes (issue #16).
+ * saved [ReaderDocument.initialOffset], and chrome that never leaves the page
+ * (issue #16, issue #243).
  *
- * A tap is a **tap zone** (the model Moon+ Reader and the UX spec's "tap zones"
- * describe): the left third turns to the previous page, the right third to the
- * next, and the middle toggles the chrome. A tap on a word is always word lookup,
- * wherever it lands. The page is a plain (non-lazy) [SelectionContainer] so every
- * visible word is composed and selectable; pagination and tokenisation are
- * incremental, so a long book shows its first page without processing the rest.
+ * A page turns two ways: the two chevrons in the bottom band, and — on a touch
+ * screen — a horizontal swipe, leftward for the next page and rightward for the
+ * previous. The page itself has no tap zones: a tap on a word is word lookup and
+ * a tap anywhere else does nothing, so reaching for the text never turns a page
+ * by accident. A long press on a word starts a phrase selection ([PhraseSelection]),
+ * which is the way to a translation of more than one word.
+ *
+ * The page is a plain (non-lazy) [SelectionContainer] so every visible word is
+ * composed and selectable; pagination and tokenisation are incremental, so a long
+ * book shows its first page without processing the rest.
  *
  * [ReaderActions.onPositionChange] is called with the character offset of each
  * page the reader turns to, so the caller can persist the reading position.
@@ -367,9 +370,7 @@ private fun ReaderBands(
     contextColumn: Boolean,
 ) {
     Column(Modifier.fillMaxSize()) {
-        if (state.chromeVisible) {
-            ReaderTitle(document.text.title, actions.onBack, state::togglePreferences)
-        }
+        ReaderTitle(document.text.title, actions.onBack, state::togglePreferences)
         ReaderPage(
             document,
             chapterText,
@@ -380,7 +381,7 @@ private fun ReaderBands(
             actions.onWordTap,
             actions.onPhraseSelected,
         )
-        if (state.chromeVisible && state.page != null) {
+        if (state.page != null) {
             ReaderPageBar(
                 progress = state.progress,
                 chapter = current?.chapter?.title?.takeIf { chapters.isNotEmpty() },
@@ -392,7 +393,7 @@ private fun ReaderBands(
                 onOpenChapters = { showChapters(state, actions, contextColumn) },
             )
         }
-        if (state.chromeVisible && state.preferencesVisible) {
+        if (state.preferencesVisible) {
             ReadingPreferencesPanel(
                 preferences = document.preferences,
                 onChange = actions.onReadingPreferencesChange,
@@ -450,10 +451,7 @@ internal class ReaderState(
     initialOffset: Int,
     initiallyFinished: Boolean,
 ) {
-    var chromeVisible by mutableStateOf(true)
-        private set
-
-    /** Whether the **Aa** panel is open; it is part of the chrome and hides with it. */
+    /** Whether the **Aa** panel is open; it is part of the chrome. */
     var preferencesVisible by mutableStateOf(false)
         private set
 
@@ -524,8 +522,12 @@ internal class ReaderState(
     /** Whether there is a page before this one, in this chapter or the one before it. */
     val canPrevious: Boolean get() = (page?.start ?: 0) > 0
 
-    /** Whether there is text after this page; the last page turns to the end state instead. */
-    val canNext: Boolean get() = page?.let { current -> current.end < textLength } == true
+    /**
+     * Whether the next action does anything. A page after this one turns; the
+     * last page raises the end-of-book state, so the control is only dead before
+     * a page has been measured.
+     */
+    val canNext: Boolean get() = page != null
 
     /**
      * Moves to the page before. Inside a chapter it is already measured, so the
@@ -553,9 +555,8 @@ internal class ReaderState(
         if (current.end >= textLength) openEnd() else moveTo(current.end)
     }
 
-    /** Raises the full-screen end state, which hides the reader's chrome. */
+    /** Raises the full-screen end state. */
     private fun openEnd() {
-        chromeVisible = false
         preferencesVisible = false
         chaptersVisible = false
         endVisible = true
@@ -564,7 +565,6 @@ internal class ReaderState(
     /** Closes the end state and returns to the last page, the way system back does. */
     fun dismissEnd() {
         endVisible = false
-        chromeVisible = true
     }
 
     /** Shows the end state's marked face; the record write is the caller's action (ADR-0038). */
@@ -577,18 +577,8 @@ internal class ReaderState(
         finished = false
     }
 
-    /** Applies a tap on the middle third: hide or show the chrome. */
-    fun toggleChrome() {
-        chromeVisible = !chromeVisible
-        if (!chromeVisible) {
-            preferencesVisible = false
-            chaptersVisible = false
-        }
-    }
-
-    /** Opens or closes the **Aa** panel; it is part of the chrome, so toggling it shows the chrome. */
+    /** Opens or closes the **Aa** panel. */
     fun togglePreferences() {
-        chromeVisible = true
         chaptersVisible = false
         preferencesVisible = !preferencesVisible
     }
@@ -600,7 +590,6 @@ internal class ReaderState(
 
     /** Opens the chapter sheet, closing the **Aa** panel so the two never overlap. */
     fun openChapters() {
-        chromeVisible = true
         preferencesVisible = false
         chaptersVisible = true
     }
@@ -641,7 +630,7 @@ internal class ReaderState(
     }
 }
 
-/** The page, its word layer built for this page only, and the tap zones over it. */
+/** The page, its word layer built for this page only, and the swipe over it. */
 @Suppress("LongMethod", "LongParameterList") // The page's pieces share one layout; splitting would hide its state.
 @Composable
 private fun ColumnScope.ReaderPage(
@@ -664,7 +653,7 @@ private fun ColumnScope.ReaderPage(
     var pageHeightPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val marginPx = with(density) { styles.horizontalMargin.roundToPx() }
-    val pageBarPx = with(density) { if (state.chromeVisible) PAGE_BAR_HEIGHT.toPx() else 0f }
+    val pageBarPx = with(density) { PAGE_BAR_HEIGHT.toPx() }
     val visibleBottomPx = pageHeightPx - (overlayHeightPx - pageBarPx).coerceAtLeast(0f)
     val liftPx = pageLift(
         layout = layout,
@@ -675,12 +664,17 @@ private fun ColumnScope.ReaderPage(
     )
     val latestTap = rememberUpdatedState(
         readerSurfaceTap(
-            page = PageTap(marginPx, tokens, layout, chapterText.text, onWordTap),
-            state = state,
+            page = PageTap(marginPx, tokens, layout, state.page?.start ?: 0, chapterText.text, onWordTap),
             enabled = dismissOverlay == null,
             liftPx = liftPx,
         ),
     )
+    val latestSwipe = rememberUpdatedState<(PageSwipe) -> Unit> { swipe ->
+        when (swipe) {
+            PageSwipe.PREVIOUS -> state.previous()
+            PageSwipe.NEXT -> state.next()
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -689,7 +683,9 @@ private fun ColumnScope.ReaderPage(
             .clipToBounds()
             .onSizeChanged { size -> pageHeightPx = size.height }
             .testTag(READER_PAGE_TAG)
-            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
+            // A tap that is not on a word does nothing: page turns are the
+            // swipe and the two chevrons, so reaching for the text is safe.
+            .readerSwipeInput(enabled = dismissOverlay == null, onSwipe = latestSwipe)
             .readerTapInput(latestTap)
             .phraseSelectionInput(
                 words = { latestTokens.value?.words.orEmpty() },
@@ -713,7 +709,7 @@ private fun ColumnScope.ReaderPage(
             onNext = state::next,
         ) { result -> layout = result }
         // Drawn over the whole page, margins included, so an outside tap dismisses
-        // the open panel rather than landing in a tap zone or on a word.
+        // the open panel rather than looking a word up.
         dismissOverlay?.let { dismiss -> DismissScrim(onDismiss = dismiss) }
     }
 }
@@ -816,41 +812,23 @@ private fun rememberPageTokens(
     }
 }
 
-/** What a tap needs from the page it lands on: where its words are, and who to tell. */
-private class PageTap(
-    val marginPx: Int,
-    val tokens: ReaderTokens?,
-    val layout: TextLayoutResult?,
-    val chapterText: String,
-    val onWordTap: (WordTap) -> Unit,
-)
-
 /**
- * The tap the page handles: a word wins wherever it lands, otherwise the tap's
- * zone decides. The word is found by hit-testing the page's tokens against its
- * layout; the words carry no link of their own, because one annotation per word
- * costs ~55 ms of text layout on Android and the reader pays it on every page
- * turn (ADR-0007, issue #251).
+ * The tap the page handles: a word opens its lookup wherever it lands, and a tap
+ * that misses every word does nothing — page turns are the swipe and the two
+ * chevrons (issue #243). The word is found by hit-testing the page's tokens
+ * against its layout; the words carry no link of their own, because one annotation
+ * per word costs ~55 ms of text layout on Android and the reader pays it on every
+ * page turn (ADR-0007, issue #251).
  */
-private fun readerSurfaceTap(
-    page: PageTap,
-    state: ReaderState,
-    enabled: Boolean,
-    liftPx: Float,
-): (Offset, Float) -> Unit = { position, width ->
+private fun readerSurfaceTap(page: PageTap, enabled: Boolean, liftPx: Float): (Offset) -> Unit = { position ->
     // While a panel is open above the page (the **Aa** panel or a lookup), a tap on
     // the page only dismisses it — through the page scrim — and must not look a
-    // word up or turn the page.
+    // word up.
     if (enabled) {
-        val zone = readerTapZone(position.x, width.toInt())
         // The text is lifted with the page, so its layout coordinates are that much lower.
         val local = Offset(position.x, position.y + liftPx)
-        val word = wordAt(local, page.marginPx, page.tokens?.words.orEmpty(), page.layout)
-        when {
-            word != null -> page.onWordTap(wordTapOf(word, state.page?.start ?: 0, page.chapterText))
-            zone == ReaderTapZone.CHROME -> state.toggleChrome()
-            zone == ReaderTapZone.PREVIOUS -> state.previous()
-            zone == ReaderTapZone.NEXT -> state.next()
+        wordAt(local, page.marginPx, page.tokens?.words.orEmpty(), page.layout)?.let { word ->
+            page.onWordTap(wordTapOf(word, page.pageStart, page.chapterText))
         }
     }
 }

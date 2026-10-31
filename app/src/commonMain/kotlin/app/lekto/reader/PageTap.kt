@@ -12,31 +12,32 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.text.WordToken
 
-/** A tap zone the reader's surface is divided into. */
-internal enum class ReaderTapZone { PREVIOUS, NEXT, CHROME }
-
-/** The width fraction each of the left and right zones takes, leaving the middle for the chrome. */
-private const val FIRST_THIRD = 1f / 3f
-private const val LAST_THIRD = 2f / 3f
-
-/** The zone [x] (in pixels, from the viewport's left) falls in, for a viewport [width] pixels wide. */
-internal fun readerTapZone(x: Float, width: Int): ReaderTapZone = when {
-    x < width * FIRST_THIRD -> ReaderTapZone.PREVIOUS
-    x > width * LAST_THIRD -> ReaderTapZone.NEXT
-    else -> ReaderTapZone.CHROME
-}
+/**
+ * What a tap needs from the page it lands on: where its words are, the chapter
+ * offset the page starts at, and who to tell (issue #251).
+ */
+@Suppress("LongParameterList") // The page's own geometry, the chapter offset, and who to tell.
+internal class PageTap(
+    val marginPx: Int,
+    val tokens: ReaderTokens?,
+    val layout: TextLayoutResult?,
+    val pageStart: Int,
+    val chapterText: String,
+    val onWordTap: (WordTap) -> Unit,
+)
 
 /**
- * Taps on the page: the **initial** pass sees them before the word layer and the
- * selection container consume them, so the reader can route the tap itself,
- * while the word layer still handles a tap that lands on a word.
+ * Taps on the page: the **initial** pass sees them before the text's selection
+ * container consumes them, so a tap that lands on a word opens its lookup
+ * wherever it lands. The page itself has no tap zones — a tap that misses every
+ * word does nothing, so reaching for the text never turns a page (issue #243).
  */
-internal fun Modifier.readerTapInput(onTap: State<(Offset, Float) -> Unit>): Modifier = pointerInput(Unit) {
+internal fun Modifier.readerTapInput(onTap: State<(Offset) -> Unit>): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         val up = awaitTapUp(down, viewConfiguration.touchSlop) ?: return@awaitEachGesture
         if (up.uptimeMillis - down.uptimeMillis < viewConfiguration.longPressTimeoutMillis) {
-            onTap.value(down.position, size.width.toFloat())
+            onTap.value(down.position)
         }
     }
 }

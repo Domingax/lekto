@@ -210,9 +210,9 @@ domain behaviour over the in-memory vault in `core/commonTest` and the directory
 vault in `core/jvmTest`, so a book cannot lose its place on export, import or a
 re-parse; its serialise/parse is a property in
 `core/commonTest/.../ReadingPositionRecordPropertyTest`. The reader's UI
-semantics — opening at a saved offset, paging with the left/right tap zones, the
-page's two page-turn accessibility actions, and a tap on the middle receding the
-two bands — live in
+semantics — opening at a saved offset, paging with the two chevrons and the
+horizontal swipe, the page's two page-turn accessibility actions, and a tap that
+misses a word changing nothing — live in
 `app/desktopTest/.../ReaderScreenSemanticsTest`, injected with the Compose test
 API's pointer injection (`performTouchInput`), and the whole loop (open, turn,
 leave, reopen at the same page) in `AppSemanticsTest` against an in-memory
@@ -245,7 +245,7 @@ Its geometry comes from the screen's own constants and its rule from the screen'
 own composable; only the words are bars, because glyphs would not verify. The
 reader adds `reader-<paper>.png` per paper (issue #209): the 48 dp top band with
 its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
-chevrons that mark the tap zones and turn the page, and the position, and one
+chevrons that turn the page, and the position, and one
 `reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
 hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
@@ -412,7 +412,7 @@ Robolectric lays glyphs out far more tightly than a device font, and a page
 boundary then always falls between paragraphs. A word is tapped at a point taken
 from the text's own layout (`GetTextLayoutResult`) rather than at a guessed pixel,
 because Robolectric measures glyphs far more tightly than a device font;
-the raw tap zones and paging are proved on this lane by the reader's own twin
+the swipe and paging are proved on this lane by the reader's own twin
 (issue #75).
 
 The two lanes are inseparable by rule, not by habit (issue #73): the architecture

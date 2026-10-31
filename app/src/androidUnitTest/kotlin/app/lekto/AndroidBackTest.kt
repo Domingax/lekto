@@ -27,6 +27,7 @@ import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
 import app.lekto.reader.READER_CHAPTER_SHEET_TAG
 import app.lekto.reader.READER_END_PANEL_TAG
+import app.lekto.reader.READER_NEXT_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TEXT_TAG
 import app.lekto.reader.READER_POSITION_TAG
@@ -176,9 +177,7 @@ class AndroidBackTest {
         }
         compose.setContent { App(environment(library)) }
         openBook()
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
-            click(Offset(visibleSize.width - 4f, center.y))
-        }
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
 
         pressBack()
