@@ -108,17 +108,22 @@ internal fun ReaderTitle(title: String, onBack: (() -> Unit)?, onPreferences: ()
  * theme's muted ink. A chevron disabled at a bound stays visible but faded, so the
  * band keeps its shape as the reader moves.
  *
+ * The position is the **Chapter**'s own title and the **Reading progress**, not a
+ * page number: a page count measures the screen and the font, so it changes when
+ * neither the book nor the reader did (ADR-0040).
+ *
  * [hasChapters] is false in the context column (issue #199): the list is already
  * there, so the position stays a label rather than a control that would open a
  * sheet that shape does not have.
  */
-@Suppress("LongParameterList") // The bar's controls and its two counters are independent.
+@Suppress("LongParameterList") // The bar's controls and its position are independent.
 @Composable
 internal fun ReaderPageBar(
-    page: Int,
-    total: Int,
+    progress: Int,
     chapter: String?,
     hasChapters: Boolean,
+    canPrevious: Boolean,
+    canNext: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onOpenChapters: () -> Unit,
@@ -132,13 +137,12 @@ internal fun ReaderPageBar(
         TapZoneButton(
             imageVector = LektoIcons.ChevronLeft,
             contentDescription = texts[TextKey.PREVIOUS_PAGE],
-            enabled = page > 0,
+            enabled = canPrevious,
             onClick = onPrevious,
             tag = READER_PREVIOUS_PAGE_TAG,
         )
         ReaderPosition(
-            page = page,
-            total = total,
+            progress = progress,
             chapter = chapter,
             onOpenChapters = onOpenChapters.takeIf {
                 hasChapters
@@ -147,7 +151,7 @@ internal fun ReaderPageBar(
         TapZoneButton(
             imageVector = LektoIcons.ChevronRight,
             contentDescription = texts[TextKey.NEXT_PAGE],
-            enabled = page < total - 1,
+            enabled = canNext,
             onClick = onNext,
             tag = READER_NEXT_PAGE_TAG,
         )
@@ -155,14 +159,15 @@ internal fun ReaderPageBar(
 }
 
 /**
- * The position line: the chapter's own title then the page, or the page alone
- * when the book has one chapter or the page is before the first. With chapters
+ * The position line: the chapter's own title then the **Reading progress**, or
+ * the progress alone when the book has one chapter or the position is before
+ * the first. With chapters
  * it is also the control that opens the chapter list — a quiet label, so it
  * takes the pointing hand and no ripple or Material hover box (docs/design.md
  * §8, ADR-0039).
  */
 @Composable
-private fun RowScope.ReaderPosition(page: Int, total: Int, chapter: String?, onOpenChapters: (() -> Unit)?) {
+private fun RowScope.ReaderPosition(progress: Int, chapter: String?, onOpenChapters: (() -> Unit)?) {
     val texts = LocalAppTexts.current
     val base = Modifier
         .weight(1f)
@@ -190,7 +195,7 @@ private fun RowScope.ReaderPosition(page: Int, total: Int, chapter: String?, onO
                 )
             }
             Text(
-                text = texts.message(AppMessage.of(TextKey.PAGE_OF, page + 1, total)),
+                text = texts.message(AppMessage.of(TextKey.READING_PROGRESS, progress)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -62,7 +62,7 @@ import kotlin.test.Test
  * icons, the numbered senses with their translations, the level named beside the
  * five chips, and the references as one muted line — over a page lifted under
  * the sheet by just enough to keep the washed word in view, its first line
- * clipped at the top and its page number unchanged. The semantics suite proves
+ * clipped at the top and its words unchanged. The semantics suite proves
  * the text, the lift and the interactions.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with

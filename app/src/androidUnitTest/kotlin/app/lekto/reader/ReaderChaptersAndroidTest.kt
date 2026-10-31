@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -22,6 +24,8 @@ import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.blockStartOffset
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,6 +69,19 @@ class ReaderChaptersAndroidTest {
     )
 
     @Test
+    fun goingBackFromAChapterStartLandsOnTheChapterBefore() {
+        compose.setContent { Reader(book, initialOffset = blockStartOffset(blocks, 2)) }
+        compose.onNodeWithText("Second body.", substring = true).assertIsDisplayed()
+
+        compose.onNodeWithTag(READER_PREVIOUS_PAGE_TAG).performClick()
+
+        // The page before a chapter's first page is the last page of the chapter
+        // before it, and the reader measures that chapter rather than the book.
+        compose.onNodeWithText("First body.", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
+    }
+
+    @Test
     fun theCurrentChapterRowIsSelected() {
         compose.setContent { Reader(book, initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK)) }
 
@@ -79,7 +96,7 @@ class ReaderChaptersAndroidTest {
         compose.setContent { Reader(book) }
 
         compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
-        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 1 of 2", substring = true)
+        assertEquals(0, compose.progressPercent())
         compose.onNodeWithTag(READER_POSITION_TAG).performClick()
         compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertIsDisplayed()
         compose.onNodeWithTag(readerChapterRowTag(1)).assertTextContains("Two")
@@ -89,7 +106,7 @@ class ReaderChaptersAndroidTest {
         compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
         compose.onNodeWithText("Second body.", substring = true).assertIsDisplayed()
         compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Two", substring = true)
-        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Page 2 of 2", substring = true)
+        assertTrue("the second chapter is past the start of the book", compose.progressPercent() > 0)
     }
 
     @Composable
@@ -102,4 +119,13 @@ class ReaderChaptersAndroidTest {
             )
         }
     }
+}
+
+/** The **Reading progress** the position line shows, as a whole percentage. */
+private fun ComposeTestRule.progressPercent(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        ?: error("no percentage in the position: $text")
 }

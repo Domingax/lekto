@@ -81,7 +81,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     // Reader.
     TextKey.PREVIOUS_PAGE to "Page précédente",
     TextKey.NEXT_PAGE to "Page suivante",
-    TextKey.PAGE_OF to "Page {0} sur {1}",
+    TextKey.READING_PROGRESS to "{0} %",
     TextKey.END_OF_BOOK to "FIN",
     TextKey.MARK_AS_FINISHED to "Marquer comme terminé",
     TextKey.MARK_AS_UNFINISHED to "Marquer comme non terminé",

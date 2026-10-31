@@ -1,8 +1,14 @@
 ---
 status: accepted
+superseded in part by ADR-0040
 ---
 
 # The reader names its chapter, it does not number it
+
+> The `Page X of Y` line beside the chapter title is superseded by
+> [ADR-0040](0040-reader-paginates-one-chapter-and-shows-progress.md): the
+> position is the chapter's title and **Reading progress**. Naming the chapter,
+> rather than numbering it, still stands.
 
 ADR-0037 made the bottom bar read `Chapter N · Page X of Y`, where N counted
 **Reading units** in reading order. The rule was meant to keep a number stable

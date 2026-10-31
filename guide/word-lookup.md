@@ -6,9 +6,9 @@ Tap a **Word token** while reading to open the lookup panel for that word.
 
 The panel rises from the bottom of the page and never covers more than a little
 under half of it. The page slides up under the panel just enough to keep the word
-you touched in view, and that word stays highlighted. The page number does not
-change: the page is not split again, and the top of it is hidden for as long as
-the panel is open.
+you touched in view, and that word stays highlighted. The page does not change:
+it is not split again, and the top of it is hidden for as long as the panel is
+open.
 
 On a desktop with a wide window the panel is not raised over the page at all: it
 takes the reader's right-hand column, and the page keeps its width. Its level name

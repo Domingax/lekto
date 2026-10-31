@@ -277,9 +277,9 @@ a bordered block in the list, with a way to dismiss it.
 
 The chevrons mark the three tap zones (previous third, chrome third, next third) and turn the
 page when tapped; a chevron disabled at a bound stays visible but faded. The position reads the current chapter's
-title above the page — `XI` over `Page 285 of 405` — so it uses the same words as the chapter
-list (ADR-0039). The two lines are centred in the band; the title takes one line and ellipsises.
-Before the first chapter, and in a book with one chapter, the page line stands alone and no
+title above the **Reading progress** — `XI` over `46%` — so it uses the same words as the chapter
+list (ADR-0039), and measures the book rather than the screen (ADR-0040). The two lines are centred in the band; the title takes one line and ellipsises.
+Before the first chapter, and in a book with one chapter, the progress line stands alone and no
 chapter is current.
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
@@ -294,11 +294,13 @@ the column to the list rather than making the reader close the word first. A col
 exactly as a sheet choice does; a book with no list reads `This book has no chapter list.` there.
 
 Chapters start on a new page. A jump moves the **Reading position** to the chapter's first block
-at once, and the page number and total update as pagination counts them.
+at once, and the reader measures that chapter only. The position reads the chapter's own title
+over the **Reading progress** — no page count, which would measure the screen and the font rather
+than the book (ADR-0040).
 
 The **`Aa` panel** sits under the bottom band, in the column: opening it lifts the band and
 clips the visible part of the page, so the text is never covered. The page keeps its
-pagination — the page number and the page count do not move — and is whole again as soon as the
+pagination — the words and the **Reading progress** do not move — and is whole again as soon as the
 panel closes. It is a square panel of printed-form rows (`Text face`, `Text size`, `Margins`:
 `Serif`/`Sans-serif`, `Narrow`/`Comfortable`/`Wide`) whose values are chips. An unselected chip carries the paper behind it, so it reads as a field on the panel
 rather than a hole in it. The panel sets the face, the size and the margins, and previews live:
@@ -319,8 +321,8 @@ opens at the saved position, not on this state.
 
 Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
 and the touched word still washed above it. The page **lifts** under the sheet by just enough to
-clear the word: it is not repaginated, so the page number and the page count do not move, and the
-top of the page is clipped for as long as the sheet is open — a transient state, not a new page.
+clear the word: it is not repaginated, so the page and the **Reading progress** do not move, and
+the top of the page is clipped for as long as the sheet is open — a transient state, not a new page.
 A panel, not an outlined card: square where it joins the bottom edge like the **Aa** panel, the
 surface tone and a hairline inset to the content, and a drag handle marks where it was raised
 from. On desktop it is the context column instead, and closing the word returns the column to the

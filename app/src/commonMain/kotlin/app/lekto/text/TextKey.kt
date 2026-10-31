@@ -115,7 +115,7 @@ enum class TextKey {
     // Reader.
     PREVIOUS_PAGE,
     NEXT_PAGE,
-    PAGE_OF,
+    READING_PROGRESS,
 
     /** The end-of-book state: `THE END`, its two actions and the marked state (issue #200). */
     END_OF_BOOK,

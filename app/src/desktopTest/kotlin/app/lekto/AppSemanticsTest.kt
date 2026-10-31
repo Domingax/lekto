@@ -104,6 +104,7 @@ import app.lekto.reader.READER_BACK_TO_LIBRARY_TAG
 import app.lekto.reader.READER_END_PANEL_TAG
 import app.lekto.reader.READER_MARK_FINISHED_TAG
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
 import app.lekto.reader.READING_PREFERENCES_TAG
@@ -212,7 +213,10 @@ class AppSemanticsTest {
 
         openBook()
 
-        awaitPage(1)
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithTag(READER_POSITION_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
     }
 
@@ -251,7 +255,7 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        val leftAt = awaitPastTheFirstPage()
         // Opening records the first page and the turn records the second,
         // both off the UI thread; wait for the second before leaving the book.
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { (library.savedOffset() ?: 0) > 0 }
@@ -259,7 +263,7 @@ class AppSemanticsTest {
         leaveReader()
         openBook()
 
-        awaitPage(2)
+        assertEquals(leftAt, awaitPastTheFirstPage(), "the session resumes where it was left")
     }
 
     @Test
@@ -450,17 +454,17 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        val atPageTwo = awaitPastTheFirstPage()
 
         tapFirstWord()
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The reader stays put behind the panel, at the same page.
-        awaitPage(2)
+        assertEquals(atPageTwo, readerProgress(), "the panel must not turn the page")
 
         onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        awaitPage(2)
+        assertEquals(atPageTwo, readerProgress(), "closing the panel must not turn the page")
     }
 
     @Test
@@ -470,7 +474,7 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        val atPageTwo = awaitPastTheFirstPage()
 
         tapFirstWord()
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
@@ -480,7 +484,7 @@ class AppSemanticsTest {
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        awaitPage(2)
+        assertEquals(atPageTwo, readerProgress(), "dismissing the panel must not turn the page")
     }
 
     @Test
@@ -497,8 +501,11 @@ class AppSemanticsTest {
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
 
         // The sheet never covers the word the reader touched: the page is lifted
-        // under it, without repaginating. The page number is unchanged.
-        awaitPage(1)
+        // under it, without repaginating. The page's words are unchanged.
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithTag(READER_POSITION_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
         val word = lastWord.getUnclippedBoundsInRoot()
         val panel = onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
         assertTrue(
@@ -523,7 +530,7 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        awaitPastTheFirstPage()
 
         // Long-press and drag across the page's words to select a phrase.
         selectFirstPhrase()
@@ -531,7 +538,7 @@ class AppSemanticsTest {
         // No provider and no key are configured: the shortcut is the whole offer.
         onNodeWithText("Translate online").assertIsDisplayed()
         // The reader stays put behind the panel, at the same page.
-        awaitPage(2)
+        awaitPastTheFirstPage()
         onNodeWithTag(TRANSLATION_SHORTCUT_TAG).performClick()
         assertTrue(
             opened.orEmpty().startsWith("https://translate.google.com/"),
@@ -540,7 +547,7 @@ class AppSemanticsTest {
 
         onNodeWithTag(PHRASE_CLOSE_TAG).performClick()
         onNodeWithText("Translate online").assertDoesNotExist()
-        awaitPage(2)
+        awaitPastTheFirstPage()
     }
 
     @Test
@@ -550,7 +557,7 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        awaitPastTheFirstPage()
 
         selectFirstPhrase()
         onNodeWithText("Translate online").assertIsDisplayed()
@@ -561,7 +568,7 @@ class AppSemanticsTest {
 
         onNodeWithText("Translate online").assertDoesNotExist()
         onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        awaitPage(2)
+        awaitPastTheFirstPage()
     }
 
     @Test
@@ -585,7 +592,7 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        awaitPastTheFirstPage()
 
         selectFirstPhrase()
 
@@ -598,7 +605,7 @@ class AppSemanticsTest {
         assertTrue(user.content.contains("Selected phrase:"), "the request discloses the context: ${user.content}")
         onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne brille")
         // The reader stays put behind the panel.
-        awaitPage(2)
+        awaitPastTheFirstPage()
     }
 
     @Test
@@ -608,7 +615,7 @@ class AppSemanticsTest {
 
         openBook()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        awaitPage(2)
+        awaitPastTheFirstPage()
 
         selectFirstPhrase()
 
@@ -1655,13 +1662,24 @@ private fun enabledSyncServices(vault: InMemoryVaultStore, target: InMemorySyncT
     outcomes = InMemorySyncOutcomeStore(),
 )
 
-/** Waits until the reader's page bar reports page [page], then asserts it is there. */
+/**
+ * Waits until the reader is past the start of the book. The bar reports
+ * **Reading progress**, not a page number (ADR-0040), so "page 2" is "past the
+ * start", and the percentage it shows is what the caller can compare.
+ */
 @OptIn(ExperimentalTestApi::class)
-private fun ComposeUiTest.awaitPage(page: Int) {
-    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodesWithText("Page $page of", substring = true).fetchSemanticsNodes().isNotEmpty()
-    }
-    onNodeWithText("Page $page of", substring = true).assertIsDisplayed()
+private fun ComposeUiTest.awaitPastTheFirstPage(): Int {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { readerProgress() > 0 }
+    return readerProgress()
+}
+
+/** The **Reading progress** the position line shows, as a whole percentage. */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeUiTest.readerProgress(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: -1
 }
 
 /**

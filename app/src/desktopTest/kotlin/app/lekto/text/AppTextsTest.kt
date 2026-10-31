@@ -59,10 +59,10 @@ class AppTextsTest {
 
     @Test
     fun `a parameterised message fills its values in each language`() {
-        val page = AppMessage.of(TextKey.PAGE_OF, 2, 5)
+        val progress = AppMessage.of(TextKey.READING_PROGRESS, 42)
 
-        assertEquals("Page 2 of 5", appTextsFor("en").message(page))
-        assertEquals("Page 2 sur 5", appTextsFor("fr").message(page))
+        assertEquals("42%", appTextsFor("en").message(progress))
+        assertEquals("42 %", appTextsFor("fr").message(progress))
     }
 
     @Test
