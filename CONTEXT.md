@@ -94,8 +94,9 @@ first child.
 _Avoid_: Volume, book
 
 **Chapter list**:
-The ordered, nested **Chapters** of a **Book**, as its original file declares them. A
-**Derived asset**, re-derived from the book original and never synced.
+The ordered, nested **Chapters** of a **Book**: the ones its original file declares, or,
+when it declares none, the ones inferred from the book's text. A **Derived asset**,
+re-derived from the book original and never synced.
 _Avoid_: Table of contents, TOC, index
 
 **Reading unit**:
