@@ -8,20 +8,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -49,10 +48,15 @@ private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
  * The reader screen on a **simulated Android runtime** (issue #75): the
  * same-named twin of `app/desktopTest`'s `ReaderScreenSemanticsTest`, so the
  * parity rule (issue #73) can see the two lanes together. The reader's page is a
- * `SelectionContainer` over an `AnnotatedString` whose words are clickable
- * `LinkAnnotation`s and whose pages are cut by the platform text stack, so
- * resume, paging (by button and by tap zone) and the receding chrome run here on
- * the runtime that ultimately renders them, not only on the desktop JVM.
+ * `SelectionContainer` over an `AnnotatedString` whose words the page hit-tests
+ * (ADR-0007) and whose pages are cut by the platform text stack, so resume,
+ * paging (by button and by tap zone) and the receding chrome run here on the
+ * runtime that ultimately renders them, not only on the desktop JVM.
+ *
+ * The long-press drag that selects a phrase stays on the desktop lane: its
+ * timeout is driven by the host clock, which this runtime does not advance
+ * mid-gesture, so the same test would fail here for the harness's reason rather
+ * than the reader's.
  *
  * A phone-sized viewport is forced, exactly as the desktop twin does. The
  * chapter is longer than the desktop twin's sample: Robolectric lays glyphs out
@@ -110,16 +114,18 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
-    fun eachWordIsAFocusableLink() {
-        compose.setContent { Reader(renderer) }
+    fun aTapOnAWordAsksForThatWordLookup() {
+        var tapped: WordTap? = null
+        compose.setContent { Reader(renderer, onWordTap = { tap -> tapped = tap }) }
 
-        // The chrome contributes the back arrow, the **Aa** control and the two
-        // page chevrons; every word adds another clickable node, so a count above
-        // the chrome proves the word layer is tappable and reachable on Android,
-        // not just painted.
-        val clickables = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
+        // Words carry no link of their own (ADR-0007): the page hit-tests the tap
+        // against its tokens, so a tap anywhere on a word finds it.
+        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(compose.firstWordCentre()) }
 
-        assertTrue("expected word links beyond the chrome, found ${clickables.size}", clickables.size > CHROME_BUTTONS)
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { tapped != null }
+        val word = tapped
+        assertNotNull("a tap on a word must ask for its lookup", word)
+        assertEquals("On", word!!.token.surface)
     }
 
     /**
@@ -318,32 +324,6 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
-    fun selectingAPhraseByLongPressDragReportsIt() {
-        var selected: PhraseSelection? = null
-        compose.setContent { Reader(renderer, onPhraseSelected = { chosen -> selected = chosen }) }
-
-        compose.onNodeWithText("On the quiet evening", substring = true).assertIsDisplayed()
-        val start = compose.firstWordCentre()
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput {
-            down(start)
-            advanceEventTime(1000)
-            moveTo(Offset(start.x + 80f, start.y))
-            moveTo(Offset(start.x + 160f, start.y))
-            up()
-        }
-
-        assertNotNull("a long-press drag must select a phrase", selected)
-        val phrase = selected!!
-        val chapter = LONG_CHAPTER.blocks.joinToString("\n\n") { block -> block.text }
-        // Robolectric's text metrics are sub-pixel, so the drag does not extend
-        // reliably here; the desktop lane proves a multi-word range and
-        // `PhraseSelectionTest` pins it. This lane proves the gesture selects a
-        // phrase from the chapter and opens the panel.
-        assertTrue("the selected phrase must not be blank", phrase.text.isNotBlank())
-        assertTrue("the phrase must come from the chapter: ${phrase.text}", chapter.contains(phrase.text))
-    }
-
-    @Test
     fun theTapZonesAreThirdsOfTheWidth() {
         val width = 300
         assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(0f, width))
@@ -362,6 +342,7 @@ class ReaderScreenSemanticsTest {
         initiallyFinished: Boolean = false,
         onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
+        onWordTap: (WordTap) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
         onMarkFinished: () -> Unit = {},
         onMarkUnfinished: () -> Unit = {},
@@ -371,6 +352,7 @@ class ReaderScreenSemanticsTest {
                 document = ReaderDocument(chapter, renderer, initialOffset),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
                 actions = ReaderActions(
+                    onWordTap = onWordTap,
                     onPhraseSelected = onPhraseSelected,
                     onBack = onBack,
                     onPositionChange = onPositionChange,
@@ -389,31 +371,41 @@ class ReaderScreenSemanticsTest {
     }
 }
 
-/** The first word link's centre, in the reader page's coordinates. */
-@Suppress("MagicNumber") // The wait for the word layer is the test's parameter.
+/** The wait for the page's text is the test's parameter. */
+@Suppress("MagicNumber")
 private fun ComposeTestRule.firstWordCentre(): Offset {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(WORD_LINK)
-        .onFirst()
-        .fetchSemanticsNode()
-        .boundsInRoot
-    return word.center - page.topLeft
+    // The text node arrives before its layout callback has run; the tap needs the
+    // layout to find the word.
+    waitForIdle()
+    return firstWordPoint()
 }
 
-/**
- * A word link on the page: a clickable node that carries neither text nor a
- * description. The reader's chrome has an icon since the navigation shell
- * (issue #185) — clickable, described, and not a word — so a word is the one
- * clickable node with nothing to read on it.
- */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)
+/** The centre of the page's first word, in the page's coordinates, from the text's own layout. */
+@Suppress("MagicNumber") // The small inset keeps the point off the glyph's edge.
+private fun ComposeTestRule.firstWordPoint(): Offset {
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { it.text }
+    // The first word: a page opens with a block separator, so its first
+    // characters belong to no word at all.
+    val from = 0
+    val anchorChar = (from until shown.length).firstOrNull { index -> !shown[index].isWhitespace() }
+        ?: shown.indexOfFirst { character -> !character.isWhitespace() }.coerceAtLeast(0)
+    val word = layout.getWordBoundary(anchorChar)
+    val start = layout.getBoundingBox(word.start)
+    val last = layout.getBoundingBox((word.end - 1).coerceAtLeast(word.start))
+    val origin = text.boundsInRoot.topLeft
+    return Offset(
+        origin.x - page.left + (start.left + last.right) / 2f,
+        origin.y - page.top + start.top + start.height / 2f,
+    )
+}
 
 /** The **Reading progress** the position line shows, as a whole percentage. */
 private fun ComposeTestRule.progressPercent(): Int {

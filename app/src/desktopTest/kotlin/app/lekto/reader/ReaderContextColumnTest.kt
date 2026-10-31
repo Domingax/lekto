@@ -15,10 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
@@ -28,8 +26,6 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -306,12 +302,13 @@ private val COLUMN_TEST_HEIGHT = 720.dp
 private fun columnTest(width: androidx.compose.ui.unit.Dp, block: suspend SkikoComposeUiTest.() -> Unit) =
     runSkikoComposeUiTest(size = Size(width.value, COLUMN_TEST_HEIGHT.value), block = block)
 
-/** Taps the first word link on the page, wherever it lands. */
+/** Taps the page's first word: words carry no link, so the page hit-tests the tap (ADR-0007). */
+@OptIn(ExperimentalTestApi::class)
+@Suppress("MagicNumber") // A few points into the text's first line.
 private fun ComposeUiTest.tapFirstWord() {
-    onAllNodes(WORD_LINK).onFirst().performClick()
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
+    onNodeWithTag(READER_PAGE_TAG).performTouchInput {
+        click(Offset(text.left - page.left + 8f, text.top - page.top + 8f))
+    }
 }
-
-/** A word link on the page: clickable, and carrying neither text nor a description (issue #185). */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)
