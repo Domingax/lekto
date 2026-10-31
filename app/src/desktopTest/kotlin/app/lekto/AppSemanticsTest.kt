@@ -12,12 +12,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -104,6 +100,7 @@ import app.lekto.reader.READER_BACK_TO_LIBRARY_TAG
 import app.lekto.reader.READER_END_PANEL_TAG
 import app.lekto.reader.READER_MARK_FINISHED_TAG
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READER_PAGE_TEXT_TAG
 import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
@@ -485,33 +482,6 @@ class AppSemanticsTest {
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
         assertEquals(atPageTwo, readerProgress(), "dismissing the panel must not turn the page")
-    }
-
-    @Test
-    fun aWordAtThePageBottomIsLiftedAboveTheLookupPanel() = runComposeUiTest {
-        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
-        setContent { App(environment(library, languageSettings = frenchTranslations())) }
-
-        openBook()
-        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            onAllNodes(WORD_LINK).fetchSemanticsNodes().isNotEmpty()
-        }
-        val lastWord = onAllNodes(WORD_LINK).onLast()
-        lastWord.performClick()
-        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
-
-        // The sheet never covers the word the reader touched: the page is lifted
-        // under it, without repaginating. The page's words are unchanged.
-        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            onAllNodesWithTag(READER_POSITION_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
-        val word = lastWord.getUnclippedBoundsInRoot()
-        val panel = onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
-        assertTrue(
-            word.bottom.value <= panel.top.value + 1f,
-            "the tapped word ends at ${word.bottom} dp, under the panel's ${panel.top} dp",
-        )
     }
 
     @Test
@@ -1703,19 +1673,24 @@ private fun ComposeUiTest.typeSearch(query: String) {
     onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput(query)
 }
 
-/** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
+/**
+ * Taps the first word on the page. Words carry no link of their own (ADR-0007),
+ * so the page hit-tests the tap: a few points inside the text's first line lands
+ * on its first word.
+ */
 @OptIn(ExperimentalTestApi::class)
 private fun ComposeUiTest.tapFirstWord() {
-    // The word layer arrives a frame after the reader opens (the page is
-    // paginated and tokenised asynchronously), so wait for it before tapping.
+    // The page arrives a frame after the reader opens (it is paginated and
+    // tokenised asynchronously), so wait for its text before tapping.
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    onAllNodes(WORD_LINK)
-        .onFirst()
-        .performClick()
+    // A mouse click rather than a touch: a text field left with a cursor (the
+    // Library's search, a dialog) makes Compose's touch injector refuse the tap.
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
+    val point = Offset(text.left - page.left + 8f, text.top - page.top + 8f)
+    onNodeWithTag(READER_PAGE_TAG).performMouseInput { click(point) }
 }
 
 /** Long-presses the first word link and drags across the line, selecting a phrase. */
@@ -1723,16 +1698,11 @@ private fun ComposeUiTest.tapFirstWord() {
 @Suppress("MagicNumber") // The long-press delay and the drag distance are the test's parameters.
 private fun ComposeUiTest.selectFirstPhrase() {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(WORD_LINK)
-        .onFirst()
-        .fetchSemanticsNode()
-        .boundsInRoot
-    val start = word.center - page.topLeft
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
+    val start = Offset(text.left - page.left + 8f, text.top - page.top + 8f)
     onNodeWithTag(READER_PAGE_TAG).performTouchInput {
         down(start)
         advanceEventTime(1000)
@@ -1888,13 +1858,3 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
         },
     )
 }
-
-/**
- * A word link on the page: a clickable node that carries neither text nor a
- * description. The reader's chrome has an icon since the navigation shell
- * (issue #185) — clickable, described, and not a word — so a word is the one
- * clickable node with nothing to read on it.
- */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)

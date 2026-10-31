@@ -9,14 +9,11 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -70,15 +67,17 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
-    fun eachWordIsAFocusableLink() = runComposeUiTest {
-        setContent { Reader(renderer) }
+    fun aTapOnAWordAsksForThatWordLookup() = runComposeUiTest {
+        var tapped: WordTap? = null
+        setContent { Reader(renderer, onWordTap = { tap -> tapped = tap }) }
 
-        // The chrome contributes the back arrow, the **Aa** control and the two
-        // page chevrons; every word adds another clickable node, so the count
-        // proves the word layer is tappable and reachable, not just painted.
-        val clickables = onAllNodes(hasClickAction()).fetchSemanticsNodes()
+        // Words carry no link of their own (ADR-0007): the page hit-tests the tap
+        // against its tokens, so a tap anywhere on a word finds it.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(firstWordTapPoint()) }
 
-        assertTrue(clickables.size > CHROME_BUTTONS, "expected word links beyond the chrome, found ${clickables.size}")
+        val word = assertNotNull(tapped, "a tap on a word must ask for its lookup")
+        assertEquals("The", word.token.surface)
+        assertNotNull(word.contextSentence, "the tap carries the sentence it was found in")
     }
 
     /**
@@ -274,7 +273,7 @@ class ReaderScreenSemanticsTest {
         setContent { Reader(renderer, onPhraseSelected = { chosen -> selected = chosen }) }
 
         onNodeWithText("On the quiet evening", substring = true).assertIsDisplayed()
-        val start = firstWordCentre()
+        val start = firstWordTapPoint()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput {
             down(start)
             advanceEventTime(1000)
@@ -307,6 +306,7 @@ class ReaderScreenSemanticsTest {
         initiallyFinished: Boolean = false,
         onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
+        onWordTap: (WordTap) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
         onMarkFinished: () -> Unit = {},
         onMarkUnfinished: () -> Unit = {},
@@ -316,6 +316,7 @@ class ReaderScreenSemanticsTest {
                 document = ReaderDocument(chapter, renderer, initialOffset),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
                 actions = ReaderActions(
+                    onWordTap = onWordTap,
                     onPhraseSelected = onPhraseSelected,
                     onBack = onBack,
                     onPositionChange = onPositionChange,
@@ -346,21 +347,10 @@ private fun ComposeUiTest.progressPercent(): Int {
 
 /** The first word link's centre, in the reader page's coordinates. */
 @OptIn(ExperimentalTestApi::class)
-private fun ComposeUiTest.firstWordCentre(): Offset {
+@Suppress("MagicNumber") // A few points into the text's first line.
+private fun ComposeUiTest.firstWordTapPoint(): Offset {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(WORD_LINK)
-        .onFirst()
-        .fetchSemanticsNode()
-        .boundsInRoot
-    return word.center - page.topLeft
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
+    // A few points inside the text's first line, which starts with the first word.
+    return Offset(text.left - page.left + 8f, text.top - page.top + 8f)
 }
-
-/**
- * A word link on the page: a clickable node that carries neither text nor a
- * description. The reader's chrome has an icon since the navigation shell
- * (issue #185) — clickable, described, and not a word — so a word is the one
- * clickable node with nothing to read on it.
- */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)

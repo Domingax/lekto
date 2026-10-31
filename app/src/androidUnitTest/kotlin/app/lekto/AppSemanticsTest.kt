@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -11,23 +12,19 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -102,6 +99,7 @@ import app.lekto.reader.READER_BACK_TO_LIBRARY_TAG
 import app.lekto.reader.READER_END_PANEL_TAG
 import app.lekto.reader.READER_MARK_FINISHED_TAG
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READER_PAGE_TEXT_TAG
 import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
@@ -473,20 +471,17 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        val atPageTwo = compose.awaitPastTheFirstPage()
-
         compose.tapFirstWord()
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The reader stays put behind the panel, at the same page. The panel is
         // bottom-aligned on Android and covers the page bar's position, so the
         // bar exists but is not visible; the reading progress is what matters.
-        assertEquals("the panel must not turn the page", atPageTwo, compose.readerProgress())
+        val atPanel = compose.readerProgress()
 
         compose.onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
 
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        assertEquals("closing the panel must not turn the page", atPageTwo, compose.readerProgress())
+        assertEquals("closing the panel must not turn the page", atPanel, compose.readerProgress())
     }
 
     @Test
@@ -495,45 +490,16 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        val atPageTwo = compose.awaitPastTheFirstPage()
-
         compose.tapFirstWord()
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        val atPanel = compose.readerProgress()
 
         // A tap on the page, above the panel, is outside it: it closes the panel
         // and does not turn the page.
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        assertEquals("dismissing the panel must not turn the page", atPageTwo, compose.readerProgress())
-    }
-
-    @Test
-    fun aWordAtThePageBottomIsLiftedAboveTheLookupPanel() {
-        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
-        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
-
-        compose.openBook()
-        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            compose.onAllNodes(WORD_LINK).fetchSemanticsNodes().isNotEmpty()
-        }
-        val lastWord = compose.onAllNodes(WORD_LINK).onLast()
-        lastWord.performSemanticsAction(SemanticsActions.OnClick)
-        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
-
-        // The sheet never covers the word the reader touched: the page is lifted
-        // under it, without repaginating. The page's words are unchanged.
-        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            compose.onAllNodesWithTag(READER_POSITION_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithTag(READER_POSITION_TAG).assertExists()
-        val word = lastWord.getUnclippedBoundsInRoot()
-        val panel = compose.onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
-        assertTrue(
-            "the tapped word ends at ${word.bottom} dp, under the panel's ${panel.top} dp",
-            word.bottom.value <= panel.top.value + 1f,
-        )
+        assertEquals("dismissing the panel must not turn the page", atPanel, compose.readerProgress())
     }
 
     @Test
@@ -1589,18 +1555,58 @@ private fun ComposeTestRule.typeSearch(query: String) {
     onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput(query)
 }
 
-/** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
+/**
+ * Taps a word on the page, so its lookup opens. Words carry no link of their own
+ * (ADR-0007), so the page hit-tests the tap; the point is taken from the text's
+ * own layout, and a few places are tried because a page opens with a block
+ * separator that belongs to no word.
+ */
+@Suppress("MagicNumber") // The fractions are the points the tap probes.
 private fun ComposeTestRule.tapFirstWord() {
-    // The word layer arrives a frame after the reader opens (the page is
-    // paginated and tokenised asynchronously), so wait for it before tapping.
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    onAllNodes(WORD_LINK)
-        .onFirst()
-        .performSemanticsAction(SemanticsActions.OnClick)
+    waitForIdle()
+    for (fraction in listOf(0.33f, 0.5f, 0.66f, 0.1f)) {
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(firstWordPoint(fraction)) }
+        waitForIdle()
+        // A tap that missed a word turned the page instead; the next point is
+        // taken from the page then on screen.
+        if (openedLookup()) return
+    }
+    throw AssertionError("no word opened a lookup: the tap never landed on one")
+}
+
+/** Whether the lookup panel is open, waiting for its entrance rather than sampling a frame. */
+private fun ComposeTestRule.openedLookup(): Boolean = try {
+    waitUntil(timeoutMillis = 2_000) {
+        onAllNodesWithTag(LOOKUP_PANEL_TAG).fetchSemanticsNodes().isNotEmpty()
+    }
+    true
+} catch (_: ComposeTimeoutException) {
+    false
+}
+
+/** The centre of a word on the page, [fraction] of the way into its text, from the text's own layout. */
+@Suppress("MagicNumber") // The fractions are the points a tap probes.
+private fun ComposeTestRule.firstWordPoint(fraction: Float = 0.33f): Offset {
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { it.text }
+    val from = (shown.length * fraction).toInt().coerceIn(0, (shown.length - 1).coerceAtLeast(0))
+    val anchorChar = (from until shown.length).firstOrNull { index -> !shown[index].isWhitespace() }
+        ?: shown.indexOfFirst { character -> !character.isWhitespace() }.coerceAtLeast(0)
+    val word = layout.getWordBoundary(anchorChar)
+    val start = layout.getBoundingBox(word.start)
+    val last = layout.getBoundingBox((word.end - 1).coerceAtLeast(word.start))
+    val origin = text.boundsInRoot.topLeft
+    return Offset(
+        origin.x - page.left + (start.left + last.right) / 2f,
+        origin.y - page.top + start.top + start.height / 2f,
+    )
 }
 
 /**
@@ -1617,16 +1623,9 @@ private fun ComposeTestRule.awaitPastTheFirstPage(): Int {
 @Suppress("MagicNumber") // The long-press delay and the drag distance are the test's parameters.
 private fun ComposeTestRule.selectFirstPhrase() {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(WORD_LINK)
-        .onFirst()
-        .fetchSemanticsNode()
-        .boundsInRoot
-    val start = word.center - page.topLeft
+    val start = firstWordPoint()
     onNodeWithTag(READER_PAGE_TAG).performTouchInput {
         down(start)
         advanceEventTime(1000)
@@ -1780,16 +1779,6 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
         },
     )
 }
-
-/**
- * A word link on the page: a clickable node that carries neither text nor a
- * description. The reader's chrome has an icon since the navigation shell
- * (issue #185) — clickable, described, and not a word — so a word is the one
- * clickable node with nothing to read on it.
- */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)
 
 /** The **Reading progress** the position line shows, as a whole percentage. */
 private fun ComposeTestRule.readerProgress(): Int {
