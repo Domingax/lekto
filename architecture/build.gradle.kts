@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The architecture suite (ticket #9): the module boundaries and naming
@@ -37,4 +38,24 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+
+    // The suite reads the repository from disk by path, which Gradle cannot see:
+    // without this input, editing a workflow or a build file and running `check`
+    // reports the architecture tests UP-TO-DATE and verifies the tree that was
+    // there before. Declaring the trees the rules inspect makes a change rerun
+    // them, at the cost of rerunning on a source edit, which is the point.
+    inputs.files(
+        fileTree(rootDir) {
+            include(
+                "**/*.gradle.kts",
+                "**/gradle.properties",
+                "gradle/**/*.toml",
+                "**/src/**/*.kt",
+                "**/package.json",
+                ".github/**",
+                "tools/packaging/**",
+            )
+            exclude("**/build/**", "**/node_modules/**", "**/.gradle/**", "**/.kotlin/**")
+        },
+    ).withPropertyName("repositoryTree").withPathSensitivity(PathSensitivity.RELATIVE)
 }

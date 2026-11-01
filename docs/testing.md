@@ -568,6 +568,17 @@ desktop build of a release cannot disagree. The accessibility limitation the
 packaging surfaces is a documented user-guide surface, held by the `guide` lane's
 build, which fails on a dead internal link.
 
+The Android APK (issue #262) is proved the same way, by the artefact. `fast`
+compiles the unsigned release variant on every change, so a resource or packaging
+break fails a pull request; the release lane then signs it, and `apksigner verify
+--print-certs` and `aapt dump badging` check the file that is published rather than
+the build that produced it. What the lane promises is again a guard of its own:
+`AndroidPackagingTest` reads the build script's derived `versionCode` and
+conditional signing, and the lane's job body — that it builds the release variant
+with the SDK on, signs from the decoded keystore, verifies the signature, names the
+asset and is waited for by the release job — each rule first against hand-built
+workflows, then against the real tree.
+
 `VaultStore` is the first seam to use the pattern: `testkit` holds
 `VaultStoreContract` and the `InMemoryVaultStore` fake, `core/commonTest` runs the
 contract against the fake, and `core/jvmTest` runs the same contract against the

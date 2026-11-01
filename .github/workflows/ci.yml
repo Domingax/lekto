@@ -37,6 +37,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - name: Build, test and lint
         run: ./gradlew check -x :integrations:webdav:jvmTest --no-daemon
+      # The release variant is the one that ships, and nothing else compiles it: a
+      # resource, packaging or R8 failure would otherwise surface on the tag,
+      # minutes before a release (issue #262). No signing secret is present here,
+      # and none is needed — the build stays unsigned, as it does on a fork.
+      - name: Build the unsigned release APK
+        run: ./gradlew :app:assembleRelease -Plekto.android=true --no-daemon
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v7
