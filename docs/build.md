@@ -384,7 +384,7 @@ same on every runner. The release lane (`.github/workflows/release.yml`) runs
 these on Linux, Windows, Apple Silicon macOS and Intel macOS, uploads five files,
 and attaches them to the release when the commit carries a `v*` tag. The release
 body is the changelog link: a GitHub compare between the previous `v*` tag and
-this one. A tag with a pre-release suffix (`v1.1.0-preview`) publishes a
+this one. A tag with a pre-release suffix (`v1.0.0-preview`) publishes a
 pre-release that never becomes the `/releases/latest` download, and a manual run
 builds the installers without publishing. The Windows installers need WiX, which
 the runner carries; the Linux lane downloads `appimagetool` at the pinned version
@@ -394,7 +394,7 @@ The application version lives in `gradle.properties` (`lekto.version`), read by
 Android's `versionName` and the installers' `packageVersion`, so one release's
 APK and installers cannot claim different versions. Its first number must be at
 least 1: jpackage's macOS bundler rejects an `app-version` that starts at zero,
-which is why the packaged release is `1.1.0` rather than a `0.x` version. The
+which is why the packaged release is `1.0.0` rather than a `0.x` version. The
 packaging names its identity explicitly: bundle id `app.lekto` and dock name
 `Lekto` on macOS, and a stable `upgradeUuid` on Windows so an upgrade replaces the
 previous install instead of sitting beside it. The runtime image carries the

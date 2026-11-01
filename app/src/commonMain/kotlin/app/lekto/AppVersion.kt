@@ -8,4 +8,4 @@ package app.lekto
  * number a reader sees and the number a store sees cannot drift apart:
  * `AppVersionSynchronisationTest` in `architecture` fails when the two disagree.
  */
-const val APP_VERSION: String = "1.1.0"
+const val APP_VERSION: String = "1.0.0"
