@@ -31,11 +31,33 @@ enum class BlockKind {
  * A block of inline [runs]: the unit a reader lays out and paginates. A block
  * never contains another block — nesting is flattened when the source is parsed
  * — so [text] is the block's whole readable content.
+ *
+ * A hard line break inside the source (`<br>`) is an `\n` in a run, not a block
+ * of its own: the blank line between blocks stays the paragraph separator, so a
+ * line break never doubles the spacing and never repeats a list marker.
+ *
+ * A [BlockKind.LIST_ITEM] carries its [listMarker] as the text of its first run,
+ * so [text] is exactly what the reader draws and counts — **Reading progress**
+ * and chapter offsets read the same characters. [listDepth] is the item's level in
+ * a nested list, `0` at the top.
  */
 @Serializable
-data class TextBlock(val kind: BlockKind, val runs: List<TextRun>, val headingLevel: Int = 0) {
+data class TextBlock(
+    val kind: BlockKind,
+    val runs: List<TextRun>,
+    val headingLevel: Int = 0,
+    val listMarker: String = "",
+    val listDepth: Int = 0,
+) {
     /** The block's runs concatenated, whitespace already normalised by the parser. */
     val text: String get() = runs.joinToString(separator = "") { run -> run.text }
+
+    /**
+     * The characters of [listMarker] at the block's start, or an empty range on a
+     * block that carries none. The reader leaves them out of its word layer, so a
+     * bullet or a number is never tappable.
+     */
+    val markerRange: IntRange get() = 0 until listMarker.length
 }
 
 /**

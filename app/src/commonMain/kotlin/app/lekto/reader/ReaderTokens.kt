@@ -2,11 +2,13 @@ package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextIndent
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.BlockKind
@@ -49,11 +51,13 @@ fun buildReaderTokens(
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, styles)
+    val markers = chapter.markerRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
     chapter.blocks.forEachIndexed { index, block ->
         tokenise(block.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
+            if (markers.isMarker(word.start)) return@forEach
             words += word
             writer.write(word, renderer.mastery.levelOf(word.key))
         }
@@ -98,14 +102,19 @@ fun buildPageTokens(
 ): ReaderTokens {
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
+    val markers = chapter.markerRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
     tokenise(slice.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
+        if (markers.isMarker(page.start + token.start)) return@forEach
         words += token
         writer.write(token, renderer.mastery.levelOf(token.key))
     }
     return ReaderTokens(builder.toAnnotatedString(), words)
 }
+
+/** Whether [offset] falls inside a list marker: a bullet or a rank is drawn, but is never a word. */
+private fun List<IntRange>.isMarker(offset: Int): Boolean = any { range -> offset in range }
 
 /** Appends each block, its block-level style and its runs' inline styles; returns each block's start offset. */
 private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderText, styles: ReaderStyles): List<Int> {
@@ -129,6 +138,9 @@ private fun appendBlock(builder: AnnotatedString.Builder, block: TextBlock, bloc
     if (block.kind == BlockKind.HEADING) {
         builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockStart + block.text.length)
     }
+    if (block.kind == BlockKind.LIST_ITEM) {
+        builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockStart + block.text.length)
+    }
     var runStart = blockStart
     block.runs.forEach { run ->
         val runStyle = run.styles.toSpanStyle()
@@ -136,6 +148,18 @@ private fun appendBlock(builder: AnnotatedString.Builder, block: TextBlock, bloc
         runStart += run.text.length
     }
 }
+
+/**
+ * A list item's hanging indent: its marker starts at its level's indent, and the
+ * lines it wraps to align one step further in, so the text of a multi-line item
+ * lines up under the first word rather than under the bullet.
+ */
+private fun ReaderStyles.listParagraphOf(depth: Int): ParagraphStyle = ParagraphStyle(
+    textIndent = TextIndent(
+        firstLine = listIndent * depth.toFloat(),
+        restLine = listIndent * (depth + 1).toFloat(),
+    ),
+)
 
 /** The emphasis a run carries, as a span the reader renders. */
 private fun Set<InlineStyle>.toSpanStyle(): SpanStyle = buildSpanStyle(

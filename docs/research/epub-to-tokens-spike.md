@@ -68,7 +68,9 @@ Tests, all in `core/src/jvmTest`:
   (`<strong>nested <em>inline</em></strong>`) produces `{STRONG}` and
   `{STRONG, EMPHASIS}` runs. Whitespace is collapsed — including the
   non-breaking space `&nbsp;` decodes to — and numeric entities (`&#233;`) are
-  decoded.
+  decoded. A `<br>` is the exception: it is the author's own break and stays one,
+  an `\n` inside its block, while the source's own line wrapping still collapses
+  (issue #271).
 - **ICU segments as required.** ICU4J's word break iterator is dictionary-based
   for scripts without spaces: `日本語の文章です` becomes `日本語 · の · 文章 ·
   です` and `我看着你好` becomes `我看 · 着 · 你 · 你好`, not per character. The

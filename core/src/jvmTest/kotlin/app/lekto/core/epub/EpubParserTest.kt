@@ -54,7 +54,7 @@ class EpubParserTest :
                 TextRun(" book with "),
                 TextRun("nested ", setOf(InlineStyle.STRONG)),
                 TextRun("inline", setOf(InlineStyle.STRONG, InlineStyle.EMPHASIS)),
-                TextRun(" markup—and a line break. After the break."),
+                TextRun(" markup—and a line break.\nAfter the break."),
             )
         }
 

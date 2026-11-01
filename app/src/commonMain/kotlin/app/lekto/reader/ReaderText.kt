@@ -76,6 +76,20 @@ private fun blockOffsets(blocks: List<TextBlock>): List<Int> = buildList {
 }
 
 /**
+ * The character ranges the chapter's list markers occupy, in the rendered text.
+ * The word layer skips them: a bullet or a rank is drawn, but it is not a word to
+ * look up, so it is neither coloured nor tappable.
+ */
+internal fun ReaderText.markerRanges(): List<IntRange> {
+    val starts = blockOffsets(blocks)
+    return blocks.mapIndexedNotNull { index, block ->
+        block.listMarker
+            .takeIf { marker -> marker.isNotEmpty() }
+            ?.let { marker -> starts[index] until starts[index] + marker.length }
+    }
+}
+
+/**
  * How a chapter becomes rendered text: the [segmenter] that finds words, the
  * [lemmas] that give each its identity, and the [mastery] lookup that colours
  * them. Typography is **not** here — it is a **Reading preference** the reader
