@@ -2,7 +2,9 @@ package app.lekto.core.book
 
 import app.lekto.core.Seams
 import app.lekto.core.sync.TombstoneStore
+import app.lekto.core.text.BookAsset
 import app.lekto.core.text.BookTextParser
+import app.lekto.core.text.ParsedBook
 import app.lekto.core.text.StructuredText
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
@@ -36,7 +38,7 @@ import kotlin.time.Instant
 @Suppress("LongParameterList", "TooManyFunctions") // Seams, and one function per BookLibrary operation, not a grab bag.
 class VaultBookLibrary(
     private val vault: VaultStore,
-    derived: DerivedAssetStore,
+    private val derived: DerivedAssetStore,
     private val parsers: Map<BookFormat, BookTextParser>,
     private val tombstones: TombstoneStore,
     private val seams: Seams,
@@ -75,7 +77,8 @@ class VaultBookLibrary(
         if (bytes.isEmpty()) throw ImportException("'$name' is empty.")
 
         onProgress(ImportProgress(ImportStage.PARSING, 0f))
-        val text = parse(format, name, bytes)
+        val parsed = parse(format, name, bytes)
+        val text = parsed.text
         onProgress(ImportProgress(ImportStage.SAVING, PARSE_SHARE))
 
         val book = Book(
@@ -85,7 +88,7 @@ class VaultBookLibrary(
             format = format,
             fileName = name,
         )
-        store(book, bytes, text)
+        store(book, bytes, parsed)
         onProgress(ImportProgress(ImportStage.SAVING, 1f))
         return book
     }
@@ -169,6 +172,7 @@ class VaultBookLibrary(
         if (vault.get(id) == null) return
         val now = seams.clock.now()
         cache.remove(id)
+        derived.removeUnder(imagesOf(id))
         removeWithTombstone(ReadingPositionRecord.idOf(id), now)
         removeWithTombstone(FinishedBookRecord.idOf(id), now)
         tombstones.put(Tombstone(id = id, updatedAt = now, deviceId = deviceId))
@@ -182,33 +186,53 @@ class VaultBookLibrary(
         vault.remove(recordId)
     }
 
-    /** Writes the record, its original attachment and the parsed-text cache. */
+    /** Writes the record, its original attachment, its images and the parsed-text cache. */
     @Suppress("TooGenericExceptionCaught") // Any storage failure must become an ImportException.
-    private fun store(book: Book, bytes: ByteArray, text: StructuredText) {
+    private fun store(book: Book, bytes: ByteArray, parsed: ParsedBook) {
         // A failure part-way must leave the vault unchanged.
         fun rollback() {
             runCatching { vault.removeAttachment(book.id) }
             runCatching { vault.remove(book.id) }
+            runCatching { derived.removeUnder(imagesOf(book.id)) }
             runCatching { cache.remove(book.id) }
         }
         try {
             vault.put(BookRecord.of(book, seams.clock.now(), deviceId))
             vault.putAttachment(book.id, bytes)
-            cache.put(book.id, text)
+            writeImages(book.id, parsed.assets)
+            cache.put(book.id, parsed.text)
         } catch (failure: RuntimeException) {
             rollback()
             throw ImportException("Could not save '${book.title}'.", failure)
         }
     }
 
-    /** Re-parses [book]'s stored original and re-caches it, or `null` when it cannot be read. */
+    /** Writes the images a parse extracted, beside the text they belong to. */
+    private fun writeImages(bookId: String, assets: List<BookAsset>) {
+        assets.forEach { asset -> derived.put(imagesOf(bookId) + asset.name, asset.bytes) }
+    }
+
+    /** Where a book's images live in the derived store: one directory per book, never in the **Vault**. */
+    private fun imagesOf(bookId: String): String = "book-images/$bookId/"
+
+    /**
+     * Re-parses [book]'s stored original and re-caches it, or `null` when it
+     * cannot be read. Its images are re-derived with its text, so a wiped cache
+     * restores both.
+     */
     private fun reparse(book: Book): StructuredText? = vault.getAttachment(book.id)
         ?.let { bytes -> runCatching { parse(book.format, book.fileName, bytes) }.getOrNull() }
-        ?.also { text -> runCatching { cache.put(book.id, text) } }
+        ?.also { parsed ->
+            runCatching {
+                writeImages(book.id, parsed.assets)
+                cache.put(book.id, parsed.text)
+            }
+        }
+        ?.text
 
     /** Parses [bytes], wrapping any parser failure in a user-facing [ImportException]. */
     @Suppress("TooGenericExceptionCaught") // A parser may fail any way; report it, do not crash.
-    private fun parse(format: BookFormat, fileName: String, bytes: ByteArray): StructuredText {
+    private fun parse(format: BookFormat, fileName: String, bytes: ByteArray): ParsedBook {
         val parser = parsers[format] ?: throw ImportException("Lekto has no ${format.name} support in this build.")
         return try {
             parser.parse(bytes)

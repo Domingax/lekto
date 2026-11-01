@@ -1,6 +1,7 @@
 package app.lekto.core.text
 
 import app.lekto.testkit.TestResources
+import app.lekto.testkit.parseText
 import io.kotest.core.spec.style.FunSpec
 import java.io.File
 import kotlin.random.Random
@@ -21,14 +22,14 @@ class TxtGoldenTest :
 
         test("the generated corpus parses to the pinned structure") {
             val actual = corpus().joinToString(separator = "\n") { (name, text) ->
-                "=== $name\n${TxtParser().parse(text.encodeToByteArray()).pinnedShape()}"
+                "=== $name\n${TxtParser().parseText(text.encodeToByteArray()).pinnedShape()}"
             }
 
             assertGolden("/golden/txt-corpus.txt", actual)
         }
 
         test("the real French book parses to the pinned outline") {
-            val actual = TxtParser().parse(TestResources.bytes("/txt/les-trois-mousquetaires.txt")).pinnedOutline()
+            val actual = TxtParser().parseText(TestResources.bytes("/txt/les-trois-mousquetaires.txt")).pinnedOutline()
 
             assertGolden("/golden/txt-les-trois-mousquetaires.txt", actual)
         }

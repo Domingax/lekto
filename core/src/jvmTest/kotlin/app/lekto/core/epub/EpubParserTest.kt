@@ -4,6 +4,7 @@ import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextRun
 import app.lekto.testkit.EpubFixtures
+import app.lekto.testkit.parseText
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -22,14 +23,14 @@ class EpubParserTest :
         val parser = EpubParser()
 
         test("reads the metadata from the OPF") {
-            val book = parser.parse(EpubFixtures.awkward())
+            val book = parser.parseText(EpubFixtures.awkward())
 
             book.title shouldBe "Awkward & Real"
             book.language shouldBe "en"
         }
 
         test("turns the spine into blocks, headings and list items in order") {
-            val kinds = parser.parse(EpubFixtures.awkward()).blocks.map { it.kind }
+            val kinds = parser.parseText(EpubFixtures.awkward()).blocks.map { it.kind }
 
             kinds shouldContainExactly listOf(
                 BlockKind.HEADING,
@@ -45,7 +46,7 @@ class EpubParserTest :
         }
 
         test("preserves nested inline formatting as runs") {
-            val paragraph = parser.parse(EpubFixtures.awkward()).blocks
+            val paragraph = parser.parseText(EpubFixtures.awkward()).blocks
                 .first { it.text.startsWith("An awkward") }
 
             paragraph.runs shouldContainExactly listOf(
@@ -59,7 +60,7 @@ class EpubParserTest :
         }
 
         test("normalises whitespace and decodes named and numeric entities") {
-            val text = parser.parse(EpubFixtures.awkward()).plainText()
+            val text = parser.parseText(EpubFixtures.awkward()).plainText()
 
             text shouldContain "Whitespace is collapsed, and spans are ignored but kept."
             text shouldContain "First item & entity"
@@ -67,7 +68,7 @@ class EpubParserTest :
         }
 
         test("skips non-linear spine items") {
-            val text = parser.parse(EpubFixtures.awkward()).plainText()
+            val text = parser.parseText(EpubFixtures.awkward()).plainText()
 
             text shouldContain "Chapter One"
             text shouldContain "第二章"
@@ -76,7 +77,7 @@ class EpubParserTest :
         }
 
         test("parses a minimal archive") {
-            val book = parser.parse(EpubFixtures.minimal())
+            val book = parser.parseText(EpubFixtures.minimal())
 
             book.title shouldBe "Minimal"
             book.language shouldBe "fr"
@@ -85,13 +86,13 @@ class EpubParserTest :
 
         test("fails clearly when the container names no rootfile") {
             shouldThrow<EpubParseException> {
-                parser.parse(EpubFixtures.withoutRootfile())
+                parser.parseText(EpubFixtures.withoutRootfile())
             }
         }
 
         test("fails clearly when the OPF the container names is absent") {
             shouldThrow<EpubParseException> {
-                parser.parse(EpubFixtures.withMissingOpf())
+                parser.parseText(EpubFixtures.withMissingOpf())
             }
         }
     })

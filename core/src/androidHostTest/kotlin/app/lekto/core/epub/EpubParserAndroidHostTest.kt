@@ -2,6 +2,7 @@ package app.lekto.core.epub
 
 import app.lekto.testkit.EpubFixtures
 import app.lekto.testkit.TestResources
+import app.lekto.testkit.parseText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,7 +32,7 @@ class EpubParserAndroidHostTest {
 
     @Test
     fun `a real EPUB imports through the Android XML parser`() {
-        val book = EpubParser(OpfXmlReader(androidFactory())).parse(TestResources.bytes("/epub/pg1952.epub"))
+        val book = EpubParser(OpfXmlReader(androidFactory())).parseText(TestResources.bytes("/epub/pg1952.epub"))
 
         assertEquals("The Yellow Wallpaper", book.title)
         assertEquals("en", book.language)

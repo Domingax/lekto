@@ -2,6 +2,7 @@ package app.lekto.core.epub
 
 import app.lekto.testkit.EpubFixtures
 import app.lekto.testkit.TestResources
+import app.lekto.testkit.parseText
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -15,7 +16,7 @@ class EpubGoldenTest :
     FunSpec({
 
         test("the awkward EPUB extracts to the pinned text") {
-            val extracted = EpubParser().parse(EpubFixtures.awkward()).plainText()
+            val extracted = EpubParser().parseText(EpubFixtures.awkward()).plainText()
 
             extracted shouldBe TestResources.text("/golden/awkward-epub.txt")
         }
