@@ -67,6 +67,20 @@ class ReaderImageLayoutTest {
     }
 
     @Test
+    fun aPictureLineIsAsTallAsItsRectangle() {
+        // A body style carries a fixed line height, and a picture's line obeys it
+        // unless the block overrides it: the text after the picture would then be
+        // laid out *behind* it, invisible, while the page still held it (issue
+        // #263).
+        val chapter = ReaderText("Pictures", "en", listOf(imageBlock("a.png")))
+
+        val chapterText = buildChapterText(chapter, styles, layout)
+        val pictureLine = chapterText.paragraphStyles.single { range -> range.start == 0 }
+
+        assertEquals(150f, pictureLine.item.lineHeight.value)
+    }
+
+    @Test
     fun aPlaceholderSitsWhereItsBlockStarts() {
         val chapter = ReaderText("Pictures", "en", listOf(imageBlock("a.png")))
 

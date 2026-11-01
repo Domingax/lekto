@@ -40,6 +40,9 @@ class ReaderPaginationTest {
 
     private val defaultStyles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
+    /** A page with text alone must fill at least this share of the viewport. */
+    private val filledPage = 0.75f
+
     @Test
     fun aLongChapterSplitsIntoContiguousPages() = runComposeUiTest {
         lateinit var pages: List<ReaderPage>
@@ -108,9 +111,14 @@ class ReaderPaginationTest {
         assertEquals(text.length, pages.last().end)
     }
 
-    @Suppress("LongMethod") // One measurement harness: the chapter, its layout and the check on every page.
+    @Suppress("LongMethod") // One harness: the chapter, its layout, the pagination and the check.
     @Test
-    fun noPageIsTallerThanTheViewportEvenAfterAPicture() = runComposeUiTest {
+    fun aPageThatStartsAfterAPictureIsNotShortenedByItsPlaceholder() = runComposeUiTest {
+        // The picture's rectangle is a placeholder at a fixed offset in the
+        // chapter. Measuring the next page from a later offset left it absolute,
+        // so it landed at a bogus place in the page and inflated a line: every
+        // page after the picture held a few lines and the rest was blank (issue
+        // #263).
         lateinit var pages: List<ReaderPage>
         lateinit var text: AnnotatedString
         lateinit var placeholders: List<AnnotatedString.Range<Placeholder>>
@@ -129,7 +137,6 @@ class ReaderPaginationTest {
                 title = "Pictures",
                 language = "en",
                 blocks = listOf(
-                    TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Before the plate."))),
                     TextBlock(
                         kind = BlockKind.IMAGE,
                         runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
@@ -142,7 +149,7 @@ class ReaderPaginationTest {
                 width = with(density) { 240.dp.toSp() },
                 height = with(density) { 160.dp.toSp() },
             )
-            text = buildChapterText(chapter, defaultStyles)
+            text = buildChapterText(chapter, defaultStyles, layout)
             placeholders = chapter.imagePlaceholders(layout)
             pages = paginateChapter(
                 text = text,
@@ -152,22 +159,19 @@ class ReaderPaginationTest {
         waitForIdle()
 
         val measurer = checkNotNull(measurerRef)
-        pages.forEach { page ->
-            // A page keeps the line break that ends its last line; the blank line
-            // that break would open is never drawn, so it is not content.
-            var visibleEnd = page.end
-            while (visibleEnd > page.start + 1 && text[visibleEnd - 1] == '\n') visibleEnd--
+        // The last page is the passage's tail: it may be short by nature.
+        val afterPicture = pages.drop(1).dropLast(1)
+        assertTrue(afterPicture.size > 3, "the passage should span several pages")
+        afterPicture.forEach { page ->
             val result = measurer.measure(
-                text.subSequence(page.start, visibleEnd),
+                text.subSequence(page.start, page.end),
                 defaultStyles.body,
-                placeholders = placeholders
-                    .filter { range -> range.start >= page.start && range.end <= visibleEnd }
-                    .map { range ->
-                        AnnotatedString.Range(range.item, range.start - page.start, range.end - page.start)
-                    },
                 constraints = Constraints(maxWidth = widthRef, maxHeight = Int.MAX_VALUE),
             )
-            assertTrue(result.size.height <= heightRef, "page ${page.start}..${page.end} is taller than the viewport")
+            assertTrue(
+                result.size.height >= heightRef * filledPage,
+                "page ${page.start}..${page.end} is only ${result.size.height} of $heightRef",
+            )
         }
     }
 

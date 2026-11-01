@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.sp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.BlockKind
@@ -52,7 +53,7 @@ fun buildReaderTokens(
     selected: IntRange? = null,
 ): ReaderTokens {
     val builder = AnnotatedString.Builder()
-    val blockStarts = appendBlocks(builder, chapter, styles)
+    val blockStarts = appendBlocks(builder, chapter, styles, ImageLayout(0.sp, 0.sp))
     val markers = chapter.markerRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
@@ -73,9 +74,13 @@ fun buildReaderTokens(
  * line breaks are the same as the tokenised text's, and building it costs a
  * string copy rather than a tokenisation per word.
  */
-fun buildChapterText(chapter: ReaderText, styles: ReaderStyles): AnnotatedString {
+fun buildChapterText(
+    chapter: ReaderText,
+    styles: ReaderStyles,
+    imageLayout: ImageLayout = ImageLayout(0.sp, 0.sp),
+): AnnotatedString {
     val builder = AnnotatedString.Builder()
-    appendBlocks(builder, chapter, styles)
+    appendBlocks(builder, chapter, styles, imageLayout)
     return builder.toAnnotatedString()
 }
 
@@ -119,7 +124,12 @@ fun buildPageTokens(
 private fun List<IntRange>.isMarker(offset: Int): Boolean = any { range -> offset in range }
 
 /** Appends each block, its block-level style and its runs' inline styles; returns each block's start offset. */
-private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderText, styles: ReaderStyles): List<Int> {
+private fun appendBlocks(
+    builder: AnnotatedString.Builder,
+    chapter: ReaderText,
+    styles: ReaderStyles,
+    imageLayout: ImageLayout,
+): List<Int> {
     val blockStarts = mutableListOf<Int>()
     var cursor = 0
     chapter.blocks.forEachIndexed { index, block ->
@@ -128,19 +138,35 @@ private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderText, 
             cursor += BLOCK_SEPARATOR.length
         }
         blockStarts += cursor
-        appendBlock(builder, block, cursor, styles)
+        appendBlock(builder, block, cursor, styles, imageLayout)
         cursor += block.text.length
     }
     return blockStarts
 }
 
 /** Appends a block's text, its block-level style and its runs' inline styles. */
-private fun appendBlock(builder: AnnotatedString.Builder, block: TextBlock, blockStart: Int, styles: ReaderStyles) {
+@Suppress("LongParameterList") // The block, its offset, the styles and the pictures' geometry.
+private fun appendBlock(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    styles: ReaderStyles,
+    imageLayout: ImageLayout,
+) {
     val image = block.image
     if (image != null) {
         // One inline placeholder instead of a character: the page draws the
         // picture in its rectangle, and the offsets stay the block's own.
+        val placeholder = image.placeholderIn(imageLayout)
         builder.appendInlineContent(id = image.name, alternateText = IMAGE_PLACEHOLDER)
+        // The body style's fixed line height would squeeze the picture's line and
+        // let the text after it draw *behind* the picture: a paragraph style on
+        // this one character gives the line the picture's own height (issue #263).
+        builder.addStyle(
+            ParagraphStyle(lineHeight = placeholder.height),
+            blockStart,
+            blockStart + IMAGE_PLACEHOLDER.length,
+        )
         return
     }
     builder.append(block.text)

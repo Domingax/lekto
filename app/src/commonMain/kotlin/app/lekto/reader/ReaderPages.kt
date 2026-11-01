@@ -2,6 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
 
 /** How many pages to measure between frames, so a long chapter never blocks the UI. */
 private const val PAGE_YIELD_EVERY = 8
@@ -70,8 +71,25 @@ internal suspend fun fillWindow(
 private class Chapter(private val text: AnnotatedString, private val layout: ReaderLayout, val end: Int) {
     /** Measures the page beginning at [from], appends it to [pages], and returns where it ends. */
     fun measure(pages: MutableList<ReaderPage>, from: Int): Int {
-        val page = paginateChapter(text.subSequence(from, end), layout).first()
+        // The chapter is measured from [from], so the pictures' placeholders —
+        // which are offsets into the whole chapter — must move with it. Left
+        // absolute, a placeholder lands at a bogus offset in the slice and
+        // inflates a line, which is what made every page after the first short.
+        val slice = layout.copy(placeholders = layout.placeholders.rebasedOn(from))
+        val page = paginateChapter(text.subSequence(from, end), slice).first()
         pages += ReaderPage(page.start + from, page.end + from)
         return page.end + from
+    }
+}
+
+/** The pictures' placeholder ranges, moved onto a slice that starts at [from]. */
+private fun List<AnnotatedString.Range<Placeholder>>.rebasedOn(from: Int): List<AnnotatedString.Range<Placeholder>> {
+    if (from == 0) return this
+    return mapNotNull { range ->
+        if (range.end <= from) {
+            null
+        } else {
+            AnnotatedString.Range(range.item, (range.start - from).coerceAtLeast(0), range.end - from)
+        }
     }
 }

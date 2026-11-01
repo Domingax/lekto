@@ -151,9 +151,6 @@ fun ReaderScreen(
     val styles = remember(document.preferences, theme) {
         ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink)
     }
-    val chapterText = remember(document.text, styles) {
-        buildChapterText(document.text, styles)
-    }
     val entries = remember(document.text) { document.text.chapterEntries() }
     val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -168,6 +165,11 @@ fun ReaderScreen(
         // paginator measures and the one the page draws are one computation.
         val pageHeight = maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT
         val images = rememberReaderImages(document, pageWidth, pageHeight, styles)
+        // The chapter text carries the pictures' placeholders and their line
+        // heights, so it is rebuilt when the picture geometry changes.
+        val chapterText = remember(document.text, styles, images.layout) {
+            buildChapterText(document.text, styles, images.layout)
+        }
         val placeholders = remember(document.text, images.layout) {
             document.text.imagePlaceholders(images.layout)
         }
