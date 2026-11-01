@@ -5,6 +5,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.lekto.core.reading.ReadingFace
@@ -32,6 +33,12 @@ data class ReaderStyles(
     val heading: TextStyle,
     val horizontalMargin: Dp,
     val mastery: MasteryRamp,
+    /**
+     * One list level's indent, scaled from the body's size so the hanging indent
+     * follows the size control. A marker sits at its level's indent and the item's
+     * wrapped lines align one step further in.
+     */
+    val listIndent: TextUnit,
 ) {
     companion object {
         /** The Light paper's ink, used when no theme supplies one. */
@@ -40,6 +47,9 @@ data class ReaderStyles(
         /** The heading's size and leading as multiples of the body's, so they follow the size control. */
         private const val HEADING_SIZE_RATIO: Float = 24f / 18f
         private const val HEADING_LEADING_RATIO: Float = 34f / 18f
+
+        /** A list level's indent, in body-line units: room for a bullet or a rank and a space. */
+        private const val LIST_INDENT_RATIO: Float = 1.5f
 
         /** [preferences] rendered as the styles the page and its pagination measure. */
         fun of(preferences: ReadingPreferences, mastery: MasteryRamp, ink: Color = DefaultInk): ReaderStyles {
@@ -63,6 +73,7 @@ data class ReaderStyles(
                 ),
                 horizontalMargin = preferences.horizontalMargin.dp,
                 mastery = mastery,
+                listIndent = (preferences.size * LIST_INDENT_RATIO).sp,
             )
         }
     }

@@ -287,6 +287,89 @@ class ReaderTextTest {
 
         assertEquals("the lantern glows", tap.contextSentence)
     }
+
+    @Test
+    fun aListMarkerIsDrawnButIsNotAWord() {
+        val list = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.LIST_ITEM,
+                    listOf(TextRun("• "), TextRun("Double KB press")),
+                    listMarker = "• ",
+                ),
+            ),
+        )
+
+        val tokens = buildReaderTokens(list, renderer, styles)
+
+        assertEquals("• Double KB press", tokens.text.text)
+        assertEquals(listOf("Double", "KB", "press"), tokens.words.map { word -> word.surface })
+    }
+
+    @Test
+    fun aPagePastTheFirstKeepsItsMarkerOutOfTheWordLayer() {
+        val list = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("before"))),
+                TextBlock(BlockKind.LIST_ITEM, listOf(TextRun("• "), TextRun("item")), listMarker = "• "),
+            ),
+        )
+        val chapterText = buildChapterText(list, styles)
+        val page = ReaderPage(chapterText.text.indexOf('•'), chapterText.length)
+
+        val tokens = buildPageTokens(chapterText, page, renderer, list, styles)
+
+        assertTrue(
+            tokens.words.none { word -> word.surface == "•" },
+            "a marker is never a word: ${tokens.words.map { it.surface }}",
+        )
+    }
+
+    @Test
+    fun aNestedItemIsIndentedOneStepDeeper() {
+        val list = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.LIST_ITEM, listOf(TextRun("• "), TextRun("outer")), listMarker = "• "),
+                TextBlock(
+                    BlockKind.LIST_ITEM,
+                    listOf(TextRun("• "), TextRun("inner")),
+                    listMarker = "• ",
+                    listDepth = 1,
+                ),
+            ),
+        )
+
+        val chapterText = buildChapterText(list, styles)
+        val indentOfInner = chapterText.paragraphStyles
+            .first { range -> chapterText.text.substring(range.start, range.end).startsWith("• inner") }
+            .item.textIndent
+
+        assertEquals(styles.listIndent, indentOfInner?.firstLine)
+        assertEquals(styles.listIndent.value * 2, indentOfInner?.restLine?.value)
+    }
+
+    @Test
+    fun aTopLevelItemHangsItsWrappedLinesUnderItsText() {
+        val list = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.LIST_ITEM, listOf(TextRun("• "), TextRun("outer")), listMarker = "• "),
+            ),
+        )
+
+        val chapterText = buildChapterText(list, styles)
+        val indent = chapterText.paragraphStyles.single().item.textIndent
+
+        assertEquals(0f, indent?.firstLine?.value)
+        assertEquals(styles.listIndent, indent?.restLine)
+    }
 }
 
 /** The span style applied to [surface]'s range. */
