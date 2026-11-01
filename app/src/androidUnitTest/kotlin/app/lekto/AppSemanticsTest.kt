@@ -1156,7 +1156,7 @@ class AppSemanticsTest {
         // The About row names the version, and its source opens where the platform
         // sends a link (issue #214).
         compose.onNodeWithTag(ABOUT_LINK_TAG).performScrollTo().performClick()
-        compose.onNodeWithTag(ABOUT_VERSION_TAG).assertTextEquals("Version 0.1.0")
+        compose.onNodeWithTag(ABOUT_VERSION_TAG).assertTextEquals("Version $APP_VERSION")
         compose.onNodeWithTag(ABOUT_SOURCE_TAG).performScrollTo().performClick()
 
         assertEquals(LEKTO_SOURCE_URL, opened)

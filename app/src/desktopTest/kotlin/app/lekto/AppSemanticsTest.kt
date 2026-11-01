@@ -1228,7 +1228,7 @@ class AppSemanticsTest {
         // The About row names the version, and its source opens where the platform
         // sends a link (issue #214).
         onNodeWithTag(ABOUT_LINK_TAG).performScrollTo().performClick()
-        onNodeWithTag(ABOUT_VERSION_TAG).assertTextEquals("Version 0.1.0")
+        onNodeWithTag(ABOUT_VERSION_TAG).assertTextEquals("Version $APP_VERSION")
         onNodeWithTag(ABOUT_SOURCE_TAG).performScrollTo().performClick()
 
         assertEquals(LEKTO_SOURCE_URL, opened)

@@ -85,9 +85,13 @@ core ─────────────► nothing     (no app module, no A
   workflow builds and publishes the pack, while its fast unit tests run in
   `check`.
 - `tools/icons` is not a module: it is the build-time scripts that fetch the
-  pinned Lucide SVGs and regenerate the committed icon set
+  pinned Lucide SVGs and regenerate the committed icon set, and that render the
+  brand mark into the desktop installers' PNG, ICO and ICNS
   ([`docs/build.md#icon-pipeline`](docs/build.md#icon-pipeline)). Nothing it
   produces is generated at build time.
+- `tools/packaging` is not a module either: `appimage.sh` turns the jpackage
+  application image into the portable Linux `.AppImage` the release lane ships
+  ([`docs/build.md#desktop`](docs/build.md#desktop)).
 
 `guide/` is not a module: it is the end-user guide's content root, a VitePress
 site built by its own npm toolchain and published to GitHub Pages (ADR-0024). It

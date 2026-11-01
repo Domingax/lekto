@@ -100,7 +100,15 @@ run says why and changes nothing locally. See
 
 ### Where do I get Lekto for my computer?
 
-The [home page](/#download) links the latest Android and desktop releases.
+The [home page](/#download) links the latest Android and desktop releases. The
+desktop installers, the way to move a Vault between Android and a computer, and the
+desktop's accessibility limitation are all on [Lekto on the desktop](/desktop).
+
+### Does Lekto work with a screen reader?
+
+On Android, yes. On the desktop, only on macOS, and on Windows once the Java Access
+Bridge is enabled; it does not work on Linux. See
+[Lekto on the desktop](/desktop#accessibility-on-the-desktop).
 
 ## Screenshots
 

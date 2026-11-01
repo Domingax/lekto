@@ -222,6 +222,7 @@ lanes; the emulator lane is nightly and never on the critical path (ticket #7).
 | `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
 | `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
 | `guide` | pull request; push to `main` when the guide changed | `npm ci`, `npm test`, `npm run check:licences` and `npm run build` in `guide/` |
+| `release` (`release.yml`) | version tag, manual | jpackage on Windows and both macOS architectures, `createDistributable` + `appimage.sh` on Linux, then `gh release create` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
 `fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
@@ -318,6 +319,14 @@ Node itself is pinned to 22 in `guide/package.json`'s `engines` and in the
 ./gradlew check -Plekto.android=false   # JVM/desktop only, no SDK needed
 ```
 
+- **The packaging tools — only to build an installer.** jpackage ships with the
+  pinned JDK, but Windows installers need WiX; macOS images use the tools the
+  operating system already carries. The Linux AppImage needs
+  `tools/packaging/appimage.sh` and `appimagetool`, which the release lane
+  downloads at the pinned version and digest. `./gradlew check` needs none of
+  them, and jpackage cannot cross-compile, so a clean checkout builds the
+  installer of its own platform only.
+
 ## Android
 
 The app's `minSdk` is **27** (Android 8.1) — `android-minSdk` in
@@ -340,7 +349,69 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 ./gradlew :app:run                        # run the desktop app
 ```
 
-Native packaging for Windows, macOS and Linux is ticket #29.
+The desktop client is packaged for the three desktop systems (issue #29):
+
+- **Windows** — a `.msi` and a `.exe`, both built by jpackage. The MSI is the
+  Windows Installer package: Add/Remove Programs, silent install and managed
+  deployment, with `upgradeUuid` replacing the previous version. The EXE is the
+  double-click installer for a reader who does not want to think about it.
+- **macOS** — a `.dmg`, built by jpackage, for Apple Silicon and for Intel.
+- **Linux** — a portable `.AppImage`. jpackage has no single-file Linux format
+  that runs on every distribution, so the lane builds the jpackage application
+  image and `tools/packaging/appimage.sh` wraps it: an AppDir with the
+  application, icon, desktop entry and `AppRun`, assembled with the pinned
+  `appimagetool`. The reader downloads one file and runs it, on Arch as on any
+  other x86-64 distribution, with no installation package.
+
+A distribution can only be built on its own operating system — jpackage does not
+cross-compile — so each runner builds its own artefacts. On Windows and macOS:
+
+```sh
+./gradlew :app:packageDistributionForCurrentOS -Plekto.android=false
+```
+
+jpackage writes the MSI and EXE under `app/build/compose/binaries/main/{msi,exe}`
+and the DMG under `dmg/`. On Linux:
+
+```sh
+./gradlew :app:createDistributable -Plekto.android=false
+tools/packaging/appimage.sh app/build/compose/binaries/main/app/Lekto \
+  app/src/desktopMain/resources/app-icon/app-icon.png dist/lekto-<version>-linux-x64.AppImage
+```
+
+The Android variant is switched off so the lane needs no Android SDK and is the
+same on every runner. The release lane (`.github/workflows/release.yml`) runs
+these on Linux, Windows, Apple Silicon macOS and Intel macOS, uploads five files,
+and attaches them to the release when the commit carries a `v*` tag. The release
+body is the changelog link: a GitHub compare between the previous `v*` tag and
+this one. A tag with a pre-release suffix (`v1.0.0-preview`) publishes a
+pre-release that never becomes the `/releases/latest` download, and a manual run
+builds the installers without publishing. The Windows installers need WiX, which
+the runner carries; the Linux lane downloads `appimagetool` at the pinned version
+and checks its digest.
+
+The application version lives in `gradle.properties` (`lekto.version`), read by
+Android's `versionName` and the installers' `packageVersion`, so one release's
+APK and installers cannot claim different versions. Its first number must be at
+least 1: jpackage's macOS bundler rejects an `app-version` that starts at zero,
+which is why the packaged release is `1.0.0` rather than a `0.x` version. The
+packaging names its identity explicitly: bundle id `app.lekto` and dock name
+`Lekto` on macOS, and a stable `upgradeUuid` on Windows so an upgrade replaces the
+previous install instead of sitting beside it. The runtime image carries the
+modules jpackage needs and `:app:suggestRuntimeModules` reports — `java.sql` for
+sqlite-jdbc, `java.net.http` for the desktop WebDAV transport, `jdk.unsupported`
+for JNA — plus `jdk.accessibility`, which is what makes the Java Access Bridge
+reachable on Windows. The installer icons are the committed desktop rasters
+`tools/icons/mark.sh` regenerates under
+`app/src/desktopMain/resources/app-icon/`; the AppImage reuses the PNG.
+
+The desktop's accessibility is limited by Compose Desktop, not by a Lekto
+setting: macOS is fully supported, Windows works through the Java Access Bridge
+(off by default; the user enables it with `jabswitch /enable`), and Linux is
+unsupported. ADR-0007 records the limitation; the end-user guide states it where
+a downloader meets it ([`guide/desktop.md`](../guide/desktop.md) and the download
+section of the home page), because it is a reason not to install the desktop
+client, not a footnote.
 
 ## Dictionary pipeline
 
@@ -489,9 +560,9 @@ program; the renderer is `app.lekto.tools.RenderAppIcon`, run by
 classpath. The pipeline adds no dependency, and every output is committed:
 `LauncherIconTest` pins the manifest-and-resource wiring, `AppIconTest`'s golden
 pins the geometry, and a raster is regenerated by hand rather than compared in CI.
-
-The ICO and ICNS are committed ahead of the packaging: `nativeDistributions` does
-not exist yet (issue #29), so nothing consumes them today beyond the window icon.
+The desktop distribution's `nativeDistributions` consumes the three rasters
+(issue #29): the Linux AppImage and window icon use the PNG, Windows the ICO and
+macOS the ICNS.
 
 ## Modules
 
