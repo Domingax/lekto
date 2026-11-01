@@ -111,15 +111,37 @@ private fun List<AnnotatedString.Range<Placeholder>>.within(
     }
 }
 
-/** The first line that would overflow [height], kept as a page range. */
+/**
+ * The first line that would overflow [height], kept as a page range. A line is
+ * measured from the window's own origin, so a page that starts with a tall
+ * picture counts the picture's whole height.
+ *
+ * When the very first line is taller than the page — a plate that fills it — the
+ * page is that line alone. Returning the whole window instead would clip
+ * everything the line hides, and the text would be lost: the page after it starts
+ * where the window ended.
+ */
 private fun cutPage(result: TextLayoutResult, start: Int, end: Int, height: Int): ReaderPage {
-    val pageTop = result.getLineTop(0)
-    for (line in 1 until result.lineCount) {
-        if (result.getLineBottom(line) - pageTop > height) {
-            val cut = result.getLineStart(line)
-            if (cut > 0) return ReaderPage(start, start + cut)
-            break
-        }
-    }
-    return ReaderPage(start, end)
+    if (result.size.height <= height) return ReaderPage(start, end)
+
+    val overflowing = (1 until result.lineCount).firstOrNull { line -> result.getLineBottom(line) > height }
+    val cut = overflowing
+        ?.let { line -> result.getLineStart(line) }
+        ?.takeIf { lineStart -> lineStart > 0 }
+        // The first line alone fills the page: it is the page, up to its last
+        // visible character. A trailing line break is left to the next page, or
+        // measuring the page would count an empty line it never draws.
+        ?: withoutBreaks(result.layoutInput.text, firstLineEnd(result, result.layoutInput.text.length))
+    return ReaderPage(start, start + cut)
+}
+
+/** Where the first line ends; the text's own end when it is the only line. */
+private fun firstLineEnd(result: TextLayoutResult, fallback: Int): Int =
+    if (result.lineCount > 1) result.getLineStart(1) else fallback
+
+/** How much of the window to keep: a trailing line break is left to the next page. */
+private fun withoutBreaks(window: AnnotatedString, end: Int): Int {
+    var cut = end
+    while (cut > 1 && window[cut - 1] == '\n') cut--
+    return cut
 }

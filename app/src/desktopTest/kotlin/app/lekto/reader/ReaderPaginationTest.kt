@@ -7,9 +7,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingPreferences
+import app.lekto.core.text.BlockKind
+import app.lekto.core.text.IMAGE_PLACEHOLDER
+import app.lekto.core.text.ImageRef
+import app.lekto.core.text.TextBlock
+import app.lekto.core.text.TextRun
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -53,6 +61,114 @@ class ReaderPaginationTest {
         assertEquals(passage.length, pages.last().end)
         pages.zipWithNext().forEach { (page, next) -> assertEquals(page.end, next.start, "pages must be contiguous") }
         pages.forEach { page -> assertTrue(page.length > 0, "a page must not be empty") }
+    }
+
+    @Test
+    fun aPageThatStartsWithAPictureFitsTheViewportAndLosesNothingAfterIt() = runComposeUiTest {
+        // A plate capped at the page's height used to overflow its line, so the
+        // paginator under-counted it: the page kept the text that followed, drew
+        // it outside the viewport, and the next page started past it. The text was
+        // lost (issue #263).
+        lateinit var pages: List<ReaderPage>
+        lateinit var text: AnnotatedString
+        var maxHeight = 0
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            maxHeight = height
+            val chapter = ReaderText(
+                title = "Pictures",
+                language = "en",
+                blocks = listOf(
+                    TextBlock(BlockKind.HEADING, listOf(TextRun("Kettlebells")), headingLevel = 2),
+                    TextBlock(
+                        kind = BlockKind.IMAGE,
+                        runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
+                        image = ImageRef("a.png", ratio = 0.6f),
+                    ),
+                    TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(passage))),
+                ),
+            )
+            val layout = ImageLayout(
+                width = with(density) { 240.dp.toSp() },
+                height = with(density) { 160.dp.toSp() },
+            )
+            text = buildChapterText(chapter, defaultStyles)
+            pages = paginateChapter(
+                text = text,
+                layout = ReaderLayout(measurer, defaultStyles.body, width, height, chapter.imagePlaceholders(layout)),
+            ).toList()
+        }
+        waitForIdle()
+
+        pages.zipWithNext().forEach { (page, next) -> assertEquals(page.end, next.start) }
+        assertEquals(0, pages.first().start)
+        assertEquals(text.length, pages.last().end)
+    }
+
+    @Suppress("LongMethod") // One measurement harness: the chapter, its layout and the check on every page.
+    @Test
+    fun noPageIsTallerThanTheViewportEvenAfterAPicture() = runComposeUiTest {
+        lateinit var pages: List<ReaderPage>
+        lateinit var text: AnnotatedString
+        lateinit var placeholders: List<AnnotatedString.Range<Placeholder>>
+        var measurerRef: TextMeasurer? = null
+        var widthRef = 0
+        var heightRef = 0
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            measurerRef = measurer
+            widthRef = width
+            heightRef = height
+            val chapter = ReaderText(
+                title = "Pictures",
+                language = "en",
+                blocks = listOf(
+                    TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Before the plate."))),
+                    TextBlock(
+                        kind = BlockKind.IMAGE,
+                        runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
+                        image = ImageRef("a.png", ratio = 0.6f),
+                    ),
+                    TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(passage))),
+                ),
+            )
+            val layout = ImageLayout(
+                width = with(density) { 240.dp.toSp() },
+                height = with(density) { 160.dp.toSp() },
+            )
+            text = buildChapterText(chapter, defaultStyles)
+            placeholders = chapter.imagePlaceholders(layout)
+            pages = paginateChapter(
+                text = text,
+                layout = ReaderLayout(measurer, defaultStyles.body, width, height, placeholders),
+            ).toList()
+        }
+        waitForIdle()
+
+        val measurer = checkNotNull(measurerRef)
+        pages.forEach { page ->
+            // A page keeps the line break that ends its last line; the blank line
+            // that break would open is never drawn, so it is not content.
+            var visibleEnd = page.end
+            while (visibleEnd > page.start + 1 && text[visibleEnd - 1] == '\n') visibleEnd--
+            val result = measurer.measure(
+                text.subSequence(page.start, visibleEnd),
+                defaultStyles.body,
+                placeholders = placeholders
+                    .filter { range -> range.start >= page.start && range.end <= visibleEnd }
+                    .map { range ->
+                        AnnotatedString.Range(range.item, range.start - page.start, range.end - page.start)
+                    },
+                constraints = Constraints(maxWidth = widthRef, maxHeight = Int.MAX_VALUE),
+            )
+            assertTrue(result.size.height <= heightRef, "page ${page.start}..${page.end} is taller than the viewport")
+        }
     }
 
     @Test

@@ -64,7 +64,10 @@ fun ImageRef.placeholderIn(layout: ImageLayout): Placeholder {
     return Placeholder(
         width = width.sp,
         height = (if (capped > 0f) capped else width).sp,
-        placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+        // Top, not Center: a centred placeholder taller than the body line
+        // overflows *above* its line box, so pagination under-counts its height
+        // and the page clips both the picture and the text after it.
+        placeholderVerticalAlign = PlaceholderVerticalAlign.Top,
     )
 }
 
