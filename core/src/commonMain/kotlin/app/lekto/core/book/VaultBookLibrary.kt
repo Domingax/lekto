@@ -19,8 +19,10 @@ import kotlin.time.Instant
  * A book is a vault record of kind [BookRecord.KIND] plus its original bytes as
  * that record's attachment (ADR-0016). The parser turns the original into
  * [StructuredText], which is cached in the derived store — device-local and
- * never exported (ADR-0005). Opening a book reads the cache, or re-parses and
- * re-caches when the cache is missing, so a wiped cache is not data loss.
+ * never exported (ADR-0005). The same store holds the book's images and its
+ * cover, both re-derived with the text when a cache is wiped. Opening a book
+ * reads the cache, or re-parses and re-caches when the cache is missing, so a
+ * wiped cache is not data loss.
  *
  * The composition root supplies the [parsers] and the installation's stable
  * [deviceId] (ADR-0003); the domain reads neither a platform nor a global.
@@ -46,6 +48,7 @@ class VaultBookLibrary(
 ) : BookLibrary {
 
     private val cache = BookTextCache(derived)
+    private val covers = BookCoverCache(derived)
 
     override fun books(): List<Book> = booksIn(vault.all())
 
@@ -156,9 +159,9 @@ class VaultBookLibrary(
     }
 
     /**
-     * Removes the book's original, cached text, reading position and finished
-     * declaration, then the book record itself, leaving a tombstone for the book
-     * and for each fact (issue #131; ADR-0015, ADR-0038).
+     * Removes the book's original, cached text, images, cover, reading position
+     * and finished declaration, then the book record itself, leaving a tombstone
+     * for the book and for each fact (issue #131; ADR-0015, ADR-0038).
      *
      * Each tombstone is written **before** the record it marks is removed, so a
      * failure leaves the book fully listed and a replayed delete completes it:
@@ -172,6 +175,7 @@ class VaultBookLibrary(
         if (vault.get(id) == null) return
         val now = seams.clock.now()
         cache.remove(id)
+        covers.remove(id)
         derived.removeUnder(imagesOf(id))
         removeWithTombstone(ReadingPositionRecord.idOf(id), now)
         removeWithTombstone(FinishedBookRecord.idOf(id), now)
@@ -186,7 +190,7 @@ class VaultBookLibrary(
         vault.remove(recordId)
     }
 
-    /** Writes the record, its original attachment, its images and the parsed-text cache. */
+    /** Writes the record, its original attachment, its images, its cover and the parsed-text cache. */
     @Suppress("TooGenericExceptionCaught") // Any storage failure must become an ImportException.
     private fun store(book: Book, bytes: ByteArray, parsed: ParsedBook) {
         // A failure part-way must leave the vault unchanged.
@@ -194,17 +198,28 @@ class VaultBookLibrary(
             runCatching { vault.removeAttachment(book.id) }
             runCatching { vault.remove(book.id) }
             runCatching { derived.removeUnder(imagesOf(book.id)) }
+            runCatching { covers.remove(book.id) }
             runCatching { cache.remove(book.id) }
         }
         try {
             vault.put(BookRecord.of(book, seams.clock.now(), deviceId))
             vault.putAttachment(book.id, bytes)
             writeImages(book.id, parsed.assets)
+            storeCover(book.id, parsed.cover)
             cache.put(book.id, parsed.text)
         } catch (failure: RuntimeException) {
             rollback()
             throw ImportException("Could not save '${book.title}'.", failure)
         }
+    }
+
+    /**
+     * Writes or removes the cover, best-effort: a cover is decoration beside the
+     * text, so a storage failure loses the art and never fails the import
+     * (issue #259). The write is atomic, so a failure leaves no partial file.
+     */
+    private fun storeCover(bookId: String, cover: ByteArray?) {
+        runCatching { cover?.let { bytes -> covers.put(bookId, bytes) } ?: covers.remove(bookId) }
     }
 
     /** Writes the images a parse extracted, beside the text they belong to. */
@@ -217,14 +232,15 @@ class VaultBookLibrary(
 
     /**
      * Re-parses [book]'s stored original and re-caches it, or `null` when it
-     * cannot be read. Its images are re-derived with its text, so a wiped cache
-     * restores both.
+     * cannot be read. Its images and its cover are re-derived with its text, so
+     * a wiped cache restores all three.
      */
     private fun reparse(book: Book): StructuredText? = vault.getAttachment(book.id)
         ?.let { bytes -> runCatching { parse(book.format, book.fileName, bytes) }.getOrNull() }
         ?.also { parsed ->
             runCatching {
                 writeImages(book.id, parsed.assets)
+                storeCover(book.id, parsed.cover)
                 cache.put(book.id, parsed.text)
             }
         }

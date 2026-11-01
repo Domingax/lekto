@@ -60,7 +60,7 @@ internal val PROGRESS_RULE_HEIGHT = 3.dp
 /** The finished line's check: the row's own small mark, not a control (docs/design.md §7.1). */
 private val FINISHED_CHECK_SIZE = 16.dp
 
-/** The language vignette's frame: 44 × 60 dp, the place a cover would go (§7.1). */
+/** The language vignette's frame: 44 × 60 dp, the fallback plate where a cover may go (§7.1). */
 internal val LANGUAGE_VIGNETTE_WIDTH = 44.dp
 internal val LANGUAGE_VIGNETTE_HEIGHT = 60.dp
 
@@ -73,10 +73,12 @@ internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Bo
  * progress and rule, or `Finished` with a check) — the tap that opens it and the
  * way to delete it (issues #196, #200).
  *
- * There are no covers: a **Book** has no cover image in its record, and a shelf
- * with covers for some books and none for others reads as broken. The vignette is
- * where a cover would go if one ever exists, so its colour is decoration and its
- * two-letter code is what carries the language.
+ * A book's art is allowed (issue #259): an EPUB's cover is extracted at import
+ * as a **Derived asset**, so a surface that shows one may paint it in the
+ * vignette's place. The typographic plaque is the **mandatory fallback** — a TXT
+ * never carries art, and an EPUB with no usable cover keeps its language code —
+ * so a row is never a hole, and its two-letter code is always what carries the
+ * language.
  *
  * **Delete never sits on the shelf as a red word.** The row's delete is the
  * shared gesture every list row uses ([DeletingRow], issue #212): a swipe from

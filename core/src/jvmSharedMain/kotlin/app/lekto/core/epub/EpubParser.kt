@@ -62,8 +62,38 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
                 chapters = chapters,
             ),
             assets = parts.assets,
+            cover = coverImage(archive, packageDocument.cover, baseDirectory),
         )
     }
+
+    /**
+     * The cover's raw bytes, or `null` for anything this build cannot show: no
+     * declaration, a media type that is not an image (or is an SVG), an entry
+     * the archive does not carry, or bytes whose header is not a raster image.
+     * A cover is never allowed to fail an import (issue #259).
+     */
+    private fun coverImage(archive: EpubArchive, item: OpfDocument.ManifestItem?, baseDirectory: String): ByteArray? {
+        val usable = item?.takeIf { candidate -> isCoverMediaType(candidate) }
+        return usable?.let { candidate ->
+            val path = EpubArchive.resolve(baseDirectory, candidate.href)
+            runCatching { archive.read(path) }.getOrNull()
+        }?.takeIf { bytes -> ImageHeader.sizeOf(bytes) != null }
+    }
+
+    /**
+     * Whether [item] declares an image a platform decoder may read. The header,
+     * not the label, decides the format; this only keeps a foreign type (a page,
+     * a stylesheet) and the spec-legal SVG out, including the `image/jpg` alias
+     * real EPUB 2 producers write.
+     */
+    private fun isCoverMediaType(item: OpfDocument.ManifestItem): Boolean {
+        val mediaType = mediaTypeOf(item)
+        return mediaType.startsWith("image/") && mediaType != "image/svg+xml"
+    }
+
+    /** The manifest media type, without parameters and case-insensitively. */
+    private fun mediaTypeOf(item: OpfDocument.ManifestItem): String =
+        item.mediaType.substringBefore(';').trim().lowercase()
 
     /** The book's chapters from its first usable table of contents, or `null` when it has none. */
     private fun tableOfContents(

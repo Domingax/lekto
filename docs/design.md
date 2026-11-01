@@ -221,13 +221,15 @@ Each screen below is one row of what it shows, and one note on what it must not 
 
 `Library` (serif) · `Import` (word) · `Search` · filter chips · rows · bottom navigation.
 
-A row is a **language vignette** (44 × 60), the title, a line of `FORMAT · 28 %`, and a **3 dp
-progress rule**. Rows are parted by **rhythm alone** — no rule between two books: the vignettes are
-the shelf's columns, and a divider saws through them. There are **no covers**: a `Book` carries a title, a language, a format and a
-file name, and only the EPUB format has a cover image at all — a shelf with covers for some books
-and none for others reads as broken. The vignette is where a cover would go if one ever exists.
-The file name is not on the row: it survives in import errors and the delete confirmation, where
-it identifies a file rather than a book.
+A row is a **plate** (44 × 60) — the book's **Cover** when it has one, its language vignette
+otherwise — the title, a line of `FORMAT · 28 %`, and a **3 dp progress rule**. Rows are parted by
+**rhythm alone** — no rule between two books: the plates are the shelf's columns, and a divider
+saws through them. **Covers are allowed.** An EPUB's cover image is extracted at import and kept
+as a **Derived asset** — device-local and never synced — so a surface that shows one paints it in
+the plate; a book without one is never a hole. **The typographic vignette stays the mandatory
+fallback**: a TXT never carries art, and an EPUB whose cover is undeclared, SVG or corrupt keeps
+its language plaque. The file name is not on the row: it survives in import errors and the delete
+confirmation, where it identifies a file rather than a book.
 
 A book is deleted **from its row**, and never from a red word that sits on every book. On a touch
 screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's wash and a trash

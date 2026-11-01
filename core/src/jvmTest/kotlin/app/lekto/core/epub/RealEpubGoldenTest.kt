@@ -32,4 +32,10 @@ class RealEpubGoldenTest :
 
             extracted shouldBe TestResources.text("/golden/pg1952.txt")
         }
+
+        test("the real EPUB 2 meta cover is extracted, not the guide page") {
+            val cover = EpubParser().parse(archive).cover
+
+            cover?.let { bytes -> ImageHeader.sizeOf(bytes) } shouldBe ImageSize(688, 1000)
+        }
     })
