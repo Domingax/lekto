@@ -54,13 +54,16 @@ data class ReaderImages(val layout: ImageLayout, val loader: BookImageLoader, va
 
 /**
  * The rectangle an image reserves: the column's width, its own ratio preserved,
- * and the page's height as a ceiling. An image taller than the page is scaled
- * down rather than cut — half a plate is unreadable (issue #263).
+ * and most of the page's height as a ceiling. An image taller than the page is
+ * scaled down rather than cut — half a plate is unreadable — and it stops short
+ * of the bottom edge so its caption can sit beneath it on the same page rather
+ * than alone on the next (issue #263).
  */
 fun ImageRef.placeholderIn(layout: ImageLayout): Placeholder {
     val width = layout.width.value.coerceAtLeast(0f)
     val natural = width / if (ratio > 0f) ratio else SQUARE
-    val capped = if (layout.height.value > 0f) natural.coerceAtMost(layout.height.value) else natural
+    val ceiling = layout.height.value * IMAGE_PAGE_SHARE
+    val capped = if (ceiling > 0f) natural.coerceAtMost(ceiling) else natural
     return Placeholder(
         width = width.sp,
         height = (if (capped > 0f) capped else width).sp,
@@ -105,6 +108,9 @@ fun ReaderText.imagesIn(page: ReaderPage): List<ImageRef> {
 
 /** The ratio a corrupt or missing header falls back to: square, never a division by zero. */
 private const val SQUARE = 1f
+
+/** The share of the page a picture may fill, leaving room for the lines that caption it. */
+private const val IMAGE_PAGE_SHARE = 0.85f
 
 /**
  * The page's pictures, ready to be placed in the text: one [InlineTextContent] per

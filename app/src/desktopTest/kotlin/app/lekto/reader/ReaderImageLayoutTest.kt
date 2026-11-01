@@ -33,11 +33,11 @@ class ReaderImageLayoutTest {
     }
 
     @Test
-    fun anImageTallerThanThePageIsScaledDownToFitIt() {
+    fun anImageTallerThanThePageStopsShortOfItsEdgeForItsCaption() {
         val placeholder = ImageRef("a.png", ratio = 0.25f).placeholderIn(layout)
 
         assertEquals(300f, placeholder.width.value)
-        assertEquals(400f, placeholder.height.value)
+        assertEquals(340f, placeholder.height.value)
     }
 
     @Test
