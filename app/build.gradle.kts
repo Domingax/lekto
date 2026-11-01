@@ -27,6 +27,36 @@ val androidEnabled: Boolean =
 // property, so they cannot drift. See gradle.properties.
 val appVersion: String = providers.gradleProperty("lekto.version").get()
 
+// `versionCode` has to rise with every published APK, and the semantic version is
+// the only version this project edits, so it is derived from it rather than kept
+// as a second number (issue #262): major*10000 + minor*100 + patch, so 1.1.0 is
+// 10100 and 1.1.1 is 10101. A preview is named by its git tag, not by
+// `lekto.version` — jpackage rejects a version suffix — so a preview and its
+// final share a versionCode, which Android still installs as an update because
+// the release key is the same.
+val appVersionCode: Int = run {
+    val fields = appVersion.split('.')
+    require(fields.size == 3 && fields.all { it.toIntOrNull() != null }) {
+        "lekto.version=$appVersion is not a major.minor.patch version, so it cannot derive a versionCode."
+    }
+    val (major, minor, patch) = fields.map { it.toInt() }
+    require(minor in 0..99 && patch in 0..99) {
+        "lekto.version=$appVersion does not fit the versionCode scheme: minor and patch must be 0..99."
+    }
+    major * 10_000 + minor * 100 + patch
+}
+
+// Android release signing (issue #262). The release lane decodes the keystore
+// into $RUNNER_TEMP and passes its path in `lekto.android.keystore`; the alias and
+// the two passwords arrive through the environment, so no secret reaches a command
+// line, a Gradle property or the repository. A build without the property stays
+// unsigned, which is what a fork and the fast lane rely on, and a build with the
+// property but without the rest fails rather than publishing an unsigned APK.
+val androidKeystorePath: String? = providers.gradleProperty("lekto.android.keystore").orNull
+val androidKeystorePassword: Provider<String> = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
+val androidKeyAlias: Provider<String> = providers.environmentVariable("ANDROID_KEY_ALIAS")
+val androidKeyPassword: Provider<String> = providers.environmentVariable("ANDROID_KEY_PASSWORD")
+
 if (androidEnabled) {
     apply(plugin = libs.plugins.androidApplication.get().pluginId)
 }
@@ -128,11 +158,53 @@ if (androidEnabled) {
             applicationId = "app.lekto"
             minSdk = libs.versions.android.minSdk.get().toInt()
             targetSdk = libs.versions.android.targetSdk.get().toInt()
-            versionCode = 1
+            versionCode = appVersionCode
             versionName = appVersion
             // Drives the instrumented tests the nightly lane runs on an emulator
             // (issue #71).
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+
+        // The release key is the project's, not a per-machine one: the same key
+        // must sign every release or an installed copy cannot be updated. It is
+        // only configured when the lane supplies it, so the fast lane and a fork
+        // still build an unsigned release APK with no secret present.
+        signingConfigs {
+            if (androidKeystorePath != null) {
+                val missing = listOf(
+                    "ANDROID_KEYSTORE_PASSWORD" to androidKeystorePassword,
+                    "ANDROID_KEY_ALIAS" to androidKeyAlias,
+                    "ANDROID_KEY_PASSWORD" to androidKeyPassword,
+                ).filterNot { (_, value) -> value.isPresent }.map { (name, _) -> name }
+                require(missing.isEmpty()) {
+                    "lekto.android.keystore is set but the signing environment is incomplete " +
+                        "(missing ${missing.joinToString()}): refusing to publish an unsigned " +
+                        "release APK (issue #262)."
+                }
+                val keystore = file(androidKeystorePath)
+                require(keystore.isFile) {
+                    "lekto.android.keystore=$androidKeystorePath is not a file: the release lane " +
+                        "decodes it into \$RUNNER_TEMP before it builds (issue #262)."
+                }
+                create("release") {
+                    storeFile = keystore
+                    storePassword = androidKeystorePassword.get()
+                    this.keyAlias = androidKeyAlias.get()
+                    this.keyPassword = androidKeyPassword.get()
+                }
+            }
+        }
+
+        buildTypes {
+            release {
+                // R8 stays off in this issue: turning it on changes the shipped
+                // APK and needs its own tests on a minified build (issue #262,
+                // follow-up #273). The measured cost is the whole reason to
+                // revisit it.
+                isMinifyEnabled = false
+                isShrinkResources = false
+                signingConfigs.findByName("release")?.let { signingConfig = it }
+            }
         }
 
         testOptions {

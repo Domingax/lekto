@@ -216,13 +216,13 @@ lanes; the emulator lane is nightly and never on the critical path (ticket #7).
 
 | Lane | Trigger | Command |
 | ---- | ------- | ------- |
-| `fast` | push, pull request | `./gradlew check -x :integrations:webdav:jvmTest` |
+| `fast` | push, pull request | `./gradlew check -x :integrations:webdav:jvmTest`, then `./gradlew :app:assembleRelease -Plekto.android=true` unsigned |
 | `licences` | push, pull request | `./gradlew checkDependencyLicences --no-configuration-cache` |
 | `sonar` | push, pull request | `./gradlew check koverXmlReport` then the SonarCloud scan |
 | `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
 | `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
 | `guide` | pull request; push to `main` when the guide changed | `npm ci`, `npm test`, `npm run check:licences` and `npm run build` in `guide/` |
-| `release` (`release.yml`) | version tag, manual | jpackage on Windows and both macOS architectures, `createDistributable` + `appimage.sh` on Linux, then `gh release create` |
+| `release` (`release.yml`) | version tag, manual | jpackage on Windows and both macOS architectures, `createDistributable` + `appimage.sh` on Linux, the signed Android APK on Linux, then `gh release create` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
 `fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
@@ -343,6 +343,48 @@ driver (#123). Android 8.0 and older are out of support (issue #125).
 
 The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+### The release APK
+
+```sh
+./gradlew :app:assembleRelease -Plekto.android=true   # the APK a release ships
+```
+
+The release lane publishes it as `Lekto-<version>-android.apk`, beside the five
+desktop files. Its `versionCode` is **derived from `lekto.version`** rather than
+kept as a second number: `major * 10000 + minor * 100 + patch`, so `1.0.0` is
+`10000`, `1.1.0` `10100` and `1.1.1` `10101`. It has to rise with every published
+APK, because that is what lets an installed copy be updated. A preview is named by
+its git tag, not by `lekto.version` — jpackage rejects a version suffix — so a
+preview and its final version share a `versionCode`, which Android still installs
+as an update because the same key signs both. `minor` and `patch` must stay below
+100 for the scheme to hold, and the build fails rather than emit a colliding code
+(issue #262).
+
+The APK is **signed with the project's release key**, never a per-machine one:
+the key must sign every release or an installed copy can never be updated again.
+The release lane decodes the key from `ANDROID_KEYSTORE_BASE64` into
+`$RUNNER_TEMP`, so it never enters the workspace, and passes its path in
+`lekto.android.keystore`; the alias and the two passwords arrive as
+`ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_PASSWORD`, so no
+secret reaches a command line or a Gradle property. `apksigner verify
+--print-certs` then checks the file that is actually published, and `aapt dump
+badging` checks it carries the version it claims.
+
+A build without those inputs stays **unsigned**, which is what a fork and the
+`fast` lane rely on; a build that is given the keystore but not the rest fails
+rather than publishing an unsigned APK. To sign locally:
+
+```sh
+ANDROID_KEYSTORE_PASSWORD=… ANDROID_KEY_ALIAS=lekto ANDROID_KEY_PASSWORD=… \
+  ./gradlew :app:assembleRelease -Plekto.android=true \
+  -Plekto.android.keystore=/path/to/lekto-release.jks
+```
+
+A signed build writes `app/build/outputs/apk/release/app-release.apk`; an unsigned
+one writes `app-release-unsigned.apk` beside it. R8 (shrinking, obfuscation) stays
+off in this build: it would remove a measured 8.4 MB, but it changes what ships and
+needs its own tests on a minified artefact (issue #273).
+
 ## Desktop
 
 ```sh
@@ -381,8 +423,9 @@ tools/packaging/appimage.sh app/build/compose/binaries/main/app/Lekto \
 
 The Android variant is switched off so the lane needs no Android SDK and is the
 same on every runner. The release lane (`.github/workflows/release.yml`) runs
-these on Linux, Windows, Apple Silicon macOS and Intel macOS, uploads five files,
-and attaches them to the release when the commit carries a `v*` tag. The release
+these on Linux, Windows, Apple Silicon macOS and Intel macOS, uploads five desktop
+files plus the signed Android APK ([Android](#android)), and attaches them to the
+release when the commit carries a `v*` tag. The release
 body is the changelog link: a GitHub compare between the previous `v*` tag and
 this one. A tag with a pre-release suffix (`v1.0.0-preview`) publishes a
 pre-release that never becomes the `/releases/latest` download, and a manual run
