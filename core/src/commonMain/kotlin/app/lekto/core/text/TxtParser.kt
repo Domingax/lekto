@@ -19,18 +19,20 @@ package app.lekto.core.text
  */
 class TxtParser : BookTextParser {
 
-    override fun parse(bytes: ByteArray): StructuredText {
+    override fun parse(bytes: ByteArray): ParsedBook {
         val raw = rawParagraphs(bytes)
         val paragraphs = raw.map { paragraph -> paragraph.collapsed() }
         val headings = TxtChapters.headings(paragraphs)
         val headingBlocks = headings.mapTo(mutableSetOf()) { heading -> heading.blockIndex }
-        return StructuredText(
-            title = TxtTitle.of(raw.firstOrNull()),
-            language = null,
-            blocks = paragraphs.mapIndexed { index, paragraph ->
-                blockOf(paragraph, isHeading = index in headingBlocks)
-            },
-            chapters = TxtChapters.chaptersOf(headings),
+        return ParsedBook(
+            StructuredText(
+                title = TxtTitle.of(raw.firstOrNull()),
+                language = null,
+                blocks = paragraphs.mapIndexed { index, paragraph ->
+                    blockOf(paragraph, isHeading = index in headingBlocks)
+                },
+                chapters = TxtChapters.chaptersOf(headings),
+            ),
         )
     }
 

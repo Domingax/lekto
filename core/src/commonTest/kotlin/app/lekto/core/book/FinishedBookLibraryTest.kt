@@ -4,6 +4,7 @@ import app.lekto.core.Seams
 import app.lekto.core.sync.TombstoneStore
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.BookTextParser
+import app.lekto.core.text.ParsedBook
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
@@ -39,7 +40,7 @@ class FinishedBookLibraryTest :
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Hello world")))),
         )
         val parsers = mapOf(
-            BookFormat.EPUB to BookTextParser { epubText },
+            BookFormat.EPUB to BookTextParser { ParsedBook(epubText) },
             BookFormat.TXT to TxtParser(),
         )
 

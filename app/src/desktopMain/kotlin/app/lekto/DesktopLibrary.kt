@@ -14,6 +14,8 @@ import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
+import app.lekto.reader.BookImageStore
+import app.lekto.reader.DerivedBookImages
 import java.io.File
 
 /**
@@ -52,6 +54,14 @@ fun desktopVocabulary(root: File = desktopVaultRoot()): Vocabulary = VaultVocabu
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )
+
+/**
+ * The desktop reader's pictures, decoded from the derived assets beside the vault
+ * (ADR-0005, ADR-0017). The store is the same directory [desktopBookLibrary]
+ * writes to, even though each builds its own view of it.
+ */
+fun desktopBookImages(root: File = desktopVaultRoot()): BookImageStore =
+    DerivedBookImages(DerivedAssetStore(JvmVaultFileSystem(File(root.parentFile, "derived"))))
 
 private fun desktopParsers(): Map<BookFormat, BookTextParser> = mapOf(
     BookFormat.EPUB to EpubParser(),

@@ -34,6 +34,12 @@ class DerivedAssetStore(private val files: VaultFileSystem) {
     /** Every derived path currently stored. */
     fun paths(): List<String> = files.listFiles()
 
+    /** Removes every derived asset whose path starts with [prefix], as deleting a book removes its images. */
+    fun removeUnder(prefix: String) {
+        VaultPaths.requireRelativePath(prefix.trimEnd('/'))
+        files.listFiles().filter { path -> path.startsWith(prefix) }.forEach(files::delete)
+    }
+
     /**
      * The app-private platform path of [path], for a derived asset opened in
      * place rather than read into memory (ADR-0017). The value is opaque to the

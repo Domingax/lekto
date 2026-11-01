@@ -3,6 +3,7 @@
 package app.lekto.reader
 
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -19,9 +20,17 @@ data class ReaderPage(val start: Int, val end: Int) {
 
 /**
  * Everything pagination needs to lay a chapter out: the [measurer], the [style]
- * to measure with, and the viewport's pixel [width] and [height].
+ * to measure with, the viewport's pixel [width] and [height], and the
+ * [placeholders] an image block occupies, so the rectangle is measured exactly
+ * where the page will draw it.
  */
-data class ReaderLayout(val measurer: TextMeasurer, val style: TextStyle, val width: Int, val height: Int)
+data class ReaderLayout(
+    val measurer: TextMeasurer,
+    val style: TextStyle,
+    val width: Int,
+    val height: Int,
+    val placeholders: List<AnnotatedString.Range<Placeholder>> = emptyList(),
+)
 
 /** The first window to measure when looking for one page's worth of text. */
 private const val FIRST_WINDOW = 1024
@@ -80,6 +89,7 @@ private fun nextPage(text: AnnotatedString, layout: ReaderLayout, start: Int): R
         val result = layout.measurer.measure(
             text = text.subSequence(start, end),
             style = layout.style,
+            placeholders = layout.placeholders.within(start, end),
             constraints = Constraints(maxWidth = layout.width, maxHeight = Int.MAX_VALUE),
         )
         if (end == text.length || result.size.height > layout.height) {
@@ -89,15 +99,49 @@ private fun nextPage(text: AnnotatedString, layout: ReaderLayout, start: Int): R
     }
 }
 
-/** The first line that would overflow [height], kept as a page range. */
-private fun cutPage(result: TextLayoutResult, start: Int, end: Int, height: Int): ReaderPage {
-    val pageTop = result.getLineTop(0)
-    for (line in 1 until result.lineCount) {
-        if (result.getLineBottom(line) - pageTop > height) {
-            val cut = result.getLineStart(line)
-            if (cut > 0) return ReaderPage(start, start + cut)
-            break
-        }
+/** The placeholders a window holds, rebased on the window's own start. */
+private fun List<AnnotatedString.Range<Placeholder>>.within(
+    start: Int,
+    end: Int,
+): List<AnnotatedString.Range<Placeholder>> = mapNotNull { range ->
+    if (range.end <= start || range.start >= end) {
+        null
+    } else {
+        AnnotatedString.Range(range.item, range.start - start, range.end - start)
     }
-    return ReaderPage(start, end)
+}
+
+/**
+ * The first line that would overflow [height], kept as a page range. A line is
+ * measured from the window's own origin, so a page that starts with a tall
+ * picture counts the picture's whole height.
+ *
+ * When the very first line is taller than the page — a plate that fills it — the
+ * page is that line alone. Returning the whole window instead would clip
+ * everything the line hides, and the text would be lost: the page after it starts
+ * where the window ended.
+ */
+private fun cutPage(result: TextLayoutResult, start: Int, end: Int, height: Int): ReaderPage {
+    if (result.size.height <= height) return ReaderPage(start, end)
+
+    val overflowing = (1 until result.lineCount).firstOrNull { line -> result.getLineBottom(line) > height }
+    val cut = overflowing
+        ?.let { line -> result.getLineStart(line) }
+        ?.takeIf { lineStart -> lineStart > 0 }
+        // The first line alone fills the page: it is the page, up to its last
+        // visible character. A trailing line break is left to the next page, or
+        // measuring the page would count an empty line it never draws.
+        ?: withoutBreaks(result.layoutInput.text, firstLineEnd(result, result.layoutInput.text.length))
+    return ReaderPage(start, start + cut)
+}
+
+/** Where the first line ends; the text's own end when it is the only line. */
+private fun firstLineEnd(result: TextLayoutResult, fallback: Int): Int =
+    if (result.lineCount > 1) result.getLineStart(1) else fallback
+
+/** How much of the window to keep: a trailing line break is left to the next page. */
+private fun withoutBreaks(window: AnnotatedString, end: Int): Int {
+    var cut = end
+    while (cut > 1 && window[cut - 1] == '\n') cut--
+    return cut
 }

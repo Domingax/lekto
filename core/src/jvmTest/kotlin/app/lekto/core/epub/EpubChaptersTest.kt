@@ -5,6 +5,7 @@ import app.lekto.core.text.Chapter
 import app.lekto.core.text.chapterAt
 import app.lekto.core.text.readingUnits
 import app.lekto.testkit.EpubFixtures
+import app.lekto.testkit.parseText
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -22,7 +23,7 @@ class EpubChaptersTest :
         val parser = EpubParser()
 
         test("a nav resolves fragment anchors to block starts, in one file") {
-            val book = parser.parse(EpubFixtures.nestedNav())
+            val book = parser.parseText(EpubFixtures.nestedNav())
 
             book.chapters shouldContainExactly listOf(
                 Chapter("First", startBlock = 2, children = listOf(Chapter("First A", startBlock = 4))),
@@ -31,13 +32,13 @@ class EpubChaptersTest :
         }
 
         test("the nav wins over an NCX that names the same entries differently") {
-            val book = parser.parse(EpubFixtures.nestedNav())
+            val book = parser.parseText(EpubFixtures.nestedNav())
 
             book.chapters.map { chapter -> chapter.title } shouldContainExactly listOf("First", "Second")
         }
 
         test("text before the first chapter has no chapter, and the last chapter runs to the end") {
-            val chapters = parser.parse(EpubFixtures.nestedNav()).chapters
+            val chapters = parser.parseText(EpubFixtures.nestedNav()).chapters
 
             chapters.chapterAt(0) shouldBe null
             chapters.chapterAt(1) shouldBe null
@@ -47,14 +48,14 @@ class EpubChaptersTest :
         }
 
         test("a part that carries text is a reading unit; a leaf is one too") {
-            val chapters = parser.parse(EpubFixtures.nestedNav()).chapters
+            val chapters = parser.parseText(EpubFixtures.nestedNav()).chapters
 
             chapters.readingUnits().map { chapter -> chapter.title } shouldContainExactly
                 listOf("First", "First A", "Second")
         }
 
         test("the NCX is read when there is no nav, ordered by the spine not by playOrder") {
-            val book = parser.parse(EpubFixtures.ncxOnly())
+            val book = parser.parseText(EpubFixtures.ncxOnly())
 
             book.chapters shouldContainExactly listOf(
                 Chapter("First Document", startBlock = 0),
@@ -63,7 +64,7 @@ class EpubChaptersTest :
         }
 
         test("a label falls back to the first heading, an unresolved fragment to the document start") {
-            val book = parser.parse(EpubFixtures.tocFallbacks())
+            val book = parser.parseText(EpubFixtures.tocFallbacks())
 
             book.chapters shouldContainExactly listOf(
                 Chapter("Missing anchor", startBlock = 0),
@@ -74,7 +75,7 @@ class EpubChaptersTest :
         }
 
         test("no usable table of contents makes one chapter per spine document") {
-            val book = parser.parse(EpubFixtures.spineOnly())
+            val book = parser.parseText(EpubFixtures.spineOnly())
 
             book.chapters shouldContainExactly listOf(
                 Chapter("untitled.xhtml", startBlock = 0),
@@ -83,7 +84,7 @@ class EpubChaptersTest :
         }
 
         test("a one-file book still exposes its blocks, headings and anchors") {
-            val book = parser.parse(EpubFixtures.nestedNav())
+            val book = parser.parseText(EpubFixtures.nestedNav())
 
             book.blocks.map { block -> block.kind } shouldContainExactly listOf(
                 BlockKind.HEADING,

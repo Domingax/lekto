@@ -3,6 +3,14 @@
 A **Reading session** opens a **Book** and presents the text Lekto renders for it,
 one page at a time.
 
+## Pictures
+
+A book's pictures are shown where the book places them, at the width of the text
+and on their own lines; a picture taller than a page is scaled down to fit, never
+cut. When Lekto cannot draw one — a format it does not read, or a file that is
+missing — it shows the book's own description of the picture instead, and the same
+description is what a screen reader announces.
+
 ## Moving through a book
 
 Turn pages with a horizontal swipe — leftward for the next page, rightward for the

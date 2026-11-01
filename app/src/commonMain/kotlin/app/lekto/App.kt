@@ -79,6 +79,8 @@ import app.lekto.navigation.AppShell
 import app.lekto.navigation.BackStack
 import app.lekto.navigation.Destination
 import app.lekto.navigation.PlatformBackHandler
+import app.lekto.reader.BookImageLoader
+import app.lekto.reader.BookImageStore
 import app.lekto.reader.MasteryController
 import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
@@ -174,6 +176,12 @@ data class AppEnvironment(
      * `null` when the platform wires none, so the reader renders the defaults.
      */
     val readingPreferences: ReadingPreferencesStore? = null,
+    /**
+     * The book's pictures, decoded from the derived assets the parser extracted
+     * (issue #263): device-local, never a **Vault** record, so they never sync.
+     * `null` when the platform wires none, and every picture shows its alt.
+     */
+    val bookImages: BookImageStore? = null,
     /**
      * The app-private **App theme** store (ADR-0036): the device-local paper the
      * whole app paints itself in — Light, Dark, Sepia, or System following the
@@ -1118,6 +1126,7 @@ private fun ReaderSession(
             } ?: lookup.phrase?.range,
             masteryRevision = masteryRevision,
             preferences = readingPreferences?.preferences ?: ReadingPreferences.DEFAULT,
+            images = environment.bookImages?.loaderFor(session.book.id) ?: BookImageLoader.None,
         ),
         actions = ReaderActions(
             onWordTap = lookup.onWordTap,

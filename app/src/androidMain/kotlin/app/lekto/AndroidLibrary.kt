@@ -16,6 +16,8 @@ import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.JvmVaultFileSystem
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
+import app.lekto.reader.BookImageStore
+import app.lekto.reader.DerivedBookImages
 import java.io.File
 
 /**
@@ -50,6 +52,14 @@ fun androidVocabulary(context: Context): Vocabulary = VaultVocabulary(
     seams = Seams.system(),
     deviceId = androidDeviceId(context),
 )
+
+/**
+ * The Android reader's pictures, decoded from the derived assets beside the vault
+ * (ADR-0005, ADR-0017). The store is the same app-private directory
+ * [androidBookLibrary] writes to, even though each builds its own view of it.
+ */
+fun androidBookImages(context: Context): BookImageStore =
+    DerivedBookImages(DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived"))))
 
 private fun androidDeviceId(context: Context): DeviceId = DeviceIdFile(File(context.filesDir, "device-id")).get()
 

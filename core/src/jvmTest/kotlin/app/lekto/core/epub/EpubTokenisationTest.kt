@@ -2,6 +2,7 @@ package app.lekto.core.epub
 
 import app.lekto.core.text.IcuTextSegmenter
 import app.lekto.testkit.EpubFixtures
+import app.lekto.testkit.parseText
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -15,7 +16,7 @@ class EpubTokenisationTest :
     FunSpec({
 
         test("a parsed paragraph segments into words with positions in the block") {
-            val book = EpubParser().parse(EpubFixtures.awkward())
+            val book = EpubParser().parseText(EpubFixtures.awkward())
             val english = book.blocks.first { it.text.startsWith("An awkward") }
 
             val words = IcuTextSegmenter().words(english.text, book.language)
@@ -25,7 +26,7 @@ class EpubTokenisationTest :
         }
 
         test("a parsed CJK paragraph segments by dictionary") {
-            val book = EpubParser().parse(EpubFixtures.awkward())
+            val book = EpubParser().parseText(EpubFixtures.awkward())
             val japanese = book.blocks.first { it.text.startsWith("日本語") }
 
             val words = IcuTextSegmenter().words(japanese.text, "ja").map { it.surface }

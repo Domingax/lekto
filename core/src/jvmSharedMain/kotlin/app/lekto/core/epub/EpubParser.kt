@@ -1,8 +1,10 @@
 package app.lekto.core.epub
 
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.BookAsset
 import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.Chapter
+import app.lekto.core.text.ParsedBook
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 
@@ -33,23 +35,33 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
 
     constructor() : this(OpfXmlReader())
 
-    override fun parse(bytes: ByteArray): StructuredText {
+    override fun parse(bytes: ByteArray): ParsedBook {
         val archive = EpubArchive.of(bytes)
         val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER), opfXml)
         val packageDocument = OpfDocument.parse(archive.read(opfPath), opfXml)
         val baseDirectory = opfPath.substringBeforeLast('/', missingDelimiterValue = "")
         val documents = packageDocument.spine.map { item ->
             val path = EpubArchive.resolve(baseDirectory, item.href)
-            SpineDocument(path = path, content = XhtmlBlocks.parse(archive.read(path)))
+            SpineDocument(
+                path = path,
+                content = XhtmlBlocks.parse(
+                    bytes = archive.read(path),
+                    base = path.substringBeforeLast('/', missingDelimiterValue = ""),
+                    readAsset = { asset -> runCatching { archive.read(asset) }.getOrNull() },
+                ),
+            )
         }
         val parts = BookParts(documents)
         val chapters = tableOfContents(archive, packageDocument, baseDirectory, parts)
             ?: parts.spineChapters()
-        return StructuredText(
-            title = packageDocument.title,
-            language = packageDocument.language,
-            blocks = parts.blocks,
-            chapters = chapters,
+        return ParsedBook(
+            text = StructuredText(
+                title = packageDocument.title,
+                language = packageDocument.language,
+                blocks = parts.blocks,
+                chapters = chapters,
+            ),
+            assets = parts.assets,
         )
     }
 
@@ -103,6 +115,17 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
         val starts: List<Int> =
             documents.runningFold(0) { start, document -> start + document.content.blocks.size }.dropLast(1)
         val blocks: List<TextBlock> = documents.flatMap { document -> document.content.blocks }
+
+        /**
+         * The images the spine references, one [BookAsset] per archive path. Two
+         * documents naming the same picture share one asset, because the derived
+         * asset name is the path's hash.
+         */
+        val assets: List<BookAsset> = documents
+            .flatMap { document ->
+                document.content.images.map { (path, bytes) -> BookAsset(imageAssetName(path), bytes) }
+            }
+            .distinctBy { asset -> asset.name }
 
         /** One chapter per spine document, titled by its first heading then its file name. */
         fun spineChapters(): List<Chapter> = documents.mapIndexed { index, document ->

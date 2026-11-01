@@ -7,9 +7,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import app.lekto.core.reading.ReadingPreferences
+import app.lekto.core.text.BlockKind
+import app.lekto.core.text.IMAGE_PLACEHOLDER
+import app.lekto.core.text.ImageRef
+import app.lekto.core.text.TextBlock
+import app.lekto.core.text.TextRun
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,6 +40,9 @@ class ReaderPaginationTest {
 
     private val defaultStyles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
+    /** A page with text alone must fill at least this share of the viewport. */
+    private val filledPage = 0.75f
+
     @Test
     fun aLongChapterSplitsIntoContiguousPages() = runComposeUiTest {
         lateinit var pages: List<ReaderPage>
@@ -53,6 +64,115 @@ class ReaderPaginationTest {
         assertEquals(passage.length, pages.last().end)
         pages.zipWithNext().forEach { (page, next) -> assertEquals(page.end, next.start, "pages must be contiguous") }
         pages.forEach { page -> assertTrue(page.length > 0, "a page must not be empty") }
+    }
+
+    @Test
+    fun aPageThatStartsWithAPictureFitsTheViewportAndLosesNothingAfterIt() = runComposeUiTest {
+        // A plate capped at the page's height used to overflow its line, so the
+        // paginator under-counted it: the page kept the text that followed, drew
+        // it outside the viewport, and the next page started past it. The text was
+        // lost (issue #263).
+        lateinit var pages: List<ReaderPage>
+        lateinit var text: AnnotatedString
+        var maxHeight = 0
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            maxHeight = height
+            val chapter = ReaderText(
+                title = "Pictures",
+                language = "en",
+                blocks = listOf(
+                    TextBlock(BlockKind.HEADING, listOf(TextRun("Kettlebells")), headingLevel = 2),
+                    TextBlock(
+                        kind = BlockKind.IMAGE,
+                        runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
+                        image = ImageRef("a.png", ratio = 0.6f),
+                    ),
+                    TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(passage))),
+                ),
+            )
+            val layout = ImageLayout(
+                width = with(density) { 240.dp.toSp() },
+                height = with(density) { 160.dp.toSp() },
+            )
+            text = buildChapterText(chapter, defaultStyles)
+            pages = paginateChapter(
+                text = text,
+                layout = ReaderLayout(measurer, defaultStyles.body, width, height, chapter.imagePlaceholders(layout)),
+            ).toList()
+        }
+        waitForIdle()
+
+        pages.zipWithNext().forEach { (page, next) -> assertEquals(page.end, next.start) }
+        assertEquals(0, pages.first().start)
+        assertEquals(text.length, pages.last().end)
+    }
+
+    @Suppress("LongMethod") // One harness: the chapter, its layout, the pagination and the check.
+    @Test
+    fun aPageThatStartsAfterAPictureIsNotShortenedByItsPlaceholder() = runComposeUiTest {
+        // The picture's rectangle is a placeholder at a fixed offset in the
+        // chapter. Measuring the next page from a later offset left it absolute,
+        // so it landed at a bogus place in the page and inflated a line: every
+        // page after the picture held a few lines and the rest was blank (issue
+        // #263).
+        lateinit var pages: List<ReaderPage>
+        lateinit var text: AnnotatedString
+        lateinit var placeholders: List<AnnotatedString.Range<Placeholder>>
+        var measurerRef: TextMeasurer? = null
+        var widthRef = 0
+        var heightRef = 0
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            measurerRef = measurer
+            widthRef = width
+            heightRef = height
+            val chapter = ReaderText(
+                title = "Pictures",
+                language = "en",
+                blocks = listOf(
+                    TextBlock(
+                        kind = BlockKind.IMAGE,
+                        runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
+                        image = ImageRef("a.png", ratio = 0.6f),
+                    ),
+                    TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(passage))),
+                ),
+            )
+            val layout = ImageLayout(
+                width = with(density) { 240.dp.toSp() },
+                height = with(density) { 160.dp.toSp() },
+            )
+            text = buildChapterText(chapter, defaultStyles, layout)
+            placeholders = chapter.imagePlaceholders(layout)
+            pages = paginateChapter(
+                text = text,
+                layout = ReaderLayout(measurer, defaultStyles.body, width, height, placeholders),
+            ).toList()
+        }
+        waitForIdle()
+
+        val measurer = checkNotNull(measurerRef)
+        // The last page is the passage's tail: it may be short by nature.
+        val afterPicture = pages.drop(1).dropLast(1)
+        assertTrue(afterPicture.size > 3, "the passage should span several pages")
+        afterPicture.forEach { page ->
+            val result = measurer.measure(
+                text.subSequence(page.start, page.end),
+                defaultStyles.body,
+                constraints = Constraints(maxWidth = widthRef, maxHeight = Int.MAX_VALUE),
+            )
+            assertTrue(
+                result.size.height >= heightRef * filledPage,
+                "page ${page.start}..${page.end} is only ${result.size.height} of $heightRef",
+            )
+        }
     }
 
     @Test

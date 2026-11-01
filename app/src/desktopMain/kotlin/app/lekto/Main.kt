@@ -82,6 +82,7 @@ fun main() {
                     languageSettings = languageSettings,
                     systemLanguage = systemLanguage,
                     readingPreferences = readingPreferences,
+                    bookImages = desktopBookImages(),
                     appTheme = appTheme,
                     pickFile = {
                         withContext(dialogDispatcher()) {

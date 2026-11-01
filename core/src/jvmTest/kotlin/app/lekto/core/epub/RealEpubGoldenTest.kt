@@ -1,6 +1,7 @@
 package app.lekto.core.epub
 
 import app.lekto.testkit.TestResources
+import app.lekto.testkit.parseText
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -19,15 +20,15 @@ class RealEpubGoldenTest :
         val archive = TestResources.bytes("/epub/pg1952.epub")
 
         test("a real book parses with its metadata and reading order") {
-            val book = EpubParser().parse(archive)
+            val book = EpubParser().parseText(archive)
 
             book.title shouldBe "The Yellow Wallpaper"
             book.language shouldBe "en"
-            book.blocks.size shouldBe 287
+            book.blocks.size shouldBe 288
         }
 
         test("the real book extracts to the pinned text") {
-            val extracted = EpubParser().parse(archive).plainText()
+            val extracted = EpubParser().parseText(archive).plainText()
 
             extracted shouldBe TestResources.text("/golden/pg1952.txt")
         }

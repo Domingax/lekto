@@ -72,9 +72,10 @@ internal class BookTextCache(private val derived: DerivedAssetStore) {
         /**
          * The shape of [CachedText] this build writes and accepts; anything else
          * is a miss. Version 2 is ADR-0041's (a TXT carries the chapter list
-         * inferred from its text); version 3 is the reader keeping hard line
-         * breaks and list markers. A text cached by an older version is re-parsed.
+         * inferred from its text); version 3 kept hard line breaks and list
+         * markers; version 4 added the image blocks. A text cached by an older
+         * version is re-parsed.
          */
-        const val FORMAT_VERSION = 3
+        const val FORMAT_VERSION = 4
     }
 }

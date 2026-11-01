@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // A PNG header is a table of byte offsets; the fixture builds one by hand.
+
 package app.lekto.testkit
 
 import java.io.ByteArrayOutputStream
@@ -17,6 +19,7 @@ import java.util.zip.ZipOutputStream
  * and non-content manifest items. It lives in `testkit` rather than a test source
  * set so the parser's tests share one fixture (docs/testing.md).
  */
+@Suppress("LargeClass", "TooManyFunctions") // One fixture per shape the parser must handle.
 object EpubFixtures {
 
     /** A deliberately awkward but valid EPUB, used for the extraction golden. */
@@ -82,6 +85,21 @@ object EpubFixtures {
     )
 
     /**
+     * A book whose text is interleaved with pictures: a figure of its own, an
+     * image inside a paragraph, and three that must fall back to their `alt` —
+     * a remote source, an entry the archive does not carry, and a file that is
+     * not an image at all (issue #263).
+     */
+    fun figures(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to FIGURES_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to FIGURES_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/images/figure.png" to png(40, 20),
+        ),
+    )
+
+    /**
      * The same archive with a `container.xml` that names no rootfile, so the
      * parser has nothing to open and must fail with a clear message.
      */
@@ -107,12 +125,15 @@ object EpubFixtures {
      * Assembles a ZIP with a stored `mimetype` first — the one structural rule
      * every EPUB must satisfy — and the remaining entries deflated.
      */
-    fun archive(vararg entries: Pair<String, String>): ByteArray {
-        val all = listOf("mimetype" to "application/epub+zip") + entries
+    fun archive(vararg entries: Pair<String, String>): ByteArray =
+        archiveBytes(entries.map { (name, text) -> name to text.toByteArray(UTF_8) })
+
+    /** The same archive, for an entry that is binary — an image, or a file pretending to be one. */
+    private fun archiveBytes(entries: List<Pair<String, ByteArray>>): ByteArray {
+        val all = listOf("mimetype" to "application/epub+zip".toByteArray(UTF_8)) + entries
         val bytes = ByteArrayOutputStream()
         ZipOutputStream(bytes).use { zip ->
-            all.forEachIndexed { index, (name, content) ->
-                val payload = content.toByteArray(UTF_8)
+            all.forEachIndexed { index, (name, payload) ->
                 val entry = ZipEntry(name)
                 if (index == 0) entry.stored(payload)
                 zip.putNextEntry(entry)
@@ -122,6 +143,17 @@ object EpubFixtures {
         }
         return bytes.toByteArray()
     }
+
+    /** A PNG header declaring [width]×[height]: enough for the reader, which reads sizes, not pixels. */
+    private fun png(width: Int, height: Int): ByteArray = byteArrayOf(
+        0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0, 0, 0, 13,
+        'I'.code.toByte(), 'H'.code.toByte(), 'D'.code.toByte(), 'R'.code.toByte(),
+        (width ushr 24).toByte(), (width ushr 16).toByte(), (width ushr 8).toByte(), width.toByte(),
+        (height ushr 24).toByte(), (height ushr 16).toByte(), (height ushr 8).toByte(), height.toByte(),
+        8, 2, 0, 0, 0,
+        0, 0, 0, 0,
+    )
 
     private fun ZipEntry.stored(payload: ByteArray) {
         method = ZipEntry.STORED
@@ -181,6 +213,44 @@ object EpubFixtures {
             <dc:language>en</dc:language>
           </metadata>
         </package>
+    """.trimIndent()
+
+    private val FIGURES_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000012</dc:identifier>
+            <dc:title>Pictures</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+            <item id="fig" href="images/figure.png" media-type="image/png"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    /**
+     * A figure of its own, an image inside a paragraph, and three pictures the
+     * reader cannot show — remote, missing, and not an image — each with an
+     * `alt` it must fall back to.
+     */
+    private val FIGURES_CHAPTER = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Pictures</title><meta charset="utf-8"/></head>
+        <body>
+          <h1>Pictures</h1>
+          <div class="fig"><img src="../images/figure.png" alt="A bar chart"/></div>
+          <p>Before <img src="../images/figure.png" alt="inline"/> after.</p>
+          <p><img src="https://example.com/remote.png" alt="Remote picture"/></p>
+          <p><img src="../images/missing.png" alt="Missing picture"/></p>
+          <p><img src="chapter.xhtml" alt="Not a picture"/></p>
+        </body>
+        </html>
     """.trimIndent()
 
     private val MINIMAL_OPF = """

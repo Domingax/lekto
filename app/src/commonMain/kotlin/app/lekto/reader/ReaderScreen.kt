@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.reading.ReadingPreferences
+import app.lekto.core.text.ImageRef
 import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
@@ -149,9 +151,6 @@ fun ReaderScreen(
     val styles = remember(document.preferences, theme) {
         ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink)
     }
-    val chapterText = remember(document.text, styles) {
-        buildChapterText(document.text, styles)
-    }
     val entries = remember(document.text) { document.text.chapterEntries() }
     val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -162,9 +161,32 @@ fun ReaderScreen(
         val state = remember(document.text) {
             ReaderState(actions.onPositionChange, document.initialOffset, initiallyFinished)
         }
-        val pages = rememberReaderPages(chapterText, styles, chapterStarts, state.anchor, pageWidth)
+        // An image reserves its rectangle from the viewport, so the placeholder the
+        // paginator measures and the one the page draws are one computation.
+        val pageHeight = maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT
+        val images = rememberReaderImages(document, pageWidth, pageHeight, styles)
+        // The chapter text carries the pictures' placeholders and their line
+        // heights, so it is rebuilt when the picture geometry changes.
+        val chapterText = remember(document.text, styles, images.layout) {
+            buildChapterText(document.text, styles, images.layout)
+        }
+        val placeholders = remember(document.text, images.layout) {
+            document.text.imagePlaceholders(images.layout)
+        }
+        val pages = rememberReaderPages(chapterText, styles, chapterStarts, state.anchor, pageWidth, placeholders)
         state.bind(pages, chapterText.length, document.initialOffset)
-        ReaderContent(document, chapterText, entries, styles, state, actions, overlayHeightPx, contextColumn, context)
+        ReaderContent(
+            document,
+            chapterText,
+            entries,
+            styles,
+            state,
+            actions,
+            overlayHeightPx,
+            contextColumn,
+            context,
+            images,
+        )
     }
 }
 
@@ -182,7 +204,7 @@ fun ReaderScreen(
  * than an overlay ([ReaderContextColumn]): the lookup is beside the text, not over
  * it, so the page needs no scrim for it and never moves (issue #199).
  */
-@Suppress("LongParameterList") // The reader's pieces, threaded from the one composition that builds them.
+@Suppress("LongMethod", "LongParameterList") // The two shapes and the end state; splitting scatters the wiring.
 @Composable
 private fun ReaderContent(
     document: ReaderDocument,
@@ -194,6 +216,7 @@ private fun ReaderContent(
     overlayHeightPx: Int,
     contextColumn: Boolean,
     context: ReaderContext,
+    images: ReaderImages,
 ) {
     val current = state.page?.let { page -> entries.entryAt(page.start) }
     // A book with one chapter has no list (ADR-0037), so the column's empty state
@@ -223,7 +246,17 @@ private fun ReaderContent(
                 onShowUnfinished = state::showUnfinished,
             )
 
-            contextColumn -> WideReader(document, chapterText, chapters, current, styles, state, actions, context)
+            contextColumn -> WideReader(
+                document,
+                chapterText,
+                chapters,
+                current,
+                styles,
+                state,
+                actions,
+                context,
+                images,
+            )
 
             else -> PhoneReader(
                 document,
@@ -235,6 +268,7 @@ private fun ReaderContent(
                 actions,
                 overlayHeightPx,
                 context,
+                images,
             )
         }
     }
@@ -288,6 +322,7 @@ private fun WideReader(
     state: ReaderState,
     actions: ReaderActions,
     context: ReaderContext,
+    images: ReaderImages,
 ) {
     LaunchedEffect(Unit) { state.dismissChapters() }
     Row(Modifier.fillMaxSize()) {
@@ -302,6 +337,7 @@ private fun WideReader(
                 actions = actions,
                 overlayHeightPx = 0,
                 contextColumn = true,
+                images = images,
             )
         }
         ReaderContextColumn(
@@ -330,6 +366,7 @@ private fun PhoneReader(
     actions: ReaderActions,
     overlayHeightPx: Int,
     context: ReaderContext,
+    images: ReaderImages,
 ) {
     Box(Modifier.fillMaxSize()) {
         ReaderBands(
@@ -342,6 +379,7 @@ private fun PhoneReader(
             actions = actions,
             overlayHeightPx = overlayHeightPx,
             contextColumn = false,
+            images = images,
         )
         if (state.chaptersVisible) {
             ChapterSheetOverlay(
@@ -368,6 +406,7 @@ private fun ReaderBands(
     actions: ReaderActions,
     overlayHeightPx: Int,
     contextColumn: Boolean,
+    images: ReaderImages,
 ) {
     Column(Modifier.fillMaxSize()) {
         ReaderTitle(document.text.title, actions.onBack, state::togglePreferences)
@@ -380,6 +419,7 @@ private fun ReaderBands(
             overlayHeightPx,
             actions.onWordTap,
             actions.onPhraseSelected,
+            images,
         )
         if (state.page != null) {
             ReaderPageBar(
@@ -642,6 +682,7 @@ private fun ColumnScope.ReaderPage(
     overlayHeightPx: Int,
     onWordTap: (WordTap) -> Unit,
     onPhraseSelected: (PhraseSelection) -> Unit,
+    images: ReaderImages,
 ) {
     // The range the current long-press drag covers, so the chosen words wash as
     // they are picked; the open panel's range is the fallback once it ends. The
@@ -706,6 +747,10 @@ private fun ColumnScope.ReaderPage(
         PageText(
             tokens = tokens,
             styles = styles,
+            images = images,
+            imageRefs = remember(document.text, state.page, images.layout) {
+                state.page?.let { page -> document.text.imagesIn(page) }.orEmpty()
+            },
             horizontalMargin = styles.horizontalMargin,
             liftPx = liftPx,
             onPrevious = state::previous,
@@ -752,6 +797,8 @@ internal fun pageLift(
 private fun PageText(
     tokens: ReaderTokens?,
     styles: ReaderStyles,
+    images: ReaderImages,
+    imageRefs: List<ImageRef>,
     horizontalMargin: Dp,
     liftPx: Float,
     onPrevious: () -> Unit,
@@ -759,6 +806,7 @@ private fun PageText(
     onLayout: (TextLayoutResult) -> Unit,
 ) {
     val texts = LocalAppTexts.current
+    val inlineContent = rememberInlineImages(imageRefs, images, styles)
     Box(
         Modifier
             .fillMaxSize()
@@ -770,6 +818,7 @@ private fun PageText(
                 Text(
                     text = tokens.text,
                     style = styles.body,
+                    inlineContent = inlineContent,
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(READER_PAGE_TEXT_TAG)
@@ -837,6 +886,37 @@ private fun readerSurfaceTap(page: PageTap, enabled: Boolean, liftPx: Float): (O
 }
 
 /**
+ * What the reader needs to draw a picture: the rectangle a placeholder may take
+ * from this viewport, the loader the platform wired, and the image blocks the
+ * book names. A placeholder is sized in sp, as Compose measures inline content,
+ * so the width in dp is converted with the density the page renders at.
+ */
+@Composable
+private fun rememberReaderImages(
+    document: ReaderDocument,
+    pageWidth: Dp,
+    pageHeight: Dp,
+    styles: ReaderStyles,
+): ReaderImages {
+    val density = LocalDensity.current
+    val layout = remember(pageWidth, pageHeight, styles, density) {
+        with(density) {
+            ImageLayout(
+                width = (pageWidth - styles.horizontalMargin * 2).coerceAtLeast(0.dp).toSp(),
+                height = pageHeight.coerceAtLeast(0.dp).toSp(),
+            )
+        }
+    }
+    return remember(document.text, document.images, layout) {
+        ReaderImages(
+            layout = layout,
+            loader = document.images,
+            refs = document.text.blocks.mapNotNull { block -> block.image }.associateBy { image -> image.name },
+        )
+    }
+}
+
+/**
  * The page window around [anchor]: a list filled by a coroutine in this
  * composable's scope, starting at the anchor's chapter and stopping a few pages
  * past it, so a jump or an open costs one chapter rather than the book
@@ -854,6 +934,7 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
     chapterStarts: Set<Int>,
     anchor: Int,
     pageWidth: Dp,
+    placeholders: List<AnnotatedString.Range<Placeholder>>,
 ): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -865,8 +946,8 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
     // already measured, while crossing a boundary starts the next one's window
     // (ADR-0037, ADR-0040).
     val windowStart = remember(anchor, chapterStarts) { chapterStartAt(anchor, chapterStarts) }
-    val layout = remember(measurer, styles, contentWidth, contentHeight) {
-        ReaderLayout(measurer, styles.body, contentWidth, contentHeight)
+    val layout = remember(measurer, styles, contentWidth, contentHeight, placeholders) {
+        ReaderLayout(measurer, styles.body, contentWidth, contentHeight, placeholders)
     }
     // A new layout is a new pagination: the font, the margin and the viewport all
     // change where a page breaks, so the window starts over with the new one.
