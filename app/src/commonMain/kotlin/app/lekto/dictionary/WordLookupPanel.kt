@@ -1,17 +1,23 @@
 package app.lekto.dictionary
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -22,28 +28,43 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
-import app.lekto.reader.MasteryChip
-import app.lekto.text.AppMessage
+import app.lekto.reader.MasterySelector
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
-import app.lekto.ui.swallowTaps
+import app.lekto.theme.LektoSpacing
+import app.lekto.ui.LookupCloseButton
+import app.lekto.ui.LookupHeader
+import app.lekto.ui.LookupSheet
+import app.lekto.ui.SheetDivider
+import app.lekto.ui.handCursor
+import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.icons.Volume2
 
-/** The test tag on a source's shortcut, so a UI test can click exactly one. */
+/** The test tag on a source's reference, so a UI test can click exactly one. */
 internal fun sourceShortcutTag(source: DictionarySource): String = "lookup-source-${source.name}"
 
 /** The test tag on the pronunciation button, so a UI test can click it unambiguously. */
 internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
 
-/** The test tag on the Save button. */
-internal const val SAVE_TAG: String = "lookup-save"
+/** The test tag on the sheet's close action. */
+internal const val LOOKUP_CLOSE_TAG: String = "lookup-close"
+
+/** The test tag on the current level's name and label, so a layout test can compare it with the chips. */
+internal const val LOOKUP_LEVEL_TAG: String = "lookup-level"
+
+/** The test tag on the sheet itself, so a layout test can read how much of the screen it takes. */
+internal const val LOOKUP_PANEL_TAG: String = "lookup-panel"
 
 /** The test tag on a mastery level's button, so a UI test can click exactly one. */
 internal fun masteryTag(level: MasteryLevel): String = "lookup-mastery-${level.name}"
 
+/** The breathing room around the dot between two references. */
+private val ReferenceGap = 4.dp
+
 /**
- * The lookup panel's pronunciation control (issue #21): the action the Listen
- * button runs and the last honest [result], so a language with no voice renders
- * its message instead of staying silent.
+ * The lookup panel's pronunciation control (issue #21): the action the speaker
+ * runs and the last honest [result], so a language with no voice renders its
+ * message instead of staying silent.
  */
 data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = null)
 
@@ -51,7 +72,8 @@ data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = nu
  * The lookup panel's vocabulary controls (issue #22): the saved [entry] for the
  * tapped word (`null` until it is saved) and the [onSave] that saves it or moves
  * it to another level. [defaultLevel] is the level a fresh save starts at, so
- * one tap on Save visibly promotes an unknown word.
+ * the footer names a level before the word is saved; one tap on a level chip
+ * saves at that level (issue #210).
  */
 data class VocabularyPanel(
     val entry: VocabularyEntry?,
@@ -70,23 +92,28 @@ data class VocabularyPanel(
 data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, val onDismiss: () -> Unit)
 
 /**
- * The word lookup panel (issue #19): the signature interaction. It opens on the
- * word the reader tapped with the offline result already in it, and always
- * offers the reference-site shortcuts beside that result — so with no pack and
- * no network it still degrades to the shortcuts and an honest message rather
- * than an empty panel. The reader stays in place behind it, so closing returns
- * to the exact reading position (docs/design.md, §7.3).
+ * The word lookup panel (issue #19; docs/design.md §7.3): the signature
+ * interaction, raised from the bottom over the reader as a **sheet** since issue
+ * #210. It opens on the word the reader tapped with the offline result already in
+ * it, and always offers the external references beside that result — so with no
+ * pack and no network it still degrades to the references and an honest message
+ * rather than an empty panel. On desktop it is the reader's context column instead
+ * (issue #199), which is what [inColumn] asks of the shared [LookupSheet].
  *
- * Since issue #21 it also carries the pronunciation control, and since issue #22
- * the [vocabulary] controls: one tap on Save stores the word with its
- * translation, context sentence and level, and the selector moves a saved word
- * between levels — the reader's colour updating is the only confirmation.
+ * The sheet covers at most [app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION] of the
+ * screen, so the page stays visible and the touched word stays washed above it.
+ * Its header is the word in the serif with its part of speech and pronunciation,
+ * the speaker and the close as icons; its body lists the senses, each with its
+ * translation; its
+ * footer names the level and carries the five chips. **There is no Save button**:
+ * a level *is* the save, one tap for one intention, and the reader's colour
+ * updating is the only confirmation.
  *
- * The panel swallows taps that land on it, so only a tap truly outside it — which
+ * The sheet swallows taps that land on it, so only a tap truly outside it — which
  * its [app.lekto.ui.DismissScrim] handles — dismisses it; a tap on the reader
  * behind it then never turns the page or opens another lookup.
  */
-@Suppress("LongParameterList") // The panel's inputs are its result, word, shortcuts, actions and the two controls.
+@Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
 @Composable
 fun WordLookupPanel(
     result: WordLookup,
@@ -96,131 +123,166 @@ fun WordLookupPanel(
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
     modifier: Modifier = Modifier,
+    inColumn: Boolean = false,
 ) {
-    OutlinedCard(modifier.fillMaxWidth().padding(8.dp).swallowTaps()) {
-        val texts = LocalAppTexts.current
-        Column(
-            Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Header(term, pronunciation.onSpeak, vocabulary, actions.onDismiss)
-            SpeechMessage(pronunciation.result)
-            when (result) {
-                is WordLookup.Found -> Found(result, term)
-
-                is WordLookup.NotInDictionary -> Text(
-                    texts.message(AppMessage.of(TextKey.NOT_IN_DICTIONARY, result.query)),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-
-                is WordLookup.Unavailable -> Text(
-                    texts.coreMessage(result.message),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-            Shortcuts(shortcuts, actions.onOpenShortcut)
-            MasterySelector(vocabulary)
-        }
-    }
-}
-
-@Composable
-private fun Header(term: String, onSpeak: () -> Unit, vocabulary: VocabularyPanel, onDismiss: () -> Unit) {
-    val texts = LocalAppTexts.current
-    Column(Modifier.fillMaxWidth()) {
-        Text(term, style = MaterialTheme.typography.titleLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onSpeak, modifier = Modifier.testTag(PRONOUNCE_TAG)) {
-                Text(texts[TextKey.LISTEN])
-            }
-            TextButton(
-                onClick = { vocabulary.onSave(vocabulary.level) },
-                modifier = Modifier.testTag(SAVE_TAG),
-            ) {
-                Text(texts[if (vocabulary.entry == null) TextKey.SAVE else TextKey.SAVED])
-            }
-            TextButton(onClick = onDismiss) { Text(texts[TextKey.CLOSE]) }
-        }
+    LookupSheet(
+        modifier = modifier,
+        sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
+        inColumn = inColumn,
+    ) {
+        SheetContent(term, result, pronunciation, actions.onDismiss)
+        Footer(shortcuts, actions.onOpenShortcut, vocabulary, inColumn)
     }
 }
 
 /**
- * The five-point selector (issue #22): tapping a level saves the word there, or
- * moves an already-saved word, so mastery can be changed after saving. Each chip
- * carries its level's colour — the current one filled, the others ringed — so the
- * reader's text colours can be read straight off the selector (issue #22
- * feedback). The chips are compact, a number and a check for known, so all five
- * fit one row (docs/design.md, §7.3).
+ * The header and the answer, in one scroll: on a phone the sheet fits them under
+ * the cap, and on a short screen — a landscape phone — the header scrolls with
+ * the senses rather than pushing the pinned footer past the edge. The footer
+ * stays, so the level and the references are always reachable.
  */
 @Composable
-private fun MasterySelector(vocabulary: VocabularyPanel) {
-    Text(LocalAppTexts.current[TextKey.MASTERY], style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        MasteryLevel.entries.forEach { level ->
-            MasteryChip(
-                level = level,
-                label = level.shortLabel(),
-                selected = level == vocabulary.level,
-                onClick = { vocabulary.onSave(level) },
-                modifier = Modifier.testTag(masteryTag(level)),
-            )
-        }
+private fun ColumnScope.SheetContent(
+    term: String,
+    result: WordLookup,
+    pronunciation: Pronunciation,
+    onDismiss: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+        SheetHeader(term, result, pronunciation, onDismiss)
+        SheetDivider()
+        SpeechMessage(pronunciation.result)
+        Answer(result)
     }
 }
 
-/** A selector chip's compact label: its number, and a check for the known level. */
-private fun MasteryLevel.shortLabel(): String = when (this) {
-    MasteryLevel.UNKNOWN -> "0"
-    MasteryLevel.RECOGNIZED -> "1"
-    MasteryLevel.FAMILIAR -> "2"
-    MasteryLevel.LEARNED -> "3"
-    MasteryLevel.KNOWN -> "4"
-}
-
-/** The honest outcome of the last pronunciation attempt: a failure is a message, success is silent. */
+/**
+ * The word in the serif, its part of speech and pronunciation under it, and the
+ * speaker and close as icons (docs/design.md §3, §7.3). The lemma stands on its
+ * own muted line when the tapped surface is an inflection, so a reader can tell
+ * why the definition does not match the word they touched.
+ */
 @Composable
-private fun SpeechMessage(speech: SpeechResult?) {
+private fun SheetHeader(term: String, result: WordLookup, pronunciation: Pronunciation, onDismiss: () -> Unit) {
     val texts = LocalAppTexts.current
-    val message = when (speech) {
-        null, is SpeechResult.Spoken -> null
-
-        is SpeechResult.NoVoice -> speech.language?.let { language ->
-            texts.message(AppMessage.of(TextKey.NO_VOICE_FOR_LANGUAGE, language))
-        } ?: texts[TextKey.NO_VOICE_FOR_UNKNOWN_LANGUAGE]
-
-        is SpeechResult.Unavailable -> texts.coreMessage(speech.message)
-    }
-    message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-}
-
-@Composable
-private fun Found(found: WordLookup.Found, term: String) {
-    if (found.lemma != term) Text(found.lemma, style = MaterialTheme.typography.titleMedium)
-    found.entries.forEach { entry -> Entry(entry) }
-}
-
-@Composable
-private fun Entry(entry: DictionaryEntry) {
-    entry.partOfSpeech?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
-    entry.pronunciation?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-    entry.senses.forEachIndexed { index, sense ->
-        Text("${index + 1}. ${sense.definition}", style = MaterialTheme.typography.bodyMedium)
-        sense.translations.forEach { translation ->
-            Text("   → $translation", style = MaterialTheme.typography.bodyMedium)
+    val found = result as? WordLookup.Found
+    LookupHeader {
+        Column(Modifier.weight(1f).padding(bottom = LektoSpacing.BetweenRelatedLines)) {
+            Text(term, style = MaterialTheme.typography.headlineMedium)
+            Lemma(term, found?.lemma)
+            Meta(found?.entries.orEmpty())
         }
+        IconButton(onClick = pronunciation.onSpeak, modifier = Modifier.handCursor().testTag(PRONOUNCE_TAG)) {
+            Icon(imageVector = LektoIcons.Volume2, contentDescription = texts[TextKey.LISTEN])
+        }
+        LookupCloseButton(onDismiss = onDismiss, tag = LOOKUP_CLOSE_TAG)
     }
 }
 
+/** The dictionary form the tapped surface resolved to, when it differs from what the reader touched. */
 @Composable
-private fun Shortcuts(shortcuts: List<DictionaryShortcut>, onOpenShortcut: (DictionaryShortcut) -> Unit) {
+private fun Lemma(term: String, lemma: String?) {
+    if (lemma == null || lemma == term) return
+    Text(lemma, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/**
+ * Every part of speech the pack gives the word, then its pronunciation, under
+ * the word. A word with several readings names them all rather than claiming the
+ * first, and the body repeats the one each group of senses belongs to.
+ */
+@Composable
+private fun Meta(entries: List<DictionaryEntry>) {
+    val parts = entries.mapNotNull(DictionaryEntry::partOfSpeech).distinct() +
+        listOfNotNull(entries.firstNotNullOfOrNull(DictionaryEntry::pronunciation))
+    if (parts.isEmpty()) return
+    Text(
+        text = parts.joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * The pinned footer: the level that saves, then the external references as one
+ * muted line (docs/design.md §7.3). The level's **name** stands beside the chips,
+ * so the numbers never need a legend, and one tap on a chip stores the word at
+ * that level. In the fixed footer the two stay reachable however long the senses
+ * run.
+ *
+ * In the context column there is no room for the name beside five chips (issue
+ * #199), so it stands above them: the same two blocks, stacked, rather than a
+ * name broken mid-word.
+ */
+@Composable
+private fun Footer(
+    shortcuts: List<DictionaryShortcut>,
+    onOpenShortcut: (DictionaryShortcut) -> Unit,
+    vocabulary: VocabularyPanel,
+    inColumn: Boolean,
+) {
+    SheetDivider()
+    MasterySelector(
+        level = vocabulary.level,
+        onSelect = vocabulary.onSave,
+        chipTag = ::masteryTag,
+        levelTag = LOOKUP_LEVEL_TAG,
+        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
+        stacked = inColumn,
+    )
+    References(shortcuts, onOpenShortcut)
+}
+
+/**
+ * The external references as a single muted line, not four buttons (issue #210):
+ * each name is still its own control, so a screen reader and a mouse reach each
+ * one, but the row reads as the sentence `WordReference · Reverso · …` the design
+ * draws. The line wraps rather than clipping when the names outgrow the sheet.
+ */
+@OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps a reference line too wide to share one row.
+@Composable
+private fun References(shortcuts: List<DictionaryShortcut>, onOpenShortcut: (DictionaryShortcut) -> Unit) {
     if (shortcuts.isEmpty()) return
-    Text(LocalAppTexts.current[TextKey.LOOK_IT_UP_ONLINE], style = MaterialTheme.typography.labelLarge)
-    shortcuts.forEach { shortcut ->
-        TextButton(
-            onClick = { onOpenShortcut(shortcut) },
-            modifier = Modifier.testTag(sourceShortcutTag(shortcut.source)),
-        ) {
-            Text(shortcut.source.label)
+    SheetDivider()
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        shortcuts.forEachIndexed { index, shortcut ->
+            if (index > 0) ReferenceSeparator()
+            Reference(shortcut, onOpenShortcut)
         }
+    }
+}
+
+/** One reference: a muted name that opens its canonical page, with the full 48 dp touch target. */
+@Composable
+private fun Reference(shortcut: DictionaryShortcut, onOpenShortcut: (DictionaryShortcut) -> Unit) {
+    Box(
+        modifier = Modifier
+            .heightIn(min = LektoSpacing.TouchTarget)
+            .handCursor()
+            .clickable { onOpenShortcut(shortcut) }
+            .testTag(sourceShortcutTag(shortcut.source)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = shortcut.source.label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The dot between two references, aligned with them on the line. */
+@Composable
+private fun ReferenceSeparator() {
+    Box(Modifier.heightIn(min = LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+        Text(
+            text = "·",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = ReferenceGap),
+        )
     }
 }

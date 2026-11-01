@@ -23,6 +23,12 @@ max_line_length = 120
 [*.{yml,yaml,json}]
 indent_size = 2
 
+# The TXT parser's real fixture keeps the CRLF line endings its source file
+# carries, so the golden proves the parser normalises them. The checkout must not
+# launder the file before the parser sees it; see its README and `.gitattributes`.
+[core/src/commonTest/resources/txt/*.txt]
+end_of_line = unset
+
 [*.md]
 # Trailing spaces are significant in Markdown (a hard line break).
 trim_trailing_whitespace = false

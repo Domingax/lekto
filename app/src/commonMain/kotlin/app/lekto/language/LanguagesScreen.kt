@@ -1,3 +1,6 @@
+@file:Suppress("TooManyFunctions")
+// One screen: its header, reload, section, rows, pickers and states, each a small composable.
+
 package app.lekto.language
 
 import androidx.compose.foundation.layout.Arrangement
@@ -7,16 +10,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
@@ -31,11 +35,28 @@ import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.text.baseLanguage
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
+import app.lekto.settings.FormRow
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
+import app.lekto.ui.HAIRLINE_THICKNESS
+import app.lekto.ui.ScreenHeader
+import app.lekto.ui.TextAction
+import app.lekto.ui.handCursor
+import app.lekto.ui.icons.ChevronRight
+import app.lekto.ui.icons.LektoIcons
 
 /** The test tag on the **Reload list** action, so a UI test can click exactly it. */
 const val LANGUAGES_RELOAD_TAG: String = "languages-reload"
+
+/** The test tag on the way back to Settings, so a UI test can click exactly it. */
+internal const val LANGUAGES_BACK_TAG: String = "languages-back"
+
+/** The test tag on the screen's title, so a test can tell the screen from the shell's bar. */
+internal const val LANGUAGES_TITLE_TAG: String = "languages-title"
+
+/** The test tag on one **Reading language**'s row, so a UI test can read its state and action together. */
+internal fun languageRowTag(language: String): String = "languages-row-$language"
 
 /** The test tag on a language's level picker on the **Languages** surface. */
 internal fun languageLevelPickerTag(language: String): String = "languages-level-$language"
@@ -77,26 +98,27 @@ data class LanguagesActions(
 )
 
 /**
- * The **Languages** surface (issues #146, #147, #148, #149; ADR-0034): it offers
- * the reader the **Translation language**s the **Language manifest** publishes a
- * pack into, then lists the offered **Reading language**s the manifest publishes,
- * in the reader's priority order, and carries three per-language controls: the
- * reader's **Reader level** picker, the **Difficulty table**'s state and download,
- * and each published **Dictionary pack**'s state and download, labelled by its
- * pair. A language the manifest publishes no table — or no dictionary — says so
- * honestly and offers no download, because a button that could only fail is worse
- * than none.
+ * The **Languages** surface (issues #146, #147, #148, #149, #215; ADR-0034): the
+ * **Translation language** as a printed-form row, then one row per offered
+ * **Reading language** in the reader's priority order. A row carries the
+ * language's name, its **Reader level** picker, and each published **Derived
+ * asset**'s state in the muted ink with its download as a quiet text action —
+ * never a full-width filled button per language (docs/design.md §7.6).
  *
- * **Reload list** is always offered, so a reader can refetch at any time — after
+ * **Reload list** stays in the header, so a reader can refetch at any time — after
  * a failed fetch, or when the pipeline has published a language since the cached
- * copy. With no manifest and no cache it says so honestly.
+ * copy. The attribution link sits at the foot of the list, in the muted ink. A
+ * language the manifest publishes no table — or no dictionary — says so honestly
+ * and offers no download, because a button that could only fail is worse than
+ * none.
  *
  * The screen renders [state], [levels], [difficulty] and [dictionaries] and
  * raises the [actions]; it owns no state, so the whole surface is proved through
  * semantics.
  */
 @Composable
-@Suppress("LongParameterList") // The surface's independent inputs: state, the per-language maps, its actions.
+// The surface reads in one order; the nested content column is the header's bleed.
+@Suppress("LongParameterList", "LongMethod", "CognitiveComplexMethod")
 fun LanguagesScreen(
     state: LanguagesUiState,
     levels: Map<String, CefrLevel> = emptyMap(),
@@ -107,71 +129,108 @@ fun LanguagesScreen(
     actions: LanguagesActions = LanguagesActions(),
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Header(actions.onBack, actions.onOpenAttribution)
-
-        ReloadAction(onReload = actions.onReload, reloading = state.reloading)
-        if (state.reloading) Reloading()
-        state.error?.let { message -> Error(LocalAppTexts.current.message(message)) }
-
-        if (state.languages.isEmpty()) {
-            EmptyState(available = state.available)
-        } else {
-            if (translationLanguages.isNotEmpty()) {
-                TranslationLanguagePicker(translationLanguage, translationLanguages, actions)
-            }
-            LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                items(state.languages, key = { offered -> offered.language }) { offered ->
-                    // The level and the table are keyed by the language's base tag,
-                    // as the ordering and naming already reduce the offered tag
-                    // (CONTEXT.md, "Reading language"); a dictionary is keyed by the
-                    // pair's manifest artifact name.
-                    LanguageRow(
-                        offered = offered,
-                        level = levels[baseLanguage(offered.language)],
-                        difficulty = difficulty[baseLanguage(offered.language)],
-                        dictionaries = dictionaries,
-                        actions = actions,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** The surface's chrome: the way back, its title and the way to attribution. */
-@Composable
-private fun Header(onBack: () -> Unit, onOpenAttribution: () -> Unit) {
     val texts = LocalAppTexts.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(onClick = onBack) { Text(texts[TextKey.BACK]) }
-        Text(texts[TextKey.LANGUAGES], style = MaterialTheme.typography.headlineMedium)
-        TextButton(onClick = onOpenAttribution, modifier = Modifier.testTag(LANGUAGES_ATTRIBUTION_TAG)) {
-            Text(texts[TextKey.ATTRIBUTION])
+    Column(
+        modifier.fillMaxSize()
+            .padding(vertical = LektoSpacing.InsidePanel),
+    ) {
+        ScreenHeader(
+            title = texts[TextKey.LANGUAGES],
+            backTag = LANGUAGES_BACK_TAG,
+            titleTag = LANGUAGES_TITLE_TAG,
+            onBack = actions.onBack,
+            trailing = { ReloadAction(onReload = actions.onReload, reloading = state.reloading) },
+        )
+        Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
+            if (state.reloading) Reloading()
+            state.error?.let { message -> Error(texts.message(message)) }
+
+            LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.ScreenEdge)) {
+                if (state.languages.isEmpty()) {
+                    item { EmptyState(available = state.available) }
+                } else {
+                    if (translationLanguages.isNotEmpty()) {
+                        item { TranslationLanguageField(translationLanguage, translationLanguages, actions) }
+                    }
+                    item { LanguagesSection(afterTranslationLanguage = translationLanguages.isNotEmpty()) }
+                    itemsIndexed(state.languages, key = { _, offered -> offered.language }) { index, offered ->
+                        // The level and the table are keyed by the language's base tag,
+                        // as the ordering and naming already reduce the offered tag
+                        // (CONTEXT.md, "Reading language"); a dictionary is keyed by the
+                        // pair's manifest artifact name.
+                        LanguageRow(
+                            offered = offered,
+                            level = levels[baseLanguage(offered.language)],
+                            difficulty = difficulty[baseLanguage(offered.language)],
+                            dictionaries = dictionaries,
+                            actions = actions,
+                            last = index == state.languages.lastIndex,
+                        )
+                    }
+                }
+                item { AttributionLink(actions.onOpenAttribution) }
+            }
         }
     }
 }
 
 /**
- * The **Reload list** action, always visible so the reader can refetch the
- * manifest at any time (issue #146). It is disabled while a fetch is in flight.
+ * The second section's label and explanation (issue #215): what the two
+ * **Derived asset**s do, so a reader meeting word difficulty for the first time
+ * knows why a language offers it and what the download changes.
+ */
+@Composable
+private fun LanguagesSection(afterTranslationLanguage: Boolean) {
+    val texts = LocalAppTexts.current
+    val topGap = if (afterTranslationLanguage) LektoSpacing.BetweenBlocks else 0.dp
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = topGap),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        Text(
+            text = texts[TextKey.LANGUAGES_BY_LANGUAGE],
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = texts[TextKey.LANGUAGES_SECTION_DESCRIPTION],
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * **Reload list**, the header's quiet action (issue #146): always visible so the
+ * reader can refetch at any time, and muted while a fetch is in flight.
  */
 @Composable
 private fun ReloadAction(onReload: () -> Unit, reloading: Boolean) {
-    Button(
+    val texts = LocalAppTexts.current
+    TextAction(
         onClick = onReload,
         enabled = !reloading,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag(LANGUAGES_RELOAD_TAG),
-    ) { Text(LocalAppTexts.current[TextKey.RELOAD_LIST]) }
+        modifier = Modifier.testTag(LANGUAGES_RELOAD_TAG),
+    ) {
+        Text(
+            text = texts[TextKey.RELOAD_LIST],
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (reloading) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onBackground
+            },
+        )
+    }
 }
 
 /**
- * One offered **Reading language**: its name, the **Reader level** the reader
- * declares in it (issue #147), its **Difficulty table** (issue #148) and each
- * **Dictionary pack** the manifest publishes for it (issue #149). The level is
- * user-authored **Vault** data, so the picker writes to the vault; **not set**
- * clears it. The difficulty table and the dictionary packs are **Derived asset**s:
- * their state and download show here, and one not published says so.
+ * One offered **Reading language** (issues #147, #148, #149, #215): its name and
+ * its **Reader level** picker on one line, then the state and download of its
+ * **Difficulty table** and each published **Dictionary pack**, parted from the
+ * next language by a hairline. The level is user-authored **Vault** data, so the
+ * picker writes to the vault; **not set** clears it. The artifacts are **Derived
+ * asset**s: their state and download show here, and one not published says so.
  */
 @Suppress("LongParameterList") // The offered language and its three independent controls, plus the surface's actions.
 @Composable
@@ -181,98 +240,152 @@ private fun LanguageRow(
     difficulty: DifficultyUiState?,
     dictionaries: Map<String, DictionaryUiState>,
     actions: LanguagesActions,
+    last: Boolean,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Column(Modifier.fillMaxWidth().testTag(languageRowTag(offered.language))) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         ) {
-            Text(
-                text = offered.displayName,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f),
-            )
-            LevelPicker(offered.language, level, actions)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = offered.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                LevelPicker(offered.language, level, actions)
+            }
+            DifficultyControl(offered, difficulty, actions)
+            DictionaryControls(offered, dictionaries, actions)
         }
-        DifficultyControl(offered, difficulty, actions)
-        DictionaryControls(offered, dictionaries, actions)
+        if (!last) {
+            HorizontalDivider(thickness = HAIRLINE_THICKNESS, color = MaterialTheme.colorScheme.outline)
+        }
     }
 }
 
 /**
- * The **Translation language** picker (ADR-0034): the reader chooses, from the
- * languages the **Language manifest** publishes a pack into, the language every
- * translation resolves into. It offers only those, so a choice always has a pack
- * to serve it, and a reader who has not chosen one shows **Not set**.
+ * The **Translation language** picker (ADR-0034) as a printed-form row: the
+ * label in the small muted type, the chosen language under it, a `chevron-right`
+ * and the hairline. It offers only the languages the **Language manifest**
+ * publishes a pack into, so a choice always has a pack to serve it, and a reader
+ * who has not chosen one shows **Not set**.
  */
 @Composable
-private fun TranslationLanguagePicker(selected: String?, languages: List<String>, actions: LanguagesActions) {
+private fun TranslationLanguageField(selected: String?, languages: List<String>, actions: LanguagesActions) {
     val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(texts[TextKey.TRANSLATION_LANGUAGE], style = MaterialTheme.typography.titleSmall)
-        Box {
-            OutlinedButton(
-                onClick = { expanded = true },
-                modifier = Modifier.testTag(TRANSLATION_LANGUAGE_PICKER_TAG),
-            ) {
-                Text(selected?.let(texts::languageName) ?: texts[TextKey.NOT_SET])
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                languages.forEach { language ->
-                    DropdownMenuItem(
-                        text = { Text(texts.languageName(language)) },
-                        onClick = {
-                            expanded = false
-                            actions.onSetTranslationLanguage(language)
-                        },
-                        modifier = Modifier.testTag(translationLanguageOptionTag(language)),
-                    )
-                }
+    Box(Modifier.fillMaxWidth()) {
+        FormRow(
+            label = texts[TextKey.TRANSLATION_LANGUAGE],
+            value = selected?.let(texts::languageName) ?: texts[TextKey.NOT_SET],
+            tag = TRANSLATION_LANGUAGE_PICKER_TAG,
+            onClick = { expanded = true },
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            languages.forEach { language ->
+                DropdownMenuItem(
+                    text = { Text(texts.languageName(language)) },
+                    onClick = {
+                        expanded = false
+                        actions.onSetTranslationLanguage(language)
+                    },
+                    modifier = Modifier.handCursor().testTag(translationLanguageOptionTag(language)),
+                )
             }
         }
     }
 }
 
 /**
- * The **Reader level** picker (issue #147): the six CEFR bands A1–C2 and **not
- * set**, which clears the level. It shows the current band, or "Not set".
+ * The **Reader level** picker (issue #147) as a quiet text action on the row:
+ * the word `Level`, the current band — or **Not set** — and a chevron that says
+ * it opens. The six CEFR bands A1–C2 and **not set**, which clears the level,
+ * stay in the dropdown, so the feature survives the planche's summary row.
  */
 @Composable
 private fun LevelPicker(language: String, level: CefrLevel?, actions: LanguagesActions) {
     val texts = LocalAppTexts.current
     var expanded by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(
+        TextAction(
             onClick = { expanded = true },
+            onClickLabel = texts[TextKey.SET_READER_LEVEL],
             modifier = Modifier.testTag(languageLevelPickerTag(language)),
         ) {
-            Text(level?.name ?: texts[TextKey.NOT_SET])
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(texts[TextKey.NOT_SET]) },
-                onClick = {
-                    expanded = false
-                    actions.onClearLevel(language)
-                },
-                modifier = Modifier.testTag(languageLevelClearTag(language)),
+            Text(
+                text = texts[TextKey.READER_LEVEL],
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            CefrLevel.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.name) },
-                    onClick = {
-                        expanded = false
-                        actions.onSetLevel(language, option)
-                    },
-                    modifier = Modifier.testTag(languageLevelOptionTag(language, option)),
-                )
-            }
+            Text(
+                text = level?.name ?: texts[TextKey.NOT_SET],
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            ChevronDown()
         }
+        LevelMenu(language, expanded, onDismiss = { expanded = false }, actions = actions)
+    }
+}
+
+/** The six CEFR bands and **not set**, in the dropdown the level picker opens. */
+@Composable
+private fun LevelMenu(language: String, expanded: Boolean, onDismiss: () -> Unit, actions: LanguagesActions) {
+    val texts = LocalAppTexts.current
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text(texts[TextKey.NOT_SET]) },
+            onClick = {
+                onDismiss()
+                actions.onClearLevel(language)
+            },
+            modifier = Modifier.handCursor().testTag(languageLevelClearTag(language)),
+        )
+        CefrLevel.entries.forEach { option ->
+            DropdownMenuItem(
+                text = { Text(option.name) },
+                onClick = {
+                    onDismiss()
+                    actions.onSetLevel(language, option)
+                },
+                modifier = Modifier.handCursor().testTag(languageLevelOptionTag(language, option)),
+            )
+        }
+    }
+}
+
+/** The small chevron that says a picker opens; decorative beside the level it names (§9). */
+@Composable
+private fun ChevronDown() {
+    Icon(
+        imageVector = LektoIcons.ChevronRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(CHEVRON_SIZE).rotate(CHEVRON_ROTATION),
+    )
+}
+
+/** The chevron's frame and the quarter turn that points a `chevron-right` down. */
+private val CHEVRON_SIZE = 16.dp
+private const val CHEVRON_ROTATION = 90f
+
+/** The way to the attribution screen, at the foot of the list and in the muted ink (issue #215). */
+@Composable
+private fun AttributionLink(onOpenAttribution: () -> Unit) {
+    TextAction(
+        onClick = onOpenAttribution,
+        modifier = Modifier.testTag(LANGUAGES_ATTRIBUTION_TAG).padding(vertical = LektoSpacing.BetweenRows),
+    ) {
+        Text(
+            text = LocalAppTexts.current[TextKey.ATTRIBUTION],
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -287,16 +400,20 @@ private fun EmptyState(available: Boolean) {
             texts[TextKey.LANGUAGES_EMPTY_UNAVAILABLE]
         },
         style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
     )
 }
 
 /** The inline fetch progress, so the surface never blocks on the network. */
 @Composable
 private fun Reloading() {
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines)) {
         LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text(LocalAppTexts.current[TextKey.LOADING_LANGUAGES], style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = LocalAppTexts.current[TextKey.LOADING_LANGUAGES],
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -307,6 +424,6 @@ private fun Error(message: String) {
         text = message,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines),
     )
 }

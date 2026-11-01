@@ -27,6 +27,14 @@ object LektoSpacing {
     /** At a screen's edges. */
     val ScreenEdge = 24.dp
 
+    /**
+     * At the window's edge for a bar's icon control, and for a screen header's: the
+     * 4 dp Material gives an app bar, so a 48 dp control lands its glyph near the
+     * border instead of floating inward. Text and rows keep [ScreenEdge]; only a
+     * header's controls take this one (docs/design.md §6, §7.5).
+     */
+    val BarInset = 4.dp
+
     /** Between a screen's blocks. */
     val BetweenBlocks = 32.dp
 

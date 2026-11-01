@@ -157,6 +157,27 @@ jobs:
             gzip -9 -n "$sqlite"
           done
 
+      # The app shows a download's size before fetching it. The manifest is written
+      # before compression, so annotate each entry with its compressed asset's byte
+      # count here. `sizeBytes` is additive at the same format version: an older
+      # build ignores it (ADR-0013).
+      - name: Record the asset sizes in the manifest
+        run: |
+          cd "$RUNNER_TEMP/out"
+          sizes="$(for asset in *.sqlite.gz; do
+            printf '%s\t%s\n' "$asset" "$(stat -c %s "$asset")"
+          done | jq -Rn '[inputs | split("\t") | {(.[0]): (.[1] | tonumber)}] | add')"
+          jq --argjson sizes "$sizes" '
+            .languages |= map(
+              (if (.difficulty != null) and ($sizes[.difficulty.name] != null)
+               then .difficulty.sizeBytes = $sizes[.difficulty.name] else . end)
+              | (if .dictionaries != null
+                 then .dictionaries |= map(
+                     if $sizes[.name] != null then .sizeBytes = $sizes[.name] else . end)
+                 else . end)
+            )' language-manifest.json > language-manifest.sized.json
+          mv language-manifest.sized.json language-manifest.json
+
       - name: Write the checksums
         run: |
           cd "$RUNNER_TEMP/out"

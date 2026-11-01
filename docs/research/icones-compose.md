@@ -587,8 +587,9 @@ on control (no way to take ten icons).
 
 ### 9.1 Generate the icons
 
-The brief named about ten icons; the set that landed with issue #184 is twelve,
-and `docs/design.md` §5 is authoritative on it. Pin a Lucide tag (the tag
+The brief named about ten icons; the set that landed with issue #184 is twelve, plus the
+`info` icon issue #213 adds for the vault's folder-sync caution and the `check` issue #214
+adds for a chosen entry — fourteen, and `docs/design.md` §5 is authoritative on it. Pin a Lucide tag (the tag
 `1.59.0` resolves on `raw.githubusercontent.com`), fetch the SVGs into
 `tools/icons/lucide/`, and run the CLI from the repository root:
 

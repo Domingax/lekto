@@ -29,6 +29,8 @@ data class KotlinSource(
     val sourceSet: String,
     val packageName: String,
     val imports: List<String>,
+    /** The file's full text, empty only for a synthetic fixture that does not scan it. */
+    val text: String = "",
 ) {
     val fileName: String get() = path.substringAfterLast('/')
 

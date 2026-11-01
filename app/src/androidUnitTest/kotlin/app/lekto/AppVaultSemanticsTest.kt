@@ -21,6 +21,7 @@ import app.lekto.core.vault.VaultRecord
 import app.lekto.core.vault.VaultStore
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
+import app.lekto.settings.VAULT_LINK_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
@@ -70,7 +71,7 @@ class AppVaultSemanticsTest {
         }, open = { null })
         compose.setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
-        compose.onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        compose.openVault()
         compose.onNodeWithText("Export vault").performScrollTo().performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { exported != null }
@@ -90,7 +91,7 @@ class AppVaultSemanticsTest {
         )
         compose.setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
-        compose.onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        compose.openVault()
         compose.onNodeWithText("Import vault").performScrollTo().performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vault.get("restored") != null }
 
@@ -110,11 +111,18 @@ class AppVaultSemanticsTest {
         compose.setContent { App(environment(libraryOver(InMemoryVaultStore()))) }
 
         compose.onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        compose.onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
 
-        compose.onNodeWithText("Vault").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Vault and sync").assertIsDisplayed()
         compose.onNodeWithText("aren't available", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Export vault").performScrollTo().assertIsNotEnabled()
     }
+}
+
+/** Reaches the **Vault and sync** screen from Settings and its doorway (issue #213). */
+private fun androidx.compose.ui.test.junit4.ComposeTestRule.openVault() {
+    onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+    onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
 }
 
 /** The real vault-backed library over [vault]; no parsers, because these tests only list books. */

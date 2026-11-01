@@ -1,7 +1,6 @@
 package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -11,10 +10,10 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import app.lekto.core.text.WordKey
-import app.lekto.core.text.WordToken
 import app.lekto.testkit.InMemoryLemmaLookup
 import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
@@ -45,7 +44,7 @@ class ReaderTextTest {
 
     private val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
-    private val chapter = ReaderChapter(
+    private val chapter = ReaderText(
         title = "Chapter",
         language = "en",
         blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lantern glows")))),
@@ -57,6 +56,25 @@ class ReaderTextTest {
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
+    }
+
+    @Test
+    fun theReadingProgressDenominatorIsExactlyTheRenderedChapterText() {
+        // Reading progress divides the position by the length of the text the
+        // reader lays out, so core's formula and this chapter text must agree on
+        // a multi-block book (issue #196).
+        val text = StructuredText(
+            title = "Lantern",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lantern glows"))),
+                TextBlock(BlockKind.HEADING, listOf(TextRun("A heading"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("and the keeper waits"))),
+            ),
+        )
+        val book = ReaderText(text.title.orEmpty(), text.language, text.blocks)
+
+        assertEquals(text.renderedLength(), buildChapterText(book, styles).length)
     }
 
     @Test
@@ -91,18 +109,22 @@ class ReaderTextTest {
     }
 
     @Test
-    fun everyWordIsTappable() {
-        val tapped = mutableListOf<WordTap>()
-        val tokens = buildReaderTokens(chapter, renderer, styles, onWordTap = { tap -> tapped += tap })
+    fun aWordTapCarriesItsTokenAndItsContextSentence() {
+        val tokens = buildReaderTokens(chapter, renderer, styles)
+        val lantern = tokens.words.first { word -> word.surface == "lantern" }
 
-        tokens.words.forEach { word -> tap(tokens, word) }
+        val tap = wordTapOf(lantern, pageStart = 0, chapterText = tokens.text.text)
 
-        assertEquals(tokens.words, tapped.map { it.token })
+        assertEquals(lantern, tap.token)
+        assertTrue(
+            assertNotNull(tap.contextSentence).contains("lantern"),
+            "the sentence the word sits in: ${tap.contextSentence}",
+        )
     }
 
     @Test
     fun inlineEmphasisSurvivesIntoTheText() {
-        val emphasised = ReaderChapter(
+        val emphasised = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(
@@ -126,7 +148,7 @@ class ReaderTextTest {
 
     @Test
     fun aHeadingKeepsItsOwnStyle() {
-        val heading = ReaderChapter(
+        val heading = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(
@@ -153,21 +175,21 @@ class ReaderTextTest {
     fun aPageCarriesItsStylesAndItsWordsOnly() {
         val chapterText = buildChapterText(chapter, styles)
         val page = ReaderPage(0, chapterText.length)
-        var tapped: WordTap? = null
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles) { tap -> tapped = tap }
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles)
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
-        val lantern = tokens.words.first { word -> word.surface == "lantern" }
         assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
-        tap(tokens, lantern)
-        assertEquals(lantern, tapped?.token)
+        assertTrue(
+            tokens.text.getLinkAnnotations(0, tokens.text.length).isEmpty(),
+            "a page carries no per-word links: the tap hit-tests the words instead (ADR-0007)",
+        )
     }
 
     @Test
     fun aPageSliceKeepsHeadingAndEmphasisStyles() {
-        val styled = ReaderChapter(
+        val styled = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(
@@ -220,10 +242,31 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aPagePastTheFirstWashesASelectionInThePagesCoordinates() {
+        // The wash compares the page's own offsets, so a page that starts later
+        // still matches a range the reader has moved onto it (issue #244).
+        val chapterText = buildChapterText(chapter, styles)
+        val words = buildPageTokens(chapterText, ReaderPage(0, chapterText.length), renderer, chapter, styles).words
+        val lantern = words.first { it.surface == "lantern" }
+        val page = ReaderPage(lantern.start, chapterText.length)
+
+        val tokens = buildPageTokens(
+            chapterText,
+            page,
+            renderer,
+            chapter,
+            styles,
+            selected = 0..lantern.surface.length,
+        )
+
+        assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "lantern").background)
+    }
+
+    @Test
     fun aTokenCarriesTheLemmaKeyWhenTheLemmaLookupKnowsIt() {
         val lemmas = InMemoryLemmaLookup(mapOf("lanterns" to "lantern"))
         val lemmaRenderer = ReaderRenderer(WhitespaceTextSegmenter(), renderer.mastery, lemmas)
-        val plural = ReaderChapter(
+        val plural = ReaderText(
             title = "Chapter",
             language = "en",
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lanterns glow")))),
@@ -238,21 +281,12 @@ class ReaderTextTest {
     fun aTapCarriesTheSentenceTheWordWasFoundIn() {
         val chapterText = buildChapterText(chapter, styles)
         val page = ReaderPage(0, chapterText.length)
-        var tapped: WordTap? = null
 
-        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles) { tap -> tapped = tap }
-        tap(tokens, tokens.words.first { it.surface == "lantern" })
+        val tokens = buildPageTokens(chapterText, page, renderer, chapter, styles)
+        val tap = wordTapOf(tokens.words.first { it.surface == "lantern" }, page.start, chapterText.text)
 
-        assertEquals("the lantern glows", tapped?.contextSentence)
+        assertEquals("the lantern glows", tap.contextSentence)
     }
-}
-
-/** Fires the link under [word], so a test can assert the tap reaches the word's handler. */
-private fun tap(tokens: ReaderTokens, word: WordToken) {
-    val range = tokens.text.getLinkAnnotations(word.start, word.end).firstOrNull()
-    assertNotNull(range, "word '${word.surface}' has no link")
-    val clickable = range.item as LinkAnnotation.Clickable
-    clickable.linkInteractionListener?.onClick(clickable)
 }
 
 /** The span style applied to [surface]'s range. */

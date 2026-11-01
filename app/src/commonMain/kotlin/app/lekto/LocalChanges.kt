@@ -14,24 +14,27 @@ import kotlinx.coroutines.flow.asSharedFlow
  * **not** emitted by the vault itself: the sync engine writes to the vault during
  * a run, so a vault-level signal would make every sync trigger the next one.
  *
- * A content change (a book imported, a word saved or deleted) is discrete, so
- * [content] is consumed after a short settle; a reading-progress change happens
- * on every page turn, so [progress] is consumed after a longer pause. They are
- * two flows because the two tempos differ and the sync controller applies a
- * different delay to each.
+ * A content change (a book imported or deleted, a word saved or deleted, a book
+ * declared finished) is discrete, so [content] is consumed after a short settle;
+ * a reading-progress change happens on every page turn, so [progress] is consumed
+ * after a longer pause. They are two flows because the two tempos differ and the
+ * sync controller applies a different delay to each.
  */
 class LocalChanges {
 
     private val contentEvents = MutableSharedFlow<Unit>(extraBufferCapacity = CONTENT_BUFFER)
     private val progressEvents = MutableSharedFlow<Unit>(extraBufferCapacity = PROGRESS_BUFFER)
 
-    /** Emits after a book was imported, or a word was saved or deleted. */
+    /** Emits after a book was imported or deleted, a word was saved or deleted, or a book was declared finished. */
     val content: SharedFlow<Unit> = contentEvents.asSharedFlow()
 
     /** Emits after a reading position was written to the vault. */
     val progress: SharedFlow<Unit> = progressEvents.asSharedFlow()
 
-    /** Records a discrete content change: a book imported, a word saved or deleted. */
+    /**
+     * Records a discrete content change: a book imported or deleted, a word saved
+     * or deleted, or a book declared finished.
+     */
     fun contentChanged() {
         contentEvents.tryEmit(Unit)
     }

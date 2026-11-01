@@ -3,12 +3,12 @@ package app.lekto.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -16,14 +16,28 @@ import app.lekto.core.dictionary.PackMetadata
 import app.lekto.core.difficulty.DifficultyMetadata
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
+import app.lekto.ui.ScreenHeader
+
+/** The test tag on the way back, so a UI test can click exactly it. */
+internal const val ATTRIBUTION_BACK_TAG: String = "attribution-back"
+
+/** The test tag on the screen's title, so a test can tell the screen from the shell's bar. */
+internal const val ATTRIBUTION_TITLE_TAG: String = "attribution-title"
 
 /**
- * The mandatory attribution screen (issues #18, #64 and #149; ADR-0011,
+ * The mandatory attribution screen (issues #18, #64, #149 and #177; ADR-0011,
  * ADR-0029): the dictionary pack and the word-difficulty table are CC BY-SA 4.0
  * works — the pack derived from Wiktionary, the table from wordfreq — so each
  * source, licence, modification and ShareAlike obligation must be visible in the
  * app. It is reached from the **Languages** surface, which owns the data it
  * describes.
+ *
+ * It also names the licences of what the app draws: the Lucide icon set it ships
+ * as code, and the Noto Serif glyph the launcher mark's letter is an outline of.
+ * Their full notices travel in `THIRD-PARTY-NOTICES.md`; this screen is what a
+ * reader of an installed copy can see, and an installed copy carries no root
+ * files.
  *
  * When an artifact is installed its metadata comes from inside it; when none is,
  * the screen still states the licence it will carry, so the obligation is never
@@ -37,13 +51,24 @@ fun AttributionScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(vertical = LektoSpacing.InsidePanel),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
     ) {
-        TextButton(onClick = onBack) { Text(LocalAppTexts.current[TextKey.BACK]) }
-        Text(LocalAppTexts.current[TextKey.ATTRIBUTION], style = MaterialTheme.typography.headlineMedium)
-        DictionaryAttribution(metadata)
-        DifficultyAttribution(difficulty)
+        ScreenHeader(
+            title = LocalAppTexts.current[TextKey.ATTRIBUTION],
+            backTag = ATTRIBUTION_BACK_TAG,
+            titleTag = ATTRIBUTION_TITLE_TAG,
+            onBack = onBack,
+        )
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
+        ) {
+            DictionaryAttribution(metadata)
+            DifficultyAttribution(difficulty)
+            IconAttribution()
+        }
     }
 }
 
@@ -95,6 +120,19 @@ private fun DifficultyAttribution(difficulty: DifficultyMetadata?) {
             difficulty.notice,
         )
     }
+}
+
+/**
+ * The icons' block (issue #177): Lucide's ISC grant, the Feather icons inside it,
+ * and the Noto Serif outline the launcher mark's letter is. It has no
+ * installed-or-not state, because the icons ship with the app itself.
+ */
+@Composable
+private fun IconAttribution() {
+    Text(
+        LocalAppTexts.current[TextKey.ATTRIBUTION_ICONS_GRANT],
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 /** One artifact's source, data, licence and modifications, with its notice when it carries one. */

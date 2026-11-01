@@ -1,0 +1,131 @@
+package app.lekto.reader
+
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
+import app.lekto.core.MasteryLevel
+import app.lekto.core.MasteryLookup
+import app.lekto.core.text.BlockKind
+import app.lekto.core.text.Chapter
+import app.lekto.core.text.TextBlock
+import app.lekto.core.text.TextRun
+import app.lekto.testkit.WhitespaceTextSegmenter
+import app.lekto.testkit.blockStartOffset
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * The chapter sheet on a **simulated Android runtime** (ADR-0037, issue #198):
+ * the `LazyColumn` the sheet is built on is Android's own scroll container, so
+ * the list is proved here as well as on the desktop lane. A book with two short
+ * chapters makes the page and row counts exact under Robolectric's metrics.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36], qualifiers = "w360dp-h640dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
+class ReaderChaptersAndroidTest {
+
+    private companion object {
+        const val SECOND_CHAPTER_BLOCK = 2
+    }
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private val renderer = ReaderRenderer(
+        segmenter = WhitespaceTextSegmenter(),
+        mastery = MasteryLookup { MasteryLevel.KNOWN },
+    )
+
+    private val blocks = listOf(
+        TextBlock(BlockKind.HEADING, listOf(TextRun("One")), headingLevel = 2),
+        TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("First body."))),
+        TextBlock(BlockKind.HEADING, listOf(TextRun("Two")), headingLevel = 2),
+        TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Second body."))),
+    )
+
+    private val book = ReaderText(
+        title = "Book",
+        language = "en",
+        blocks = blocks,
+        chapters = listOf(Chapter("One", startBlock = 0), Chapter("Two", startBlock = 2)),
+    )
+
+    @Test
+    fun goingBackFromAChapterStartLandsOnTheChapterBefore() {
+        compose.setContent { Reader(book, initialOffset = blockStartOffset(blocks, 2)) }
+        compose.onNodeWithText("Second body.", substring = true).assertIsDisplayed()
+
+        compose.onNodeWithTag(READER_PREVIOUS_PAGE_TAG).performClick()
+
+        // The page before a chapter's first page is the last page of the chapter
+        // before it, and the reader measures that chapter rather than the book.
+        compose.onNodeWithText("First body.", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
+    }
+
+    @Test
+    fun theCurrentChapterRowIsSelected() {
+        compose.setContent { Reader(book, initialOffset = blockStartOffset(blocks, SECOND_CHAPTER_BLOCK)) }
+
+        compose.onNodeWithTag(READER_POSITION_TAG).performClick()
+
+        compose.onNodeWithTag(readerChapterRowTag(0)).assertIsNotSelected()
+        compose.onNodeWithTag(readerChapterRowTag(1)).assertIsSelected()
+    }
+
+    @Test
+    fun theSheetListsTheChaptersAndAJumpShowsItsPage() {
+        compose.setContent { Reader(book) }
+
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("One", substring = true)
+        assertEquals(0, compose.progressPercent())
+        compose.onNodeWithTag(READER_POSITION_TAG).performClick()
+        compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(readerChapterRowTag(1)).assertTextContains("Two")
+
+        compose.onNodeWithTag(readerChapterRowTag(1)).performClick()
+
+        compose.onNodeWithTag(READER_CHAPTER_SHEET_TAG).assertDoesNotExist()
+        compose.onNodeWithText("Second body.", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertTextContains("Two", substring = true)
+        assertTrue("the second chapter is past the start of the book", compose.progressPercent() > 0)
+    }
+
+    @Composable
+    private fun Reader(text: ReaderText, initialOffset: Int = 0) {
+        MaterialTheme {
+            ReaderScreen(
+                document = ReaderDocument(text, renderer, initialOffset),
+                modifier = Modifier.size(width = 360.dp, height = 640.dp),
+                actions = ReaderActions(onBack = {}),
+            )
+        }
+    }
+}
+
+/** The **Reading progress** the position line shows, as a whole percentage. */
+private fun ComposeTestRule.progressPercent(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        ?: error("no percentage in the position: $text")
+}

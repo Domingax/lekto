@@ -50,5 +50,16 @@ internal class EpubArchive(private val entries: Map<String, ByteArray>) {
             }
             return segments.joinToString("/")
         }
+
+        /**
+         * Resolves [href] against [baseDirectory], **keeping its fragment**, so a
+         * table-of-contents entry that points at an anchor stays distinguishable
+         * from one that points at the start of its document (ADR-0037).
+         */
+        fun resolveWithFragment(baseDirectory: String, href: String): String {
+            val fragment = href.substringAfter('#', missingDelimiterValue = "")
+            val path = resolve(baseDirectory, href)
+            return if (fragment.isEmpty()) path else "$path#$fragment"
+        }
     }
 }

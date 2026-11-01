@@ -88,7 +88,7 @@ jobs:
           mkdir -p dist
           tools/packaging/appimage.sh \
             app/build/compose/binaries/main/app/Lekto \
-            app/icons/lekto.png \
+            app/src/desktopMain/resources/app-icon/app-icon.png \
             "dist/${{ matrix.prefix }}-${version}-${{ matrix.label }}.AppImage"
       # One naming scheme for every platform, so the guide and the release body
       # name exactly what the reader downloads. Windows contributes two files.
@@ -123,10 +123,10 @@ jobs:
             echo "::endgroup::"
           done
 
-  # Publish every installer on the tag's release, with the committed desktop
-  # notes. A manual run builds them and stops there, and a tag with a pre-release
-  # suffix (`v1.0.0-preview`) publishes a pre-release, so a preview never becomes
-  # the `/releases/latest` download the guide points at.
+  # Publish every installer on the tag's release, with a changelog link to the
+  # previous desktop tag. A manual run builds them and stops there, and a tag
+  # with a pre-release suffix (`v1.1.0-preview`) publishes a pre-release, so a
+  # preview never becomes the `/releases/latest` download the guide points at.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: package
@@ -136,27 +136,26 @@ jobs:
     steps:
       # `gh release create` shells out to git; a job without a checkout has no
       # repository to run that in, even though the release itself is remote.
+      # The full history and tags let it name the release before this one, which
+      # is what the changelog link compares against.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
-      # The body is committed and reviewed like code, so every desktop release
-      # states the platform's accessibility limit where a downloader meets it.
-      - name: Write the release notes
-        shell: bash
-        run: |
-          version="$(sed -n 's/^lekto\.version=//p' gradle.properties)"
-          sed \
-            -e "s|{{REPOSITORY}}|$GITHUB_REPOSITORY|g" \
-            -e "s|{{VERSION}}|$version|g" \
-            .github/release-notes/desktop.md > "$RUNNER_TEMP/RELEASE_NOTES.md"
-          cat "$RUNNER_TEMP/RELEASE_NOTES.md"
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          args=(--repo "$GITHUB_REPOSITORY" --title "Lekto $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" --verify-tag)
+          previous="$(git tag --list 'v*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n 1)"
+          if [[ -n "$previous" ]]; then
+            changelog="https://github.com/$GITHUB_REPOSITORY/compare/${previous}...${GITHUB_REF_NAME}"
+          else
+            changelog="https://github.com/$GITHUB_REPOSITORY/commits/$GITHUB_REF_NAME"
+          fi
+          args=(--repo "$GITHUB_REPOSITORY" --title "Lekto $GITHUB_REF_NAME" --notes "**Changelog:** $changelog" --verify-tag)
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then
             args+=(--prerelease)
           fi

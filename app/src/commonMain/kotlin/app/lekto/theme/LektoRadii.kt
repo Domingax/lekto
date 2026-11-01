@@ -6,7 +6,9 @@ import androidx.compose.ui.unit.dp
 /**
  * The three radii of `docs/design.md` §4, as roles a screen can name.
  *
- * Controls take 8 dp, cards and panels 12 dp, sheets and dialogues 16 dp.
+ * Controls take 8 dp, cards and panels 12 dp, sheets and dialogues 16 dp. A panel
+ * anchored to a screen edge is square: it joins the edge rather than floating above
+ * it.
  */
 object LektoRadii {
     /** Buttons, chips, fields and language vignettes. */

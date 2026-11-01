@@ -52,13 +52,24 @@ internal fun wordIndexAt(
         ?: words.indexOfLast { word -> word.end <= offset }.takeIf { index -> index >= 0 }
 }
 
+/**
+ * The range the page washes, in the page's own coordinates: the live drag already
+ * is, while the committed selection sits in the chapter's and is moved onto the
+ * page by [pageStart] (issue #244). A committed range from another page lands
+ * outside it, so no word matches.
+ */
+internal fun washedRange(drag: IntRange?, committed: IntRange?, pageStart: Int): IntRange? =
+    drag ?: committed?.shiftedBy(-pageStart)
+
+/** The same range, moved [offset] characters along the text. */
+private fun IntRange.shiftedBy(offset: Int): IntRange = (first + offset)..(last + offset)
+
 /** Lifts a page-local [range] to the chapter coordinates and cuts the phrase [chapter] holds there. */
 internal fun phraseInChapter(chapter: String, pageStart: Int, range: IntRange): PhraseSelection {
-    val start = range.first + pageStart
-    val end = range.last + pageStart
+    val lifted = range.shiftedBy(pageStart)
     return PhraseSelection(
-        text = chapter.substring(start, end),
-        range = start..end,
-        sentence = contextSentence(chapter, start, end),
+        text = chapter.substring(lifted.first, lifted.last),
+        range = lifted,
+        sentence = contextSentence(chapter, lifted.first, lifted.last),
     )
 }

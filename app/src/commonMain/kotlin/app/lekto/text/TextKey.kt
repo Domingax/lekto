@@ -21,8 +21,6 @@ enum class TextKey {
     DISMISS,
     DELETE,
     CANCEL,
-    SAVE,
-    SAVED,
     CLOSE,
     SHOW,
     HIDE,
@@ -33,16 +31,41 @@ enum class TextKey {
     /** The action that empties a search field. */
     CLEAR_SEARCH,
 
-    // Platform file dialogs (the native chrome a reader sees on desktop).
+    // Platform file dialogs (the native chrome a reader sees on desktop). The
+    // system dialog draws its own filter and buttons, so only a title is ours.
     PICK_BOOK_TITLE,
-    BOOKS_FILTER,
     EXPORT_VAULT_TITLE,
-    VAULT_FILTER,
     IMPORT_VAULT_TITLE,
 
     // Library.
+
+    /** The empty shelf's heading, in the screen title's serif. */
+    LIBRARY_EMPTY_TITLE,
+
+    /** The sentence under the empty heading: what to do about it. */
     LIBRARY_EMPTY,
+
+    /** The filled action in the empty state; the header's [IMPORT] is a word, this one carries the action. */
+    IMPORT_BOOK,
+
+    /** What the skeleton rows say to a screen reader while the shelf is being read. */
+    LIBRARY_LOADING,
+
+    /** The three **Reading state** filter chips under the search field (issue #200). */
+    READING_STATE_UNREAD,
+    READING_STATE_IN_PROGRESS,
+    READING_STATE_FINISHED,
+
+    /** The empty shelf when the filter hides every book, and the action that clears it (issue #200). */
+    LIBRARY_ALL_FINISHED,
+    LIBRARY_NO_BOOKS_IN_STATE,
+    SHOW_ALL_BOOKS,
+
     CONTINUE_READING,
+
+    /** The heading over the books that did not lead: what is left to read. */
+    OTHER_BOOKS,
+
     IMPORT,
     IMPORTING,
     IMPORT_PROGRESS,
@@ -51,8 +74,22 @@ enum class TextKey {
     ERROR_DETAIL,
     NO_BOOKS_MATCH_QUERY,
 
+    // The row's Reading progress line (issue #196).
+    LIBRARY_ROW_PROGRESS,
+    LIBRARY_ROW_NOT_STARTED,
+    LIBRARY_ROW_MEASURING,
+    LIBRARY_ROW_MEASURING_DESCRIPTION,
+
+    /** A finished book's row: `FORMAT · Finished`, with no progress rule (issue #200). */
+    LIBRARY_ROW_FINISHED,
+
     // Vocabulary.
+    VOCABULARY_EMPTY_TITLE,
     VOCABULARY_EMPTY,
+
+    /** The saved-word count beside the screen's title, in the singular and the plural. */
+    VOCABULARY_COUNT_ONE,
+    VOCABULARY_COUNT_MANY,
     ALL_LEVELS,
     MASTERY_UNKNOWN,
     MASTERY_RECOGNIZED,
@@ -64,11 +101,35 @@ enum class TextKey {
     NO_WORDS_MATCH_QUERY_AT_LEVEL,
     NO_WORDS_AT_LEVEL,
 
+    /** What a search that found nothing covers, under the no-match heading. */
+    NO_WORDS_MATCH_DETAIL,
+    DELETE_WORD_TITLE,
+    DELETE_WORD_MESSAGE,
+
+    /** What a row's tap does, for a screen reader: it opens the word's level sheet. */
+    CHANGE_LEVEL,
+
+    /** What the reserved level column is for, while no word is open (desktop). */
+    VOCABULARY_LEVEL_HINT,
+
     // Reader.
     PREVIOUS_PAGE,
     NEXT_PAGE,
-    PAGE_OF,
+    READING_PROGRESS,
+
+    /** The end-of-book state: `THE END`, its two actions and the marked state (issue #200). */
+    END_OF_BOOK,
+    MARK_AS_FINISHED,
+    MARK_AS_UNFINISHED,
+    BACK_TO_LIBRARY,
+
+    /** The chapter sheet's heading. */
+    CHAPTERS,
+
+    /** What the desktop context column says for a book with no chapter list (issue #199). */
+    NO_CHAPTERS,
     READING_PREFERENCES,
+    READING_TEXT,
     READING_FACE,
     READING_FACE_SERIF,
     READING_FACE_SANS_SERIF,
@@ -86,12 +147,12 @@ enum class TextKey {
     NOT_IN_DICTIONARY,
     NO_VOICE_FOR_LANGUAGE,
     NO_VOICE_FOR_UNKNOWN_LANGUAGE,
-    LOOK_IT_UP_ONLINE,
     TRANSLATE_ONLINE,
 
     // Phrase lookup panel.
+    QUOTED_PHRASE,
     CONNECT_PROVIDER_PROMPT,
-    OPEN_SETTINGS,
+    SET_UP_PROVIDER,
     TRANSLATING,
     PROVIDER_RETURNED_NO_TRANSLATION,
     HIDE_WHAT_IS_SENT,
@@ -104,27 +165,51 @@ enum class TextKey {
     SECTION_APPEARANCE,
     SECTION_APP_LANGUAGE,
     SECTION_LANGUAGES,
-    SECTION_VAULT,
     SECTION_SYNC,
     SECTION_LLM_PROVIDER,
+
+    /** The three group labels of the Settings index (issue #214; docs/design.md §7.5). */
+    SETTINGS_GROUP_READING,
+    SETTINGS_GROUP_DATA,
+    SETTINGS_GROUP_APPLICATION,
+
+    /** The index's **Reading languages** row and its empty value (issue #214). */
+    SETTINGS_READING_LANGUAGES,
+    SETTINGS_NO_READING_LANGUAGES,
+
+    /** A short value for a row whose screen is not wired in this build (issue #214). */
+    SETTINGS_NOT_AVAILABLE,
+
+    /** The value under **LLM provider** once a key is stored (issue #214). */
+    PROVIDER_CONFIGURED,
+
+    /** The **About** screen (issue #214). */
+    ABOUT,
+    ABOUT_VERSION,
+    ABOUT_LICENCE,
+    ABOUT_SOURCE,
+
+    /** The **Vault and sync** screen's title (docs/design.md §7.6; issue #213). */
+    VAULT_AND_SYNC,
     LANGUAGES_SECTION_DESCRIPTION,
+    LANGUAGES_BY_LANGUAGE,
     VAULT_SECTION_DESCRIPTION,
     VAULT_UNAVAILABLE,
     EXPORT_VAULT,
     IMPORT_VAULT,
     PROVIDER_SECTION_DESCRIPTION,
     PROVIDER_UNAVAILABLE,
+    PROVIDER,
     BASE_URL,
     API_KEY,
     MODEL,
     CHOOSE_A_PROVIDER,
     KEY_STORED,
     REMOVE_KEY,
-    TEST_CONNECTION,
+    CONNECTION,
     APP_LANGUAGE_DESCRIPTION,
 
     // Appearance screen (ADR-0036).
-    APPEARANCE_DESCRIPTION,
     THEME_SYSTEM,
     THEME_SYSTEM_DESCRIPTION,
     THEME_LIGHT,
@@ -133,19 +218,23 @@ enum class TextKey {
     THEME_DARK_DESCRIPTION,
     THEME_SEPIA,
     THEME_SEPIA_DESCRIPTION,
-    CURRENT_THEME,
 
     // Sync section.
-    SYNC_SECTION_DESCRIPTION,
     SYNC_FOLDER_WARNING,
+    SYNC_FOLDER_WARNING_TITLE,
     SYNC_UNAVAILABLE,
     SERVER_ADDRESS,
     USERNAME,
     APPLICATION_PASSWORD,
-    TURN_OFF_SYNC,
-    ENABLE_SYNC,
     SYNC_NOW,
     DISCONNECT,
+    SYNC_LAST_JUST_NOW,
+    SYNC_LAST_MINUTE,
+    SYNC_LAST_MINUTES,
+    SYNC_LAST_HOUR,
+    SYNC_LAST_HOURS,
+    SYNC_LAST_DAY,
+    SYNC_LAST_DAYS,
     SYNC_STATUS_ON,
     SYNC_STATUS_OFF,
     SYNC_STATUS_NOT_SET_UP,
@@ -158,12 +247,18 @@ enum class TextKey {
     LANGUAGES_EMPTY_UNAVAILABLE,
     LOADING_LANGUAGES,
     DIFFICULTY_NOT_PUBLISHED,
-    DOWNLOADING_DIFFICULTY,
+    DOWNLOAD,
+    DOWNLOAD_SIZE,
+    DOWNLOADING,
     DOWNLOAD_AGAIN,
     DOWNLOAD_DIFFICULTY,
-    DICTIONARY_NOT_PUBLISHED,
-    DOWNLOADING_DICTIONARY,
     DOWNLOAD_DICTIONARY,
+    DICTIONARY_NOT_PUBLISHED,
+    SIZE_KILOBYTES,
+    SIZE_MEGABYTES,
+    SIZE_GIGABYTES,
+    READER_LEVEL,
+    SET_READER_LEVEL,
     DICTIONARY_STATUS_NOT_INSTALLED,
     DICTIONARY_STATUS_READY,
     DICTIONARY_STATUS_INCOMPATIBLE,
@@ -178,6 +273,7 @@ enum class TextKey {
     ATTRIBUTION_DICTIONARY_NOT_INSTALLED,
     ATTRIBUTION_DIFFICULTY_GRANT,
     ATTRIBUTION_DIFFICULTY_NOT_INSTALLED,
+    ATTRIBUTION_ICONS_GRANT,
     FIELD_SOURCE,
     FIELD_DATA,
     FIELD_LICENCE,

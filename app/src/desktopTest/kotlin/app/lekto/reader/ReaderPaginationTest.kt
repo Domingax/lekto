@@ -1,5 +1,7 @@
 package app.lekto.reader
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -124,5 +126,75 @@ class ReaderPaginationTest {
             "a bigger text must take more pages: ${smallPages.size} at ${ReadingPreferences.MIN_SIZE} vs " +
                 "${largePages.size} at ${ReadingPreferences.MAX_SIZE}",
         )
+    }
+
+    /**
+     * Issue #241: a book is measured one chapter at a time. The window starts at
+     * the chapter's first block — a boundary the paginator can trust — and stops
+     * a few pages past the anchor, so opening a long book never lays out the
+     * book. This is the shape the old whole-book pagination failed.
+     */
+    @Test
+    fun theWindowMeasuresItsChapterUpToAFewPagesPastTheAnchor() = runComposeUiTest {
+        val book = AnnotatedString(
+            buildString {
+                repeat(400) { append("the quick brown fox jumps over the lazy dog and then keeps going. ") }
+            },
+        )
+        val chapterStarts = setOf(0, book.length / 4, book.length / 2, book.length * 3 / 4)
+        val anchor = book.length / 2
+        val chapterEnd = book.length * 3 / 4
+        lateinit var pages: List<ReaderPage>
+        var frames = 0
+
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            val layout = ReaderLayout(measurer, defaultStyles.body, width, height)
+            LaunchedEffect(Unit) {
+                val measured = mutableStateListOf<ReaderPage>()
+                fillWindow(book, layout, chapterStarts, anchor, measured) { frames++ }
+                pages = measured.toList()
+            }
+        }
+        waitForIdle()
+
+        assertEquals(anchor, pages.first().start, "the window starts at the chapter's first block")
+        assertTrue(pages.all { page -> page.end <= chapterEnd }, "the window never crosses into the next chapter")
+        assertTrue(pages.last().end > anchor, "the window covers the anchor")
+        assertTrue(pages.size <= 8, "a few pages, not the chapter: ${pages.size}")
+        assertTrue(frames > 0, "the reader gets a frame as soon as its page exists")
+    }
+
+    @Test
+    fun aTurnInsideTheChapterOnlyMeasuresWhatItReveals() = runComposeUiTest {
+        val book = AnnotatedString(
+            buildString {
+                repeat(400) { append("the quick brown fox jumps over the lazy dog and then keeps going. ") }
+            },
+        )
+        var firstWindow: List<ReaderPage> = emptyList()
+        var secondWindow: List<ReaderPage> = emptyList()
+
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            val height = with(density) { 160.dp.roundToPx() }
+            val layout = ReaderLayout(measurer, defaultStyles.body, width, height)
+            LaunchedEffect(Unit) {
+                val pages = mutableStateListOf<ReaderPage>()
+                fillWindow(book, layout, emptySet(), 0, pages) {}
+                firstWindow = pages.toList()
+                fillWindow(book, layout, emptySet(), firstWindow.last().start, pages) {}
+                secondWindow = pages.toList()
+            }
+        }
+        waitForIdle()
+
+        assertEquals(firstWindow, secondWindow.take(firstWindow.size), "a turn keeps what was measured")
+        assertTrue(secondWindow.size > firstWindow.size, "a turn measures the pages it reveals")
     }
 }

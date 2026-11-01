@@ -126,7 +126,8 @@ Android — its `androidMain` platform set may name the Android API it backs; th
 testkit never reaches production), naming and placement (a package matches its
 directory, a source sits under its module's package root, a test class is `*Test.kt`
 in a test source set, and a desktop `*SemanticsTest` has a same-named Android
-host-lane twin — issue #73), and that every manifest has a `.github/dependabot.yml`
+host-lane twin — issue #73), that every clickable control carries the hand cursor
+(issue #217), and that every manifest has a `.github/dependabot.yml`
 entry ([Alert triage](#alert-triage); issue #153).
 
 The rules are hand-rolled rather than Konsist or ArchUnit, so the suite adds no
@@ -375,33 +376,34 @@ and the DMG under `dmg/`. On Linux:
 ```sh
 ./gradlew :app:createDistributable -Plekto.android=false
 tools/packaging/appimage.sh app/build/compose/binaries/main/app/Lekto \
-  app/icons/lekto.png dist/lekto-<version>-linux-x64.AppImage
+  app/src/desktopMain/resources/app-icon/app-icon.png dist/lekto-<version>-linux-x64.AppImage
 ```
 
 The Android variant is switched off so the lane needs no Android SDK and is the
 same on every runner. The release lane (`.github/workflows/release.yml`) runs
 these on Linux, Windows, Apple Silicon macOS and Intel macOS, uploads five files,
-and attaches them to the release when the commit carries a `v*` tag, with the
-committed body `.github/release-notes/desktop.md`; a tag with a pre-release
-suffix (`v1.0.0-preview`) publishes a pre-release that never becomes the
-`/releases/latest` download, and a manual run builds the installers without
-publishing. The Windows installers need WiX, which the runner carries; the Linux
-lane downloads `appimagetool` at the pinned version and checks its digest.
+and attaches them to the release when the commit carries a `v*` tag. The release
+body is the changelog link: a GitHub compare between the previous `v*` tag and
+this one. A tag with a pre-release suffix (`v1.1.0-preview`) publishes a
+pre-release that never becomes the `/releases/latest` download, and a manual run
+builds the installers without publishing. The Windows installers need WiX, which
+the runner carries; the Linux lane downloads `appimagetool` at the pinned version
+and checks its digest.
 
 The application version lives in `gradle.properties` (`lekto.version`), read by
 Android's `versionName` and the installers' `packageVersion`, so one release's
 APK and installers cannot claim different versions. Its first number must be at
 least 1: jpackage's macOS bundler rejects an `app-version` that starts at zero,
-which is why the first packaged release is `1.0.0` rather than `0.1.0`. The
+which is why the packaged release is `1.1.0` rather than a `0.x` version. The
 packaging names its identity explicitly: bundle id `app.lekto` and dock name
 `Lekto` on macOS, and a stable `upgradeUuid` on Windows so an upgrade replaces the
 previous install instead of sitting beside it. The runtime image carries the
 modules jpackage needs and `:app:suggestRuntimeModules` reports — `java.sql` for
 sqlite-jdbc, `java.net.http` for the desktop WebDAV transport, `jdk.unsupported`
 for JNA — plus `jdk.accessibility`, which is what makes the Java Access Bridge
-reachable on Windows. The installer icons are generated from the guide's brand
-mark by `tools/icons/app-icons.sh` and committed under `app/icons/`; the AppImage
-reuses the Linux PNG.
+reachable on Windows. The installer icons are the committed desktop rasters
+`tools/icons/mark.sh` regenerates under
+`app/src/desktopMain/resources/app-icon/`; the AppImage reuses the PNG.
 
 The desktop's accessibility is limited by Compose Desktop, not by a Lekto
 setting: macOS is fully supported, Windows works through the Java Access Bridge
@@ -480,15 +482,18 @@ The same run also writes a **language manifest**
 (`--language-manifest`, default `language-manifest.json` in the output directory):
 the catalogue of what the release offers for reading — each **Reading language**
 with the **Difficulty table** published for it and the **Dictionary pack**s
-published for its pairs, each pair naming its **Translation language** (issues
-#145, #161). It is built from the run's own output, so a run that published
-nothing yields an empty manifest and the catalogue can never advertise an artefact
-that was not built. The workflow uploads it under its own date-free name beside
-the assets, so the app can fetch one constant address,
+published for its pairs, each pair naming its **Translation language**, and each
+artefact carrying its compressed asset's size in bytes once the workflow has
+gzipped it (issues #145, #161, #215). It is built from the run's own output, so a
+run that published nothing yields an empty manifest and the catalogue can never
+advertise an artefact that was not built. The workflow compresses the assets,
+annotates the manifest with their sizes, then writes `SHA256SUMS` and uploads both
+under date-free names, so the app can fetch one constant address,
 `releases/latest/download/language-manifest.json`. Its format version is declared
 by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 `LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test
-(ADR-0013).
+(ADR-0013). The `sizeBytes` field is additive at that same version, so a build
+that predates it ignores it.
 
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
 each pair's alias into the device-local **derived store**, validates the format
@@ -532,7 +537,7 @@ like any other. It is pinned at 5.4.0 because 5.5.0's Android artifact requires
 ## Icon pipeline
 
 `tools/icons/fetch.sh` regenerates the icon set committed under
-`app/src/commonMain/kotlin/app/lekto/ui/icons/`. It fetches the twelve SVGs at the
+`app/src/commonMain/kotlin/app/lekto/ui/icons/`. It fetches the fourteen SVGs at the
 pinned Lucide tag, runs the pinned Valkyrie CLI with its zip digest checked, and
 writes the `ImageVector` Kotlin. Nothing is generated at build time and the app
 declares no icon dependency: the output is committed, and `LektoIconsTest` pins
@@ -540,12 +545,24 @@ its geometry in `./gradlew check`. The licences are in `THIRD-PARTY-NOTICES.md`;
 the design rule is `docs/design.md` §5, and the reasoning is
 `docs/research/icones-compose.md`.
 
-`tools/icons/app-icons.sh` is the installer-icon pipeline beside it (issue #29).
-It renders the guide's single brand mark, `guide/public/favicon.svg`, into the
-container each operating system's installer asks for — a 512px PNG for Linux, a
-multi-resolution ICO for Windows and an ICNS for macOS — and writes them under
-`app/icons/`. The three files are committed; re-run the script when the mark
-changes, never edit an icon by hand.
+`tools/icons/mark.sh` regenerates the launcher mark (issue #177) from the SVGs in
+`tools/icons/mark/`, which are its only source of truth: `mark.svg` is the letter,
+with its paper rim and the four Mastery level colours, `letter.svg` the same letter
+in one ink for Android 13's monochrome layer. It converts them into the adaptive
+icon's two layers under `app/src/androidMain/res/` — the launch screen reuses the
+foreground, because the rim carries the mark onto the Dark paper and the system
+masks the same third of both — writes `guide/public/favicon.svg`,
+and renders the desktop rasters into `app/src/desktopMain/resources/app-icon/` — a PNG for the
+Linux package and the window icon, a multi-resolution ICO for Windows and an ICNS
+for macOS. The conversion is `tools/icons/mark/Convert.java`, a single-file JDK
+program; the renderer is `app.lekto.tools.RenderAppIcon`, run by
+`./gradlew :app:renderAppIcon`, which draws with the Skia already on the desktop
+classpath. The pipeline adds no dependency, and every output is committed:
+`LauncherIconTest` pins the manifest-and-resource wiring, `AppIconTest`'s golden
+pins the geometry, and a raster is regenerated by hand rather than compared in CI.
+The desktop distribution's `nativeDistributions` consumes the three rasters
+(issue #29): the Linux AppImage and window icon use the PNG, Windows the ICO and
+macOS the ICNS.
 
 ## Modules
 

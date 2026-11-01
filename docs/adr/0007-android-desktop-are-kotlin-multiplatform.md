@@ -129,8 +129,9 @@ ADR-0007 substrate:
 
 - **Pagination is lazy.** `paginateChapter` returns a `Sequence<ReaderPage>` and
   finds each page by measuring a bounded run from the previous page's end, so
-  opening a book lays out its **first page**, not its every page. A background
-  fill lays out the rest for the page counter, one yield every few pages.
+  opening a book lays out its **first page**, not its every page. The background
+  fill and the page counter it fed were removed by ADR-0040: the reader measures
+  the chapter holding the anchor and a few pages past it.
 - **The word layer is per page.** The chapter is built once **unstyled by
   mastery** (a colour or a link does not change a glyph's width), pagination
   measures that, and only the visible page is tokenised and coloured. Opening a
@@ -140,3 +141,16 @@ Neither the substrate nor the "own EPUB pipeline" decision changes; this records
 where the production reader landed, and supersedes the "whole-chapter layout"
 note in `docs/research/paginated-reader-spike.md`.
 
+## Update — words are no longer links (issue #243)
+
+The reader used to make every **Word token** a `LinkAnnotation.Clickable`, which put a
+tap handler on each of them and let a screen reader focus word by word. Measured on a
+Pixel 6a, that layer cost about 55 ms of text layout per page, paid on every page turn:
+150 links meant a 1300 ms worst frame, 81 ms without them.
+
+The page now hit-tests the tap against its tokens (`readerSurfaceTap`) and builds no link
+per word. The rest of the substrate in this ADR stands: `AnnotatedString`/`SpanStyle` for
+the mastery colour and underline, `SelectionContainer` for phrase selection, and the
+platform's own text stack for layout. A screen reader keeps the page's two turn actions
+and the chapter list, but can no longer jump from word to word; that is the accepted
+cost, since a 150-stop page was as much a burden for it as a help.

@@ -24,6 +24,13 @@ class InMemoryLanguageCatalog(private var current: LanguageCatalogState = Langua
     /** When set, the next [reload] fails with it; used to test the honest offline state. */
     var failure: Exception? = null
 
+    /**
+     * When set, [reload] runs it once its outcome is decided and before it reports
+     * it: the seam a test holds a fetch in flight with, so the window where the
+     * surface renders while a fetch runs is proved rather than raced.
+     */
+    var whileInFlight: (() -> Unit)? = null
+
     /** When set, a [reload] lands on it and [status] then reports it; used to test a fetch. */
     var onReload: LanguageCatalogState? = null
 
@@ -35,7 +42,9 @@ class InMemoryLanguageCatalog(private var current: LanguageCatalogState = Langua
 
     override fun reload(): LanguageCatalogState {
         reloads++
-        failure?.let { throw it }
+        val decided = failure
+        whileInFlight?.invoke()
+        decided?.let { throw it }
         onReload?.let { landed -> current = landed }
         return current
     }
@@ -78,7 +87,15 @@ fun testLanguageManifest(
             languages.map { offered ->
                 buildJsonObject {
                     put("language", offered.language)
-                    offered.difficulty?.let { name -> put("difficulty", buildJsonObject { put("name", name) }) }
+                    offered.difficulty?.let { name ->
+                        put(
+                            "difficulty",
+                            buildJsonObject {
+                                put("name", name)
+                                offered.difficultySizeBytes?.let { bytes -> put("sizeBytes", bytes) }
+                            },
+                        )
+                    }
                     put(
                         "dictionaries",
                         buildJsonArray {
@@ -87,6 +104,7 @@ fun testLanguageManifest(
                                     buildJsonObject {
                                         put("translationLanguage", dictionary.translationLanguage)
                                         put("name", dictionary.name)
+                                        dictionary.sizeBytes?.let { bytes -> put("sizeBytes", bytes) }
                                     },
                                 )
                             }
@@ -103,9 +121,11 @@ fun testOfferedLanguage(
     language: String,
     difficulty: String? = null,
     dictionaries: List<OfferedDictionary> = emptyList(),
+    difficultySizeBytes: Long? = null,
 ): OfferedLanguage = OfferedLanguage(
     language = language,
     displayName = app.lekto.core.language.readingLanguageName(language),
     difficulty = difficulty,
     dictionaries = dictionaries,
+    difficultySizeBytes = difficultySizeBytes,
 )

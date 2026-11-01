@@ -21,6 +21,7 @@ import app.lekto.core.vault.VaultRecord
 import app.lekto.core.vault.VaultStore
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
+import app.lekto.settings.VAULT_LINK_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
@@ -60,7 +61,7 @@ class AppVaultSemanticsTest {
         }, open = { null })
         setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
-        onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        openVault()
         onNodeWithText("Export vault").performScrollTo().performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { exported != null }
@@ -80,7 +81,7 @@ class AppVaultSemanticsTest {
         )
         setContent { App(environment(libraryOver(vault), vaultTransfer = transfer)) }
 
-        onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        openVault()
         onNodeWithText("Import vault").performScrollTo().performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vault.get("restored") != null }
 
@@ -100,11 +101,19 @@ class AppVaultSemanticsTest {
         setContent { App(environment(libraryOver(InMemoryVaultStore()))) }
 
         onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+        onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
 
-        onNodeWithText("Vault").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Vault and sync").assertIsDisplayed()
         onNodeWithText("aren't available", substring = true).performScrollTo().assertIsDisplayed()
         onNodeWithText("Export vault").performScrollTo().assertIsNotEnabled()
     }
+}
+
+/** Reaches the **Vault and sync** screen from Settings and its doorway (issue #213). */
+@OptIn(ExperimentalTestApi::class)
+private fun androidx.compose.ui.test.ComposeUiTest.openVault() {
+    onNodeWithTag(shellSectionTag(ShellSection.SETTINGS)).performClick()
+    onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
 }
 
 /** The real vault-backed library over [vault]; no parsers, because these tests only list books. */

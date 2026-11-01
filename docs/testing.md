@@ -69,7 +69,14 @@ Project Gutenberg book — read through `TestResources` in `testkit`, and the
 pure-Kotlin `TxtParser` (ticket #15), whose tests run in `core/commonTest`. The
 extraction goldens in `resources/golden/` pin the EPUB parser's output; a change
 that alters the text fails until the golden is deliberately updated. See
-`docs/research/epub-to-tokens-spike.md`. The block walk has its own guard,
+`docs/research/epub-to-tokens-spike.md`. The `TxtParser`'s unit cases stay in
+`core/commonTest`, and the structure it infers — the title, the heading blocks and
+the chapter list — is pinned the way the parser row of
+[the test levels](#test-levels) demands: `TxtGoldenTest` in `core/jvmTest` records
+a generated corpus and one awkward real book,
+`resources/txt/les-trois-mousquetaires.txt` (CRLF, a packed table of contents,
+headings written on two lines), against `resources/golden/txt-*.txt` (ADR-0041).
+The block walk has its own guard,
 `XhtmlBlocksTest` in `core/jvmTest`: a heading that writes its anchor
 self-closing leaves the HTML parser with an `<a>` it never closes, and the rest
 of the chapter lands inside it, which imported three real books as their table
@@ -124,6 +131,74 @@ no-match state are `LibraryScreenSemanticsTest` on both lanes, and
 `AppSemanticsTest` proves the query is dropped when the reader leaves the Library
 for a book, Vocabulary, Settings or Languages.
 
+Reading progress in each row (issue #196) is proved at the same levels. The
+denominator — the reader's rendered text, the blocks joined by a blank line — is
+`StructuredText.renderedLength()`, pinned in `StructuredTextTest` in
+`core/commonTest` and, on a multi-block book, to `buildChapterText(...).length`
+in `ReaderTextTest`, so the share and the text the reader lays out cannot drift.
+The whole percentage is `ReadingProgress.percent`, pinned by `ReadingProgressTest`
+for the floor (`28.9 %` → `28 %`), a position at 0, an offset past the end
+clamped to 100, the absence of a 99 % cap, and a property over generated offsets
+and lengths. The length is a **Derived asset** written and removed beside the
+parsed text, so `VaultBookLibraryTest` proves the entry lands and goes with the
+text, a re-parse rewrites it, and a **derived store that refuses to read
+`book-text/<id>.json`** still lists progress — the list reads only the length
+entry. `JvmBookLibraryTest` proves the same entry on a real directory, outside
+the vault root. The controller's background repair is `LibraryControllerTest`:
+construction lists the row at `…` without parsing, the measurement runs on the
+injected dispatcher and moves the row to its percentage, a failed measurement
+leaves `…` rather than `Not started`, and neither the content nor the reading
+sync signal fires. The row's three states — a percentage with a rule that
+carries `ProgressBarRangeInfo`, `Not started` without one, and `…` with its
+localized description and no rule — are `LibraryScreenSemanticsTest` on both
+lanes, and the file name is absent from the row and present in the delete
+confirmation on both.
+
+The Library's visual anatomy (issue #208) is proved at the same levels. The
+language hues are a theme token, so `LanguageHuesTest` pins the five daylight
+hues, the third a dark paper lifts each by, Sepia's unchanged ones, the base tag
+a regional language resolves to, and the muted ink a language the identity does
+not name takes. The row's frame — the vignette's two-letter code, the title, and
+the 48 dp floor a row never shrinks below — and the three states — the empty
+shelf with its one filled action, the skeleton rows that are distinguishable
+from the empty message, and the no-match state — are `LibraryScreenSemanticsTest`
+on both lanes, together with the two named groups (`Other books` parts the unread
+books from the recently read ones) and the delete idiom of each: the Android twin
+swipes the row and finds the confirmation, and the desktop twin proves the trash
+appears on hover, that a drag on a pointer platform does nothing, and that the
+confirmation guards the vault either way. The shelf's loading state is the controller's: `LibraryControllerTest`
+pins that a refresh reports it while the vault is read, so the skeleton is real
+state and not a still. The golden lane records the frame on four books across
+three languages, one sheet per paper.
+
+Declaring a book **Finished** (issue #200; ADR-0038) is a second vault fact beside
+the reading position, so it is proved at its own levels. `FinishedBookRecord` is
+a serialise/parse invariant, so `FinishedBookRecordPropertyTest` in
+`core/commonTest` round-trips an arbitrary book id and instant and pins the
+derived `<bookId>-finished` id under the `progress` kind, while
+`FinishedBookLibraryTest` — split from `VaultBookLibraryTest` so the fact stands
+alone — proves that marking writes the record without touching the position's
+`updatedAt`, that an undo removes it and leaves a tombstone, that a finished book
+is excluded from the leading group even when it was read last, that `delete`
+removes the declaration and leaves its tombstone, and that a vault with no record
+reads **Unread** or **In progress**, never **Finished**.
+`JvmBookLibraryTest` pins the real file under `progress/` and its removal on a
+directory-backed vault. The state partition is `LibraryListingTest`'s: **Finished**
+wins, a position means **In progress**, and the rest is **Unread**. The filter is
+view state, so `LibraryControllerTest` pins the default two states, the toggle
+whose last chip cannot be turned off, the two narrowings applying together, and
+`Show all books` clearing both; `LibraryScreenSemanticsTest` on both lanes pins
+the chips' on-and-off state, the finished row (`FORMAT · Finished`, a check, no
+rule), the three empty states, and that the browse list itself hides a finished
+row until its chip is on, while `AppSemanticsTest` runs the whole loop — the end
+state's `Mark as finished`, the record it writes, the Library's
+`All your books are finished.` on return, and the row once **Finished** is
+selected. The reader's end state is a UI behaviour: `ReaderScreenSemanticsTest`
+on both lanes pins that reaching the last page does not raise it, a next tap does,
+mark and undo flip it, marking never reports a position, and `Back to Library`
+leaves; `AndroidBackTest` pins that system back closes it onto the last page. The
+goldens add the filter row's frame to the shelf's three papers.
+
 Deleting a book (issue #131) is proved at the same levels. It is a domain
 behaviour, so `VaultBookLibraryTest` in `core/commonTest` removes the book's
 record, its original, its derived text and its reading position and leaves a
@@ -142,15 +217,18 @@ domain behaviour over the in-memory vault in `core/commonTest` and the directory
 vault in `core/jvmTest`, so a book cannot lose its place on export, import or a
 re-parse; its serialise/parse is a property in
 `core/commonTest/.../ReadingPositionRecordPropertyTest`. The reader's UI
-semantics — opening at a saved offset, paging with the buttons and the
-left/right tap zones, and a tap on the middle receding the chrome — live in
+semantics — opening at a saved offset, paging with the two chevrons and the
+horizontal swipe, the page's two page-turn accessibility actions, and a tap that
+misses a word changing nothing — live in
 `app/desktopTest/.../ReaderScreenSemanticsTest`, injected with the Compose test
 API's pointer injection (`performTouchInput`), and the whole loop (open, turn,
 leave, reopen at the same page) in `AppSemanticsTest` against an in-memory
-library. Pagination is lazy and tokenisation is per page: `paginateChapter`
-yields one page at a time and `buildPageTokens` colours only the visible page, so
-opening a book lays out and tokenises its first page and not its every page;
-`LongChapterPerformanceTest` pins the shape on a book sized to 300 pages, and
+library. Pagination is bounded by the chapter and tokenisation is per page:
+`paginateChapter` yields one page at a time, `fillWindow` measures the chapter
+holding the anchor and a few pages past it, and `buildPageTokens` colours only the
+visible page, so opening a book neither lays out the book nor tokenises every
+word; `LongChapterPerformanceTest` pins the shape on a book sized to 300 pages,
+and
 `ReadingProgressWriterTest` pins that rapid page turns coalesce to one vault
 write rather than racing it.
 
@@ -166,9 +244,68 @@ swatches, one sheet per paper; the reader adds one `mastery-palette-<paper>.png`
 per paper (issue #183), its mastery ramp and the reader page's word layer as
 coloured blocks — the same layout a page of text produces, without the glyphs.
 The ramps' 4.5:1 floor is `MasteryPaletteContrastTest`'s, measured against each
-paper, because a golden can pin a colour but not its readability. A text-bearing reader golden waits on pinned reading typography (a
-bundled font); until then, typography is pinned by `ReaderStyles` and the word
-layer by `ReaderTextTest`. Record or update with
+paper, because a golden can pin a colour but not its readability. The Library
+adds one `library-<paper>.png` per paper (issue #208): the shelf's frame — the
+search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
+rule and the hairline that parts two rows — on four books across three languages.
+Its geometry comes from the screen's own constants and its rule from the screen's
+own composable; only the words are bars, because glyphs would not verify. The
+reader adds `reader-<paper>.png` per paper (issue #209): the 48 dp top band with
+its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
+chevrons that turn the page, and the position, and one
+`reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
+hairline and its printed-form rows of chip frames, each unselected chip on the
+paper behind it, with the page and the bottom band pushed up rather than covered
+and the page clipped rather than repaginated. The lookup sheet adds one
+`word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
+(issue #210): the sheet raised over a page at the 45 % cap, square at its top
+edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
+meta bars, the two real icons, the numbered senses with their translations, the
+level named beside the five filled chip frames (the current one ringed in ink)
+and the references as one muted, content-aligned line; the offline sheet swaps
+the senses for the honest message. The phrase sheet adds
+`phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
+(issue #211): the same shell with the phrase in the serif band and the close icon,
+then either the translation body with its disclosure or the prompt with its
+settings link, above the zero-configuration shortcut. The Vocabulary list adds
+`vocabulary-<paper>.png` per paper and `vocabulary-delete-light.png` (issue #212):
+the title and the count beside it, the shared search surface, the filter row with
+its partly cut chip, the current filter filled in ink and each chip carrying its
+level's dot, then each row's word bar, dot and level name, translation and muted
+sentence with a hairline between rows — the first row hovered, so the trash in the
+slot reserved for it is recorded too. Its level sheet adds
+`vocabulary-level-sheet-<paper>.png` per paper (issue #178): the scrim over the
+list, then the shared sheet's drag handle, the word in the title's size with the
+close icon, the translation and the muted sentence, a hairline, and the level named
+beside the five filled chip frames with the current one ringed in ink. The desktop
+column adds one sheet, `vocabulary-level-column-light.png` (issue #178): the same
+panel in the 320 dp reserved column, its hairline rule at the edge, the word and
+its close on the title band, and the level stacked above the chips.
+The confirmation sheet records the scrim,
+the 16 dp dialogue, its title and message, and `Delete` in the reserved red. The
+two settings forms add one sheet, `settings-forms-light.png` (issue #213): the
+**LLM provider** and **Vault and sync** screens side by side, each with its back
+arrow and serif title, their printed-form rows — label, value, hairline — the one
+filled action per screen (`Connection` on the provider, `Sync now` on the vault),
+the vault's outlined `Connection`, and `Remove key` and `Disconnect` in the
+reserved red. The Settings index adds `settings-index-<paper>.png` per paper
+(issue #214): the serif title, the three muted group labels, each row's title and
+current value as ink bars with its chevron, and the hairline that parts two rows of
+a group. The **Languages** screen adds `languages-<paper>.png` per paper
+(issue #215): the back arrow and serif title with **Reload list** at the edge, the
+printed-form **Translation language** row, then the `By language` label and the
+short explanation of the two derived assets, then one row per language with its
+name and level picker, each **Derived asset**'s muted state and its
+trailing text action, the hairline that parts two languages, and the attribution at
+the foot in the muted ink — three rows standing for one ready, one missing both
+derived assets and one with a corrupt dictionary. The launcher
+mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
+coloured letter on the paper and the monochrome letter tinted on the night surface (issue
+#177); it is text-free by construction, because the letter is an outline, not a glyph.
+A text-bearing golden waits on
+pinned reading typography (a bundled font); until then, typography is pinned by
+`ReaderStyles` and the word layer by `ReaderTextTest`. Record or update with
+
 
 ```sh
 ./gradlew :app:recordRoborazziDesktop
@@ -265,10 +402,10 @@ that (issue #69). The desktop lane keeps a Bundle-strict saveable-state registry
 in `VocabularyScreenSemanticsTest` as its own guard.
 
 The reader's page — a `SelectionContainer` over an `AnnotatedString` whose
-words are clickable `LinkAnnotation`s, paginated by the platform text stack — is
+words the page hit-tests, paginated by the platform text stack — is
 also proved on this lane (issue #75): `ReaderScreenSemanticsTest`
-opens at a saved offset, turns pages by button and by tap zone, and toggles the
-chrome on the runtime Android uses. Robolectric lays glyphs out far more tightly
+opens at a saved offset, turns pages by tapping the zones, and toggles the chrome
+on the runtime Android uses. Robolectric lays glyphs out far more tightly
 than a device font, so the twin uses a longer chapter than the desktop test's
 sample; the assertions are about behaviour, not a pinned page count.
 
@@ -279,10 +416,10 @@ vocabulary list with its search and filter, settings and attribution, and the
 vault export/import loop all run under Robolectric through the same `App()`
 composable. The book's text is built from one-line paragraphs, because
 Robolectric lays glyphs out far more tightly than a device font, and a page
-boundary then always falls between paragraphs. A word link is activated through
-its semantics action rather than a synthetic tap, because a tap on Robolectric's
-tiny measured glyphs lands between them and the reader turns the page instead;
-the raw tap zones and paging are proved on this lane by the reader's own twin
+boundary then always falls between paragraphs. A word is tapped at a point taken
+from the text's own layout (`GetTextLayoutResult`) rather than at a guessed pixel,
+because Robolectric measures glyphs far more tightly than a device font;
+the swipe and paging are proved on this lane by the reader's own twin
 (issue #75).
 
 The two lanes are inseparable by rule, not by habit (issue #73): the architecture
@@ -364,6 +501,18 @@ own: `sync` is a `suspend` function that runs on the caller's context, so
 that must move work off the caller's thread takes a `CoroutineDispatcher`
 parameter, the way `Seams` threads its clock, ids and randomness.
 
+A seam is only half the answer: the test must also wait for the work it means to
+observe. A surface that renders a **provisional** state lets a test run ahead of
+it — the Languages screen shows its honest empty state, with **Reload list**
+disabled, while the first fetch is still in flight — so a tap asked for during
+that window is dropped and the test waits for a result no one will fetch. The
+suite's rule is to wait for the settled state with `AWAIT_DISPATCHED_WORK_MILLIS`
+(the failure message, the loaded list), never to assert on something the first
+frame already shows. Where that window only opens on a loaded machine, `testkit`'s
+fakes hold the work in flight (`InMemoryLanguageCatalog.whileInFlight`), so the
+race is proved on an idle one — `AppSemanticsTest`'s reload test is the case that
+taught this, on both lanes.
+
 The **window insets** are a seam of the same kind. `App` takes a `WindowInsets`
 that defaults to `WindowInsets.safeDrawing`, so every screen clears the status
 and navigation bars and any display cutout — Android 15 draws an app targeting
@@ -399,7 +548,7 @@ row and each demanded level to a red → green before the commit.
 The icon set (issue #184) is generated once and committed, so the Kotlin it adds
 is not hand-written and the generator is not run in tests. `LektoIconsTest` pins
 what a regeneration could silently change: the 24 dp grid, the 2-unit round
-stroke, the twelve-name set, and the back arrow as the only icon that mirrors in
+stroke, the fourteen-name set, and the back arrow as the only icon that mirrors in
 a right-to-left layout.
 
 The desktop installers (issue #29) are proved by the artefact, not by a unit
@@ -511,17 +660,20 @@ reached. It also pins that the blocking probe and sync move onto the injected
 dispatcher rather than the caller's scope — so Android never runs a network call
 on the main thread — and that a completed sync refreshes the library rather than
 leaving it stale (issue #116). `SyncReportSummaryTest` pins the plain-language
-summary, the section's
-controls, status line and folder-sync warning are `SettingsScreenSemanticsTest`
-on both lanes, and the loop — reach settings, save the endpoint and find it
-persisted — is driven through `AppSemanticsTest` on both lanes. The
+summary, and the **Vault and sync** screen's controls, status line and
+folder-sync warning are `VaultSettingsScreenSemanticsTest` on both lanes
+(issue #213), and the loop — reach Settings → Vault and sync, type the endpoint
+and find it persisted before **Connection**, which stores the password and turns
+sync on — is driven through `AppSemanticsTest` on both lanes. A run records its
+time with the injected clock, so the screen can say "Synced 2 minutes ago";
+`SyncOutcomeStoreContract` pins that the time round-trips. The
 composition roots now both wire a real driver (issue #116; ADR-0026):
 `desktopSync` and `androidSync` build the same `WebDavSyncTarget` over their
 platform's transport, rooted app-privately under the client's own directory. The
 Android wiring is proved on the host lane by `AndroidSyncHostTest` — the settings
 document under `Context.filesDir`, the library's device id and a delete's
 tombstone there, and the engine reconciling the Android vault — so **Settings →
-Sync** is usable on the first-class client, not only desktop. Without a driver the
+Vault and sync** is usable on the first-class client, not only desktop. Without a driver the
 section says sync is unavailable and never gates the reader.
 
 The automatic triggers (issue #121; ADR-0028) are proved at their own levels. The
@@ -643,7 +795,7 @@ and the per-OS voice-listing parsers are `core/jvmTest` (`JvmPronouncerTest`,
 `core/androidHostTest` (`AndroidPronouncerHostTest`): it drives the platform
 `TextToSpeech` on a simulated runtime, where an installed language speaks and a
 language with no voice is an honest message, so the two clients cannot disagree
-about the outcome. The panel's Listen control and the messages it renders are
+about the outcome. The panel's speaker control and the messages it renders are
 `app/desktopTest`, and `AppSemanticsTest` speaks a tapped word through
 `testkit`'s `FakePronouncer`, covering the no-voice and no-engine messages.
 
@@ -691,12 +843,13 @@ no provider-authored text — and therefore no echoed key — ever reaches a mes
 `LlmConnectionResultTest` pins the allowlist, the status fallback, and that an unknown
 identifier cannot be rendered. No provider and no real key is involved, as the pack
 downloader's lane is. The state
-holder — load, choose one provider, save app-privately while the key goes to the
-`SecretStore`, test off the UI thread, report inline — is `ProviderControllerTest` in
-`app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The section's
-controls are `SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach
-settings, choose a provider, type a key, test the connection and see it answered — runs
-through `AppSemanticsTest` on both lanes. Android excludes the local Ollama preset,
+holder — load, choose one provider, test off the UI thread and, on success, store
+the key in the `SecretStore`, report inline — is `ProviderControllerTest` in
+`app/desktopTest`, driven by `kotlinx-coroutines-test`'s virtual time. The screen's
+controls are `ProviderSettingsScreenSemanticsTest` on both lanes (issue #213), and
+the whole loop — reach Settings → LLM provider, choose a provider, type a key,
+press **Connection** and see it answered and stored — runs through `AppSemanticsTest`
+on both lanes. Android excludes the local Ollama preset,
 which only a desktop can reach (ADR-0022), through the provider list the platform
 wires.
 
@@ -718,7 +871,9 @@ the context, report a failure inline, cancel on close, and fall back to the
 `app/desktopTest`, driven by virtual time. The panel is
 `PhraseLookupPanelSemanticsTest` on both lanes — the shortcut with no provider,
 the non-blocking prompt beside it, the streamed text with its disclosure
-collapsed until asked for, the inline failure and the empty answer — and the
+collapsed until asked for, the inline failure and the empty answer, the three
+states kept apart, and a long translation scrolling to the shortcut instead of
+clipping under the sheet's cap — and the
 whole loop — select a phrase,
 watch the translation stream in with the provider reachable directly, close and
 find the reader on the same page — runs through `AppSemanticsTest` on both
@@ -749,9 +904,9 @@ section's controls — the provider picker reading "Choose a provider" until one
 chosen, opening the model field raising the typed key, the model field offering the
 loaded list as an exposed dropdown that still accepts manual typing, the discreet
 missing-key note, and an unsupported list reported inline — are
-`SettingsScreenSemanticsTest` on both lanes, and the whole loop — reach settings,
-choose a provider, watch its models load, pick one and see the field fill — runs
-through `AppSemanticsTest` on both lanes. The list is device-local UI state:
+`ProviderSettingsScreenSemanticsTest` on both lanes (issue #213), and the whole
+loop — reach Settings → LLM provider, choose a provider, watch its models load,
+pick one and see the field fill — runs through `AppSemanticsTest` on both lanes. The list is device-local UI state:
 it never enters the vault, an export or a log.
 
 The settings screen's vault export/import (issue #20) is proved at the same
@@ -760,13 +915,22 @@ the save action, an import restoring the vault, a cancelled file dialog as a
 no-op, and a bad or unreadable file becoming an honest message rather than a
 crash — is a behaviour over the in-memory vault in
 `app/desktopTest/.../settings/VaultTransferControllerTest`, driven by
-`kotlinx-coroutines-test`'s virtual time. The screen's sections and its
-export/import controls are UI semantics in `SettingsScreenSemanticsTest`, and the
-same screen is re-proved on a simulated Android runtime in
-`app/androidUnitTest/.../settings/SettingsScreenSemanticsTest` (issue #77) — the
-way to the **Languages** surface, the vault section's export/import controls, and
-the LLM provider and sync sections — so the screen is proved on both lanes, as the
-parity rule requires (issue #73). The
+`kotlinx-coroutines-test`'s virtual time. The **Vault and sync** screen and its
+export/import controls are UI semantics in `VaultSettingsScreenSemanticsTest`,
+and the same screen is re-proved on a simulated Android runtime in
+`app/androidUnitTest/.../settings/VaultSettingsScreenSemanticsTest` (issue #77).
+Since issue #213 the two forms are screens of their own, and since issue #214 the
+index is all that is left: `SettingsScreenSemanticsTest` proves, on both lanes, the
+three named groups — **Reading**, **Data**, **Application** — one row per area,
+each row carrying its current value in its own semantics, each screen one tap away,
+and no control on the list itself. The **App language** and **About** screens the
+index opens have their own `AppLanguageScreenSemanticsTest` and
+`AboutScreenSemanticsTest`, on both lanes too (issue #73). The row's
+**Reading languages** value is a pure split, `ReadingLanguagesTest` in
+`app/desktopTest`: the languages the reader's books are in, most-read first, a
+subtag folded to its base and a book with no language left out. The version the
+**About** screen shows is declared by the app and by the Android build, so
+`AppVersionSynchronisationTest` in `architecture` fails when the two drift apart. The
 whole loop — export to the injected save action, import from the injected picker,
 and the library reloading the restored records rather than showing its stale list
 (`LibraryController.refresh`) — runs through `AppVaultSemanticsTest` against the
@@ -774,7 +938,8 @@ real vault-backed `VaultBookLibrary`, so the test proves what the user then sees
 its same-named `app/androidUnitTest` twin (issue #79) re-proves the loop on the
 runtime Android uses.
 The desktop wiring that roots the transfer at the same directory as the library
-is `DesktopVaultTest`; the modal Swing dialogs and the Android `CreateDocument`
+is `DesktopVaultTest`; the modal system dialogs — the AWT `FileDialog`, with the
+Swing chooser only as its fallback (issue #219) — and the Android `CreateDocument`
 and `OpenDocument` glue sit behind the coverage exclusion, like the rest of the
 platform entry points. A modal dialog pumps a nested event loop, so the desktop
 root runs each dialog on a dispatcher of its own rather than the composition's:
@@ -794,10 +959,17 @@ by `ReaderTextTest`: a lemma lookup collapses an inflection onto the lemma's key
 and a tap carries the sentence the word was found in. The reader's live state —
 load once, an unsaved word is unknown, a save bumps the revision that recolours,
 and a previous session's save is present at startup — is a `VocabularyControllerTest`
-in `app/desktopTest`, and the panel's Save button and level chips are
-`WordLookupPanelSemanticsTest`. The whole loop — tap a word, Save it with its
-context and level, change the level afterwards, and find an earlier session's
-entry already saved — runs through `AppSemanticsTest` against the in-memory
+in `app/desktopTest`, and the panel's level chips are its save (issue #210):
+`WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
+no separate Save control exists, that the current level is named beside the
+chips, and that the sheet covers at most 45 % of the screen. `AppSemanticsTest`
+also drives the reader's lift: a word at the bottom of the page is tapped, the
+sheet opens, and the word's bounds are asserted above the sheet's top while the
+page's words stay put — the page rises under the sheet without repaginating.
+The whole loop — tap a word, choose a level so it is saved with its context,
+change the level afterwards, and find an earlier session's entry already at its
+level — runs
+through `AppSemanticsTest` against the in-memory
 vocabulary, including that saving an inflected form does not create a second
 entry; its same-named `app/androidUnitTest` twin (issue #79) re-proves the save
 loop on the runtime Android uses. The translation a save keeps is the shared
@@ -822,9 +994,15 @@ search is a pure transform, `VocabularySearchTest`: a blank query keeps every
 entry, and a word is found by its spelling, its lemma, its translation or its
 context sentence, case-insensitively. The list's surface is
 `VocabularyScreenSemanticsTest` in `app/desktopTest` — the instructional empty
-state, an entry's word, translation, context sentence and mastery, the search
-field raising the query, the no-match message and the delete action.
-The whole loop runs through `AppSemanticsTest` against the in-memory vocabulary:
+state, an entry's word, level, translation and context sentence, the count beside
+the title (singular at one, and the vocabulary's rather than the filtered list's),
+the search field raising the query, a search that matches nothing naming the query
+back beside a `Clear search` action, and a delete that only ever asks: the row's
+trash appears on hover and the confirmation removes nothing until it is confirmed.
+The delete's two idioms are each proved in their lane (issue #212): the desktop
+suite hovers the row and shows a drag deletes nothing, and its Android twin swipes
+the row and confirms. The whole loop runs through `AppSemanticsTest` against the
+in-memory vocabulary:
 a word saved from the reader appears in the list with its details, the list can
 be searched, and deleting the word returns it to unsaved in the reader — so the
 list and the text cannot disagree. The desktop wiring that deletes over a real
@@ -839,12 +1017,15 @@ runtime (issue #71).
 
 The mastery filter (issue #66) is proved the same way. `filterByMastery` is a
 pure transform, so `VocabularyFilterTest` proves a level keeps only its entries,
-`null` keeps them all, and the filter composes with the search. The chips
-themselves are the shared `MasteryChip` (in `app`'s reader package), so the
-list's filter and the lookup panel's level selector cannot drift;
-`VocabularyScreenSemanticsTest` proves a chip raises its level, the all-levels
-chip clears it, and a filter that matches nothing says so, and `AppSemanticsTest`
-filters the list to a level and finds only that level's word.
+`null` keeps them all, and the filter composes with the search. The list's chips
+are the **Aa** panel's own `ChoiceChip` (issue #212; `ui/Chip.kt`), so a chip
+looks the same wherever it chooses something — the current filter is the theme's
+ink behind its name, and each carries its level's dot. The lookup panel's
+`MasteryChip` — where the level's own colour *is* the save — stays its own
+control. `VocabularyScreenSemanticsTest` proves a chip raises its level, the
+all-levels chip clears it, the current one is announced as selected, and a filter
+that matches nothing says so, and `AppSemanticsTest` filters the list to a level
+and finds only that level's word.
 
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to
@@ -903,7 +1084,8 @@ does not — and the whole loop, download to shown as installed, runs through
 The **Languages** surface and its **Language manifest** (issues #146, #147) are proved at
 their own levels. Reading a manifest is a pure function from bytes to a
 catalogue, so `LanguageManifestReadTest` in `core/commonTest` pins that the
-offered languages and their artefacts are read, that a manifest whose format this
+offered languages and their artefacts are read — including each artefact's
+published size when the manifest carries it — that a manifest whose format this
 build does not read is refused rather than misread, that malformed bytes are not
 mistaken for an empty catalogue, and a write/read round-trip over generated
 languages. `LanguageCatalog`'s lifecycle is a `core/commonTest` behaviour over the
@@ -921,7 +1103,11 @@ language with no books last. The state holder is `LanguageControllerTest` in
 **Difficulty table**'s per-language state, download, honest no-table line,
 progress and failure (issue #148), and the **Dictionary pack**'s per-pair state,
 download, pair label ("English → French"), honest no-pack line, progress and
-failure (issue #149); and
+failure (issue #149). Since issue #215 the same suite pins that every language row
+exposes its state and its text action together, that a download shows the
+manifest's published size, and that a missing artifact and a corrupt one read
+differently and offer a different action; the row's visual anatomy is
+`LanguagesGoldenTest`'s sheet. And
 the two ways in — the library's header and Settings — the always-visible reload
 after a failed first fetch, setting and clearing a level through the surface,
 downloading a difficulty table, and downloading a dictionary pack and reaching
@@ -943,8 +1129,9 @@ or its export. `AppLanguagesTest` pins the languages the app ships and the
 app-language default; `TranslationLanguageChoicesTest` pins the translation
 languages a manifest publishes and the translation-language default;
 `LanguageSettingsControllerTest` pins that the two are chosen independently,
-written through and never overwritten by a default. The **Settings** surface's
-app-language picker is `SettingsScreenSemanticsTest` on both lanes, and the
+written through and never overwritten by a default. The **App language** screen,
+one tap from the Settings index's own row, is `AppLanguageScreenSemanticsTest` on
+both lanes; the row's current value is `SettingsScreenSemanticsTest`'s, and the
 **Languages** surface's translation-language picker is
 `LanguagesScreenSemanticsTest` on both lanes; choosing each and the first-launch
 defaults are `AppSemanticsTest` on both lanes, including the case this fixes — an
@@ -976,6 +1163,42 @@ dismissing it without looking a word up (a dismiss scrim over the page), and the
 size disabled at its bounds — and the whole loop, changing the size in the reader
 and finding it kept after leaving and reopening the book, runs through
 `AppSemanticsTest` on both lanes.
+
+The book's **Chapter list** (issue #198; ADR-0037) is derived beside the parsed
+text, so it is proved at the parser level and its cache envelope at the store
+level. `EpubChaptersTest` in `core/jvmTest` runs the EPUB fixtures through the
+real parser: a one-file nav whose entries point at fragment anchors yields nested
+chapters at the right block starts, the nav wins over an NCX that names the same
+entries differently, the NCX is read when no nav exists and ordered by the spine
+rather than `playOrder`, a label falls back to the first heading, an unresolved
+fragment to its document's start, an entry outside the spine is dropped, and a
+book with no usable TOC yields one chapter per spine document. `TxtGoldenTest` in `core/jvmTest` pins the structure a TXT infers — its title, its
+heading blocks and its chapter list — over a generated corpus and a real French
+book, and `BookTextCacheTest` plus a
+`VaultBookLibraryTest` case pin that a missing or different cache `formatVersion`
+is a miss, so the original is re-parsed and rewritten. The reader's side is
+`ReaderChaptersTest` in `app/desktopTest` — a page break at every chapter start,
+the chapter's title above the **Reading progress** (`XI`, then `46%`), a
+one-chapter book keeping that label, the sheet's
+hierarchy and current row, a jump saving its chapter's first block, a jump to the
+current chapter writing nothing, Close and an outside tap dismissing the sheet,
+and opening the sheet dismissing an open lookup — with
+`ReaderChaptersAndroidTest` re-proving the `LazyColumn` sheet on the Android host
+lane and `AndroidBackTest` pinning that Back closes the sheet before the reader.
+
+The desktop **context column** (issue #199) is the same list beside the page, so
+`ReaderContextColumnTest` in `app/desktopTest` runs the reader at the breakpoint
+and one dp below it: the column is reserved at 1100 dp and absent below, it lists
+the chapters with the current one selected, its empty state names a book with no
+list, a column choice jumps and saves exactly as a sheet choice does, a word
+selection swaps the column to the lookup and back while the page keeps its width,
+and the position returns the column to the list while a lookup is open.
+The reader hosts the panel rather than drawing it, so the test drives a stand-in
+and only the placement is the reader's. The same current-row semantics run in
+`ReaderChaptersTest` and its Android twin, and
+`reader-context-column-light.png` is the screenshot lane's planche of the shape —
+drawn from the same tokens, like every other planche, while the semantics above
+prove the component itself.
 
 The app's own **App theme** (issue #182; ADR-0036) — Light, Dark, Sepia, or System
 following the platform — is proved at its own levels too. `AppTheme.resolve` is
@@ -1028,10 +1251,14 @@ the **app language**. `AppTextsTest` in `app/desktopTest` pins that every
 `TextKey` resolves in both languages the app ships, that a parameterised message
 fills its values, that a known domain constant reads in the chosen language, that
 an unknown domain text passes through unchanged, and that a stored message
-round-trips so a kept sync outcome still reads after a restart. The whole
-**Settings** screen re-rendered in French is `SettingsScreenSemanticsTest` on both
-lanes, and the picker's re-render without a relaunch is `AppSemanticsTest` on both
-lanes.
+round-trips so a kept sync outcome still reads after a restart. It also pins that
+the platform file dialogs keep only their titles, with no filter text the system
+dialog would never display (issue #219). The whole
+**Settings** index re-rendered in French is `SettingsScreenSemanticsTest` on both
+lanes, as are the screens it now opens — `AppLanguageScreenSemanticsTest`,
+`AboutScreenSemanticsTest`, `ProviderSettingsScreenSemanticsTest` and
+`VaultSettingsScreenSemanticsTest` (issues #213, #214) — and the language choice's
+re-render without a relaunch is `AppSemanticsTest` on both lanes.
 
 ## Naming and placement
 

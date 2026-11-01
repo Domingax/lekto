@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <!--
+    The launcher mark: the letter, and the letter alone (issue #177;
+    docs/design.md §5). There is no page and no tile: the L is the mark, and the
+    ground it sits on is the theme's paper, drawn by the layer below.
+
+    The L is the `L` of Noto Serif Bold 2.015 — the platform serif Android renders
+    `FontFamily.Serif`, so the mark carries the reading serif and not a lookalike
+    — mapped to a 50-unit cap height (ink 41.6 x 50, top 29, baseline 79). Its
+    corners sit 32.5 units from the centre, inside the 66 dp safe circle of the
+    108 dp canvas, so no launcher mask cuts them. A glyph outline, never a
+    rendered `Text`: the mark must not depend on the fonts of the machine that
+    draws it. Licence: SIL OFL 1.1 (THIRD-PARTY-NOTICES.md).
+
+    The letter wears a rim of its own paper: the same outline, stroked at 2 units
+    and drawn under the glyph, so 1 unit shows outside. It is invisible on the
+    Light paper — the launcher's ground — and it is what keeps the mark readable
+    on the Dark one, where the foot is ink on ink (1.07:1). That is why the launch
+    screen can keep the foreground alone (docs/design.md §7.7).
+
+    The four Mastery level colours that have one climb the letter: the cap is
+    level 0, the shaft carries levels 1 to 3 in **equal shares of the shaft's
+    ink**, and the foot is the letter's ink — level 4, "known", which is the
+    absence of colour (docs/design.md §2.2). The shares are measured on this
+    outline rather than estimated: the shaft is not a rectangle, so the thirds
+    differ by a few tenths. The bands span the whole canvas and are cut by the
+    letter's clip, so the flare under the cap is filled; the last one stops at
+    y = 63.38, the foot's shoulder, so no cut crosses the arm.
+
+    `tools/icons/mark.sh` turns this file into
+    app/src/androidMain/res/drawable/ic_launcher_foreground.xml and into the
+    guide's favicon. Edit here, never there.
+  -->
+  <defs>
+    <clipPath id="letter">
+      <path d="M33.20,79L33.20,75.29L35.72,75.29Q37.26,75.29 38.49,74.41Q39.71,73.54 39.71,71.23L39.71,36.91Q39.71,34.46 38.45,33.59Q37.19,32.71 35.44,32.71L33.20,32.71L33.20,29L57.43,29L57.43,32.71L55.05,32.71Q52.95,32.71 51.90,33.55Q50.85,34.39 50.85,36.70L50.85,74.73L63.87,74.73Q66.32,74.73 67.66,73.15Q68.99,71.58 69.69,68.64L70.88,63.38L74.80,63.38L74.31,79L33.20,79Z"/>
+    </clipPath>
+  </defs>
+  <path d="M33.20,79L33.20,75.29L35.72,75.29Q37.26,75.29 38.49,74.41Q39.71,73.54 39.71,71.23L39.71,36.91Q39.71,34.46 38.45,33.59Q37.19,32.71 35.44,32.71L33.20,32.71L33.20,29L57.43,29L57.43,32.71L55.05,32.71Q52.95,32.71 51.90,33.55Q50.85,34.39 50.85,36.70L50.85,74.73L63.87,74.73Q66.32,74.73 67.66,73.15Q68.99,71.58 69.69,68.64L70.88,63.38L74.80,63.38L74.31,79L33.20,79Z" fill="none" stroke="#FAF7F2" stroke-width="2"/>
+  <path d="M33.20,79L33.20,75.29L35.72,75.29Q37.26,75.29 38.49,74.41Q39.71,73.54 39.71,71.23L39.71,36.91Q39.71,34.46 38.45,33.59Q37.19,32.71 35.44,32.71L33.20,32.71L33.20,29L57.43,29L57.43,32.71L55.05,32.71Q52.95,32.71 51.90,33.55Q50.85,34.39 50.85,36.70L50.85,74.73L63.87,74.73Q66.32,74.73 67.66,73.15Q68.99,71.58 69.69,68.64L70.88,63.38L74.80,63.38L74.31,79L33.20,79Z" fill="#1C1A17"/>
+  <g clip-path="url(#letter)">
+    <rect x="0" y="29" width="108" height="3.71" fill="#1D4ED8"/>
+    <rect x="0" y="32.71" width="108" height="10.00" fill="#A16207"/>
+    <rect x="0" y="42.71" width="108" height="10.30" fill="#C2410C"/>
+    <rect x="0" y="53.01" width="108" height="10.37" fill="#15803D"/>
+  </g>
+</svg>

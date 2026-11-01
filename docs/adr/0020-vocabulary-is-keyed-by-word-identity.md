@@ -55,3 +55,10 @@ The "held in the **Vault** (ADR-0033)" line above is superseded: the language th
 list derives its gloss against is the **Translation language**, a device-local
 setting, not a **Vault** record (ADR-0034, which supersedes ADR-0033). The keying
 and the fallback are unchanged.
+
+## Update — the level chip is the save (issue #210)
+
+The "panel's Save button" in the consequences above is gone: the lookup panel's
+level chips are the save, one tap for one intention, and the current level's name
+stands beside them. The keying, the revision-bumped recolour and the loaded-entry
+re-render are unchanged; the panel simply has one control fewer.

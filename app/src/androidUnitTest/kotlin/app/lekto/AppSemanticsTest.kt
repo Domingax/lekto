@@ -4,38 +4,41 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.BookProgress
+import app.lekto.core.book.FinishedBook
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingPosition
+import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.book.ReadingState
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.language.LanguageCatalog
@@ -48,12 +51,14 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.sync.SyncEngine
 import app.lekto.core.sync.SyncSettings
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.Chapter
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
@@ -68,10 +73,14 @@ import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
+import app.lekto.dictionary.LOOKUP_CLOSE_TAG
+import app.lekto.dictionary.LOOKUP_PANEL_TAG
+import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
+import app.lekto.language.LANGUAGES_BACK_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
 import app.lekto.language.TRANSLATION_LANGUAGE_PICKER_TAG
 import app.lekto.language.languageDifficultyDownloadTag
@@ -81,27 +90,45 @@ import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.library.libraryStateTag
 import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.navigation.ShellSection
 import app.lekto.navigation.shellSectionTag
 import app.lekto.reader.READER_BACK_TAG
+import app.lekto.reader.READER_BACK_TO_LIBRARY_TAG
+import app.lekto.reader.READER_END_PANEL_TAG
+import app.lekto.reader.READER_MARK_FINISHED_TAG
+import app.lekto.reader.READER_NEXT_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TAG
+import app.lekto.reader.READER_PAGE_TEXT_TAG
+import app.lekto.reader.READER_POSITION_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
 import app.lekto.reader.READING_PREFERENCES_TAG
+import app.lekto.settings.ABOUT_LINK_TAG
+import app.lekto.settings.ABOUT_SOURCE_TAG
+import app.lekto.settings.ABOUT_VERSION_TAG
 import app.lekto.settings.API_KEY_FIELD_TAG
 import app.lekto.settings.APPEARANCE_LINK_TAG
-import app.lekto.settings.APP_LANGUAGE_PICKER_TAG
+import app.lekto.settings.APP_LANGUAGE_BACK_TAG
+import app.lekto.settings.APP_LANGUAGE_LINK_TAG
+import app.lekto.settings.ATTRIBUTION_BACK_TAG
+import app.lekto.settings.ATTRIBUTION_LINK_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
+import app.lekto.settings.LEKTO_SOURCE_URL
 import app.lekto.settings.MODEL_FIELD_TAG
+import app.lekto.settings.PROVIDER_CONNECT_TAG
+import app.lekto.settings.PROVIDER_LINK_TAG
 import app.lekto.settings.PROVIDER_PICKER_TAG
 import app.lekto.settings.ProviderController
 import app.lekto.settings.SETTINGS_TITLE_TAG
+import app.lekto.settings.SYNC_CONNECT_TAG
 import app.lekto.settings.SYNC_HOST_FIELD_TAG
-import app.lekto.settings.SYNC_SAVE_TAG
+import app.lekto.settings.SYNC_PASSWORD_FIELD_TAG
 import app.lekto.settings.SYNC_USERNAME_FIELD_TAG
+import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
-import app.lekto.settings.TEST_CONNECTION_TAG
+import app.lekto.settings.VAULT_LINK_TAG
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.appLanguageOptionTag
 import app.lekto.settings.appearanceOptionTag
@@ -126,15 +153,20 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.testkit.inMemoryVocabulary
 import app.lekto.testkit.testOfferedLanguage
+import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
+import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
+import app.lekto.vocabulary.VOCABULARY_LEVEL_SHEET_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
-import app.lekto.vocabulary.vocabularyDeleteTag
 import app.lekto.vocabulary.vocabularyFilterTag
+import app.lekto.vocabulary.vocabularyLevelTag
 import app.lekto.vocabulary.vocabularyMasteryTag
+import app.lekto.vocabulary.vocabularyRowTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -178,8 +210,12 @@ class AppSemanticsTest {
         val library = InMemoryLibrary()
         compose.setContent { App(environment(library, pickFile = { PickedFile("lantern.epub", byteArrayOf(1)) })) }
 
-        compose.onNodeWithText("No books yet", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Import").performClick()
+        // The first frame is the shelf in skeleton (docs/design.md §7.7); the
+        // empty state lands once the local vault read returns (issue #208).
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("No books yet").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Import a book").performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("The Lantern Keeper").fetchSemanticsNodes().isNotEmpty()
@@ -194,7 +230,10 @@ class AppSemanticsTest {
 
         compose.openBook()
 
-        compose.awaitPage(1)
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(READER_POSITION_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(READER_POSITION_TAG).assertExists()
         compose.onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
     }
 
@@ -232,8 +271,8 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library)) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        val leftAt = compose.awaitPastTheFirstPage()
         // Opening records the first page and the turn records the second,
         // both off the UI thread; wait for the second before leaving the book.
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { (library.savedOffset() ?: 0) > 0 }
@@ -241,10 +280,35 @@ class AppSemanticsTest {
         compose.leaveReader()
         compose.openBook()
 
-        // The reopened reader resumes past page one: the page number is enough,
-        // and Previous page enabled proves it is not page one.
-        compose.awaitPage(2)
-        compose.onNodeWithText("Previous page").assertIsEnabled()
+        assertEquals("the session resumes where it was left", leftAt, compose.awaitPastTheFirstPage())
+    }
+
+    @Test
+    fun declaringFinishedFromTheEndStateWritesTheFactAndTheLibraryFilterSeesIt() {
+        val library = InMemoryLibrary().apply {
+            import("lantern.epub", byteArrayOf(1))
+            // Open on the last page, so the end state is one tap away.
+            readAt("b1", offset = Int.MAX_VALUE)
+        }
+        compose.setContent { App(environment(library)) }
+        compose.openBook()
+
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        // The declaration is a vault write off the app's dispatcher (issue #200).
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { library.finished("b1") != null }
+        compose.onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).performClick()
+
+        // The default filter is Unread and In progress, so the only book is
+        // hidden and the shelf says why (ADR-0038).
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("All your books are finished.").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(libraryStateTag(ReadingState.FINISHED)).performClick()
+        compose.onNodeWithText("The Lantern Keeper").assertIsDisplayed()
+        compose.onNodeWithText("EPUB · Finished").assertIsDisplayed()
     }
 
     @Test
@@ -254,7 +318,7 @@ class AppSemanticsTest {
 
         compose.onNodeWithText("Continue reading").assertDoesNotExist()
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         // Leave at once: the position write is still in flight, and the library
         // still has to re-read when it lands (issue #188).
         compose.leaveReader()
@@ -295,7 +359,7 @@ class AppSemanticsTest {
 
         compose.typeSearch("zzz")
         compose.openLanguages()
-        compose.onNodeWithText("Back").performClick()
+        compose.onNodeWithTag(LANGUAGES_BACK_TAG).performClick()
         compose.tapSection(ShellSection.LIBRARY)
         compose.onNodeWithText("No books match \"zzz\".").assertDoesNotExist()
     }
@@ -359,7 +423,6 @@ class AppSemanticsTest {
         // paper: choosing one writes through and marks it, with no toast (ADR-0036).
         assertEquals(AppTheme.DARK, appTheme.load())
         compose.onNodeWithTag(appearanceOptionTag(AppTheme.DARK)).assertIsSelected()
-        compose.onNodeWithText("Current").assertIsDisplayed()
     }
 
     @Test
@@ -370,7 +433,7 @@ class AppSemanticsTest {
         compose.openBook()
         compose.tapFirstWord()
 
-        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // No pack is wired, so the panel degrades to the honest message and the
         // reference shortcuts (issue #19).
         compose.onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
@@ -407,20 +470,17 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
-
         compose.tapFirstWord()
-        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The reader stays put behind the panel, at the same page. The panel is
         // bottom-aligned on Android and covers the page bar's position, so the
-        // bar exists but is not visible; the page number is what matters.
-        compose.onNodeWithText("Page 2 of", substring = true).assertExists()
+        // bar exists but is not visible; the reading progress is what matters.
+        val atPanel = compose.readerProgress()
 
-        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
 
-        compose.onNodeWithText("Look it up online").assertDoesNotExist()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        assertEquals("closing the panel must not turn the page", atPanel, compose.readerProgress())
     }
 
     @Test
@@ -429,18 +489,16 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
-
         compose.tapFirstWord()
-        compose.onNodeWithText("Look it up online").assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        val atPanel = compose.readerProgress()
 
         // A tap on the page, above the panel, is outside it: it closes the panel
         // and does not turn the page.
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
-        compose.onNodeWithText("Look it up online").assertDoesNotExist()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        assertEquals("dismissing the panel must not turn the page", atPanel, compose.readerProgress())
     }
 
     @Test
@@ -458,24 +516,24 @@ class AppSemanticsTest {
         }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        compose.awaitPastTheFirstPage()
 
         // Long-press and drag across the page's words to select a phrase.
         compose.selectFirstPhrase()
 
         // No provider and no key are configured: the shortcut is the whole offer.
         compose.onNodeWithText("Translate online").assertIsDisplayed()
-        compose.onNodeWithText("Page 2 of", substring = true).assertExists()
+        assertTrue("the session resumes past the start of the book", compose.readerProgress() > 0)
         compose.onNodeWithTag(TRANSLATION_SHORTCUT_TAG).performClick()
         assertTrue(
             "the shortcut must open the translation service's prefilled page: $opened",
             opened.orEmpty().startsWith("https://translate.google.com/"),
         )
 
-        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithTag(PHRASE_CLOSE_TAG).performClick()
         compose.onNodeWithText("Translate online").assertDoesNotExist()
-        compose.awaitPage(2)
+        compose.awaitPastTheFirstPage()
     }
 
     @Test
@@ -484,8 +542,8 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        compose.awaitPastTheFirstPage()
 
         compose.selectFirstPhrase()
         compose.onNodeWithText("Translate online").assertIsDisplayed()
@@ -495,8 +553,8 @@ class AppSemanticsTest {
         compose.onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(center.x, 4f)) }
 
         compose.onNodeWithText("Translate online").assertDoesNotExist()
-        compose.onNodeWithText("Look it up online").assertDoesNotExist()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        compose.awaitPastTheFirstPage()
     }
 
     @Test
@@ -519,8 +577,8 @@ class AppSemanticsTest {
         }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        compose.awaitPastTheFirstPage()
 
         compose.selectFirstPhrase()
 
@@ -533,7 +591,7 @@ class AppSemanticsTest {
         assertTrue("the request discloses the context: ${user.content}", user.content.contains("Selected phrase:"))
         compose.onNodeWithTag(TRANSLATION_RESULT_TAG).assertTextEquals("La lanterne brille")
         // The reader stays put behind the panel.
-        compose.onNodeWithText("Page 2 of", substring = true).assertExists()
+        assertTrue("the session resumes past the start of the book", compose.readerProgress() > 0)
     }
 
     @Test
@@ -542,12 +600,12 @@ class AppSemanticsTest {
         compose.setContent { App(environment(library, dictionary = dictionaryServices())) }
 
         compose.openBook()
-        compose.onNodeWithText("Next page").performClick()
-        compose.awaitPage(2)
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        compose.awaitPastTheFirstPage()
 
         compose.selectFirstPhrase()
 
-        compose.onNodeWithText("Connect an LLM provider", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("A phrase needs an AI", substring = true).assertIsDisplayed()
         compose.onNodeWithTag(TRANSLATION_SETTINGS_TAG).performClick()
 
         // The non-blocking prompt lands on settings, leaving the book behind.
@@ -562,7 +620,7 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Listen").performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         val (text, language) = pronouncer.utterances.single()
@@ -578,7 +636,7 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Listen").performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
         compose.waitForIdle()
@@ -592,7 +650,7 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Listen").performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.onNodeWithText("No speech engine is available", substring = true).assertIsDisplayed()
     }
@@ -604,7 +662,7 @@ class AppSemanticsTest {
         }
 
         compose.openLanguages()
-        compose.onNodeWithText("English → French").assertIsDisplayed()
+        compose.onNodeWithText("English → French", substring = true).assertIsDisplayed()
 
         compose.onNodeWithTag(LANGUAGES_ATTRIBUTION_TAG).performClick()
 
@@ -643,15 +701,20 @@ class AppSemanticsTest {
             )
         }
 
-        compose.tapSection(ShellSection.SETTINGS)
+        compose.openProvider()
         compose.onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
         compose.onNodeWithText("Anthropic").performClick()
         compose.onNodeWithTag(MODEL_FIELD_TAG).performScrollTo().performTextInput("claude-3")
         compose.onNodeWithTag(API_KEY_FIELD_TAG).performScrollTo().performTextInput("sk-live-123")
-        compose.onNodeWithTag(TEST_CONNECTION_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(PROVIDER_CONNECT_TAG).performScrollTo().performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { client.tested.isNotEmpty() }
         assertEquals("sk-live-123", client.tested.single().second)
+        // Connection stores the key only after the provider answers (issue #213).
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            secrets.get(ProviderController.providerSecretKey(LlmProvider.ANTHROPIC)) ==
+                SecretResult.Found("sk-live-123")
+        }
         compose.onNodeWithText("The provider answered.", substring = true).performScrollTo().assertIsDisplayed()
     }
 
@@ -668,7 +731,7 @@ class AppSemanticsTest {
             )
         }
 
-        compose.tapSection(ShellSection.SETTINGS)
+        compose.openProvider()
         compose.onNodeWithTag(PROVIDER_PICKER_TAG).performScrollTo().performClick()
         compose.onNodeWithText("Anthropic").performClick()
 
@@ -702,13 +765,23 @@ class AppSemanticsTest {
         )
         compose.setContent { App(environment(InMemoryLibrary(), secrets = secrets, sync = sync)) }
 
-        compose.tapSection(ShellSection.SETTINGS)
+        compose.openVault()
         compose.onNodeWithTag(SYNC_HOST_FIELD_TAG).performScrollTo().performTextInput("https://cloud.example.test/dav")
         compose.onNodeWithTag(SYNC_USERNAME_FIELD_TAG).performScrollTo().performTextInput("reader")
-        compose.onNodeWithTag(SYNC_SAVE_TAG).performScrollTo().performClick()
 
+        // The endpoint is reversible, so it applies on change (issue #213).
         assertEquals(
             SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader"),
+            settings.load(),
+        )
+        compose.onNodeWithTag(SYNC_PASSWORD_FIELD_TAG).performScrollTo().performTextInput("app-password")
+        compose.onNodeWithTag(SYNC_CONNECT_TAG).performScrollTo().performClick()
+
+        // Connection tests the server, stores the password and turns sync on.
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { settings.load().enabled }
+        assertEquals(SecretResult.Found("app-password"), secrets.get(SyncController.PASSWORD_KEY))
+        assertEquals(
+            SyncSettings(serverUrl = "https://cloud.example.test/dav", username = "reader", enabled = true),
             settings.load(),
         )
     }
@@ -721,7 +794,8 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        // The level is the save: one tap on the fresh level's chip stores the word.
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val entry = vocabulary.all().single()
@@ -733,11 +807,9 @@ class AppSemanticsTest {
         // The word has no signal (no reader level, no difficulty), so the fresh
         // save defaults to the familiar level (ADR-0030).
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
-        // No toast, no dialog: the saved state on the panel is the confirmation.
-        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText("Saved").assertIsDisplayed()
+        // No toast, no dialog and no Save control: the reader's colour is the
+        // confirmation, and the footer already names the level.
+        compose.onNodeWithText("Familiar").assertIsDisplayed()
     }
 
     @Test
@@ -748,10 +820,10 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
-        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             vocabulary.all().single().mastery == MasteryLevel.LEARNED
@@ -770,9 +842,9 @@ class AppSemanticsTest {
         compose.openBook()
         compose.tapFirstWord()
 
-        // The entry survived the restart: the panel opens already saved.
-        compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performScrollTo().assertIsDisplayed()
+        // The entry survived the restart: the sheet opens on its level.
+        compose.onNodeWithText("Learned").assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsSelected()
     }
 
     @Test
@@ -786,18 +858,22 @@ class AppSemanticsTest {
 
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         assertEquals("the save must key on the lemma", "lantern", vocabulary.all().single().key.key)
 
-        // The word panel is open over the page bar; close it before turning the page.
-        compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithText("Next page").performClick()
+        // The word panel is open over the page bar; close it before looking the
+        // word up again. The page stays where it is: this runtime measures glyphs
+        // too narrowly for the page to hit-test a word past the first character,
+        // so the cross-page half of this test lives on the desktop lane.
+        compose.onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
+        // Let the panel's exit settle before reopening it on the same page.
+        compose.mainClock.advanceTimeBy(1_000)
         compose.tapFirstWord()
         // The same lemma again, so its entry updates in place rather than adding a
         // second one.
-        compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithText("Save").assertDoesNotExist()
+        compose.onNodeWithText("Familiar").assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
         assertEquals(1, vocabulary.all().size)
     }
 
@@ -820,7 +896,8 @@ class AppSemanticsTest {
         compose.onNodeWithText("lantern").assertIsDisplayed()
         compose.onNodeWithText("lanterne").assertIsDisplayed()
         compose.onNodeWithText("The lantern burned all night.").assertIsDisplayed()
-        compose.onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern"))).assertTextEquals("Learned")
+        compose.onNodeWithTag(vocabularyMasteryTag(WordKey("en", "lantern")), useUnmergedTree = true)
+            .assertTextEquals("Learned")
     }
 
     @Test
@@ -976,6 +1053,47 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun changingALevelFromTheVocabularyListWritesItToTheVaultOnAndroid() {
+        // The same action on the touch runtime (issue #178): a tap on the row
+        // raises the level sheet, and one chip is the write.
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", translation = "lanterne", mastery = MasteryLevel.RECOGNIZED))
+        compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        compose.tapSection(ShellSection.VOCABULARY)
+        compose.onNodeWithTag(vocabularyRowTag(key)).performClick()
+        compose.onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().single().mastery == MasteryLevel.KNOWN
+        }
+        assertEquals("changing the level must not add a second entry", 1, vocabulary.all().size)
+        compose.onNodeWithTag(vocabularyMasteryTag(key), useUnmergedTree = true).assertTextEquals("Known")
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
+    }
+
+    @Test
+    fun aLevelOutsideTheActiveFilterLeavesTheListAndKeepsTheSheetOpenOnAndroid() {
+        val vocabulary = inMemoryVocabulary()
+        val key = WordKey("en", "lantern")
+        vocabulary.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.UNKNOWN))
+        compose.setContent { App(environment(InMemoryLibrary(), vocabulary = vocabulary)) }
+
+        compose.tapSection(ShellSection.VOCABULARY)
+        compose.onNodeWithTag(vocabularyFilterTag(MasteryLevel.UNKNOWN)).performScrollTo().performClick()
+        compose.onNodeWithTag(vocabularyRowTag(key)).performClick()
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(vocabularyRowTag(key)).fetchSemanticsNodes().isEmpty()
+        }
+        compose.onNodeWithTag(VOCABULARY_LEVEL_SHEET_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(vocabularyLevelTag(MasteryLevel.KNOWN)).assertIsSelected()
+    }
+
+    @Test
     fun anEmptyVocabularyShowsTheInstructionalEmptyState() {
         compose.setContent { App(environment(InMemoryLibrary(), vocabulary = inMemoryVocabulary())) }
 
@@ -990,16 +1108,20 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         compose.setContent { App(environment(library, vocabulary = vocabulary)) }
 
-        // Save the first word from the panel, then find it in the list.
+        // Save the first word at a level, then find it in the list.
         compose.openBook()
         compose.tapFirstWord()
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val saved = vocabulary.all().single()
 
         compose.leaveReader()
         compose.tapSection(ShellSection.VOCABULARY)
-        compose.onNodeWithTag(vocabularyDeleteTag(saved.key)).performScrollTo().performClick()
+        // The delete is a row gesture behind a confirmation now (issue #212): a
+        // swipe uncovers the trash, and only the dialog's own action removes the
+        // word.
+        compose.onNodeWithTag(vocabularyRowTag(saved.key)).performScrollTo().performTouchInput { swipeLeft() }
+        compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isEmpty() }
         // The list recomposes after the write; wait for the empty state before asserting.
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
@@ -1013,8 +1135,31 @@ class AppSemanticsTest {
         compose.openBook()
         compose.tapFirstWord()
 
-        compose.onNodeWithText("Save").assertIsDisplayed()
-        compose.onNodeWithText("Saved").assertDoesNotExist()
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        assertTrue(
+            "the level is the save; no Save word survives",
+            compose.onAllNodesWithText("Save").fetchSemanticsNodes().isEmpty(),
+        )
+    }
+
+    @Test
+    fun theIndexReachesAttributionAndAboutInOneTap() {
+        var opened: String? = null
+        compose.setContent { App(environment(InMemoryLibrary(), openUrl = { url -> opened = url })) }
+
+        compose.tapSection(ShellSection.SETTINGS)
+        compose.onNodeWithTag(ATTRIBUTION_LINK_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("Dictionary data is derived from Wiktionary contributors", substring = true)
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(ATTRIBUTION_BACK_TAG).performClick()
+
+        // The About row names the version, and its source opens where the platform
+        // sends a link (issue #214).
+        compose.onNodeWithTag(ABOUT_LINK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(ABOUT_VERSION_TAG).assertTextEquals("Version $APP_VERSION")
+        compose.onNodeWithTag(ABOUT_SOURCE_TAG).performScrollTo().performClick()
+
+        assertEquals(LEKTO_SOURCE_URL, opened)
     }
 
     @Test
@@ -1030,8 +1175,7 @@ class AppSemanticsTest {
     fun theAppLanguageOffersTheLanguagesTheAppShips() {
         compose.setContent { App(environment(InMemoryLibrary(), languageSettings = InMemoryLanguageSettingsStore())) }
 
-        compose.tapSection(ShellSection.SETTINGS)
-        compose.onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        compose.openAppLanguage()
 
         compose.onNodeWithTag(appLanguageOptionTag("en")).assertIsDisplayed()
         compose.onNodeWithTag(appLanguageOptionTag("fr")).assertIsDisplayed()
@@ -1044,13 +1188,14 @@ class AppSemanticsTest {
         val settings = InMemoryLanguageSettingsStore()
         compose.setContent { App(environment(InMemoryLibrary(), languageSettings = settings)) }
 
-        compose.tapSection(ShellSection.SETTINGS)
-        compose.onNodeWithTag(APP_LANGUAGE_PICKER_TAG).performScrollTo().performClick()
+        compose.openAppLanguage()
         compose.onNodeWithTag(appLanguageOptionTag("fr")).performClick()
 
         assertEquals("fr", settings.load().appLanguage)
-        // Settings shows the choice without a relaunch — and the whole interface
-        // follows it into French (ADR-0034).
+        // The whole interface follows the choice without a relaunch (ADR-0034), and
+        // the index names it under **App language** once back on the list.
+        compose.onNodeWithTag(APP_LANGUAGE_BACK_TAG).performClick()
+        compose.onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
         compose.onNodeWithText("français").assertIsDisplayed()
     }
 
@@ -1160,10 +1305,20 @@ class AppSemanticsTest {
     @Test
     fun reloadingTheLanguageListRefetchesItWhenNoneIsCached() {
         // The first open finds no cache and the fetch fails: the honest empty state.
+        // The fetch is held in flight for a moment, the way a loaded machine holds
+        // it, because that is where CI lost this test: the surface renders its empty
+        // state at once, so a tap on **Reload list** asked for before the first
+        // fetch lands is a dropped tap — the action is disabled while a fetch runs —
+        // and the failure is never retried. Waiting for the failure first is the
+        // fix, and the held fetch makes that wait load-bearing here too.
         val catalog = InMemoryLanguageCatalog().apply { failure = IOException("offline") }
+        catalog.whileInFlight = { if (catalog.reloads == 1) Thread.sleep(FIRST_FETCH_MILLIS) }
         compose.setContent { App(environment(InMemoryLibrary(), languages = catalog)) }
 
         compose.openLanguages()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("offline").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("hasn't loaded the list of languages", substring = true).assertIsDisplayed()
 
         catalog.failure = null
@@ -1261,6 +1416,24 @@ class AppSemanticsTest {
     private fun ComposeTestRule.openLanguages() {
         tapSection(ShellSection.SETTINGS)
         onNodeWithTag(LANGUAGES_LINK_TAG).performScrollTo().performClick()
+    }
+
+    /** Reaches the **App language** screen from Settings and its row (issue #214). */
+    private fun ComposeTestRule.openAppLanguage() {
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(APP_LANGUAGE_LINK_TAG).performScrollTo().performClick()
+    }
+
+    /** Reaches the **LLM provider** screen from Settings and its doorway (issue #213). */
+    private fun ComposeTestRule.openProvider() {
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(PROVIDER_LINK_TAG).performScrollTo().performClick()
+    }
+
+    /** Reaches the **Vault and sync** screen from Settings and its doorway (issue #213). */
+    private fun ComposeTestRule.openVault() {
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
     }
 }
 
@@ -1365,10 +1538,6 @@ internal fun environment(
     sync = sync,
 )
 
-/** A vocabulary over an in-memory vault, so a test can inspect and restart it. */
-private fun inMemoryVocabulary(): Vocabulary =
-    VaultVocabulary(InMemoryVaultStore(), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-
 /**
  * Opens the one book every test imports and waits for its reader.
  *
@@ -1389,42 +1558,77 @@ private fun ComposeTestRule.typeSearch(query: String) {
     onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput(query)
 }
 
-/** Taps the first word link on the page: word links carry no text, unlike the chrome buttons. */
+/**
+ * Taps a word on the page, so its lookup opens. Words carry no link of their own
+ * (ADR-0007), so the page hit-tests the tap; the point is taken from the text's
+ * own layout, and a few places are tried because a page opens with a block
+ * separator that belongs to no word.
+ */
+@Suppress("MagicNumber") // The fractions are the points the tap probes.
 private fun ComposeTestRule.tapFirstWord() {
-    // The word layer arrives a frame after the reader opens (the page is
-    // paginated and tokenised asynchronously), so wait for it before tapping.
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    onAllNodes(WORD_LINK)
-        .onFirst()
-        .performSemanticsAction(SemanticsActions.OnClick)
+    waitForIdle()
+    for (fraction in listOf(0.33f, 0.5f, 0.66f, 0.1f)) {
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(firstWordPoint(fraction)) }
+        waitForIdle()
+        // A tap that missed a word turned the page instead; the next point is
+        // taken from the page then on screen.
+        if (openedLookup()) return
+    }
+    throw AssertionError("no word opened a lookup: the tap never landed on one")
 }
 
-/** Waits until the reader's page bar reports page [page], then asserts it is there. */
-private fun ComposeTestRule.awaitPage(page: Int) {
-    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodesWithText("Page $page of", substring = true).fetchSemanticsNodes().isNotEmpty()
+/** Whether the lookup panel is open, waiting for its entrance rather than sampling a frame. */
+private fun ComposeTestRule.openedLookup(): Boolean = try {
+    waitUntil(timeoutMillis = 2_000) {
+        onAllNodesWithTag(LOOKUP_PANEL_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    onNodeWithText("Page $page of", substring = true).assertExists()
+    true
+} catch (_: ComposeTimeoutException) {
+    false
+}
+
+/** The centre of a word on the page, [fraction] of the way into its text, from the text's own layout. */
+@Suppress("MagicNumber") // The fractions are the points a tap probes.
+private fun ComposeTestRule.firstWordPoint(fraction: Float = 0.33f): Offset {
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { it.text }
+    val from = (shown.length * fraction).toInt().coerceIn(0, (shown.length - 1).coerceAtLeast(0))
+    val anchorChar = (from until shown.length).firstOrNull { index -> !shown[index].isWhitespace() }
+        ?: shown.indexOfFirst { character -> !character.isWhitespace() }.coerceAtLeast(0)
+    val word = layout.getWordBoundary(anchorChar)
+    val start = layout.getBoundingBox(word.start)
+    val last = layout.getBoundingBox((word.end - 1).coerceAtLeast(word.start))
+    val origin = text.boundsInRoot.topLeft
+    return Offset(
+        origin.x - page.left + (start.left + last.right) / 2f,
+        origin.y - page.top + start.top + start.height / 2f,
+    )
+}
+
+/**
+ * Waits until the reader is past the start of the book. The bar reports
+ * **Reading progress**, not a page number (ADR-0040), so "page 2" is "past the
+ * start", and the percentage it shows is what the caller can compare.
+ */
+private fun ComposeTestRule.awaitPastTheFirstPage(): Int {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { readerProgress() > 0 }
+    return readerProgress()
 }
 
 /** Long-presses the first word link and drags across the line, selecting a phrase. */
 @Suppress("MagicNumber") // The long-press delay and the drag distance are the test's parameters.
 private fun ComposeTestRule.selectFirstPhrase() {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-        onAllNodes(WORD_LINK)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(WORD_LINK)
-        .onFirst()
-        .fetchSemanticsNode()
-        .boundsInRoot
-    val start = word.center - page.topLeft
+    val start = firstWordPoint()
     onNodeWithTag(READER_PAGE_TAG).performTouchInput {
         down(start)
         advanceEventTime(1000)
@@ -1458,15 +1662,24 @@ private const val PARAGRAPHS = 40
 private const val AWAIT_DISPATCHED_WORK_MILLIS: Long = 10_000
 
 /**
+ * How long the Languages surface's first fetch is held in flight before it
+ * reports its failure. Long enough that the surface renders while the fetch
+ * runs — the window CI lost the reload test in — and short enough to be free.
+ */
+private const val FIRST_FETCH_MILLIS: Long = 300
+
+/**
  * A [BookLibrary] held in memory: import, open and reading progress without a
  * vault. Shared with `AppWindowInsetsSemanticsTest`, which needs a book to open
  * without standing a vault up.
  */
-internal class InMemoryLibrary : BookLibrary {
+@Suppress("TooManyFunctions") // It stands in for the whole BookLibrary seam; one function per member.
+internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val positions = mutableMapOf<String, Int>()
     private val lastRead = mutableMapOf<String, Long>()
+    private val finished = mutableMapOf<String, FinishedBook>()
     private var reads = 0L
 
     @Synchronized override fun books(): List<Book> = stored
@@ -1474,7 +1687,24 @@ internal class InMemoryLibrary : BookLibrary {
     @Synchronized override fun listing(): LibraryListing = LibraryListing.of(
         books = stored,
         lastReadByBook = lastRead.mapValues { (_, order) -> Instant.fromEpochMilliseconds(order) },
+        progressByBook = stored.mapNotNull { book ->
+            positions[book.id]?.let { offset ->
+                book.id to BookProgress.forPosition(
+                    ReadingPosition(book.id, offset),
+                    longText(book).renderedLength(),
+                )
+            }
+        }.toMap(),
+        readingStateByBook = stored.associate { book ->
+            book.id to ReadingState.of(hasPosition = book.id in positions, finished = book.id in finished)
+        },
     )
+
+    @Synchronized override fun measure(bookId: String): ReadingProgress? {
+        val book = stored.firstOrNull { it.id == bookId }
+        val offset = positions[bookId]
+        return if (book != null && offset != null) ReadingProgress(offset, longText(book).renderedLength()) else null
+    }
 
     @Synchronized override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
         val book = Book(
@@ -1494,6 +1724,7 @@ internal class InMemoryLibrary : BookLibrary {
             book = book,
             text = longText(book),
             position = positions[book.id]?.let { offset -> ReadingPosition(book.id, offset) },
+            finished = finished[book.id],
         )
     }
 
@@ -1501,11 +1732,23 @@ internal class InMemoryLibrary : BookLibrary {
         stored = stored.filterNot { book -> book.id == id }
         positions.remove(id)
         lastRead.remove(id)
+        finished.remove(id)
     }
 
     @Synchronized
     override fun position(bookId: String): ReadingPosition? =
         positions[bookId]?.let { offset -> ReadingPosition(bookId, offset) }
+
+    @Synchronized override fun finished(bookId: String): FinishedBook? = finished[bookId]
+
+    @Synchronized override fun markFinished(bookId: String) {
+        if (stored.none { book -> book.id == bookId }) return
+        finished[bookId] = FinishedBook(bookId, Instant.fromEpochMilliseconds(++reads))
+    }
+
+    @Synchronized override fun markUnfinished(bookId: String) {
+        finished.remove(bookId)
+    }
 
     @Synchronized override fun savePosition(position: ReadingPosition) {
         positions[position.bookId] = position.offset
@@ -1514,6 +1757,11 @@ internal class InMemoryLibrary : BookLibrary {
 
     /** The last offset written, so a test can wait for the asynchronous save. */
     @Synchronized fun savedOffset(): Int? = positions.values.firstOrNull()
+
+    /** Test hook: opens the book at [offset], so a test can resume on its last page. */
+    @Synchronized fun readAt(bookId: String, offset: Int) {
+        positions[bookId] = offset
+    }
 
     /**
      * One short paragraph per line, each starting with "On": Robolectric's tight
@@ -1524,18 +1772,21 @@ internal class InMemoryLibrary : BookLibrary {
     private fun longText(book: Book): StructuredText = StructuredText(
         title = book.title,
         language = book.language,
+        chapters = if (chapters) {
+            listOf(Chapter("First", startBlock = 0), Chapter("Second", startBlock = PARAGRAPHS / 2))
+        } else {
+            emptyList()
+        },
         blocks = List(PARAGRAPHS) {
             TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("On the quiet evening.")))
         },
     )
 }
 
-/**
- * A word link on the page: a clickable node that carries neither text nor a
- * description. The reader's chrome has an icon since the navigation shell
- * (issue #185) — clickable, described, and not a word — so a word is the one
- * clickable node with nothing to read on it.
- */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)
+/** The **Reading progress** the position line shows, as a whole percentage. */
+private fun ComposeTestRule.readerProgress(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: -1
+}

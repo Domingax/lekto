@@ -1,9 +1,13 @@
+@file:Suppress("TooManyFunctions") // The composition root: one function per destination and per seam it wires.
+
 package app.lekto
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -17,9 +21,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
@@ -36,6 +40,7 @@ import app.lekto.core.language.AppLanguages
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettingsStore
+import app.lekto.core.language.readingLanguagesOf
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -77,16 +82,23 @@ import app.lekto.navigation.PlatformBackHandler
 import app.lekto.reader.MasteryController
 import app.lekto.reader.PhraseSelection
 import app.lekto.reader.ReaderActions
-import app.lekto.reader.ReaderChapter
+import app.lekto.reader.ReaderContext
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderScreen
+import app.lekto.reader.ReaderText
 import app.lekto.reader.ReadingPreferencesController
 import app.lekto.reader.WordTap
+import app.lekto.settings.AboutActions
+import app.lekto.settings.AboutScreen
+import app.lekto.settings.AppLanguageActions
+import app.lekto.settings.AppLanguageScreen
 import app.lekto.settings.AppearanceActions
 import app.lekto.settings.AppearanceScreen
 import app.lekto.settings.AttributionScreen
+import app.lekto.settings.LEKTO_SOURCE_URL
 import app.lekto.settings.ProviderController
+import app.lekto.settings.ProviderSettingsScreen
 import app.lekto.settings.ProviderUiState
 import app.lekto.settings.SettingsActions
 import app.lekto.settings.SettingsScreen
@@ -94,6 +106,7 @@ import app.lekto.settings.SettingsUiState
 import app.lekto.settings.SyncController
 import app.lekto.settings.SyncServices
 import app.lekto.settings.SyncUiState
+import app.lekto.settings.VaultSettingsScreen
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
@@ -101,6 +114,7 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
 import app.lekto.theme.LektoTheme
+import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.theme.appThemeScheme
 import app.lekto.translation.PhraseLookupActions
 import app.lekto.translation.PhraseLookupPanel
@@ -108,6 +122,8 @@ import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
 import app.lekto.vocabulary.VocabularyController
+import app.lekto.vocabulary.VocabularyLevelColumn
+import app.lekto.vocabulary.VocabularyLevelSheet
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
 import app.lekto.vocabulary.filterByMastery
@@ -120,6 +136,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 
 /**
  * The pieces a platform entry point supplies to the [App]: the [segmenter], the
@@ -389,6 +406,7 @@ fun App(
             sync = syncState,
             appLanguage = languageSettings?.appLanguage ?: AppLanguages.ENGLISH,
             appTheme = appTheme?.theme ?: AppTheme.DEFAULT,
+            readingLanguages = readingLanguagesOf(state.books),
         ),
     )
 
@@ -407,7 +425,6 @@ fun App(
                     scope,
                     progress,
                     settings,
-                    vocabulary,
                     mastery,
                     language,
                     languageSettings,
@@ -434,7 +451,6 @@ private fun AppScreens(
     scope: CoroutineScope,
     progress: ReadingProgressWriter,
     settings: Settings,
-    vocabulary: VocabularyController?,
     mastery: MasteryController?,
     language: LanguageController?,
     languageSettings: LanguageSettingsController?,
@@ -472,6 +488,7 @@ private fun AppScreens(
 
     val current = destination
     if (current is Destination.Reading) {
+        val bookId = current.session.book.id
         ReaderDestination(
             current.session,
             environment,
@@ -484,8 +501,46 @@ private fun AppScreens(
             lemmas,
             onBack = { stack = stack.back() },
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
+            onMarkFinished = {
+                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markFinished)
+            },
+            onMarkUnfinished = {
+                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markUnfinished)
+            },
         )
     } else {
+        // The clock the two settings screens read "2 minutes ago" against, taken
+        // once so the index and the vault screen cannot disagree within a frame.
+        val now = settings.sync?.now ?: Clock.System.now()
+        // Every settings entry shares one action bundle: the same controllers, and
+        // the same ways into the screens below Settings (issue #213). The screens
+        // keep only the secret a field is typing; every persisted value comes from
+        // these actions.
+        val settingsActions = SettingsActions(
+            onOpenAppearance = { stack = stack.push(Destination.Appearance) },
+            onOpenAppLanguage = { stack = stack.push(Destination.AppLanguage) },
+            onOpenLanguages = { stack = stack.push(Destination.Languages) },
+            onOpenProvider = { stack = stack.push(Destination.ProviderSettings) },
+            onOpenVault = { stack = stack.push(Destination.VaultSettings) },
+            onOpenAttribution = { stack = stack.push(Destination.Attribution) },
+            onOpenAbout = { stack = stack.push(Destination.About) },
+            onOpenSource = { environment.openUrl(LEKTO_SOURCE_URL) },
+            onSelectAppLanguage = { code -> settings.languageSettings?.chooseAppLanguage(code) },
+            onExportVault = { settings.vaultTransfer?.export() },
+            onImportVault = { settings.vaultTransfer?.import(controller::refresh) },
+            onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
+            onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
+            onModelChange = { model -> settings.provider?.setModel(model) },
+            onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
+            onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
+            onConnectProvider = { apiKey -> settings.provider?.connect(apiKey) },
+            onRemoveProviderKey = { settings.provider?.removeKey() },
+            onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
+            onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
+            onConnectSync = { password -> settings.sync?.connect(password) },
+            onSyncNow = { settings.sync?.syncNow() },
+            onDisconnectSync = { settings.sync?.disconnect() },
+        )
         AppShell(
             current = checkNotNull(current.section) { "$current covers the shell; it is rendered above it" },
             onSelect = { section -> stack = stack.select(section) },
@@ -500,11 +555,39 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Settings -> SettingsDestination(
-                    settings,
-                    onVaultImported = controller::refresh,
-                    onOpenAppearance = { stack = stack.push(Destination.Appearance) },
-                    onOpenLanguages = { stack = stack.push(Destination.Languages) },
+                Destination.Settings -> SettingsScreen(
+                    state = settings.state,
+                    actions = settingsActions,
+                    now = now,
+                )
+
+                Destination.AppLanguage -> AppLanguageScreen(
+                    current = settings.state.appLanguage,
+                    actions = AppLanguageActions(
+                        onSelect = settingsActions.onSelectAppLanguage,
+                        onBack = { stack = stack.back() },
+                    ),
+                )
+
+                Destination.About -> AboutScreen(
+                    actions = AboutActions(
+                        onOpenSource = settingsActions.onOpenSource,
+                        onBack = { stack = stack.back() },
+                    ),
+                )
+
+                Destination.ProviderSettings -> ProviderSettingsScreen(
+                    state = settings.state.provider,
+                    actions = settingsActions,
+                    onBack = { stack = stack.back() },
+                )
+
+                Destination.VaultSettings -> VaultSettingsScreen(
+                    vault = settings.state.vault,
+                    sync = settings.state.sync,
+                    actions = settingsActions,
+                    onBack = { stack = stack.back() },
+                    now = now,
                 )
 
                 Destination.Appearance -> AppearanceScreen(
@@ -526,7 +609,7 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Vocabulary -> VocabularyDestination(vocabulary, environment, languageSettings, scope)
+                Destination.Vocabulary -> VocabularyDestination(mastery, environment, languageSettings, scope)
 
                 Destination.Library -> LibraryDestination(
                     environment,
@@ -561,6 +644,8 @@ private fun ReaderDestination(
     lemmas: LemmaLookup,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
+    onMarkFinished: () -> Unit,
+    onMarkUnfinished: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
@@ -611,6 +696,8 @@ private fun ReaderDestination(
         lookup = lookup,
         readingPreferences = readingPreferences,
         onBack = onBack,
+        onMarkFinished = onMarkFinished,
+        onMarkUnfinished = onMarkUnfinished,
         onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
     )
 }
@@ -674,8 +761,8 @@ private class Lookup(
 }
 
 /**
- * The settings screen's live pieces, bundled so [AppScreens] stays within the
- * parameter bound: the two controllers it drives and the state it renders.
+ * The settings surface's live pieces, bundled so [AppScreens] stays within the
+ * parameter bound: the controllers its screens drive and the state they render.
  */
 @Suppress("LongParameterList") // The settings controllers; bundling a bundle adds a type, not clarity.
 private class Settings(
@@ -687,49 +774,6 @@ private class Settings(
     val languageSettings: LanguageSettingsController?,
     val state: SettingsUiState,
 )
-
-/**
- * The settings destination wrapped so its action bundle stays out of [AppScreens].
- * It is a section of the shell now, so it has no back action of its own: the bar
- * and the back stack replace it (issue #185).
- */
-@Suppress("LongParameterList") // The settings controllers and the ways it navigates, each independent.
-@Composable
-private fun SettingsDestination(
-    settings: Settings,
-    onVaultImported: () -> Unit,
-    onOpenAppearance: () -> Unit,
-    onOpenLanguages: () -> Unit,
-) {
-    SettingsScreen(
-        state = settings.state,
-        actions = SettingsActions(
-            onOpenAppearance = onOpenAppearance,
-            onOpenLanguages = onOpenLanguages,
-            onSelectAppLanguage = { language -> settings.languageSettings?.chooseAppLanguage(language) },
-            onExportVault = { settings.vaultTransfer?.export() },
-            onImportVault = { settings.vaultTransfer?.import(onVaultImported) },
-            onDismissVaultMessage = { settings.vaultTransfer?.dismiss() },
-            onSelectProvider = { provider -> settings.provider?.selectProvider(provider) },
-            onModelChange = { model -> settings.provider?.setModel(model) },
-            onBaseUrlChange = { baseUrl -> settings.provider?.setBaseUrl(baseUrl) },
-            onLoadModels = { apiKey -> settings.provider?.loadModels(apiKey) },
-            onSaveProvider = { apiKey -> settings.provider?.save(apiKey) },
-            onTestProvider = { apiKey -> settings.provider?.test(apiKey) },
-            onRemoveProviderKey = { settings.provider?.removeKey() },
-            onDismissProviderResult = { settings.provider?.dismissResult() },
-            onSyncHostChange = { host -> settings.sync?.setServerUrl(host) },
-            onSyncUsernameChange = { username -> settings.sync?.setUsername(username) },
-            onSaveSync = { password -> settings.sync?.save(password) },
-            onTestSync = { password -> settings.sync?.test(password) },
-            onEnableSync = { settings.sync?.enable() },
-            onDisableSync = { settings.sync?.disable() },
-            onSyncNow = { settings.sync?.syncNow() },
-            onDisconnectSync = { settings.sync?.disconnect() },
-            onDismissSyncResult = { settings.sync?.dismissResult() },
-        ),
-    )
-}
 
 /** The library destination wrapped so its navigation bundle stays out of [AppScreens]. */
 @Suppress("LongParameterList") // The composition's inputs; a bundle is [LibraryNavigation] already.
@@ -748,34 +792,174 @@ private fun LibraryDestination(
 }
 
 /**
- * The vocabulary list destination (issue #23): the reader's live vocabulary, the
- * search query the user has typed, and the delete that removes an entry from the
- * vault. The query is local to the screen; the delete is a blocking vault write,
- * so it runs on the environment's dispatcher, and the reader recolours through
+ * The vocabulary list destination (issue #23; the level sheet #178): the reader's
+ * live vocabulary, the search query the user has typed, the entry whose level
+ * sheet is open, and the delete that removes an entry from the vault. The query
+ * and the open word are local to the screen; the writes are blocking vault writes,
+ * so they run on the environment's dispatcher, and the reader recolours through
  * the controller's bumped revision.
  *
  * The translation each row shows is derived from the installed **Dictionary
- * packs** (issue #67; ADR-0032), not the one the entry froze at save time: the
- * whole list is queried once per entry set and **Translation language**, off the
- * UI thread because the pack read blocks, and an entry no pack answers falls back
- * to its stored translation. Nothing derived is written back to the vault, and the
- * search matches the resolved translation, because the list searches what it
- * shows.
+ * packs** (issue #67; ADR-0032), not the one the entry froze at save time, so the
+ * search matches the resolved translation — the list searches what it shows, and
+ * nothing derived is written back to the vault.
+ *
+ * The open word is read from the **unfiltered** list, so a level the active filter
+ * excludes lets the row leave while the panel stays open, and the write goes
+ * through the **stored** entry (see [raiseLevel]).
  */
 @Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
 @Composable
 private fun VocabularyDestination(
-    vocabulary: VocabularyController?,
+    mastery: MasteryController?,
     environment: AppEnvironment,
     languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
-    val translationLanguage = languageSettings?.translationLanguage
-    val all = vocabulary?.all().orEmpty()
+    var openKey by remember { mutableStateOf<WordKey?>(null) }
+    val all = mastery?.all().orEmpty()
+    val derived = derivedTranslations(all, languageSettings?.translationLanguage, environment)
+    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
+    // The open word is resolved from the whole list, not the narrowed one, so a
+    // filter that excludes the chosen level cannot close the sheet.
+    val open = openKey?.let { key -> shown.firstOrNull { entry -> entry.key == key } }
+    val vanished = openKey != null && open == null
+    // A word a sync removed, or the reader deleted, closes its own sheet rather
+    // than leaving a stale one over the list.
+    LaunchedEffect(openKey, vanished) { if (vanished) openKey = null }
+
+    val state = vocabularyState(shown, query, masteryLevel, all.size)
+    val actions = VocabularyActions(
+        onSearch = { text -> query = text },
+        onFilter = { chosen -> masteryLevel = chosen },
+        onClearSearch = { query = "" },
+        onDelete = { entry ->
+            scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
+        },
+        onOpen = { entry -> openKey = entry.key },
+    )
+    val raise: (VocabularyEntry, MasteryLevel) -> Unit = { entry, level ->
+        raiseLevel(mastery, environment, scope, entry, level)
+    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val list = VocabularyList(state, actions, open, raise, onDismiss = { openKey = null })
+        if (maxWidth >= WIDE_WINDOW_BREAKPOINT) WideVocabulary(list) else NarrowVocabulary(list)
+    }
+    // Back closes the open word before the shell sees it, so dismissing it never
+    // costs the reader their screen (docs/design.md §6).
+    PlatformBackHandler(enabled = open != null) { openKey = null }
+}
+
+/**
+ * Saves [level] onto [entry]'s **stored** record (issue #178): the same save the
+ * reader's panel makes, so the change signal fires and sync pushes it (ADR-0028),
+ * and it starts from the stored entry, never the row's pack-derived copy, so a
+ * derived translation never reaches the **Vault** (ADR-0032).
+ */
+@Suppress("LongParameterList") // The composition's inputs; a bundle would only hide that.
+private fun raiseLevel(
+    mastery: MasteryController?,
+    environment: AppEnvironment,
+    scope: CoroutineScope,
+    entry: VocabularyEntry,
+    level: MasteryLevel,
+) {
+    val levelWriter = mastery ?: return
+    val stored = levelWriter.entryFor(entry.key) ?: return
+    scope.launch { withContext(environment.dispatcher) { levelWriter.save(stored.copy(mastery = level)) } }
+}
+
+/**
+ * The list's state: the search and the level filter applied to [shown], and the
+ * vocabulary's own count beside the title — the count is not the narrowed list's
+ * (docs/design.md §7.4).
+ */
+private fun vocabularyState(
+    shown: List<VocabularyEntry>,
+    query: String,
+    masteryLevel: MasteryLevel?,
+    total: Int,
+): VocabularyUiState = if (total == 0) {
+    VocabularyUiState.Empty
+} else {
+    VocabularyUiState.Results(
+        entries = filterByMastery(searchVocabulary(shown, query), masteryLevel),
+        query = query,
+        masteryLevel = masteryLevel,
+        total = total,
+    )
+}
+
+/**
+ * The list's live pieces, so its two shapes take one input rather than five: the
+ * state it renders, the taps it raises, the open word, the write that word's level
+ * takes, and the dismissal. A plain class, not a data class: a composable lambda
+ * has no value equality, so a `copy` would compare two different ones as different.
+ */
+private class VocabularyList(
+    val state: VocabularyUiState,
+    val actions: VocabularyActions,
+    val open: VocabularyEntry?,
+    val raise: (VocabularyEntry, MasteryLevel) -> Unit,
+    val onDismiss: () -> Unit,
+)
+
+/**
+ * The desktop shape of the list (issue #178; docs/design.md §6): the rows, and the
+ * open word in the same reserved column the reader shows its lookup in, so opening
+ * a word never narrows the list under the reader's eye.
+ */
+@Composable
+private fun WideVocabulary(list: VocabularyList) {
+    Row(Modifier.fillMaxSize()) {
+        VocabularyScreen(
+            state = list.state,
+            actions = list.actions,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        )
+        VocabularyLevelColumn(
+            entry = list.open,
+            onSave = { level -> list.open?.let { entry -> list.raise(entry, level) } },
+            onDismiss = list.onDismiss,
+        )
+    }
+}
+
+/** The phone shape: the sheet raised from the bottom edge over the rows. */
+@Composable
+private fun NarrowVocabulary(list: VocabularyList) {
+    Box(Modifier.fillMaxSize()) {
+        VocabularyScreen(state = list.state, actions = list.actions)
+        list.open?.let { entry ->
+            VocabularyLevelSheet(
+                entry = entry,
+                onSave = { level -> list.raise(entry, level) },
+                onDismiss = list.onDismiss,
+            )
+        }
+    }
+}
+
+/**
+ * The translation each row shows, derived from the installed **Dictionary packs**
+ * (issue #67; ADR-0032): the whole list is queried once per entry set and
+ * **Translation language**, off the UI thread because the pack read blocks, and an
+ * entry no pack answers falls back to its stored translation.
+ */
+@Composable
+private fun derivedTranslations(
+    all: List<VocabularyEntry>,
+    translationLanguage: String?,
+    environment: AppEnvironment,
+): Map<WordKey, String> {
     var derived by remember { mutableStateOf(emptyMap<WordKey, String>()) }
-    LaunchedEffect(all, translationLanguage, environment.dictionary) {
+    // Keyed on what the query reads, not on the entries themselves: a level change
+    // rewrites an entry, and re-querying every pack for the whole list to answer a
+    // question whose answer did not change would make each save cost a list.
+    val sources = all.map { entry -> entry.key to entry.translation }
+    LaunchedEffect(sources, translationLanguage, environment.dictionary) {
         // Each Reading language's pack is resolved here, on the composition thread
         // where the reader resolves its own, so the services' per-pair installer
         // cache is only ever written from one thread; only the blocking query moves
@@ -790,22 +974,7 @@ private fun VocabularyDestination(
             }
         }
     }
-    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
-    val state = if (all.isEmpty()) {
-        VocabularyUiState.Empty
-    } else {
-        VocabularyUiState.Results(filterByMastery(searchVocabulary(shown, query), masteryLevel), query, masteryLevel)
-    }
-    VocabularyScreen(
-        state = state,
-        actions = VocabularyActions(
-            onSearch = { text -> query = text },
-            onFilter = { chosen -> masteryLevel = chosen },
-            onDelete = { entry ->
-                scope.launch { withContext(environment.dispatcher) { vocabulary?.delete(entry.key) } }
-            },
-        ),
-    )
+    return derived
 }
 
 /**
@@ -873,13 +1042,42 @@ private fun libraryActions(
     onDismissError = controller::dismissError,
     onSearch = controller::search,
     onClearSearch = controller::clearSearch,
+    onToggleState = controller::toggleState,
+    onShowAllBooks = controller::showAllBooks,
 )
 
 /** Where the library's taps lead, bundled so [libraryActions] stays within the parameter bound. */
 private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
 
+/**
+ * Declares or undoes a book's **Finished** fact from the reader (issue #200;
+ * ADR-0038). The vault write is blocking, so it runs on the environment's
+ * dispatcher; the record then raises the discrete local-change signal so sync
+ * pushes it, and the Library is re-listed so its filter sees the new state on
+ * return. A failed write is swallowed like a failed position save: losing one
+ * declaration is better than bringing the reader down.
+ */
+@Suppress("LongParameterList") // The caller's wiring and the fact it records; a bundle would only hide them.
+private fun setFinished(
+    environment: AppEnvironment,
+    controller: LibraryController,
+    changes: LocalChanges,
+    scope: CoroutineScope,
+    bookId: String,
+    write: (BookLibrary, String) -> Unit,
+) {
+    scope.launch {
+        runCatching {
+            withContext(environment.dispatcher) { write(environment.library, bookId) }
+        }.onSuccess {
+            changes.contentChanged()
+            controller.refresh()
+        }
+    }
+}
+
 /** The reader over an opened [session], with a way back to the library and the lookup panel. */
-@Suppress("LongParameterList") // The reader's inputs are independent; a bundle would only hide that.
+@Suppress("LongParameterList", "LongMethod") // The reader's independent inputs and its one wiring.
 @Composable
 private fun ReaderSession(
     session: ReadingSession,
@@ -890,50 +1088,82 @@ private fun ReaderSession(
     lookup: Lookup,
     readingPreferences: ReadingPreferencesController?,
     onBack: () -> Unit,
+    onMarkFinished: () -> Unit,
+    onMarkUnfinished: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
-    // The reader shows one chapter at a time; this build renders a book's blocks
-    // as a single chapter and the chrome carries the book's title. It opens at
-    // the saved reading position, or the start for a book never opened.
-    val chapter = ReaderChapter(
+    // The reader shows the whole book and its chapter list; the chrome carries
+    // the book's title. It opens at the saved reading position, or the start for
+    // a book never opened (ADR-0037).
+    val text = ReaderText(
         title = session.book.title,
         language = session.book.language,
         blocks = session.text.blocks,
+        chapters = session.text.chapters,
     )
-    Box(Modifier.fillMaxSize()) {
-        ReaderScreen(
-            document = ReaderDocument(
-                chapter = chapter,
-                renderer = ReaderRenderer(
-                    segmenter = environment.segmenter,
-                    mastery = mastery,
-                    lemmas = lemmas,
-                ),
-                initialOffset = session.position?.offset ?: 0,
-                selectedRange = lookup.selection?.let { selected ->
-                    selected.tap.token.start..selected.tap.token.end
-                } ?: lookup.phrase?.range,
-                masteryRevision = masteryRevision,
-                preferences = readingPreferences?.preferences ?: ReadingPreferences.DEFAULT,
+    // The word sheet's measured height, so the page can lift under it and keep
+    // the touched word visible without repaginating (issue #210).
+    var wordPanelHeightPx by remember { mutableStateOf(0) }
+    ReaderScreen(
+        document = ReaderDocument(
+            text = text,
+            renderer = ReaderRenderer(
+                segmenter = environment.segmenter,
+                mastery = mastery,
+                lemmas = lemmas,
             ),
-            actions = ReaderActions(
-                onWordTap = lookup.onWordTap,
-                onPhraseSelected = lookup.onPhraseSelected,
-                onBack = onBack,
-                onPositionChange = onPositionChange,
-                onReadingPreferencesChange = { next -> readingPreferences?.update(next) },
-                // A lookup panel is open above the reader: a tap on the page outside
-                // it closes it, rather than looking a word up or turning the page.
-                onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
-            ),
-        )
-        LookupOverlays(lookup, session.book.language, environment.openUrl)
-    }
+            initialOffset = session.position?.offset ?: 0,
+            selectedRange = lookup.selection?.let { selected ->
+                selected.tap.token.start..selected.tap.token.end
+            } ?: lookup.phrase?.range,
+            masteryRevision = masteryRevision,
+            preferences = readingPreferences?.preferences ?: ReadingPreferences.DEFAULT,
+        ),
+        actions = ReaderActions(
+            onWordTap = lookup.onWordTap,
+            onPhraseSelected = lookup.onPhraseSelected,
+            onBack = onBack,
+            onPositionChange = onPositionChange,
+            onReadingPreferencesChange = { next -> readingPreferences?.update(next) },
+            // A lookup sheet is open above the page on a phone: a tap on the page
+            // outside it closes it, rather than looking a word up or turning the
+            // page. In the context column the reader ignores this, because the
+            // panel is beside the page rather than over it (issue #199).
+            onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
+            onMarkFinished = onMarkFinished,
+            onMarkUnfinished = onMarkUnfinished,
+        ),
+        overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
+        initiallyFinished = session.finished != null,
+        // The word or phrase panel is the reader's to place (issue #199): the
+        // context column on desktop, the bottom sheet on a phone.
+        context = ReaderContext(
+            isLookupOpen = lookup.hasPanel,
+            panel = { modifier, inColumn ->
+                LookupOverlays(
+                    lookup = lookup,
+                    language = session.book.language,
+                    openUrl = environment.openUrl,
+                    inColumn = inColumn,
+                    modifier = modifier,
+                    onWordPanelHeight = { height -> wordPanelHeightPx = height },
+                )
+            },
+        ),
+    )
 }
 
-/** The panel for the open word or phrase, bottom-aligned over the reader. */
+/** The panel for the open word or phrase, in the context column or bottom-aligned over the reader. */
+@Suppress("LongParameterList") // The lookup, its host and its measured height are independent inputs.
 @Composable
-private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: (String) -> Unit) {
+private fun LookupOverlays(
+    lookup: Lookup,
+    language: String?,
+    openUrl: (String) -> Unit,
+    inColumn: Boolean,
+    modifier: Modifier,
+    onWordPanelHeight: (Int) -> Unit,
+) {
     lookup.selection?.let { selected ->
         LookupPanel(
             selected = selected,
@@ -942,7 +1172,9 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
             translationLanguage = lookup.translationLanguage,
             openUrl = openUrl,
             onDismiss = lookup.onDismiss,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            onPanelHeight = onWordPanelHeight,
+            inColumn = inColumn,
+            modifier = modifier,
         )
     }
     lookup.phrase?.let { phrase ->
@@ -954,7 +1186,8 @@ private fun BoxScope.LookupOverlays(lookup: Lookup, language: String?, openUrl: 
             translation = lookup.translation,
             onOpenSettings = lookup.onOpenSettings,
             onDismiss = lookup.onDismiss,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            inColumn = inColumn,
+            modifier = modifier,
         )
     }
 }
@@ -969,6 +1202,8 @@ private fun LookupPanel(
     translationLanguage: String?,
     openUrl: (String) -> Unit,
     onDismiss: () -> Unit,
+    onPanelHeight: (Int) -> Unit,
+    inColumn: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val token = selected.tap.token
@@ -986,7 +1221,8 @@ private fun LookupPanel(
         ),
         pronunciation = pronunciation,
         vocabulary = vocabulary,
-        modifier = modifier,
+        modifier = modifier.onSizeChanged { size -> onPanelHeight(size.height) },
+        inColumn = inColumn,
     )
 }
 
@@ -1005,6 +1241,7 @@ private fun PhrasePanel(
     translation: PhraseTranslationUiState,
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
+    inColumn: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val shortcut = remember(phrase, language, translationLanguage) {
@@ -1024,6 +1261,7 @@ private fun PhrasePanel(
         translation = translation,
         onOpenSettings = onOpenSettings,
         modifier = modifier,
+        inColumn = inColumn,
     )
 }
 

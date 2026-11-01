@@ -5,10 +5,5 @@
          theme before the app can read the stored choice, so this is what makes a
          System device launch dark rather than flash white. The explicit Light,
          Dark and Sepia themes in `values` override this for a chosen paper. -->
-    <style name="Theme.Lekto" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/lekto_paper_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-    </style>
+    <style name="Theme.Lekto" parent="@style/LektoPaper.Dark" />
 </resources>

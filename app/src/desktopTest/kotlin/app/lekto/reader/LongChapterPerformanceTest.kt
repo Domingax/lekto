@@ -1,5 +1,7 @@
 package app.lekto.reader
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -8,21 +10,25 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
+import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.IcuTextSegmenter
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * A long-book guard (issue #16): a book sized like 300 pages measures the cost
- * of the real open path — build the styled chapter text once, lay out the first
- * page, tokenise that page — against laying out and tokenising the whole book.
+ * A long-book guard (issue #16, issue #241): opening a book must cost one
+ * chapter, not the book. The book is sized like 300 pages and split into a
+ * hundred chapters; opening it at the middle chapter measures the pages the
+ * reader can show, and stops.
+ *
  * The exact numbers are printed for the record and the assertions are loose (a
  * wall-clock bound tight enough to be meaningful would be flaky on shared CI),
- * but the shape is pinned: the first page must not wait on the whole book, so a
- * regression to eager whole-book work turns red.
+ * but the shape is pinned: a regression to whole-book work shows up as a window
+ * spanning the book instead of one chapter, and fails here.
  *
  * The measurement runs inside `setContent` because a `TextMeasurer` only exists
  * in a composition; the times therefore include that one frame, which is the
@@ -32,10 +38,14 @@ import kotlin.test.assertTrue
 @Suppress("MagicNumber") // Paragraph count and viewport dimensions are the experiment's parameters.
 class LongChapterPerformanceTest {
 
-    private val chapter = ReaderChapter(
+    private val chapterCount = 100
+    private val paragraphs = 900
+    private val blocksPerChapter = paragraphs / chapterCount
+
+    private val chapter = ReaderText(
         title = "A three-hundred-page book",
         language = "en",
-        blocks = List(900) { index ->
+        blocks = List(paragraphs) { index ->
             TextBlock(
                 kind = BlockKind.PARAGRAPH,
                 runs = listOf(
@@ -48,59 +58,55 @@ class LongChapterPerformanceTest {
         },
     )
 
+    private fun renderedStart(block: Int): Int =
+        chapter.blocks.take(block).sumOf { blockText -> blockText.text.length + BLOCK_SEPARATOR.length }
+
     @Test
-    @Suppress("LongMethod") // One linear measurement: chapter text, first page, first-page tokens, whole-book layout.
-    fun aLongBookIsOpenedWithoutProcessingTheWholeBook() = runComposeUiTest {
+    @Suppress("LongMethod") // One linear measurement: chapter text, first page, first-page tokens, window.
+    fun aLongBookIsOpenedWithoutMeasuringTheWholeBook() = runComposeUiTest {
         val renderer = ReaderRenderer(IcuTextSegmenter(), MasteryLookup { MasteryLevel.UNKNOWN })
         val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
+        val chapterStarts = (0 until chapterCount).map { index -> renderedStart(index * blocksPerChapter) }.toSet()
 
-        var start = System.nanoTime()
+        // The anchor sits at the middle chapter's first block: the one a chapter
+        // jump lands on, and the worst case the reader can open at.
+        val anchorBlock = (chapterCount / 2) * blocksPerChapter
+        val anchor = renderedStart(anchorBlock)
+        val chapterEnd = renderedStart(anchorBlock + blocksPerChapter)
+
+        val start = System.nanoTime()
         val chapterText = buildChapterText(chapter, styles)
         val chapterTextMs = millisSince(start)
 
-        lateinit var firstPage: ReaderPage
-        lateinit var pages: List<ReaderPage>
-        var firstPageMs = 0L
+        var window: List<ReaderPage> = emptyList()
         var firstPageTokensMs = 0L
-        var paginateMs = 0L
         setContent {
             val measurer = rememberTextMeasurer()
             val density = LocalDensity.current
             val width = with(density) { 320.dp.roundToPx() }
             val height = with(density) { 560.dp.roundToPx() }
             val layout = ReaderLayout(measurer, styles.body, width, height)
-            // Warm up the text engine and the segmenter so the timings separate the
-            // first page's steady-state cost from one-off JIT and ICU startup.
-            val warmUp = paginateChapter(chapterText, layout).first()
-            buildPageTokens(chapterText, warmUp, renderer, chapter, styles)
-            start = System.nanoTime()
-            firstPage = paginateChapter(chapterText, layout).first()
-            firstPageMs = millisSince(start)
-            start = System.nanoTime()
-            buildPageTokens(chapterText, firstPage, renderer, chapter, styles)
-            firstPageTokensMs = millisSince(start)
-            start = System.nanoTime()
-            pages = paginateChapter(chapterText, layout).toList()
-            paginateMs = millisSince(start)
+            val pages = mutableStateListOf<ReaderPage>()
+            LaunchedEffect(Unit) {
+                val windowStart = System.nanoTime()
+                fillWindow(chapterText, layout, chapterStarts, anchor, pages) {}
+                window = pages.toList()
+                println("long-book: window in ${millisSince(windowStart)}ms")
+
+                val tokensStart = System.nanoTime()
+                buildPageTokens(chapterText, window.first(), renderer, chapter, styles)
+                firstPageTokensMs = millisSince(tokensStart)
+            }
         }
         waitForIdle()
 
-        start = System.nanoTime()
-        val eagerTokens = buildReaderTokens(chapter, renderer, styles)
-        val eagerTokensMs = millisSince(start)
-
         println(
-            "long-book: chars=${chapterText.length} words=${eagerTokens.words.size} pages=${pages.size} " +
-                "chapterText=${chapterTextMs}ms eagerTokens=${eagerTokensMs}ms firstPage=${firstPageMs}ms " +
-                "firstPageTokens=${firstPageTokensMs}ms paginate=${paginateMs}ms",
+            "long-book: chars=${chapterText.length} chapters=$chapterCount windowPages=${window.size} " +
+                "chapterText=${chapterTextMs}ms firstPageTokens=${firstPageTokensMs}ms",
         )
-        assertTrue(pages.size > 100, "a 300-page book should span more than 100 pages at this viewport")
-        assertTrue(firstPage.end in 1 until chapterText.length, "the first page is one slice of the book")
-        // The point of AC "opens without a perceptible stall": the first page's
-        // work must be a small fraction of the whole book's. A regression to
-        // whole-book-before-the-first-page makes the first page cost the whole
-        // pagination and fails here, while the ratio survives the machine's speed.
-        assertTrue(firstPageMs + firstPageTokensMs < paginateMs, "the first page must not wait on the whole book")
+        assertEquals(anchor, window.first().start, "the window starts at the chapter the reader opened")
+        assertTrue(window.size <= 4, "a window is a page and a few ahead, not the book: ${window.size}")
+        assertTrue(window.last().end <= chapterEnd, "the window stays inside one chapter")
     }
 
     private fun millisSince(startNanos: Long): Long = (System.nanoTime() - startNanos) / 1_000_000

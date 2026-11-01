@@ -147,6 +147,38 @@ class ReadingPreferencesPanelSemanticsTest {
         compose.onNodeWithText("Text face").assertIsDisplayed()
     }
 
+    /**
+     * The panel is a temporary display: opening it must not repaginate the book,
+     * so the page keeps the same words (issue #209 review).
+     */
+    @Test
+    fun openingThePanelDoesNotRepaginateTheBook() {
+        compose.setContent { PreferencesReader(renderer) }
+        val before = compose.pageWords()
+
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+
+        compose.onNodeWithTag(READING_PREFERENCES_PANEL_TAG).assertIsDisplayed()
+        assertEquals("the panel must not change the page's words", before, compose.pageWords())
+    }
+
+    /**
+     * The panel joins the column under the bottom band, so it pushes the page and
+     * the position line up rather than covering them (docs/design.md §7.2).
+     */
+    @Test
+    fun thePanelPushesTheBandUpInsteadOfCoveringThePage() {
+        compose.setContent { PreferencesReader(renderer) }
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+
+        val page = compose.onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+        val position = compose.onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode().boundsInRoot
+        val panel = compose.onNodeWithTag(READING_PREFERENCES_PANEL_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue("the position must stay above the panel", position.bottom <= panel.top)
+        assertTrue("the page must end above the position band", page.bottom <= position.top)
+    }
+
     @Test
     fun tappingOutsideThePanelDismissesItWithoutTappingAWord() {
         var tappedWord = false
@@ -163,13 +195,47 @@ class ReadingPreferencesPanelSemanticsTest {
         assertTrue("a tap that dismisses the panel must not tap a word", !tappedWord)
     }
 
+    /**
+     * The page above the sheet is the preview (ADR-0035): a face or margin choice
+     * reaches the reader the moment it is tapped, the sheet stays open, and there
+     * is no separate step to confirm it.
+     */
+    @Test
+    fun aFaceOrMarginChangeAppliesAtOnceWithNoConfirmationStep() {
+        var changed: ReadingPreferences? = null
+        compose.setContent { PreferencesReader(renderer) { next -> changed = next } }
+
+        compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        compose.onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).performClick()
+
+        val face = changed
+        assertNotNull("the panel must raise a change", face)
+        assertEquals(ReadingFace.SANS_SERIF, face!!.face)
+        compose.onNodeWithTag(readerFaceTag(ReadingFace.SANS_SERIF)).assertIsSelected()
+
+        compose.onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).performClick()
+
+        val margin = changed
+        assertNotNull("the panel must raise a change", margin)
+        assertEquals(ReadingMargin.WIDE, margin!!.margin)
+        compose.onNodeWithTag(readerMarginTag(ReadingMargin.WIDE)).assertIsSelected()
+
+        compose.onNodeWithTag(READING_SMALLER_TAG).performClick()
+
+        val size = changed
+        assertNotNull("the panel must raise a change", size)
+        assertEquals(ReadingPreferences.DEFAULT_SIZE - ReadingPreferences.SIZE_STEP, size!!.size)
+        // The sheet is still the one open surface: the change applied above it.
+        compose.onNodeWithText("Text face").assertIsDisplayed()
+    }
+
     @Test
     fun aSizeChangeRepaginatesTheOpenBook() {
         var changed: ReadingPreferences? = null
         compose.setContent { PreferencesReader(renderer) { next -> changed = next } }
 
-        compose.onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        val before = compose.pageBarText()
+        compose.onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+        val before = compose.pageWords()
 
         compose.onNodeWithTag(READING_PREFERENCES_TAG).performClick()
         repeat(5) { compose.onNodeWithTag(READING_LARGER_TAG).performClick() }
@@ -177,12 +243,12 @@ class ReadingPreferencesPanelSemanticsTest {
         val chosen = changed
         assertNotNull("the panel must raise a change", chosen)
         assertEquals(ReadingPreferences.MAX_SIZE, chosen!!.size)
-        assertNotEquals(before, compose.pageBarText(), "a bigger text must repaginate the open book")
+        assertNotEquals("a bigger text must repaginate into fewer words", before, compose.pageWords())
     }
 }
 
 /** Sixty paragraphs of one sentence, so the chapter spans pages under Robolectric's tighter metrics. */
-private val LONG_CHAPTER = ReaderChapter(
+private val LONG_CHAPTER = ReaderText(
     title = "The Lantern Keeper",
     language = "en",
     blocks = List(60) {
@@ -220,7 +286,7 @@ private fun PreferencesReader(
     }
 }
 
-/** The page bar's text, so a test can tell one pagination from another. */
-private fun ComposeTestRule.pageBarText(): String = onNodeWithText("Page 1 of", substring = true).fetchSemanticsNode()
+/** The words the page shows, so a test can tell one pagination from another. */
+private fun ComposeTestRule.pageWords(): String = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
     .config[SemanticsProperties.Text]
-    .joinToString(" ") { text -> text.text }
+    .joinToString(" ") { line -> line.text }

@@ -18,8 +18,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.DISMISS to "Fermer",
     TextKey.DELETE to "Supprimer",
     TextKey.CANCEL to "Annuler",
-    TextKey.SAVE to "Enregistrer",
-    TextKey.SAVED to "Enregistré",
     TextKey.CLOSE to "Fermer",
     TextKey.SHOW to "Afficher",
     TextKey.HIDE to "Masquer",
@@ -28,24 +26,40 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
 
     // Platform file dialogs.
     TextKey.PICK_BOOK_TITLE to "Importer un livre",
-    TextKey.BOOKS_FILTER to "Livres (EPUB, TXT)",
     TextKey.EXPORT_VAULT_TITLE to "Exporter le coffre",
-    TextKey.VAULT_FILTER to "Coffre Lekto (JSON)",
     TextKey.IMPORT_VAULT_TITLE to "Importer un coffre",
 
     // Library.
-    TextKey.LIBRARY_EMPTY to "Aucun livre pour l'instant — touchez Importer pour ajouter votre premier livre",
+    TextKey.LIBRARY_EMPTY_TITLE to "Aucun livre pour l'instant",
+    TextKey.LIBRARY_EMPTY to "Un EPUB ou un fichier texte, et le premier mot est à une minute.",
+    TextKey.IMPORT_BOOK to "Importer un livre",
+    TextKey.LIBRARY_LOADING to "Chargement de vos livres",
+    TextKey.READING_STATE_UNREAD to "À lire",
+    TextKey.READING_STATE_IN_PROGRESS to "En cours",
+    TextKey.READING_STATE_FINISHED to "Terminé",
+    TextKey.LIBRARY_ALL_FINISHED to "Tous vos livres sont terminés.",
+    TextKey.LIBRARY_NO_BOOKS_IN_STATE to "Aucun livre dans cet état.",
+    TextKey.SHOW_ALL_BOOKS to "Afficher tous les livres",
     TextKey.CONTINUE_READING to "Continuer la lecture",
+    TextKey.OTHER_BOOKS to "Autres livres",
     TextKey.IMPORT to "Importer",
     TextKey.IMPORTING to "Importation…",
     TextKey.IMPORT_PROGRESS to "Progression de l'importation",
     TextKey.DELETE_BOOK_TITLE to "Supprimer « {0} » ?",
-    TextKey.DELETE_BOOK_MESSAGE to "Cette action est irréversible.",
+    TextKey.DELETE_BOOK_MESSAGE to "Lekto supprimera « {0} ». Cette action est irréversible.",
     TextKey.ERROR_DETAIL to "Erreur : {0}",
     TextKey.NO_BOOKS_MATCH_QUERY to "Aucun livre ne correspond à « {0} ».",
+    TextKey.LIBRARY_ROW_PROGRESS to "{0} · {1} %",
+    TextKey.LIBRARY_ROW_NOT_STARTED to "{0} · Non commencé",
+    TextKey.LIBRARY_ROW_MEASURING to "{0} · …",
+    TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION to "La progression de lecture est en cours de calcul.",
+    TextKey.LIBRARY_ROW_FINISHED to "{0} · Terminé",
 
     // Vocabulary.
-    TextKey.VOCABULARY_EMPTY to "Aucun mot enregistré — touchez un mot pendant la lecture pour l'enregistrer",
+    TextKey.VOCABULARY_EMPTY_TITLE to "Aucun mot enregistré",
+    TextKey.VOCABULARY_EMPTY to "Touchez un mot pendant la lecture, et il apparaîtra ici.",
+    TextKey.VOCABULARY_COUNT_ONE to "1 mot",
+    TextKey.VOCABULARY_COUNT_MANY to "{0} mots",
     TextKey.ALL_LEVELS to "Tous les niveaux",
     TextKey.MASTERY_UNKNOWN to "Inconnu",
     TextKey.MASTERY_RECOGNIZED to "Reconnu",
@@ -56,12 +70,26 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.NO_WORDS_MATCH_QUERY to "Aucun mot ne correspond à « {0} ».",
     TextKey.NO_WORDS_MATCH_QUERY_AT_LEVEL to "Aucun mot ne correspond à « {0} » au niveau {1}.",
     TextKey.NO_WORDS_AT_LEVEL to "Aucun mot au niveau {0}.",
+    TextKey.NO_WORDS_MATCH_DETAIL to "La recherche porte sur le mot, sa traduction et sa phrase.",
+    TextKey.DELETE_WORD_TITLE to "Supprimer « {0} » ?",
+    TextKey.DELETE_WORD_MESSAGE to
+        "L'entrée sera retirée de votre vocabulaire. " +
+        "Le mot pourra être enregistré de nouveau en le touchant dans le livre.",
+    TextKey.CHANGE_LEVEL to "Changer le niveau",
+    TextKey.VOCABULARY_LEVEL_HINT to "Choisissez un mot pour changer son niveau.",
 
     // Reader.
     TextKey.PREVIOUS_PAGE to "Page précédente",
     TextKey.NEXT_PAGE to "Page suivante",
-    TextKey.PAGE_OF to "Page {0} sur {1}",
+    TextKey.READING_PROGRESS to "{0} %",
+    TextKey.END_OF_BOOK to "FIN",
+    TextKey.MARK_AS_FINISHED to "Marquer comme terminé",
+    TextKey.MARK_AS_UNFINISHED to "Marquer comme non terminé",
+    TextKey.BACK_TO_LIBRARY to "Retour à la bibliothèque",
+    TextKey.CHAPTERS to "Chapitres",
+    TextKey.NO_CHAPTERS to "Ce livre n'a pas de liste de chapitres.",
     TextKey.READING_PREFERENCES to "Aa",
+    TextKey.READING_TEXT to "Texte",
     TextKey.READING_FACE to "Police du texte",
     TextKey.READING_FACE_SERIF to "À empattements",
     TextKey.READING_FACE_SANS_SERIF to "Sans empattements",
@@ -79,13 +107,12 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.NOT_IN_DICTIONARY to "« {0} » n'est pas dans le dictionnaire hors ligne.",
     TextKey.NO_VOICE_FOR_LANGUAGE to "Aucune voix n'est installée pour « {0} ».",
     TextKey.NO_VOICE_FOR_UNKNOWN_LANGUAGE to "Aucune voix n'est installée pour cette langue.",
-    TextKey.LOOK_IT_UP_ONLINE to "Chercher en ligne",
     TextKey.TRANSLATE_ONLINE to "Traduire en ligne",
 
     // Phrase lookup panel.
-    TextKey.CONNECT_PROVIDER_PROMPT to
-        "Connectez un fournisseur LLM dans les réglages pour traduire des phrases ici.",
-    TextKey.OPEN_SETTINGS to "Ouvrir les réglages",
+    TextKey.QUOTED_PHRASE to "« {0} »",
+    TextKey.CONNECT_PROVIDER_PROMPT to "Une phrase a besoin d'une IA pour être traduite.",
+    TextKey.SET_UP_PROVIDER to "Configurer un fournisseur",
     TextKey.TRANSLATING to "Traduction…",
     TextKey.PROVIDER_RETURNED_NO_TRANSLATION to "Le fournisseur n'a renvoyé aucune traduction.",
     TextKey.HIDE_WHAT_IS_SENT to "Masquer ce qui est envoyé",
@@ -98,37 +125,46 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_APPEARANCE to "Apparence",
     TextKey.SECTION_APP_LANGUAGE to "Langue de l'application",
     TextKey.SECTION_LANGUAGES to "Langues",
-    TextKey.SECTION_VAULT to "Coffre",
     TextKey.SECTION_SYNC to "Synchronisation",
     TextKey.SECTION_LLM_PROVIDER to "Fournisseur LLM",
+    TextKey.SETTINGS_GROUP_READING to "Lecture",
+    TextKey.SETTINGS_GROUP_DATA to "Données",
+    TextKey.SETTINGS_GROUP_APPLICATION to "Application",
+    TextKey.SETTINGS_READING_LANGUAGES to "Langues de lecture",
+    TextKey.SETTINGS_NO_READING_LANGUAGES to "Aucune pour l'instant",
+    TextKey.SETTINGS_NOT_AVAILABLE to "Indisponible",
+    TextKey.PROVIDER_CONFIGURED to "{0}, configuré",
+    TextKey.ABOUT to "À propos",
+    TextKey.ABOUT_VERSION to "Version {0}",
+    TextKey.ABOUT_LICENCE to
+        "Lekto est un logiciel libre, publié sous la licence GNU Affero General Public License v3.0.",
+    TextKey.ABOUT_SOURCE to "Code source",
+    TextKey.VAULT_AND_SYNC to "Coffre et synchronisation",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
-        "Découvrez les langues que Lekto propose pour la lecture, classées selon celles où vous avez le " +
-        "plus de livres. Définissez votre niveau et téléchargez les données de difficulté des mots et " +
-        "le dictionnaire hors ligne pour chacune.",
+        "La difficulté des mots colore chaque mot selon sa difficulté pour votre niveau, et le " +
+        "dictionnaire hors ligne cherche les mots sans réseau. Définissez votre niveau pour une " +
+        "langue, puis téléchargez ce qui lui manque.",
+    TextKey.LANGUAGES_BY_LANGUAGE to "Par langue",
     TextKey.VAULT_SECTION_DESCRIPTION to
-        "Votre coffre contient tout ce que vous avez importé et enregistré. Exportez-le dans un fichier " +
-        "que vous conservez, ou importez-en un pour restaurer vos livres et votre vocabulaire sur cet " +
-        "appareil. L'importation remplace le coffre déjà présent sur cet appareil.",
+        "Le coffre vit dans le stockage privé de l'application. Il contient vos livres, votre " +
+        "vocabulaire et vos positions de lecture.",
     TextKey.VAULT_UNAVAILABLE to "L'export et l'import du coffre ne sont pas disponibles dans cette version.",
     TextKey.EXPORT_VAULT to "Exporter le coffre",
     TextKey.IMPORT_VAULT to "Importer un coffre",
     TextKey.PROVIDER_SECTION_DESCRIPTION to
-        "Traduisez une phrase sélectionnée avec votre propre fournisseur LLM. Votre clé est conservée " +
-        "dans le stockage sécurisé de cet appareil — jamais dans votre coffre, un export ou un journal.",
+        "Une phrase sélectionnée peut être traduite par votre fournisseur. La clé reste dans le " +
+        "trousseau de cet appareil ; vos livres ne quittent jamais le coffre.",
     TextKey.PROVIDER_UNAVAILABLE to
         "La connexion à un fournisseur LLM n'est pas disponible dans cette version.",
+    TextKey.PROVIDER to "Fournisseur",
     TextKey.BASE_URL to "URL de base",
     TextKey.API_KEY to "Clé API",
     TextKey.MODEL to "Modèle",
     TextKey.CHOOSE_A_PROVIDER to "Choisir un fournisseur",
     TextKey.KEY_STORED to "Une clé est enregistrée.",
     TextKey.REMOVE_KEY to "Supprimer la clé",
-    TextKey.TEST_CONNECTION to "Tester la connexion",
+    TextKey.CONNECTION to "Connexion",
     TextKey.APP_LANGUAGE_DESCRIPTION to "La langue que Lekto utilise pour ses propres textes.",
-    TextKey.APPEARANCE_DESCRIPTION to
-        "Choisissez l'apparence de Lekto sur cet appareil. Le thème recolore toute l'application — " +
-        "jamais le texte d'un livre, qui garde sa police, sa taille et ses marges. Votre choix reste " +
-        "sur cet appareil et ne voyage jamais avec votre coffre.",
     TextKey.THEME_SYSTEM to "Système",
     TextKey.THEME_SYSTEM_DESCRIPTION to "Suit le réglage de l'appareil",
     TextKey.THEME_LIGHT to "Clair",
@@ -137,25 +173,26 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.THEME_DARK_DESCRIPTION to "Nuit chaude, encre claire",
     TextKey.THEME_SEPIA to "Sépia",
     TextKey.THEME_SEPIA_DESCRIPTION to "Papier chiffon",
-    TextKey.CURRENT_THEME to "Actuel",
 
     // Sync.
-    TextKey.SYNC_SECTION_DESCRIPTION to
-        "Synchronisez votre coffre entre vos appareils via votre propre serveur WebDAV — Nextcloud, " +
-        "ownCloud, Synology ou tout hôte WebDAV. Votre mot de passe est conservé dans le stockage " +
-        "sécurisé de cet appareil.",
     TextKey.SYNC_FOLDER_WARNING to
-        "Ne pointez pas un outil de synchronisation de dossiers vers votre coffre. Syncthing, Dropbox, " +
-        "iCloud Drive et similaires ajouteraient un second écrivain sur les mêmes fichiers et " +
-        "pourraient les corrompre. Utilisez la synchronisation propre à Lekto.",
+        "Syncthing, Dropbox, iCloud Drive et similaires ajouteraient un second écrivain sur les mêmes " +
+        "fichiers et pourraient les corrompre. Utilisez la synchronisation propre à Lekto.",
+    TextKey.SYNC_FOLDER_WARNING_TITLE to
+        "Ne pointez pas un outil de synchronisation de dossiers vers votre coffre",
     TextKey.SYNC_UNAVAILABLE to "La synchronisation n'est pas disponible dans cette version.",
     TextKey.SERVER_ADDRESS to "Adresse du serveur",
     TextKey.USERNAME to "Nom d'utilisateur",
     TextKey.APPLICATION_PASSWORD to "Mot de passe d'application",
-    TextKey.TURN_OFF_SYNC to "Désactiver la synchronisation",
-    TextKey.ENABLE_SYNC to "Activer la synchronisation",
     TextKey.SYNC_NOW to "Synchroniser maintenant",
     TextKey.DISCONNECT to "Déconnecter",
+    TextKey.SYNC_LAST_JUST_NOW to "Synchronisé à l'instant.",
+    TextKey.SYNC_LAST_MINUTE to "Synchronisé il y a 1 minute.",
+    TextKey.SYNC_LAST_MINUTES to "Synchronisé il y a {0} minutes.",
+    TextKey.SYNC_LAST_HOUR to "Synchronisé il y a 1 heure.",
+    TextKey.SYNC_LAST_HOURS to "Synchronisé il y a {0} heures.",
+    TextKey.SYNC_LAST_DAY to "Synchronisé il y a 1 jour.",
+    TextKey.SYNC_LAST_DAYS to "Synchronisé il y a {0} jours.",
     TextKey.SYNC_STATUS_ON to "La synchronisation est active.",
     TextKey.SYNC_STATUS_OFF to "La synchronisation est inactive.",
     TextKey.SYNC_STATUS_NOT_SET_UP to "La synchronisation n'est pas encore configurée.",
@@ -171,34 +208,28 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.LOADING_LANGUAGES to "Chargement de la liste des langues…",
     TextKey.DIFFICULTY_NOT_PUBLISHED to
         "Lekto ne publie pas encore de données de difficulté des mots pour cette langue.",
-    TextKey.DOWNLOADING_DIFFICULTY to "Téléchargement des données de difficulté des mots…",
+    TextKey.DOWNLOAD to "Télécharger",
+    TextKey.DOWNLOAD_SIZE to "Télécharger {0}",
+    TextKey.DOWNLOADING to "Téléchargement…",
     TextKey.DOWNLOAD_AGAIN to "Télécharger à nouveau",
     TextKey.DOWNLOAD_DIFFICULTY to "Télécharger les données de difficulté des mots",
-    TextKey.DICTIONARY_NOT_PUBLISHED to "Lekto ne publie pas encore de dictionnaire hors ligne pour cette langue.",
-    TextKey.DOWNLOADING_DICTIONARY to "Téléchargement du dictionnaire hors ligne…",
     TextKey.DOWNLOAD_DICTIONARY to "Télécharger le dictionnaire hors ligne",
-    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to
-        "Le dictionnaire hors ligne n'est pas encore installé. Téléchargez-le pour chercher des mots " +
-        "sans réseau.",
-    TextKey.DICTIONARY_STATUS_READY to
-        "Le dictionnaire hors ligne est installé. Les mots sont cherchés sans réseau.",
+    TextKey.DICTIONARY_NOT_PUBLISHED to "Lekto ne publie pas encore de dictionnaire hors ligne pour cette langue.",
+    TextKey.SIZE_KILOBYTES to "{0} Ko",
+    TextKey.SIZE_MEGABYTES to "{0} Mo",
+    TextKey.SIZE_GIGABYTES to "{0} Go",
+    TextKey.READER_LEVEL to "Niveau",
+    TextKey.SET_READER_LEVEL to "Définir le niveau de lecture",
+    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to "Le dictionnaire hors ligne n'est pas installé.",
+    TextKey.DICTIONARY_STATUS_READY to "Le dictionnaire hors ligne est installé.",
     TextKey.DICTIONARY_STATUS_INCOMPATIBLE to
-        "Le dictionnaire installé est au format {0}, mais cette application lit le format {1}. " +
-        "Téléchargez-le à nouveau.",
-    TextKey.DICTIONARY_STATUS_CORRUPT to
-        "Le dictionnaire installé est endommagé et n'a pas pu être lu. Téléchargez-le à nouveau.",
-    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to
-        "Les données de difficulté des mots ne sont pas encore installées. Téléchargez-les pour " +
-        "colorer les mots selon leur difficulté.",
-    TextKey.DIFFICULTY_STATUS_READY to
-        "Les données de difficulté des mots sont installées. Les mots sont colorés selon leur " +
-        "difficulté pour votre niveau.",
+        "Le dictionnaire hors ligne est au format {0}, mais cette application lit le format {1}.",
+    TextKey.DICTIONARY_STATUS_CORRUPT to "Le dictionnaire hors ligne est endommagé.",
+    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to "Les données de difficulté ne sont pas installées.",
+    TextKey.DIFFICULTY_STATUS_READY to "Les données de difficulté sont installées.",
     TextKey.DIFFICULTY_STATUS_INCOMPATIBLE to
-        "Les données de difficulté des mots installées sont au format {0}, mais cette application lit " +
-        "le format {1}. Téléchargez-les à nouveau.",
-    TextKey.DIFFICULTY_STATUS_CORRUPT to
-        "Les données de difficulté des mots installées sont endommagées et n'ont pas pu être lues. " +
-        "Téléchargez-les à nouveau.",
+        "Les données de difficulté sont au format {0}, mais cette application lit le format {1}.",
+    TextKey.DIFFICULTY_STATUS_CORRUPT to "Les données de difficulté sont endommagées.",
 
     // Attribution.
     TextKey.ATTRIBUTION_DICTIONARY_GRANT to
@@ -214,6 +245,12 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.ATTRIBUTION_DIFFICULTY_NOT_INSTALLED to
         "Les données de difficulté des mots ne sont pas encore installées. Leur attribution complète " +
         "apparaîtra ici une fois installées.",
+    TextKey.ATTRIBUTION_ICONS_GRANT to
+        "Les icônes de l'interface viennent de Lucide (ISC), dont six dérivées de Feather (MIT) : " +
+        "Copyright (c) 2026 Lucide Icons and Contributors, Copyright (c) 2013-present Cole Bemis. " +
+        "La lettre de l'icône est le tracé d'un glyphe de Noto Serif (SIL OFL 1.1) : " +
+        "Copyright 2022 The Noto Project Authors ; la police elle-même n'est pas embarquée dans " +
+        "Lekto. Les notices complètes sont dans THIRD-PARTY-NOTICES.md, à la racine du projet.",
     TextKey.FIELD_SOURCE to "Source",
     TextKey.FIELD_DATA to "Données",
     TextKey.FIELD_LICENCE to "Licence",

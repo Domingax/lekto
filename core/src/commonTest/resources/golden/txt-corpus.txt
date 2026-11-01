@@ -1,0 +1,293 @@
+=== prose
+title: -
+blocks: 3
+  0 PARAGRAPH Un récit sans titre ni chapitre.
+  1 PARAGRAPH Il continue.
+  2 PARAGRAPH Et finit.
+chapters: 1
+  0 -
+
+=== title-and-chapters
+title: Les Trois Mousquetaires
+blocks: 5
+  0 PARAGRAPH Les Trois Mousquetaires
+  1 HEADING 1 Chapitre II
+  2 PARAGRAPH Un.
+  3 HEADING 1 Chapitre III
+  4 PARAGRAPH Deux.
+chapters: 2
+  1 Chapitre II
+  3 Chapitre III
+
+=== packed-table-of-contents
+title: -
+blocks: 5
+  0 PARAGRAPH CHAPITRE PREMIER LES TROIS PRÉSENTS CHAPITRE II UN TITRE CHA…
+  1 HEADING 1 CHAPITRE II. L'ANTICHAMBRE
+  2 PARAGRAPH Un paragraphe.
+  3 HEADING 1 CHAPITRE III. L'AUDIENCE
+  4 PARAGRAPH Un autre paragraphe.
+chapters: 2
+  1 CHAPITRE II. L'ANTICHAMBRE
+  3 CHAPITRE III. L'AUDIENCE
+
+=== restarted-numbering
+title: -
+blocks: 12
+  0 PARAGRAPH CHAPTER 1. A Title.
+  1 PARAGRAPH A paragraph.
+  2 PARAGRAPH CHAPTER 2. A Title.
+  3 PARAGRAPH A paragraph.
+  4 PARAGRAPH CHAPTER 3. A Title.
+  5 PARAGRAPH A paragraph.
+  6 PARAGRAPH CHAPTER 1. A Title.
+  7 PARAGRAPH A paragraph.
+  8 PARAGRAPH CHAPTER 2. A Title.
+  9 PARAGRAPH A paragraph.
+  10 PARAGRAPH CHAPTER 3. A Title.
+  11 PARAGRAPH A paragraph.
+chapters: 1
+  0 -
+
+=== bare-numerals
+title: -
+blocks: 6
+  0 HEADING 1 1
+  1 PARAGRAPH Un.
+  2 HEADING 1 2
+  3 PARAGRAPH Deux.
+  4 HEADING 1 3
+  5 PARAGRAPH Trois.
+chapters: 3
+  0 1
+  2 2
+  4 3
+
+=== scraped-page-numbers
+title: -
+blocks: 6
+  0 PARAGRAPH 12
+  1 PARAGRAPH Un.
+  2 PARAGRAPH 13
+  3 PARAGRAPH Deux.
+  4 PARAGRAPH 14
+  5 PARAGRAPH Trois.
+chapters: 1
+  0 -
+
+=== descending-numbering
+title: -
+blocks: 4
+  0 PARAGRAPH Chapter 3
+  1 PARAGRAPH Un.
+  2 PARAGRAPH Chapter 2
+  3 PARAGRAPH Deux.
+chapters: 1
+  0 -
+
+=== single-heading
+title: -
+blocks: 2
+  0 PARAGRAPH Chapter I
+  1 PARAGRAPH Son unique chapitre.
+chapters: 1
+  0 -
+
+=== two-character-first-line
+title: Un
+blocks: 2
+  0 PARAGRAPH Un
+  1 PARAGRAPH texte.
+chapters: 1
+  0 -
+
+=== sentence-first-line
+title: -
+blocks: 2
+  0 PARAGRAPH Il était une fois.
+  1 PARAGRAPH La suite.
+chapters: 1
+  0 -
+
+=== japanese
+title: 第一章
+blocks: 4
+  0 PARAGRAPH 第一章
+  1 PARAGRAPH 日本語の文章です。
+  2 PARAGRAPH 第二章
+  3 PARAGRAPH 続きです。
+chapters: 1
+  0 -
+
+=== crlf
+title: -
+blocks: 4
+  0 HEADING 1 Chapter I
+  1 PARAGRAPH Un.
+  2 HEADING 1 Chapter II
+  3 PARAGRAPH Deux.
+chapters: 2
+  0 Chapter I
+  2 Chapter II
+
+=== generated-1
+title: -
+blocks: 8
+  0 HEADING 1 Chapitre I
+  1 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  2 HEADING 1 Chapitre II
+  3 PARAGRAPH Un paragraphe du chapitre 2.
+  4 HEADING 1 Chapitre III
+  5 PARAGRAPH Un paragraphe du chapitre 3.
+  6 HEADING 1 Chapitre IV
+  7 PARAGRAPH Un paragraphe du chapitre 4. Un paragraphe du chapitre 4.
+chapters: 4
+  0 Chapitre I
+  2 Chapitre II
+  4 Chapitre III
+  6 Chapitre IV
+
+=== generated-2
+title: -
+blocks: 4
+  0 HEADING 1 CHAPITRE 1. UN TITRE
+  1 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  2 HEADING 1 CHAPITRE 2. UN TITRE
+  3 PARAGRAPH Un paragraphe du chapitre 2.
+chapters: 2
+  0 CHAPITRE 1. UN TITRE
+  2 CHAPITRE 2. UN TITRE
+
+=== generated-3
+title: -
+blocks: 4
+  0 HEADING 1 CHAPITRE 1. UN TITRE
+  1 PARAGRAPH Un paragraphe du chapitre 1.
+  2 HEADING 1 CHAPITRE 2. UN TITRE
+  3 PARAGRAPH Un paragraphe du chapitre 2.
+chapters: 2
+  0 CHAPITRE 1. UN TITRE
+  2 CHAPITRE 2. UN TITRE
+
+=== generated-4
+title: -
+blocks: 6
+  0 HEADING 1 1
+  1 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  2 HEADING 1 2
+  3 PARAGRAPH Un paragraphe du chapitre 2.
+  4 HEADING 1 3
+  5 PARAGRAPH Un paragraphe du chapitre 3. Un paragraphe du chapitre 3.
+chapters: 3
+  0 1
+  2 2
+  4 3
+
+=== generated-5
+title: Le Livre 5
+blocks: 7
+  0 PARAGRAPH Le Livre 5
+  1 HEADING 1 CHAPITRE 1. UN TITRE
+  2 PARAGRAPH Un paragraphe du chapitre 1.
+  3 HEADING 1 CHAPITRE 2. UN TITRE
+  4 PARAGRAPH Un paragraphe du chapitre 2. Un paragraphe du chapitre 2.
+  5 HEADING 1 CHAPITRE 3. UN TITRE
+  6 PARAGRAPH Un paragraphe du chapitre 3.
+chapters: 3
+  1 CHAPITRE 1. UN TITRE
+  3 CHAPITRE 2. UN TITRE
+  5 CHAPITRE 3. UN TITRE
+
+=== generated-6
+title: -
+blocks: 6
+  0 HEADING 1 Chapitre I
+  1 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  2 HEADING 1 Chapitre II
+  3 PARAGRAPH Un paragraphe du chapitre 2.
+  4 HEADING 1 Chapitre III
+  5 PARAGRAPH Un paragraphe du chapitre 3. Un paragraphe du chapitre 3.
+chapters: 3
+  0 Chapitre I
+  2 Chapitre II
+  4 Chapitre III
+
+=== generated-7
+title: -
+blocks: 6
+  0 HEADING 1 CHAPITRE 1. UN TITRE
+  1 PARAGRAPH Un paragraphe du chapitre 1.
+  2 HEADING 1 CHAPITRE 2. UN TITRE
+  3 PARAGRAPH Un paragraphe du chapitre 2. Un paragraphe du chapitre 2.
+  4 HEADING 1 CHAPITRE 3. UN TITRE
+  5 PARAGRAPH Un paragraphe du chapitre 3.
+chapters: 3
+  0 CHAPITRE 1. UN TITRE
+  2 CHAPITRE 2. UN TITRE
+  4 CHAPITRE 3. UN TITRE
+
+=== generated-8
+title: -
+blocks: 4
+  0 HEADING 1 Chapitre I
+  1 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  2 HEADING 1 Chapitre II
+  3 PARAGRAPH Un paragraphe du chapitre 2. Un paragraphe du chapitre 2.
+chapters: 2
+  0 Chapitre I
+  2 Chapitre II
+
+=== generated-9
+title: -
+blocks: 6
+  0 HEADING 1 Chapitre I
+  1 PARAGRAPH Un paragraphe du chapitre 1.
+  2 HEADING 1 Chapitre II
+  3 PARAGRAPH Un paragraphe du chapitre 2.
+  4 HEADING 1 Chapitre III
+  5 PARAGRAPH Un paragraphe du chapitre 3.
+chapters: 3
+  0 Chapitre I
+  2 Chapitre II
+  4 Chapitre III
+
+=== generated-10
+title: -
+blocks: 8
+  0 HEADING 1 Chapitre I
+  1 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  2 HEADING 1 Chapitre II
+  3 PARAGRAPH Un paragraphe du chapitre 2. Un paragraphe du chapitre 2.
+  4 HEADING 1 Chapitre III
+  5 PARAGRAPH Un paragraphe du chapitre 3. Un paragraphe du chapitre 3.
+  6 HEADING 1 Chapitre IV
+  7 PARAGRAPH Un paragraphe du chapitre 4.
+chapters: 4
+  0 Chapitre I
+  2 Chapitre II
+  4 Chapitre III
+  6 Chapitre IV
+
+=== generated-11
+title: Le Livre 11
+blocks: 5
+  0 PARAGRAPH Le Livre 11
+  1 HEADING 1 1
+  2 PARAGRAPH Un paragraphe du chapitre 1. Un paragraphe du chapitre 1.
+  3 HEADING 1 2
+  4 PARAGRAPH Un paragraphe du chapitre 2. Un paragraphe du chapitre 2.
+chapters: 2
+  1 1
+  3 2
+
+=== generated-12
+title: Le Livre 12
+blocks: 5
+  0 PARAGRAPH Le Livre 12
+  1 HEADING 1 Chapitre I
+  2 PARAGRAPH Un paragraphe du chapitre 1.
+  3 HEADING 1 Chapitre II
+  4 PARAGRAPH Un paragraphe du chapitre 2.
+chapters: 2
+  1 Chapitre I
+  3 Chapitre II

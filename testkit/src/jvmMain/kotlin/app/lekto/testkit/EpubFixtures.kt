@@ -31,6 +31,49 @@ object EpubFixtures {
         "OEBPS/images/cover.png" to "not-really-a-png",
     )
 
+    /**
+     * A one-file EPUB whose EPUB 3 nav points inside the file at fragment
+     * anchors, with a nested entry (ADR-0037). It also carries an NCX with
+     * different labels, so the nav is proved to win.
+     */
+    fun nestedNav(): ByteArray = archive(
+        "META-INF/container.xml" to CONTAINER,
+        "OEBPS/content.opf" to NESTED_NAV_OPF,
+        "OEBPS/nav.xhtml" to NESTED_NAV,
+        "OEBPS/toc.ncx" to NESTED_NCX,
+        "OEBPS/text/book.xhtml" to NESTED_BOOK,
+    )
+
+    /**
+     * A nav that exercises the fallbacks (ADR-0037): an empty label takes the
+     * chapter's first heading, a missing fragment starts its document, and an
+     * entry outside the spine is dropped.
+     */
+    fun tocFallbacks(): ByteArray = archive(
+        "META-INF/container.xml" to CONTAINER,
+        "OEBPS/content.opf" to FALLBACK_OPF,
+        "OEBPS/nav.xhtml" to FALLBACK_NAV,
+        "OEBPS/text/book.xhtml" to FALLBACK_BOOK,
+        "OEBPS/text/extra.xhtml" to FALLBACK_EXTRA,
+    )
+
+    /** An EPUB 2 book whose only table of contents is the NCX. */
+    fun ncxOnly(): ByteArray = archive(
+        "META-INF/container.xml" to CONTAINER,
+        "OEBPS/content.opf" to NCX_OPF,
+        "OEBPS/toc.ncx" to NCX,
+        "OEBPS/text/one.xhtml" to NCX_CHAPTER_ONE,
+        "OEBPS/text/two.xhtml" to NCX_CHAPTER_TWO,
+    )
+
+    /** A book with no nav and no NCX, so each spine document must become a chapter. */
+    fun spineOnly(): ByteArray = archive(
+        "META-INF/container.xml" to CONTAINER,
+        "OEBPS/content.opf" to SPINE_ONLY_OPF,
+        "OEBPS/text/untitled.xhtml" to SPINE_ONLY_UNTITLED,
+        "OEBPS/text/titled.xhtml" to SPINE_ONLY_TITLED,
+    )
+
     /** A minimal valid EPUB with one paragraph, for the happy-path assertions. */
     fun minimal(): ByteArray = archive(
         "META-INF/container.xml" to CONTAINER,
@@ -155,6 +198,213 @@ object EpubFixtures {
             <itemref idref="ch"/>
           </spine>
         </package>
+    """.trimIndent()
+
+    private val NESTED_NAV_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000020</dc:identifier>
+            <dc:title>Nested</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+            <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+            <item id="book" href="text/book.xhtml" media-type="application/xhtml+xml"/>
+          </manifest>
+          <spine toc="ncx">
+            <itemref idref="book"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    private val NESTED_NAV = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+        <head><title>Contents</title><meta charset="utf-8"/></head>
+        <body>
+          <nav epub:type="toc">
+            <ol>
+              <li>
+                <a href="text/book.xhtml#one">First</a>
+                <ol><li><a href="text/book.xhtml#sub">First A</a></li></ol>
+              </li>
+              <li><a href="text/book.xhtml#two">Second</a></li>
+            </ol>
+          </nav>
+        </body>
+        </html>
+    """.trimIndent()
+
+    private val NESTED_NCX = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+          <navMap>
+            <navPoint id="n1"><navLabel><text>NCX One</text></navLabel><content src="text/book.xhtml#one"/></navPoint>
+            <navPoint id="n2"><navLabel><text>NCX Two</text></navLabel><content src="text/book.xhtml#two"/></navPoint>
+          </navMap>
+        </ncx>
+    """.trimIndent()
+
+    private val NESTED_BOOK = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Book</title><meta charset="utf-8"/></head>
+        <body>
+          <h1 id="top">The Book</h1>
+          <p>Text before the first chapter.</p>
+          <h2 id="one">One</h2>
+          <p>First chapter text.</p>
+          <h3 id="sub">One A</h3>
+          <p>Nested text.</p>
+          <h2 id="two">Two</h2>
+          <p>Second chapter text.</p>
+        </body>
+        </html>
+    """.trimIndent()
+
+    private val FALLBACK_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000023</dc:identifier>
+            <dc:title>Fallbacks</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+            <item id="book" href="text/book.xhtml" media-type="application/xhtml+xml"/>
+            <item id="extra" href="text/extra.xhtml" media-type="application/xhtml+xml"/>
+          </manifest>
+          <spine>
+            <itemref idref="book"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    private val FALLBACK_NAV = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+        <head><title>Contents</title><meta charset="utf-8"/></head>
+        <body>
+          <nav epub:type="toc">
+            <ol>
+              <li><a href="text/book.xhtml#one"></a></li>
+              <li><a href="text/book.xhtml#missing">Missing anchor</a></li>
+              <li><a href="text/extra.xhtml#x">Outside the spine</a></li>
+            </ol>
+          </nav>
+        </body>
+        </html>
+    """.trimIndent()
+
+    private val FALLBACK_BOOK = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Book</title><meta charset="utf-8"/></head>
+        <body>
+          <h1 id="top">The Heading</h1>
+          <p>Intro.</p>
+          <h2 id="one">One</h2>
+          <p>One text.</p>
+        </body>
+        </html>
+    """.trimIndent()
+
+    private val FALLBACK_EXTRA = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Extra</title><meta charset="utf-8"/></head>
+        <body><h1>Extra</h1></body>
+        </html>
+    """.trimIndent()
+
+    private val NCX_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000021</dc:identifier>
+            <dc:title>NCX Book</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+            <item id="one" href="text/one.xhtml" media-type="application/xhtml+xml"/>
+            <item id="two" href="text/two.xhtml" media-type="application/xhtml+xml"/>
+          </manifest>
+          <spine toc="ncx">
+            <itemref idref="one"/>
+            <itemref idref="two"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    private val NCX = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+          <navMap>
+            <navPoint id="n2" playOrder="1">
+              <navLabel><text>Second Document</text></navLabel>
+              <content src="text/two.xhtml"/>
+            </navPoint>
+            <navPoint id="n1" playOrder="2">
+              <navLabel><text>First Document</text></navLabel>
+              <content src="text/one.xhtml"/>
+            </navPoint>
+          </navMap>
+        </ncx>
+    """.trimIndent()
+
+    private val NCX_CHAPTER_ONE = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>One</title><meta charset="utf-8"/></head>
+        <body><h1>One</h1><p>First document text.</p></body>
+        </html>
+    """.trimIndent()
+
+    private val NCX_CHAPTER_TWO = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Two</title><meta charset="utf-8"/></head>
+        <body><h1>Two</h1><p>Second document text.</p></body>
+        </html>
+    """.trimIndent()
+
+    private val SPINE_ONLY_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000022</dc:identifier>
+            <dc:title>Bare</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="untitled" href="text/untitled.xhtml" media-type="application/xhtml+xml"/>
+            <item id="titled" href="text/titled.xhtml" media-type="application/xhtml+xml"/>
+          </manifest>
+          <spine>
+            <itemref idref="untitled"/>
+            <itemref idref="titled"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    private val SPINE_ONLY_UNTITLED = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Untitled</title><meta charset="utf-8"/></head>
+        <body><p>No heading here.</p></body>
+        </html>
+    """.trimIndent()
+
+    private val SPINE_ONLY_TITLED = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Titled</title><meta charset="utf-8"/></head>
+        <body><h1>Bee</h1><p>With a heading.</p></body>
+        </html>
     """.trimIndent()
 
     private val NAV = """

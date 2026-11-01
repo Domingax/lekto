@@ -47,7 +47,41 @@ data class TextBlock(val kind: BlockKind, val runs: List<TextRun>, val headingLe
  * (ADR-0005): re-opened from the cache rather than re-parsed.
  */
 @Serializable
-data class StructuredText(val title: String?, val language: String?, val blocks: List<TextBlock>) {
+data class StructuredText(
+    val title: String?,
+    val language: String?,
+    val blocks: List<TextBlock>,
+    /**
+     * The book's **Chapter list**: the chapters its original file declares, or the
+     * ones inferred from its text when it declares none (ADR-0037, ADR-0041). It
+     * is a derived asset beside the blocks. An empty list means the source
+     * declared no structure and the parser has not learned to infer one.
+     */
+    val chapters: List<Chapter> = emptyList(),
+) {
     /** The blocks as plain text, one per line: the shape the golden test pins. */
     fun plainText(): String = blocks.joinToString(separator = "\n") { block -> block.text }
+
+    /**
+     * The length of the text the reader renders: the blocks joined by a blank
+     * line (issue #196). It is the denominator of **Reading progress**, so the
+     * formula lives beside the blocks and the reader's own chapter text agrees
+     * with it (`buildChapterText`).
+     *
+     * An empty book renders no text, so its length is 0 rather than a negative
+     * separator count.
+     */
+    fun renderedLength(): Int = blocks.renderedLength()
 }
+
+/** The rendered length of [this] run of blocks: their text and the blank lines between them. */
+fun List<TextBlock>.renderedLength(): Int =
+    sumOf { block -> block.text.length } + BLOCK_SEPARATOR.length * (size - 1).coerceAtLeast(0)
+
+/**
+ * The text between two rendered blocks: a blank line. The reader lays the blocks
+ * out with it (`buildChapterText`), and [StructuredText.renderedLength] counts it,
+ * so the denominator of **Reading progress** cannot drift from the text on screen
+ * (issue #196).
+ */
+const val BLOCK_SEPARATOR: String = "\n\n"

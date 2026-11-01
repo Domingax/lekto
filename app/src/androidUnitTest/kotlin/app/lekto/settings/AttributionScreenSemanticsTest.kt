@@ -61,6 +61,16 @@ class AttributionScreenSemanticsTest {
         compose.onNodeWithText("The word-difficulty data isn't installed yet", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun `the icons and the mark's letter name their licences on Android`() {
+        compose.setContent { Attribution(null) }
+
+        // The icons ship with the app, so their grant never waits on a download.
+        compose.onNodeWithText("The interface icons come from Lucide", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithText("Noto Serif", substring = true).assertIsDisplayed()
+    }
+
     @Composable
     private fun Attribution(metadata: PackMetadata?, difficulty: DifficultyMetadata? = null) {
         MaterialTheme {

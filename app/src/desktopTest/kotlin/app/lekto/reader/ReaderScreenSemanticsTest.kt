@@ -5,20 +5,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -30,17 +31,18 @@ import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The reader screen's behaviour through semantics and injected taps: it renders
- * the sample chapter, page navigation works in both directions (buttons and the
- * left/right tap zones), a tap on the middle recedes the chrome and returns it,
- * and it opens at a saved position (issue #16). A phone-sized viewport is forced
- * so the sample spans several pages deterministically and the chrome fits.
+ * The reader screen's behaviour through semantics and injected gestures: it
+ * renders the sample chapter, page navigation works in both directions (the two
+ * chevrons and the horizontal swipe), a tap that misses a word does nothing, and
+ * it opens at a saved position (issue #16, issue #243). A phone-sized viewport is
+ * forced so the sample spans several pages deterministically and the chrome fits.
  */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("MagicNumber") // The tap coordinates and the thirds of the width are the test's parameters.
+@Suppress("MagicNumber", "TooManyFunctions") // The gesture coordinates, and one test per behaviour the reader owns.
 class ReaderScreenSemanticsTest {
 
     private val renderer = ReaderRenderer(
@@ -49,11 +51,11 @@ class ReaderScreenSemanticsTest {
     )
 
     private companion object {
-        /** Previous, Next and the **Aa** control: the clickable nodes the screen adds itself. */
-        const val CHROME_BUTTONS = 3
+        /** The back arrow, the **Aa** control and the two page chevrons: the screen's own controls. */
+        const val CHROME_BUTTONS = 4
 
         /** One short line, so the page has blank space below it for a centre tap. */
-        val SHORT_CHAPTER = ReaderChapter(
+        val SHORT_CHAPTER = ReaderText(
             title = "Short",
             language = "en",
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Hello.")))),
@@ -68,62 +70,105 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
-    fun eachWordIsAFocusableLink() = runComposeUiTest {
-        setContent { Reader(renderer) }
+    fun aTapOnAWordAsksForThatWordLookup() = runComposeUiTest {
+        var tapped: WordTap? = null
+        setContent { Reader(renderer, onWordTap = { tap -> tapped = tap }) }
 
-        // The chrome contributes Previous/Next; every word adds another clickable
-        // node, so the count proves the word layer is tappable and reachable, not
-        // just painted.
-        val clickables = onAllNodes(hasClickAction()).fetchSemanticsNodes()
+        // Words carry no link of their own (ADR-0007): the page hit-tests the tap
+        // against its tokens, so a tap anywhere on a word finds it.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(firstWordTapPoint()) }
 
-        assertTrue(clickables.size > CHROME_BUTTONS, "expected word links beyond the chrome, found ${clickables.size}")
+        val word = assertNotNull(tapped, "a tap on a word must ask for its lookup")
+        assertEquals("The", word.token.surface)
+        assertNotNull(word.contextSentence, "the tap carries the sentence it was found in")
     }
 
+    /**
+     * The reader's two bands (docs/design.md §7.2): the back arrow, the book's
+     * title and the **Aa** control above; the two chevrons and the position below.
+     * The chevrons are controls, disabled at a bound except the next one on the
+     * last page, which raises the end of the book.
+     */
     @Test
-    fun navigatesForwardAndBackWithTheButtons() = runComposeUiTest {
+    fun theBandsCarryTheBackTitleAaAndThePosition() = runComposeUiTest {
         setContent { Reader(renderer) }
 
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Previous page").assertIsNotEnabled()
-
-        onNodeWithText("Next page").performClick()
-        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Previous page").assertIsEnabled()
-
-        onNodeWithText("Previous page").performClick()
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-        onNodeWithText("Previous page").assertIsNotEnabled()
-    }
-
-    @Test
-    fun theRightZoneTurnsThePageAndTheLeftZoneTurnsItBack() = runComposeUiTest {
-        setContent { Reader(renderer) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-
-        // A tap in the right third advances; in the left third it goes back.
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(visibleSize.width - 4f, center.y)) }
-        onNodeWithText("Page 2 of", substring = true).assertIsDisplayed()
-
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(Offset(4f, center.y)) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-    }
-
-    @Test
-    fun tappingTheCentreRecedesAndReturnsTheChrome() = runComposeUiTest {
-        setContent { Reader(renderer, chapter = SHORT_CHAPTER) }
-        onNodeWithText("Hello.").assertIsDisplayed()
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
-
-        // The short chapter leaves the middle of the page free of glyphs, so the
-        // centre tap is a chrome toggle rather than a word lookup.
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
-        onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
-        onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
-        onNodeWithText("Hello.").assertIsDisplayed()
-
-        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
-        onNodeWithText("Page 1 of", substring = true).assertIsDisplayed()
         onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_TITLE_TAG).assertTextEquals(SampleChapter.chapter.title)
+        onNodeWithTag(READING_PREFERENCES_TAG).assertIsDisplayed()
+        assertEquals(0, progressPercent())
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsDisplayed().assertIsEnabled()
+
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        assertTrue(progressPercent() > 0, "page two is further through the book than page one")
+
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).performClick()
+        assertEquals(0, progressPercent())
+    }
+
+    /**
+     * The page carries the two turns as accessibility actions beside the two
+     * chevrons, so a screen-reader or switch user has a way through the book
+     * without hunting for the bottom band.
+     */
+    @Test
+    fun thePageOffersTheTwoPageTurnsToAScreenReader() = runComposeUiTest {
+        setContent { Reader(renderer) }
+
+        val actions = onNodeWithText("On the quiet evening", substring = true)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.CustomActions]
+
+        assertEquals(listOf("Previous page", "Next page"), actions.map { action -> action.label })
+    }
+
+    @Test
+    fun aLeftwardSwipeTurnsThePageAndARightwardOneTurnsItBack() = runComposeUiTest {
+        setContent { Reader(renderer) }
+        assertEquals(0, progressPercent())
+
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { swipeLeft() }
+        val second = progressPercent()
+        assertTrue(second > 0, "a leftward swipe turns forward")
+
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { swipeRight() }
+        assertEquals(0, progressPercent())
+    }
+
+    @Test
+    fun aTapThatMissesAWordChangesNothing() = runComposeUiTest {
+        setContent { Reader(renderer, chapter = SHORT_CHAPTER) }
+        assertEquals(0, progressPercent())
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+
+        // The short chapter leaves the middle of the page free of glyphs. A tap
+        // there used to recede the chrome or turn the page; now it does nothing.
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(center) }
+
+        assertEquals(0, progressPercent())
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun aSwipeIsIgnoredWhileTheTextPanelIsOpen() = runComposeUiTest {
+        setContent { Reader(renderer) }
+        onNodeWithTag(READING_PREFERENCES_TAG).performClick()
+        val before = progressPercent()
+
+        onNodeWithTag(READER_PAGE_TAG).performTouchInput { swipeLeft() }
+
+        assertEquals(before, progressPercent(), "the page scrim owns the surface while the panel is open")
+    }
+
+    @Test
+    fun aSwipeIsHorizontalAndCoversEnoughOfThePage() {
+        val width = 400f
+        assertEquals(PageSwipe.NEXT, pageSwipe(dx = -120f, dy = 8f, width = width))
+        assertEquals(PageSwipe.PREVIOUS, pageSwipe(dx = 120f, dy = 8f, width = width))
+        assertNull(pageSwipe(dx = -40f, dy = 8f, width = width), "a drag too short for a page turn")
+        assertNull(pageSwipe(dx = -120f, dy = 200f, width = width), "a drag mostly down the page")
     }
 
     @Test
@@ -132,17 +177,112 @@ class ReaderScreenSemanticsTest {
         // the first: a resumed session is exactly where the user left it.
         setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
 
-        onNodeWithText("Page 1 of", substring = true).assertDoesNotExist()
-        onNodeWithText("Previous page").assertIsEnabled()
-        onNodeWithText("Next page").assertIsNotEnabled()
+        assertTrue(progressPercent() >= 90, "a session saved at the end opens near the end")
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsEnabled()
+        // The last page still offers a next action: it raises the end of the book.
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsEnabled()
+    }
+
+    @Test
+    fun reachingTheLastPageDoesNotOpenTheEndState() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
+
+        onNodeWithTag(READER_END_PANEL_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun nextOnTheLastPageOpensTheEndState() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE) }
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsEnabled()
+
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        onNodeWithText("THE END").assertIsDisplayed()
+        onNodeWithText(SampleChapter.chapter.title).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
+        // The state replaces the reader's chrome with its own panel.
+        onNodeWithTag(READER_POSITION_TAG).assertDoesNotExist()
+        onNodeWithTag(READER_BACK_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun markingFinishedKeepsThePanelOpenAndUndoFlipsItBack() = runComposeUiTest {
+        var marked = 0
+        var undone = 0
+        setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                onMarkFinished = { marked++ },
+                onMarkUnfinished = { undone++ },
+            )
+        }
+        openEndState()
+
+        onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        assertEquals(1, marked)
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        onNodeWithText("Finished").assertIsDisplayed()
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_FINISHED_TAG).assertDoesNotExist()
+
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).performClick()
+
+        assertEquals(1, undone)
+        onNodeWithTag(READER_MARK_FINISHED_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aFinishedSessionOpensTheEndStateAlreadyMarked() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, initiallyFinished = true) }
+        openEndState()
+
+        onNodeWithText("Finished").assertIsDisplayed()
+        onNodeWithTag(READER_MARK_UNFINISHED_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun markingFinishedNeverMovesThePosition() = runComposeUiTest {
+        val reported = mutableListOf<Int>()
+        setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                onPositionChange = { offset -> reported += offset },
+                onMarkFinished = {},
+            )
+        }
+        openEndState()
+
+        onNodeWithTag(READER_MARK_FINISHED_TAG).performClick()
+
+        assertTrue(reported.isEmpty(), "declaring finished is not a page turn: $reported")
+    }
+
+    @Test
+    fun backToLibraryLeavesTheReader() = runComposeUiTest {
+        var left = false
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, onBack = { left = true }) }
+        openEndState()
+
+        onNodeWithTag(READER_BACK_TO_LIBRARY_TAG).performClick()
+
+        assertTrue(left, "Back to Library leaves for the Library")
     }
 
     @Test
     fun aPageTurnReportsItsPosition() = runComposeUiTest {
         var reported = -1
         setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
 
-        onNodeWithText("Next page").performClick()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
 
         assertTrue(reported > 0, "turning to page two must report a non-zero character offset")
     }
@@ -153,7 +293,7 @@ class ReaderScreenSemanticsTest {
         setContent { Reader(renderer, onPhraseSelected = { chosen -> selected = chosen }) }
 
         onNodeWithText("On the quiet evening", substring = true).assertIsDisplayed()
-        val start = firstWordCentre()
+        val start = firstWordTapPoint()
         onNodeWithTag(READER_PAGE_TAG).performTouchInput {
             down(start)
             advanceEventTime(1000)
@@ -167,56 +307,60 @@ class ReaderScreenSemanticsTest {
         assertTrue(chapter.contains(phrase.text), "the phrase must come from the chapter: ${phrase.text}")
     }
 
-    @Test
-    fun theTapZonesAreThirdsOfTheWidth() {
-        val width = 300
-        assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(0f, width))
-        assertEquals(ReaderTapZone.PREVIOUS, readerTapZone(99f, width))
-        assertEquals(ReaderTapZone.CHROME, readerTapZone(150f, width))
-        assertEquals(ReaderTapZone.NEXT, readerTapZone(201f, width))
-        assertEquals(ReaderTapZone.NEXT, readerTapZone(300f, width))
-    }
-
     @Composable
     @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
     private fun Reader(
         renderer: ReaderRenderer,
-        chapter: ReaderChapter = SampleChapter.chapter,
+        chapter: ReaderText = SampleChapter.chapter,
         initialOffset: Int = 0,
+        initiallyFinished: Boolean = false,
+        onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
+        onWordTap: (WordTap) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
+        onMarkFinished: () -> Unit = {},
+        onMarkUnfinished: () -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
                 document = ReaderDocument(chapter, renderer, initialOffset),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
                 actions = ReaderActions(
+                    onWordTap = onWordTap,
                     onPhraseSelected = onPhraseSelected,
-                    onBack = {},
+                    onBack = onBack,
                     onPositionChange = onPositionChange,
+                    onMarkFinished = onMarkFinished,
+                    onMarkUnfinished = onMarkUnfinished,
                 ),
+                initiallyFinished = initiallyFinished,
             )
         }
     }
+
+    /** Raises the end state from the last page, the only way it opens. */
+    private fun ComposeUiTest.openEndState() {
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+    }
+}
+
+/** The **Reading progress** the position line shows, as a whole percentage. */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeUiTest.progressPercent(): Int {
+    val text = onNodeWithTag(READER_POSITION_TAG).fetchSemanticsNode()
+        .config[SemanticsProperties.Text]
+        .joinToString(" ") { line -> line.text }
+    return Regex("(\\d+)\\s*%").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        ?: error("no percentage in the position: $text")
 }
 
 /** The first word link's centre, in the reader page's coordinates. */
 @OptIn(ExperimentalTestApi::class)
-private fun ComposeUiTest.firstWordCentre(): Offset {
+@Suppress("MagicNumber") // A few points into the text's first line.
+private fun ComposeUiTest.firstWordTapPoint(): Offset {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val word = onAllNodes(WORD_LINK)
-        .onFirst()
-        .fetchSemanticsNode()
-        .boundsInRoot
-    return word.center - page.topLeft
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
+    // A few points inside the text's first line, which starts with the first word.
+    return Offset(text.left - page.left + 8f, text.top - page.top + 8f)
 }
-
-/**
- * A word link on the page: a clickable node that carries neither text nor a
- * description. The reader's chrome has an icon since the navigation shell
- * (issue #185) — clickable, described, and not a word — so a word is the one
- * clickable node with nothing to read on it.
- */
-private val WORD_LINK = hasClickAction() and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
-    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription)

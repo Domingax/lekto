@@ -19,8 +19,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.DISMISS to "Dismiss",
     TextKey.DELETE to "Delete",
     TextKey.CANCEL to "Cancel",
-    TextKey.SAVE to "Save",
-    TextKey.SAVED to "Saved",
     TextKey.CLOSE to "Close",
     TextKey.SHOW to "Show",
     TextKey.HIDE to "Hide",
@@ -29,24 +27,40 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
 
     // Platform file dialogs.
     TextKey.PICK_BOOK_TITLE to "Import a book",
-    TextKey.BOOKS_FILTER to "Books (EPUB, TXT)",
     TextKey.EXPORT_VAULT_TITLE to "Export vault",
-    TextKey.VAULT_FILTER to "Lekto vault (JSON)",
     TextKey.IMPORT_VAULT_TITLE to "Import a vault",
 
     // Library.
-    TextKey.LIBRARY_EMPTY to "No books yet — tap Import to add your first book",
+    TextKey.LIBRARY_EMPTY_TITLE to "No books yet",
+    TextKey.LIBRARY_EMPTY to "An EPUB or a text file, and the first word is a minute away.",
+    TextKey.IMPORT_BOOK to "Import a book",
+    TextKey.LIBRARY_LOADING to "Loading your books",
+    TextKey.READING_STATE_UNREAD to "Unread",
+    TextKey.READING_STATE_IN_PROGRESS to "In progress",
+    TextKey.READING_STATE_FINISHED to "Finished",
+    TextKey.LIBRARY_ALL_FINISHED to "All your books are finished.",
+    TextKey.LIBRARY_NO_BOOKS_IN_STATE to "No books in this state.",
+    TextKey.SHOW_ALL_BOOKS to "Show all books",
     TextKey.CONTINUE_READING to "Continue reading",
+    TextKey.OTHER_BOOKS to "Other books",
     TextKey.IMPORT to "Import",
     TextKey.IMPORTING to "Importing…",
     TextKey.IMPORT_PROGRESS to "Import progress",
     TextKey.DELETE_BOOK_TITLE to "Delete « {0} »?",
-    TextKey.DELETE_BOOK_MESSAGE to "This cannot be undone.",
+    TextKey.DELETE_BOOK_MESSAGE to "Lekto will remove « {0} ». This cannot be undone.",
     TextKey.ERROR_DETAIL to "Error: {0}",
     TextKey.NO_BOOKS_MATCH_QUERY to "No books match \"{0}\".",
+    TextKey.LIBRARY_ROW_PROGRESS to "{0} · {1} %",
+    TextKey.LIBRARY_ROW_NOT_STARTED to "{0} · Not started",
+    TextKey.LIBRARY_ROW_MEASURING to "{0} · …",
+    TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION to "Reading progress is being measured.",
+    TextKey.LIBRARY_ROW_FINISHED to "{0} · Finished",
 
     // Vocabulary.
-    TextKey.VOCABULARY_EMPTY to "No words saved yet — tap a word while reading to save it",
+    TextKey.VOCABULARY_EMPTY_TITLE to "No words saved yet",
+    TextKey.VOCABULARY_EMPTY to "Tap a word while reading, and it lands here.",
+    TextKey.VOCABULARY_COUNT_ONE to "1 word",
+    TextKey.VOCABULARY_COUNT_MANY to "{0} words",
     TextKey.ALL_LEVELS to "All levels",
     TextKey.MASTERY_UNKNOWN to "Unknown",
     TextKey.MASTERY_RECOGNIZED to "Recognized",
@@ -57,12 +71,25 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.NO_WORDS_MATCH_QUERY to "No words match \"{0}\".",
     TextKey.NO_WORDS_MATCH_QUERY_AT_LEVEL to "No words match \"{0}\" at the {1} level.",
     TextKey.NO_WORDS_AT_LEVEL to "No words at the {0} level.",
+    TextKey.NO_WORDS_MATCH_DETAIL to "The search covers the word, its translation and its sentence.",
+    TextKey.DELETE_WORD_TITLE to "Delete « {0} »?",
+    TextKey.DELETE_WORD_MESSAGE to
+        "This removes the entry from your vocabulary. The word can be saved again by tapping it in the book.",
+    TextKey.CHANGE_LEVEL to "Change level",
+    TextKey.VOCABULARY_LEVEL_HINT to "Choose a word to change its level.",
 
     // Reader.
     TextKey.PREVIOUS_PAGE to "Previous page",
     TextKey.NEXT_PAGE to "Next page",
-    TextKey.PAGE_OF to "Page {0} of {1}",
+    TextKey.READING_PROGRESS to "{0}%",
+    TextKey.END_OF_BOOK to "THE END",
+    TextKey.MARK_AS_FINISHED to "Mark as finished",
+    TextKey.MARK_AS_UNFINISHED to "Mark as unfinished",
+    TextKey.BACK_TO_LIBRARY to "Back to Library",
+    TextKey.CHAPTERS to "Chapters",
+    TextKey.NO_CHAPTERS to "This book has no chapter list.",
     TextKey.READING_PREFERENCES to "Aa",
+    TextKey.READING_TEXT to "Text",
     TextKey.READING_FACE to "Text face",
     TextKey.READING_FACE_SERIF to "Serif",
     TextKey.READING_FACE_SANS_SERIF to "Sans-serif",
@@ -80,12 +107,12 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.NOT_IN_DICTIONARY to "\"{0}\" isn't in the offline dictionary.",
     TextKey.NO_VOICE_FOR_LANGUAGE to "No voice is installed for \"{0}\".",
     TextKey.NO_VOICE_FOR_UNKNOWN_LANGUAGE to "No voice is installed for this language.",
-    TextKey.LOOK_IT_UP_ONLINE to "Look it up online",
     TextKey.TRANSLATE_ONLINE to "Translate online",
 
     // Phrase lookup panel.
-    TextKey.CONNECT_PROVIDER_PROMPT to "Connect an LLM provider in settings to translate phrases here.",
-    TextKey.OPEN_SETTINGS to "Open settings",
+    TextKey.QUOTED_PHRASE to "\u201C{0}\u201D",
+    TextKey.CONNECT_PROVIDER_PROMPT to "A phrase needs an AI to be translated.",
+    TextKey.SET_UP_PROVIDER to "Set up a provider",
     TextKey.TRANSLATING to "Translating…",
     TextKey.PROVIDER_RETURNED_NO_TRANSLATION to "The provider returned no translation.",
     TextKey.HIDE_WHAT_IS_SENT to "Hide what's sent",
@@ -98,35 +125,45 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.SECTION_APPEARANCE to "Appearance",
     TextKey.SECTION_APP_LANGUAGE to "App language",
     TextKey.SECTION_LANGUAGES to "Languages",
-    TextKey.SECTION_VAULT to "Vault",
     TextKey.SECTION_SYNC to "Sync",
     TextKey.SECTION_LLM_PROVIDER to "LLM provider",
+    TextKey.SETTINGS_GROUP_READING to "Reading",
+    TextKey.SETTINGS_GROUP_DATA to "Data",
+    TextKey.SETTINGS_GROUP_APPLICATION to "Application",
+    TextKey.SETTINGS_READING_LANGUAGES to "Reading languages",
+    TextKey.SETTINGS_NO_READING_LANGUAGES to "None yet",
+    TextKey.SETTINGS_NOT_AVAILABLE to "Not available",
+    TextKey.PROVIDER_CONFIGURED to "{0}, configured",
+    TextKey.ABOUT to "About",
+    TextKey.ABOUT_VERSION to "Version {0}",
+    TextKey.ABOUT_LICENCE to
+        "Lekto is free software, released under the GNU Affero General Public License v3.0.",
+    TextKey.ABOUT_SOURCE to "Source code",
+    TextKey.VAULT_AND_SYNC to "Vault and sync",
     TextKey.LANGUAGES_SECTION_DESCRIPTION to
-        "See the languages Lekto offers for reading, ordered by the ones you have most books in. " +
-        "Set your level and download the word-difficulty data and the offline dictionary for each there.",
+        "Word difficulty colours each word by how hard it is for your level, and the offline " +
+        "dictionary looks words up with no network. Set your level in a language, then download " +
+        "what it is missing.",
+    TextKey.LANGUAGES_BY_LANGUAGE to "By language",
     TextKey.VAULT_SECTION_DESCRIPTION to
-        "Your vault holds everything you've imported and saved. Export it to a file you keep, " +
-        "or import one to restore your books and vocabulary on this device. Importing replaces " +
-        "the vault already on this device.",
+        "The vault lives in the app's private storage. It holds your books, your vocabulary and " +
+        "your positions.",
     TextKey.VAULT_UNAVAILABLE to "Vault export and import aren't available in this build.",
     TextKey.EXPORT_VAULT to "Export vault",
     TextKey.IMPORT_VAULT to "Import vault",
     TextKey.PROVIDER_SECTION_DESCRIPTION to
-        "Translate a selected phrase with your own LLM provider. Your key is kept in this device's " +
-        "secure storage — never in your vault, an export or a log.",
+        "A selected phrase can be translated by your provider. The key stays in this device's " +
+        "keychain; your books never leave the vault.",
     TextKey.PROVIDER_UNAVAILABLE to "Connecting an LLM provider isn't available in this build.",
+    TextKey.PROVIDER to "Provider",
     TextKey.BASE_URL to "Base URL",
     TextKey.API_KEY to "API key",
     TextKey.MODEL to "Model",
     TextKey.CHOOSE_A_PROVIDER to "Choose a provider",
     TextKey.KEY_STORED to "A key is stored.",
     TextKey.REMOVE_KEY to "Remove key",
-    TextKey.TEST_CONNECTION to "Test connection",
+    TextKey.CONNECTION to "Connection",
     TextKey.APP_LANGUAGE_DESCRIPTION to "The language Lekto uses for its own texts.",
-    TextKey.APPEARANCE_DESCRIPTION to
-        "Choose how Lekto looks on this device. The theme recolours the whole app — never a book's " +
-        "text, which keeps its face, size and margins. Your choice stays on this device and never " +
-        "travels with your vault.",
     TextKey.THEME_SYSTEM to "System",
     TextKey.THEME_SYSTEM_DESCRIPTION to "Follows the device setting",
     TextKey.THEME_LIGHT to "Light",
@@ -135,23 +172,25 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.THEME_DARK_DESCRIPTION to "Warm night, light ink",
     TextKey.THEME_SEPIA to "Sepia",
     TextKey.THEME_SEPIA_DESCRIPTION to "Rag paper",
-    TextKey.CURRENT_THEME to "Current",
 
     // Sync.
-    TextKey.SYNC_SECTION_DESCRIPTION to
-        "Sync your vault between your devices through your own WebDAV server — Nextcloud, ownCloud, " +
-        "Synology or any WebDAV host. Your password is kept in this device's secure storage.",
     TextKey.SYNC_FOLDER_WARNING to
-        "Don't point a folder-sync tool at your vault. Syncthing, Dropbox, iCloud Drive and the like " +
-        "would put a second writer on the same files and can corrupt them. Use Lekto's own sync instead.",
+        "Syncthing, Dropbox, iCloud Drive and the like would put a second writer on the same files " +
+        "and can corrupt them. Use Lekto's own sync instead.",
+    TextKey.SYNC_FOLDER_WARNING_TITLE to "Don't point a folder-sync tool at your vault",
     TextKey.SYNC_UNAVAILABLE to "Sync isn't available in this build.",
     TextKey.SERVER_ADDRESS to "Server address",
     TextKey.USERNAME to "Username",
     TextKey.APPLICATION_PASSWORD to "Application password",
-    TextKey.TURN_OFF_SYNC to "Turn off sync",
-    TextKey.ENABLE_SYNC to "Enable sync",
     TextKey.SYNC_NOW to "Sync now",
     TextKey.DISCONNECT to "Disconnect",
+    TextKey.SYNC_LAST_JUST_NOW to "Synced just now.",
+    TextKey.SYNC_LAST_MINUTE to "Synced 1 minute ago.",
+    TextKey.SYNC_LAST_MINUTES to "Synced {0} minutes ago.",
+    TextKey.SYNC_LAST_HOUR to "Synced 1 hour ago.",
+    TextKey.SYNC_LAST_HOURS to "Synced {0} hours ago.",
+    TextKey.SYNC_LAST_DAY to "Synced 1 day ago.",
+    TextKey.SYNC_LAST_DAYS to "Synced {0} days ago.",
     TextKey.SYNC_STATUS_ON to "Sync is on.",
     TextKey.SYNC_STATUS_OFF to "Sync is off.",
     TextKey.SYNC_STATUS_NOT_SET_UP to "Sync isn't set up yet.",
@@ -165,27 +204,28 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
         "Lekto hasn't loaded the list of languages it offers yet. Reload the list, or check your connection.",
     TextKey.LOADING_LANGUAGES to "Loading the language list…",
     TextKey.DIFFICULTY_NOT_PUBLISHED to "Lekto doesn't publish word-difficulty data for this language yet.",
-    TextKey.DOWNLOADING_DIFFICULTY to "Downloading word-difficulty data…",
+    TextKey.DOWNLOAD to "Download",
+    TextKey.DOWNLOAD_SIZE to "Download {0}",
+    TextKey.DOWNLOADING to "Downloading…",
     TextKey.DOWNLOAD_AGAIN to "Download again",
     TextKey.DOWNLOAD_DIFFICULTY to "Download word-difficulty data",
+    TextKey.DOWNLOAD_DICTIONARY to "Download the offline dictionary",
     TextKey.DICTIONARY_NOT_PUBLISHED to "Lekto doesn't publish an offline dictionary for this language yet.",
-    TextKey.DOWNLOADING_DICTIONARY to "Downloading the offline dictionary…",
-    TextKey.DOWNLOAD_DICTIONARY to "Download offline dictionary",
-    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to
-        "The offline dictionary isn't installed yet. Download it to look words up with no network.",
-    TextKey.DICTIONARY_STATUS_READY to "The offline dictionary is installed. Words are looked up with no network.",
+    TextKey.SIZE_KILOBYTES to "{0} KB",
+    TextKey.SIZE_MEGABYTES to "{0} MB",
+    TextKey.SIZE_GIGABYTES to "{0} GB",
+    TextKey.READER_LEVEL to "Level",
+    TextKey.SET_READER_LEVEL to "Set reader level",
+    TextKey.DICTIONARY_STATUS_NOT_INSTALLED to "Offline dictionary isn't installed.",
+    TextKey.DICTIONARY_STATUS_READY to "Offline dictionary is installed.",
     TextKey.DICTIONARY_STATUS_INCOMPATIBLE to
-        "The installed dictionary is format {0}, but this app reads format {1}. Download it again.",
-    TextKey.DICTIONARY_STATUS_CORRUPT to
-        "The installed dictionary is damaged and couldn't be read. Download it again.",
-    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to
-        "Word-difficulty data isn't installed yet. Download it to colour words by how hard they are.",
-    TextKey.DIFFICULTY_STATUS_READY to
-        "Word-difficulty data is installed. Words are coloured by how hard they are for your level.",
+        "Offline dictionary is format {0}, but this app reads format {1}.",
+    TextKey.DICTIONARY_STATUS_CORRUPT to "Offline dictionary is damaged.",
+    TextKey.DIFFICULTY_STATUS_NOT_INSTALLED to "Word difficulty isn't installed.",
+    TextKey.DIFFICULTY_STATUS_READY to "Word difficulty is installed.",
     TextKey.DIFFICULTY_STATUS_INCOMPATIBLE to
-        "The installed word-difficulty data is format {0}, but this app reads format {1}. Download it again.",
-    TextKey.DIFFICULTY_STATUS_CORRUPT to
-        "The installed word-difficulty data is damaged and couldn't be read. Download it again.",
+        "Word difficulty is format {0}, but this app reads format {1}.",
+    TextKey.DIFFICULTY_STATUS_CORRUPT to "Word difficulty is damaged.",
 
     // Attribution.
     TextKey.ATTRIBUTION_DICTIONARY_GRANT to
@@ -199,6 +239,12 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
         "Lekto is not affiliated with, nor endorsed by, wordfreq.",
     TextKey.ATTRIBUTION_DIFFICULTY_NOT_INSTALLED to
         "The word-difficulty data isn't installed yet. Its full attribution appears here once it is.",
+    TextKey.ATTRIBUTION_ICONS_GRANT to
+        "The interface icons come from Lucide (ISC), six of them derived from Feather (MIT): " +
+        "Copyright (c) 2026 Lucide Icons and Contributors, Copyright (c) 2013-present Cole Bemis. " +
+        "The launcher mark's letter is the outline of a Noto Serif glyph (SIL OFL 1.1): " +
+        "Copyright 2022 The Noto Project Authors; the font itself is not bundled with Lekto. " +
+        "The full notices are in the project's THIRD-PARTY-NOTICES.md.",
     TextKey.FIELD_SOURCE to "Source",
     TextKey.FIELD_DATA to "Data",
     TextKey.FIELD_LICENCE to "Licence",

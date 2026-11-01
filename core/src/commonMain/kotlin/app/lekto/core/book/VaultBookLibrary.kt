@@ -33,7 +33,7 @@ import kotlin.time.Instant
  * @param parsers the parser for each supported [BookFormat]; a missing format is
  *   refused rather than guessed.
  */
-@Suppress("LongParameterList") // Its collaborators are seams; bundling them adds a type, not clarity.
+@Suppress("LongParameterList", "TooManyFunctions") // Seams, and one function per BookLibrary operation, not a grab bag.
 class VaultBookLibrary(
     private val vault: VaultStore,
     derived: DerivedAssetStore,
@@ -49,7 +49,23 @@ class VaultBookLibrary(
 
     override fun listing(): LibraryListing {
         val records = vault.all()
-        return LibraryListing.of(books = booksIn(records), lastReadByBook = lastReadIn(records))
+        // Only the position, finished and tiny length entries are read here: the
+        // parsed text is never decoded to list a shelf (issues #196, #200).
+        val positions = positionsIn(records)
+        val finished = finishedIn(records).keys
+        val progress = positions.mapValues { (bookId, position) ->
+            BookProgress.forPosition(position, cache.lengthOf(bookId))
+        }
+        val books = booksIn(records)
+        val states = books.associate { book ->
+            book.id to ReadingState.of(hasPosition = book.id in positions, finished = book.id in finished)
+        }
+        return LibraryListing.of(
+            books = books,
+            lastReadByBook = lastReadIn(records),
+            progressByBook = progress,
+            readingStateByBook = states,
+        )
     }
 
     override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
@@ -77,20 +93,69 @@ class VaultBookLibrary(
     override fun open(id: String): ReadingSession? {
         val book = vault.get(id)?.let { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
         val text = book?.let { cache.textOf(it.id) ?: reparse(it) }
-        return if (book != null && text != null) ReadingSession(book, text, position(book.id)) else null
+        return if (book != null && text != null) {
+            ReadingSession(book, text, position(book.id), finished(book.id))
+        } else {
+            null
+        }
     }
 
     override fun position(bookId: String): ReadingPosition? = vault.get(ReadingPositionRecord.idOf(bookId))
         ?.let { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }
+
+    override fun finished(bookId: String): FinishedBook? = vault.get(FinishedBookRecord.idOf(bookId))
+        ?.let { record -> runCatching { FinishedBookRecord.finishedOf(record) }.getOrNull() }
 
     override fun savePosition(position: ReadingPosition) {
         vault.put(ReadingPositionRecord.of(position, seams.clock.now(), deviceId))
     }
 
     /**
-     * Removes the book's original, cached text and reading position, then the
-     * book record itself, leaving a tombstone for the book and for its position
-     * (issue #131; ADR-0015).
+     * Writes the finished record with the clock's now. The position record is
+     * deliberately untouched, so **Last read** does not move (ADR-0038).
+     */
+    override fun markFinished(bookId: String) {
+        if (vault.get(bookId) == null) return
+        val finished = FinishedBook(bookId, seams.clock.now())
+        vault.put(FinishedBookRecord.of(finished, finished.finishedAt, deviceId))
+    }
+
+    /**
+     * Removes the finished record, writing its tombstone first so a device that
+     * has not seen the undo cannot copy the declaration back (ADR-0015,
+     * ADR-0038). A book that was not declared finished is a no-op: no record
+     * exists to delete, so there is nothing for a tombstone to out-vote.
+     */
+    override fun markUnfinished(bookId: String) {
+        removeWithTombstone(FinishedBookRecord.idOf(bookId), seams.clock.now())
+    }
+
+    /**
+     * A missing rendered length is repaired from the cached text when that
+     * survives, and from the original otherwise — the re-parse re-caches both
+     * ([BookTextCache.put]). A read or write that fails leaves the length
+     * absent, so the row keeps `…`; it never becomes `Not started`.
+     */
+    override fun measure(bookId: String): ReadingProgress? {
+        /** The cached text's length, or the original's when the cache is gone. */
+        fun renderedLength(book: Book): Int? =
+            cache.textOf(book.id)?.renderedLength() ?: reparse(book)?.renderedLength()
+
+        /** The entry when it survives, a repaired one otherwise; `null` when it cannot be stored. */
+        fun cachedLength(book: Book): Int? = runCatching {
+            cache.lengthOf(book.id) ?: renderedLength(book)?.also { length -> cache.putLength(book.id, length) }
+        }.getOrNull()
+
+        val book = vault.get(bookId)?.let { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
+        return position(bookId)?.let { position ->
+            book?.let(::cachedLength)?.let { length -> ReadingProgress(position.offset, length) }
+        }
+    }
+
+    /**
+     * Removes the book's original, cached text, reading position and finished
+     * declaration, then the book record itself, leaving a tombstone for the book
+     * and for each fact (issue #131; ADR-0015, ADR-0038).
      *
      * Each tombstone is written **before** the record it marks is removed, so a
      * failure leaves the book fully listed and a replayed delete completes it:
@@ -104,33 +169,36 @@ class VaultBookLibrary(
         if (vault.get(id) == null) return
         val now = seams.clock.now()
         cache.remove(id)
-        val positionId = ReadingPositionRecord.idOf(id)
-        if (vault.get(positionId) != null) {
-            tombstones.put(Tombstone(id = positionId, updatedAt = now, deviceId = deviceId))
-            vault.remove(positionId)
-        }
+        removeWithTombstone(ReadingPositionRecord.idOf(id), now)
+        removeWithTombstone(FinishedBookRecord.idOf(id), now)
         tombstones.put(Tombstone(id = id, updatedAt = now, deviceId = deviceId))
         vault.remove(id)
+    }
+
+    /** Removes [recordId] if it exists, writing its tombstone first so the deletion can sync. */
+    private fun removeWithTombstone(recordId: String, now: Instant) {
+        if (vault.get(recordId) == null) return
+        tombstones.put(Tombstone(id = recordId, updatedAt = now, deviceId = deviceId))
+        vault.remove(recordId)
     }
 
     /** Writes the record, its original attachment and the parsed-text cache. */
     @Suppress("TooGenericExceptionCaught") // Any storage failure must become an ImportException.
     private fun store(book: Book, bytes: ByteArray, text: StructuredText) {
+        // A failure part-way must leave the vault unchanged.
+        fun rollback() {
+            runCatching { vault.removeAttachment(book.id) }
+            runCatching { vault.remove(book.id) }
+            runCatching { cache.remove(book.id) }
+        }
         try {
             vault.put(BookRecord.of(book, seams.clock.now(), deviceId))
             vault.putAttachment(book.id, bytes)
             cache.put(book.id, text)
         } catch (failure: RuntimeException) {
-            rollback(book.id)
+            rollback()
             throw ImportException("Could not save '${book.title}'.", failure)
         }
-    }
-
-    /** Undoes a partial [store] so a failed import leaves the vault unchanged. */
-    private fun rollback(id: String) {
-        runCatching { vault.removeAttachment(id) }
-        runCatching { vault.remove(id) }
-        runCatching { cache.remove(id) }
     }
 
     /** Re-parses [book]'s stored original and re-caches it, or `null` when it cannot be read. */
@@ -167,6 +235,16 @@ private fun booksIn(records: List<VaultRecord>): List<Book> = records
     .inTitleOrder()
 
 /**
+ * Where each book was left off: the position record's body, keyed by its book id
+ * (issue #196). A record this build cannot read names no book, so it is skipped,
+ * exactly as [lastReadIn] skips it.
+ */
+private fun positionsIn(records: List<VaultRecord>): Map<String, ReadingPosition> = records
+    .filter { record -> record.kind == ReadingPositionRecord.KIND }
+    .mapNotNull { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }
+    .associate { position -> position.bookId to position }
+
+/**
  * When each book's position last moved: the position record's `updatedAt`
  * (CONTEXT.md, "Last read"). A record this build cannot read names no book, so
  * it is skipped rather than misdated.
@@ -178,3 +256,16 @@ private fun lastReadIn(records: List<VaultRecord>): Map<String, Instant> = recor
             ?.let { position -> position.bookId to record.updatedAt }
     }
     .toMap()
+
+/**
+ * The books declared **Finished**, keyed by book id (ADR-0038). A record this
+ * build cannot read names no book, so it is skipped exactly as [lastReadIn]
+ * skips one — the absence of a readable declaration already means "not
+ * declared", which is why there is no migration. A position record also lives
+ * under [FinishedBookRecord.KIND] but has no `finishedAt`, so decoding it as a
+ * declaration fails and it is skipped.
+ */
+private fun finishedIn(records: List<VaultRecord>): Map<String, FinishedBook> = records
+    .filter { record -> record.kind == FinishedBookRecord.KIND }
+    .mapNotNull { record -> runCatching { FinishedBookRecord.finishedOf(record) }.getOrNull() }
+    .associate { finished -> finished.bookId to finished }

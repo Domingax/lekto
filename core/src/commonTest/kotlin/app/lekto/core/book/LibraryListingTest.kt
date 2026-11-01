@@ -70,4 +70,39 @@ class LibraryListingTest :
         test("an empty vault lists nothing") {
             LibraryListing.of(emptyList(), emptyMap()) shouldBe LibraryListing()
         }
+
+        test("a finished book falls into the title-ordered rest and never leads") {
+            val alpha = book("Alpha")
+            val bravo = book("Bravo")
+            val charlie = book("Charlie")
+
+            val listing = LibraryListing.of(
+                books = listOf(alpha, bravo, charlie),
+                lastReadByBook = mapOf(
+                    alpha.id to moment(2),
+                    charlie.id to moment(3),
+                ),
+                readingStateByBook = mapOf(
+                    alpha.id to ReadingState.IN_PROGRESS,
+                    charlie.id to ReadingState.FINISHED,
+                ),
+            )
+
+            listing.lastRead.map { it.title } shouldBe listOf("Alpha")
+            listing.others.map { it.title } shouldBe listOf("Bravo", "Charlie")
+            listing.readingStateOf(charlie) shouldBe ReadingState.FINISHED
+        }
+
+        test("a listing without a state map reads a positioned book as In progress and the rest as Unread") {
+            val started = book("Started")
+            val unread = book("Unread")
+            val listing = LibraryListing.of(
+                books = listOf(started, unread),
+                lastReadByBook = mapOf(started.id to moment(1)),
+                progressByBook = mapOf(started.id to BookProgress.Measured(10)),
+            )
+
+            listing.readingStateOf(started) shouldBe ReadingState.IN_PROGRESS
+            listing.readingStateOf(unread) shouldBe ReadingState.UNREAD
+        }
     })

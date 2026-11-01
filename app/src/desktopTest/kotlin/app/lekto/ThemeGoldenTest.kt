@@ -61,7 +61,7 @@ class ThemeGoldenTest {
     /**
      * The background Android paints before the first frame, in the paper of the
      * chosen **App theme** (ADR-0036; docs/design.md §7.7). It records the
-     * background only — the icon and the launch screen's mark are issue #177's.
+     * background only: the launch mark is issue #177's, and `AppIconTest` pins it.
      */
     private fun launchWindow(name: String, theme: AppTheme) = runComposeUiTest {
         setContent {

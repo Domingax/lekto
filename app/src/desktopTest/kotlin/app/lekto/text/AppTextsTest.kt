@@ -26,6 +26,25 @@ class AppTextsTest {
         }
     }
 
+    /**
+     * The desktop's system dialog displays its own filter, so the app keeps no
+     * filter text (issue #219): three titles, and no filter description that
+     * would never be shown.
+     */
+    @Test
+    fun `the platform file dialogs keep their titles and no filter text`() {
+        val names = TextKey.entries.map { it.name }
+
+        assertTrue("BOOKS_FILTER" !in names, "BOOKS_FILTER is dead text: the system dialog shows no filter")
+        assertTrue("VAULT_FILTER" !in names, "VAULT_FILTER is dead text: the system dialog shows no filter")
+        assertEquals("Import a book", appTextsFor("en")[TextKey.PICK_BOOK_TITLE])
+        assertEquals("Importer un livre", appTextsFor("fr")[TextKey.PICK_BOOK_TITLE])
+        assertEquals("Export vault", appTextsFor("en")[TextKey.EXPORT_VAULT_TITLE])
+        assertEquals("Exporter le coffre", appTextsFor("fr")[TextKey.EXPORT_VAULT_TITLE])
+        assertEquals("Import a vault", appTextsFor("en")[TextKey.IMPORT_VAULT_TITLE])
+        assertEquals("Importer un coffre", appTextsFor("fr")[TextKey.IMPORT_VAULT_TITLE])
+    }
+
     @Test
     fun `the two tables differ, so a language is a real choice`() {
         assertNotEquals(appTextsFor("en")[TextKey.LIBRARY], appTextsFor("fr")[TextKey.LIBRARY])
@@ -40,10 +59,10 @@ class AppTextsTest {
 
     @Test
     fun `a parameterised message fills its values in each language`() {
-        val page = AppMessage.of(TextKey.PAGE_OF, 2, 5)
+        val progress = AppMessage.of(TextKey.READING_PROGRESS, 42)
 
-        assertEquals("Page 2 of 5", appTextsFor("en").message(page))
-        assertEquals("Page 2 sur 5", appTextsFor("fr").message(page))
+        assertEquals("42%", appTextsFor("en").message(progress))
+        assertEquals("42 %", appTextsFor("fr").message(progress))
     }
 
     @Test

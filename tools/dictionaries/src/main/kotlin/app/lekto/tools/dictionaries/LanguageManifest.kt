@@ -29,14 +29,14 @@ internal data class ManifestLanguage(
 
 /** A **Difficulty table** published for one reading language, named by its stable asset. */
 @Serializable
-internal data class ManifestArtifact(val name: String)
+internal data class ManifestArtifact(val name: String, val sizeBytes: Long? = null)
 
 /**
  * A **Dictionary pack** published for one (Reading language × Translation
  * language) pair, with the translation language named and its stable asset.
  */
 @Serializable
-internal data class ManifestDictionary(val translationLanguage: String, val name: String)
+internal data class ManifestDictionary(val translationLanguage: String, val name: String, val sizeBytes: Long? = null)
 
 /**
  * The manifest is published and app-facing, so it is pretty-printed. Defaults are

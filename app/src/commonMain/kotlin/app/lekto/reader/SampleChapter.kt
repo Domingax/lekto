@@ -16,7 +16,7 @@ object SampleChapter {
 
     const val LANGUAGE = "en"
 
-    val chapter: ReaderChapter = ReaderChapter(
+    val chapter: ReaderText = ReaderText(
         title = "The Lantern Keeper",
         language = LANGUAGE,
         blocks = listOf(
