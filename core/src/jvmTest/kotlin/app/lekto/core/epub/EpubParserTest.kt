@@ -95,4 +95,41 @@ class EpubParserTest :
                 parser.parseText(EpubFixtures.withMissingOpf())
             }
         }
+
+        test("an EPUB 3 cover-image resolves to its archive entry") {
+            val cover = parser.parse(EpubFixtures.coverImage()).cover
+
+            cover?.contentEquals(EpubFixtures.coverImageBytes()) shouldBe true
+            cover?.let { bytes -> ImageHeader.sizeOf(bytes) } shouldBe ImageSize(60, 90)
+        }
+
+        test("an EPUB 2 meta cover resolves through the manifest id") {
+            val cover = parser.parse(EpubFixtures.metaCover()).cover
+
+            cover?.contentEquals(EpubFixtures.metaCoverBytes()) shouldBe true
+            cover?.let { bytes -> ImageHeader.sizeOf(bytes) } shouldBe ImageSize(40, 20)
+        }
+
+        test("a guide cover is a page, never an image") {
+            parser.parse(EpubFixtures.guideCover()).cover shouldBe null
+        }
+
+        test("a cover the archive does not carry is no cover, and not a failure") {
+            parser.parse(EpubFixtures.withMissingCover()).cover shouldBe null
+        }
+
+        test("an SVG cover is no cover: neither platform decoder reads it") {
+            parser.parse(EpubFixtures.svgCover()).cover shouldBe null
+        }
+
+        test("a corrupt cover keeps the import green and the book cover-less") {
+            val parsed = parser.parse(EpubFixtures.corruptCover())
+
+            parsed.cover shouldBe null
+            parsed.text.blocks.isNotEmpty() shouldBe true
+        }
+
+        test("a book with no cover declaration carries none") {
+            parser.parse(EpubFixtures.minimal()).cover shouldBe null
+        }
     })

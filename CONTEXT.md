@@ -74,7 +74,8 @@ _Avoid_: Password, token
 
 **Book**:
 An imported piece of reading content — EPUB or TXT as first-class, PDF as best-effort
-text extraction. Comprises an original file plus the text Lekto renders.
+text extraction. Comprises an original file plus the text Lekto renders, and, when the
+original carries one, a **Cover** derived from it.
 _Avoid_: Document, text
 
 **Book original**:
@@ -82,6 +83,12 @@ The file the user imported — an EPUB or a TXT — stored in the vault as the b
 attachment so export carries it. Parsed text is a **Derived asset** re-derivable from
 it; the original is not reproducible and is never left device-local.
 _Avoid_: Source file, raw file
+
+**Cover**:
+The image an **EPUB** declares as its book's face. A **Derived asset**, re-derived from
+the **Book original** and never synced. A **TXT** has none, and a **Book** with no usable
+cover shows the **Library**'s language plaque instead.
+_Avoid_: Thumbnail, jacket, book art
 
 **Chapter**:
 A titled division of a **Book**, beginning at a place in the book's text. A chapter may

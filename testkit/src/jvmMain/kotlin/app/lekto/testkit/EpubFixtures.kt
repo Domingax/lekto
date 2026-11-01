@@ -99,6 +99,78 @@ object EpubFixtures {
         ),
     )
 
+    /** An EPUB 3 whose manifest marks its PNG `properties="cover-image"` (issue #259). */
+    fun coverImage(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to COVER_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to COVER_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/images/cover.png" to coverImageBytes(),
+        ),
+    )
+
+    /** The bytes [coverImage] stores under `OEBPS/images/cover.png`. */
+    fun coverImageBytes(): ByteArray = png(60, 90)
+
+    /**
+     * An EPUB 2 whose cover is the de-facto `<meta name="cover">` bridge (issue
+     * #259). Its JPEG is declared with the `image/jpg` alias real producers write.
+     */
+    fun metaCover(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to META_COVER_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to COVER_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/images/cover.jpg" to metaCoverBytes(),
+        ),
+    )
+
+    /** The JPEG header [metaCover] stores under `OEBPS/images/cover.jpg`. */
+    fun metaCoverBytes(): ByteArray = jpeg(40, 20)
+
+    /**
+     * An EPUB 2 that names its cover only through `<guide type="cover">`, a
+     * content page. Chasing it would scrape a page, never an image.
+     */
+    fun guideCover(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to GUIDE_COVER_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to COVER_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/cover.xhtml" to COVER_PAGE.toByteArray(UTF_8),
+            "OEBPS/images/cover.png" to coverImageBytes(),
+        ),
+    )
+
+    /** An EPUB 3 whose `cover-image` names an entry the archive does not carry. */
+    fun withMissingCover(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to MISSING_COVER_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to COVER_CHAPTER.toByteArray(UTF_8),
+        ),
+    )
+
+    /** An EPUB 3 whose `cover-image` is an SVG, which neither platform decoder reads. */
+    fun svgCover(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to SVG_COVER_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to COVER_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/images/cover.svg" to SVG_COVER.toByteArray(UTF_8),
+        ),
+    )
+
+    /** An EPUB 3 whose cover is declared PNG but whose bytes are not an image. */
+    fun corruptCover(): ByteArray = archiveBytes(
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to COVER_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to COVER_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/images/cover.png" to "not-really-a-png".toByteArray(UTF_8),
+        ),
+    )
+
     /**
      * The same archive with a `container.xml` that names no rootfile, so the
      * parser has nothing to open and must fail with a clear message.
@@ -153,6 +225,20 @@ object EpubFixtures {
         (height ushr 24).toByte(), (height ushr 16).toByte(), (height ushr 8).toByte(), height.toByte(),
         8, 2, 0, 0, 0,
         0, 0, 0, 0,
+    )
+
+    /**
+     * A JPEG header declaring [width]×[height]: SOI, an APP0 segment to skip,
+     * then the start-of-frame the reader takes the size from.
+     */
+    private fun jpeg(width: Int, height: Int): ByteArray = byteArrayOf(
+        0xFF.toByte(), 0xD8.toByte(), // SOI
+        0xFF.toByte(), 0xE0.toByte(), 0x00, 0x10, // APP0, length 16 (the field included)
+        0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+        0xFF.toByte(), 0xC0.toByte(), 0x00, 0x11, 0x08, // SOF0, length 17, precision 8
+        (height ushr 8).toByte(), height.toByte(),
+        (width ushr 8).toByte(), width.toByte(),
+        0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
     )
 
     private fun ZipEntry.stored(payload: ByteArray) {
@@ -251,6 +337,128 @@ object EpubFixtures {
           <p><img src="chapter.xhtml" alt="Not a picture"/></p>
         </body>
         </html>
+    """.trimIndent()
+
+    private val COVER_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000030</dc:identifier>
+            <dc:title>Covered</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+            <item id="cover-img" href="images/cover.png" media-type="image/png" properties="cover-image"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    /**
+     * EPUB 2's de-facto bridge: the manifest item carries no property, and
+     * `<meta name="cover">` names it by id.
+     */
+    private val META_COVER_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000031</dc:identifier>
+            <dc:title>Meta Covered</dc:title>
+            <dc:language>en</dc:language>
+            <meta name="cover" content="cover-img"/>
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+            <item id="cover-img" href="images/cover.jpg" media-type="image/jpg"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    /** The EPUB 2 guide points at a page, not an image, so it is not a cover source. */
+    private val GUIDE_COVER_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000032</dc:identifier>
+            <dc:title>Guided</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+            <item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>
+            <item id="cover-img" href="images/cover.png" media-type="image/png"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+          <guide>
+            <reference type="cover" href="cover.xhtml"/>
+          </guide>
+        </package>
+    """.trimIndent()
+
+    /** Points at an image the archive does not carry, so the import must stay green. */
+    private val MISSING_COVER_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000033</dc:identifier>
+            <dc:title>Missing Cover</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+            <item id="cover-img" href="images/absent.png" media-type="image/png" properties="cover-image"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    /** A spec-legal cover type neither Skia's raster path nor BitmapFactory decodes. */
+    private val SVG_COVER_OPF = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000034</dc:identifier>
+            <dc:title>Vector Cover</dc:title>
+            <dc:language>en</dc:language>
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+            <item id="cover-img" href="images/cover.svg" media-type="image/svg+xml" properties="cover-image"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+        </package>
+    """.trimIndent()
+
+    private val COVER_CHAPTER = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Chapter</title><meta charset="utf-8"/></head>
+        <body><h1>Chapter</h1><p>Text.</p></body>
+        </html>
+    """.trimIndent()
+
+    private val COVER_PAGE = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+        <head><title>Cover</title><meta charset="utf-8"/></head>
+        <body><div><img src="images/cover.png" alt="Cover"/></div></body>
+        </html>
+    """.trimIndent()
+
+    private val SVG_COVER = """
+        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="90"><rect width="60" height="90"/></svg>
     """.trimIndent()
 
     private val MINIMAL_OPF = """
