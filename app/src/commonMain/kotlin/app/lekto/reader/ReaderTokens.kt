@@ -1,5 +1,6 @@
 package app.lekto.reader
 
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
@@ -12,6 +13,7 @@ import androidx.compose.ui.text.style.TextIndent
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.IMAGE_PLACEHOLDER
 import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.WordToken
@@ -134,6 +136,13 @@ private fun appendBlocks(builder: AnnotatedString.Builder, chapter: ReaderText, 
 
 /** Appends a block's text, its block-level style and its runs' inline styles. */
 private fun appendBlock(builder: AnnotatedString.Builder, block: TextBlock, blockStart: Int, styles: ReaderStyles) {
+    val image = block.image
+    if (image != null) {
+        // One inline placeholder instead of a character: the page draws the
+        // picture in its rectangle, and the offsets stay the block's own.
+        builder.appendInlineContent(id = image.name, alternateText = IMAGE_PLACEHOLDER)
+        return
+    }
     builder.append(block.text)
     if (block.kind == BlockKind.HEADING) {
         builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockStart + block.text.length)

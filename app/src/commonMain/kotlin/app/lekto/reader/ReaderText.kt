@@ -67,7 +67,7 @@ fun ReaderText.chapterStartOffsets(): Set<Int> {
 }
 
 /** The character offset of each block's start, the text's own block separator counted. */
-private fun blockOffsets(blocks: List<TextBlock>): List<Int> = buildList {
+internal fun blockOffsets(blocks: List<TextBlock>): List<Int> = buildList {
     var offset = 0
     blocks.forEach { block ->
         add(offset)
@@ -125,4 +125,6 @@ data class ReaderDocument(
     val selectedRange: IntRange? = null,
     val masteryRevision: Int = 0,
     val preferences: ReadingPreferences = ReadingPreferences.DEFAULT,
+    /** Where the book's pictures are decoded from; [BookImageLoader.None] shows the alt instead. */
+    val images: BookImageLoader = BookImageLoader.None,
 )

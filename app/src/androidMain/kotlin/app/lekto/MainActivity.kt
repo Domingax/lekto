@@ -118,6 +118,7 @@ private fun LektoApp(
             languageSettings = languageSettings,
             systemLanguage = systemLanguage,
             readingPreferences = readingPreferences,
+            bookImages = androidBookImages(context),
             appTheme = appTheme,
             pickFile = {
                 // Arm the picker before launching, then park the import until

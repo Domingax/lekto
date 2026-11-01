@@ -63,6 +63,19 @@ class JvmBookLibraryTest :
             session?.text?.blocks?.joinToString(" ") { it.text }.orEmpty() shouldContain "awkward"
         }
 
+        test("a real EPUB's images land in the derived store, beside the text") {
+            val root = newRoot()
+            val derived = derivedBeside(root)
+            val library = libraryOver(root, derived)
+
+            val book = library.import("pictures.epub", EpubFixtures.figures())
+            val images = derived.paths().filter { path -> path.startsWith("book-images/${book.id}/") }
+
+            images.size shouldBe 1
+            library.delete(book.id)
+            derived.paths().none { path -> path.startsWith("book-images/${book.id}/") } shouldBe true
+        }
+
         test("a text file imports and opens with its paragraphs") {
             val library = libraryOver(newRoot())
 

@@ -3,6 +3,7 @@
 package app.lekto.reader
 
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -19,9 +20,17 @@ data class ReaderPage(val start: Int, val end: Int) {
 
 /**
  * Everything pagination needs to lay a chapter out: the [measurer], the [style]
- * to measure with, and the viewport's pixel [width] and [height].
+ * to measure with, the viewport's pixel [width] and [height], and the
+ * [placeholders] an image block occupies, so the rectangle is measured exactly
+ * where the page will draw it.
  */
-data class ReaderLayout(val measurer: TextMeasurer, val style: TextStyle, val width: Int, val height: Int)
+data class ReaderLayout(
+    val measurer: TextMeasurer,
+    val style: TextStyle,
+    val width: Int,
+    val height: Int,
+    val placeholders: List<AnnotatedString.Range<Placeholder>> = emptyList(),
+)
 
 /** The first window to measure when looking for one page's worth of text. */
 private const val FIRST_WINDOW = 1024
@@ -80,12 +89,25 @@ private fun nextPage(text: AnnotatedString, layout: ReaderLayout, start: Int): R
         val result = layout.measurer.measure(
             text = text.subSequence(start, end),
             style = layout.style,
+            placeholders = layout.placeholders.within(start, end),
             constraints = Constraints(maxWidth = layout.width, maxHeight = Int.MAX_VALUE),
         )
         if (end == text.length || result.size.height > layout.height) {
             return cutPage(result, start, end, layout.height)
         }
         window *= 2
+    }
+}
+
+/** The placeholders a window holds, rebased on the window's own start. */
+private fun List<AnnotatedString.Range<Placeholder>>.within(
+    start: Int,
+    end: Int,
+): List<AnnotatedString.Range<Placeholder>> = mapNotNull { range ->
+    if (range.end <= start || range.start >= end) {
+        null
+    } else {
+        AnnotatedString.Range(range.item, range.start - start, range.end - start)
     }
 }
 

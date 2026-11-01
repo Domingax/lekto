@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // A PNG header is a table of byte offsets; the fixture builds one by hand.
+
 package app.lekto.testkit
 
 import java.io.ByteArrayOutputStream
@@ -17,6 +19,7 @@ import java.util.zip.ZipOutputStream
  * and non-content manifest items. It lives in `testkit` rather than a test source
  * set so the parser's tests share one fixture (docs/testing.md).
  */
+@Suppress("LargeClass", "TooManyFunctions") // One fixture per shape the parser must handle.
 object EpubFixtures {
 
     /** A deliberately awkward but valid EPUB, used for the extraction golden. */
@@ -88,10 +91,12 @@ object EpubFixtures {
      * not an image at all (issue #263).
      */
     fun figures(): ByteArray = archiveBytes(
-        "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
-        "OEBPS/content.opf" to FIGURES_OPF.toByteArray(UTF_8),
-        "OEBPS/text/chapter.xhtml" to FIGURES_CHAPTER.toByteArray(UTF_8),
-        "OEBPS/images/figure.png" to png(40, 20),
+        listOf(
+            "META-INF/container.xml" to CONTAINER.toByteArray(UTF_8),
+            "OEBPS/content.opf" to FIGURES_OPF.toByteArray(UTF_8),
+            "OEBPS/text/chapter.xhtml" to FIGURES_CHAPTER.toByteArray(UTF_8),
+            "OEBPS/images/figure.png" to png(40, 20),
+        ),
     )
 
     /**
@@ -121,10 +126,10 @@ object EpubFixtures {
      * every EPUB must satisfy — and the remaining entries deflated.
      */
     fun archive(vararg entries: Pair<String, String>): ByteArray =
-        archiveBytes(*entries.map { (name, text) -> name to text.toByteArray(UTF_8) }.toTypedArray())
+        archiveBytes(entries.map { (name, text) -> name to text.toByteArray(UTF_8) })
 
     /** The same archive, for an entry that is binary — an image, or a file pretending to be one. */
-    fun archiveBytes(vararg entries: Pair<String, ByteArray>): ByteArray {
+    private fun archiveBytes(entries: List<Pair<String, ByteArray>>): ByteArray {
         val all = listOf("mimetype" to "application/epub+zip".toByteArray(UTF_8)) + entries
         val bytes = ByteArrayOutputStream()
         ZipOutputStream(bytes).use { zip ->
