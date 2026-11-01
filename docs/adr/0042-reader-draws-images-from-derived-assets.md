@@ -35,11 +35,12 @@ asset.
 per chapter with `TextMeasurer`, which has always accepted placeholders. An image
 becomes **one character** — `IMAGE_PLACEHOLDER`, U+FFFC — whose rectangle is a
 `Placeholder` sized from the text column's width and the header's ratio, capped at
-the page's height. So an image is never split across pages, a page break still
+half the page's height. So an image is never split across pages, a page break still
 falls on a line boundary, and every offset the reader already keeps — **Reading
 position**, chapter starts, word taps, selection, **Reading progress** — counts an
 image as one character rather than learning a second coordinate system. An image
-taller than a page is scaled down to fit; half a plate is unreadable.
+taller than that ceiling is scaled down to fit it rather than cut — half a plate is
+unreadable — and the room left below is what lets its caption sit on the same page.
 
 **An image cannot fail the book.** A remote `src`, an entry the archive does not
 carry, a format whose header this build cannot size (SVG, for now — #269), or

@@ -33,19 +33,20 @@ class ReaderImageLayoutTest {
     }
 
     @Test
-    fun anImageTallerThanThePageStopsShortOfItsEdgeForItsCaption() {
+    fun anImageTallerThanThePageIsScaledDownToHalfOfIt() {
         val placeholder = ImageRef("a.png", ratio = 0.25f).placeholderIn(layout)
 
         assertEquals(300f, placeholder.width.value)
-        assertEquals(340f, placeholder.height.value)
+        assertEquals(200f, placeholder.height.value)
     }
 
     @Test
     fun aCorruptRatioDoesNotDivideByZero() {
         val placeholder = ImageRef("a.png", ratio = 0f).placeholderIn(layout)
 
+        // Square, then held to the same half-page ceiling as any other picture.
         assertEquals(300f, placeholder.width.value)
-        assertEquals(300f, placeholder.height.value)
+        assertEquals(200f, placeholder.height.value)
     }
 
     @Test
