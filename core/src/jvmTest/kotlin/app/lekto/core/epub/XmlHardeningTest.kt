@@ -3,6 +3,8 @@ package app.lekto.core.epub
 import app.lekto.testkit.EpubFixtures
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.parsers.ParserConfigurationException
@@ -47,7 +49,7 @@ class XmlHardeningTest :
         }
 
         test("the hardened factory parses a namespace-aware document") {
-            val document = XmlHardening.hardenedFactory().newDocumentBuilder()
+            val document = XmlHardening.hardenedBuilder()
                 .parse(
                     """
                     <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
@@ -62,24 +64,52 @@ class XmlHardeningTest :
                 .item(0).textContent shouldBe "Hardened"
         }
 
-        test("a document with a DOCTYPE and an external entity is rejected, not fetched") {
+        test("a DOCTYPE is accepted, as an EPUB 2 NCX carries one") {
+            val xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+                <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><navMap/></ncx>
+            """.trimIndent()
+
+            val document = XmlHardening.hardenedBuilder().parse(xml.byteInputStream())
+
+            document.documentElement.localName shouldBe "ncx"
+        }
+
+        test("the hardened builder answers an external entity with an empty source") {
+            // The resolver is the portable defence: the parser never opens the
+            // systemId, and an unsupported load-external-dtd feature changes nothing.
+            val source = XmlHardening.blankEntityResolver.resolveEntity(null, "file:///etc/passwd")
+
+            source?.characterStream?.readText() shouldBe ""
+        }
+
+        test("a DOCTYPE's external entity is never expanded") {
             val xml = """
                 <!DOCTYPE a [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
                 <a>&xxe;</a>
             """.trimIndent()
 
-            // The hardened factory disallows a DOCTYPE outright wherever the
-            // platform supports that feature, so the external entity can never be
-            // expanded. A platform without that feature still installs a blank
-            // entity resolver, so the entity resolves to nothing.
-            val result = runCatching {
-                XmlHardening.hardenedFactory().newDocumentBuilder()
-                    .apply { setEntityResolver { _, _ -> org.xml.sax.InputSource(java.io.StringReader("")) } }
-                    .parse(xml.byteInputStream())
+            // A DOCTYPE is allowed, so the external entity must be stopped by the
+            // blank resolver and the unexpanded entity references instead: the
+            // parse succeeds and the entity contributes no text.
+            val document = XmlHardening.hardenedBuilder().parse(xml.byteInputStream())
+
+            document.documentElement.textContent shouldBe ""
+        }
+
+        test("a rejected document throws without printing a fatal-error line") {
+            val stderr = ByteArrayOutputStream()
+            val original = System.err
+            val failure = try {
+                System.setErr(PrintStream(stderr, true, Charsets.UTF_8))
+                runCatching { OpfXmlReader().read("<!DOCTYPE a><a>".encodeToByteArray()) }
+            } finally {
+                System.setErr(original)
             }
 
-            result.getOrNull()?.documentElement?.textContent.orEmpty() shouldBe ""
-            result.isSuccess shouldBe false
+            failure.isFailure shouldBe true
+            stderr.toString(Charsets.UTF_8) shouldBe ""
         }
     })
 

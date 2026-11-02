@@ -1,6 +1,12 @@
 package app.lekto.core.epub
 
+import org.xml.sax.EntityResolver
+import org.xml.sax.ErrorHandler
+import org.xml.sax.InputSource
+import org.xml.sax.SAXParseException
+import java.io.StringReader
 import javax.xml.XMLConstants
+import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -14,16 +20,24 @@ import javax.xml.parsers.DocumentBuilderFactory
  * hardening feature must therefore never be a reason to refuse a book — a real
  * EPUB failed to import on Android before this tolerated an unknown feature.
  *
- * The portable defences live with the parser that uses them: `isExpandEntityReferences`
- * and a blank `EntityResolver` inside `OpfDocument.parseXml`.
+ * A `DOCTYPE` is deliberately **allowed**: an EPUB 2's `.ncx` table of contents
+ * normally declares one, and rejecting it loses the book's own chapter list
+ * (issue #291). The defence against external entities does not need that
+ * rejection — [EXTERNAL_DTD_FEATURE] stops a DTD from being loaded,
+ * `isExpandEntityReferences = false` keeps entities unexpanded, and
+ * [hardenedBuilder] installs a blank `EntityResolver`, so nothing is ever
+ * fetched.
  */
 internal object XmlHardening {
 
     /** The Xerces feature that disables external DTD loading; not known on Android. */
     const val EXTERNAL_DTD_FEATURE: String = "http://apache.org/xml/features/nonvalidating/load-external-dtd"
 
-    /** The Xerces feature that rejects a DOCTYPE outright; not known on Android. */
-    const val DISALLOW_DOCTYPE_FEATURE: String = "http://apache.org/xml/features/disallow-doctype-decl"
+    /**
+     * The resolver every hardened builder installs: whatever the document names,
+     * it answers with an empty source, so the parser never opens a URL.
+     */
+    val blankEntityResolver: EntityResolver = EntityResolver { _, _ -> InputSource(StringReader("")) }
 
     /** A `DocumentBuilderFactory` with namespace awareness on, hardening on where supported. */
     fun hardenedFactory(base: DocumentBuilderFactory = DocumentBuilderFactory.newInstance()): DocumentBuilderFactory =
@@ -32,7 +46,18 @@ internal object XmlHardening {
             isExpandEntityReferences = false
             setFeatureIfSupported(XMLConstants.FEATURE_SECURE_PROCESSING, true)
             setFeatureIfSupported(EXTERNAL_DTD_FEATURE, false)
-            setFeatureIfSupported(DISALLOW_DOCTYPE_FEATURE, true)
+        }
+
+    /**
+     * A builder with the defences a factory cannot carry: a blank entity resolver,
+     * so a document can never make the parser fetch a URL, and the
+     * [QuietErrorHandler], so a rejected document does not write Xerces'
+     * `[Fatal Error]` line to stderr (issue #291).
+     */
+    fun hardenedBuilder(factory: DocumentBuilderFactory = hardenedFactory()): DocumentBuilder =
+        factory.newDocumentBuilder().apply {
+            setEntityResolver(blankEntityResolver)
+            setErrorHandler(QuietErrorHandler)
         }
 
     /**
@@ -47,4 +72,18 @@ internal object XmlHardening {
             // The parser does not know this feature; the portable defences still apply.
         }
     }
+}
+
+/**
+ * Xerces' default handler prints every parse problem to stderr, even when the
+ * caller catches the exception and carries on. Warnings and recoverable errors
+ * are ignored; a fatal error is rethrown so the caller still sees the failure.
+ */
+private object QuietErrorHandler : ErrorHandler {
+
+    override fun warning(exception: SAXParseException) = Unit
+
+    override fun error(exception: SAXParseException) = Unit
+
+    override fun fatalError(exception: SAXParseException): Nothing = throw exception
 }
