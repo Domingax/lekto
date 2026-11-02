@@ -222,7 +222,7 @@ Each screen below is one row of what it shows, and one note on what it must not 
 `Library` (serif) · `Import` (word) · `Search` · filter chips · rows · bottom navigation.
 
 A row is a **plate** (44 × 60) — the book's **Cover** when it has one, its language vignette
-otherwise — the title, a line of `FORMAT · 28 %`, and a **3 dp progress rule**. Rows are parted by
+otherwise — the title, a line of `Author · 28 %`, and a **3 dp progress rule**. Rows are parted by
 **rhythm alone** — no rule between two books: the plates are the shelf's columns, and a divider
 saws through them. **Covers are shown.** An EPUB's cover image is extracted at import and kept
 as a **Derived asset** — device-local and never synced — and the row paints it in the plate; a
@@ -234,8 +234,10 @@ confirmation, where it identifies a file rather than a book.
 An EPUB's **Author** is read at import from its package document — the book's creator,
 never an editor or illustrator, and never the `file-as` sort key — and travels on the
 book's record beside the title, so a surface can name it without re-opening the
-original. The row's line keeps to `FORMAT · 28 %`; a TXT has no author, and neither does
-a book that names none.
+original. The row's line leads with it: `Author · 28 %`. A TXT has no author, and
+neither does a book that names none, so its line is the state alone (`28 %`), with
+no leading separator and no placeholder word. The format is where a file came from,
+not what a reader chooses a book by, so it leaves the row.
 
 A book is deleted **from its row**, and never from a red word that sits on every book. On a touch
 screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's wash and a trash
@@ -246,9 +248,10 @@ is no undo. The row exposes the same action to a screen reader as an accessibili
 **Reading progress** is where the reader is now, not the furthest point reached: the share of the
 book's rendered text before the **Reading position**, rounded down, so a book on its last page
 reads just under 100 %. The number and the rule carry the same whole percentage. An **Unread**
-book — no Reading position, and not **Finished** — reads `FORMAT · Not started`, with no rule; an
-**In progress** book whose text has not been measured yet reads `FORMAT · …`, also without a rule.
-A **Finished** book reads `FORMAT · Finished` with a check and carries **no progress rule**: the
+book — no Reading position, and not **Finished** — reads `Author · Not started` (or `Not started`
+alone), with no rule; an **In progress** book whose text has not been measured yet reads
+`Author · …` (or `…`), also without a rule. A **Finished** book reads `Author · Finished` (or
+`Finished`) with a check and carries **no progress rule**: the
 declaration is not a percentage, and a book read to the end may have been reread or skipped
 (ADR-0038).
 

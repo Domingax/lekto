@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -91,6 +92,7 @@ import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.library.libraryRowTag
 import app.lekto.library.libraryStateTag
 import app.lekto.navigation.SHELL_NAV_TAG
 import app.lekto.navigation.ShellSection
@@ -326,7 +328,7 @@ class AppSemanticsTest {
         }
         compose.onNodeWithTag(libraryStateTag(ReadingState.FINISHED)).performClick()
         compose.onNodeWithText("The Lantern Keeper").assertIsDisplayed()
-        compose.onNodeWithText("EPUB · Finished").assertIsDisplayed()
+        compose.onNodeWithTag(libraryRowTag("b1")).assertTextContains("Finished", substring = true)
     }
 
     @Test

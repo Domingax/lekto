@@ -74,14 +74,18 @@ enum class TextKey {
     ERROR_DETAIL,
     NO_BOOKS_MATCH_QUERY,
 
-    // The row's Reading progress line (issue #196).
+    // The row's second line: the Author when it names one, then the Reading state (issue #287).
     LIBRARY_ROW_PROGRESS,
+    LIBRARY_ROW_PROGRESS_WITH_AUTHOR,
     LIBRARY_ROW_NOT_STARTED,
+    LIBRARY_ROW_NOT_STARTED_WITH_AUTHOR,
     LIBRARY_ROW_MEASURING,
+    LIBRARY_ROW_MEASURING_WITH_AUTHOR,
     LIBRARY_ROW_MEASURING_DESCRIPTION,
 
-    /** A finished book's row: `FORMAT · Finished`, with no progress rule (issue #200). */
+    /** A finished book's row: `Author · Finished` (or `Finished`), with no progress rule (issues #200, #287). */
     LIBRARY_ROW_FINISHED,
+    LIBRARY_ROW_FINISHED_WITH_AUTHOR,
 
     // Vocabulary.
     VOCABULARY_EMPTY_TITLE,

@@ -80,9 +80,9 @@ internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Bo
 
 /**
  * One library row: the frame §7.1 gives it (issue #208) — the **Reading
- * language**'s vignette, the title beside it, its **Reading state** line (the
- * progress and rule, or `Finished` with a check) — the tap that opens it and the
- * way to delete it (issues #196, #200).
+ * language**'s vignette, the title beside it, its second line (the **Author**
+ * then the Reading state: the progress and rule, or `Finished` with a check) —
+ * the tap that opens it and the way to delete it (issues #196, #200, #287).
  *
  * A book's art is shown here (issue #259): an EPUB's cover is extracted at import
  * as a **Derived asset**, decoded off the main thread and painted in the
@@ -223,10 +223,12 @@ private fun LanguageVignette(language: String?, modifier: Modifier = Modifier) {
 internal fun languageCode(language: String?): String = baseLanguage(language.orEmpty()).take(2).uppercase()
 
 /**
- * The row's second line: `FORMAT · Finished` with a check and no rule, or a
- * measured percentage with its rule, or one of the two unmeasured states
- * (docs/design.md §7.1; issues #196, #200). A declaration is not a percentage,
- * so a finished book never shows the progress rule (ADR-0038).
+ * The row's second line: the **Author** then the Reading state —
+ * `Author · Finished` with a check and no rule, `Author · 28 %` with its rule, or
+ * one of the two unmeasured states (docs/design.md §7.1; issues #196, #200,
+ * #287). A book that names no author reads the state alone, with no leading
+ * separator and no placeholder word. A declaration is not a percentage, so a
+ * finished book never shows the progress rule (ADR-0038).
  */
 @Composable
 private fun StateLine(book: Book, progress: BookProgress, state: ReadingState) {
@@ -237,10 +239,17 @@ private fun StateLine(book: Book, progress: BookProgress, state: ReadingState) {
     }
 }
 
+/** The pair of texts a row line can read: prefixed by the **Author**, and the state alone. */
+private data class RowLineKeys(val alone: TextKey, val withAuthor: TextKey)
+
+private val PROGRESS_LINE = RowLineKeys(TextKey.LIBRARY_ROW_PROGRESS, TextKey.LIBRARY_ROW_PROGRESS_WITH_AUTHOR)
+private val NOT_STARTED_LINE = RowLineKeys(TextKey.LIBRARY_ROW_NOT_STARTED, TextKey.LIBRARY_ROW_NOT_STARTED_WITH_AUTHOR)
+private val MEASURING_LINE = RowLineKeys(TextKey.LIBRARY_ROW_MEASURING, TextKey.LIBRARY_ROW_MEASURING_WITH_AUTHOR)
+private val FINISHED_LINE = RowLineKeys(TextKey.LIBRARY_ROW_FINISHED, TextKey.LIBRARY_ROW_FINISHED_WITH_AUTHOR)
+
 /** The finished book's line: the check marks the declaration, and there is no rule under it. */
 @Composable
 private fun FinishedLine(book: Book) {
-    val texts = LocalAppTexts.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = LektoIcons.Check,
@@ -249,43 +258,55 @@ private fun FinishedLine(book: Book) {
             modifier = Modifier.size(FINISHED_CHECK_SIZE),
         )
         Spacer(Modifier.width(LektoSpacing.InsideLabelPair))
-        Text(
-            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_FINISHED, book.format.name)),
-            style = MaterialTheme.typography.bodySmall,
-        )
+        RowLineText(book, FINISHED_LINE)
     }
 }
 
 /** The row's second line when the book is not finished: a percentage with its rule, or an unmeasured state. */
 @Composable
 private fun ProgressLine(book: Book, progress: BookProgress) {
-    val texts = LocalAppTexts.current
-    val style = MaterialTheme.typography.bodySmall
     when (progress) {
-        BookProgress.NotStarted -> Text(
-            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_NOT_STARTED, book.format.name)),
-            style = style,
-        )
+        BookProgress.NotStarted -> RowLineText(book, NOT_STARTED_LINE)
 
-        BookProgress.Unmeasured -> Text(
-            text = texts.message(AppMessage.of(TextKey.LIBRARY_ROW_MEASURING, book.format.name)),
-            style = style,
-            // `…` alone is not something a screen reader can read; the row says
-            // what the data is waiting for until the background measurement lands.
-            modifier = Modifier.semantics {
-                contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION]
-            },
-        )
+        BookProgress.Unmeasured -> {
+            val measuring = LocalAppTexts.current[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION]
+            RowLineText(
+                book,
+                MEASURING_LINE,
+                // `…` alone is not something a screen reader can read; the row says
+                // what the data is waiting for until the background measurement lands.
+                modifier = Modifier.semantics { contentDescription = measuring },
+            )
+        }
 
         is BookProgress.Measured -> {
-            Text(
-                text = texts.message(
-                    AppMessage.of(TextKey.LIBRARY_ROW_PROGRESS, book.format.name, progress.percent),
-                ),
-                style = style,
-            )
+            RowLineText(book, PROGRESS_LINE, progress.percent)
             ProgressRule(book.id, progress.percent)
         }
+    }
+}
+
+/** One line of ink in the row's second line: the **Author** then the state, or the state alone (issue #287). */
+@Composable
+private fun RowLineText(book: Book, keys: RowLineKeys, vararg values: Any?, modifier: Modifier = Modifier) {
+    Text(
+        text = LocalAppTexts.current.message(rowLineMessage(book, keys, *values)),
+        style = MaterialTheme.typography.bodySmall,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The line's message: the **Author** when the book names one, then the state
+ * ([RowLineKeys.withAuthor]); the state alone ([RowLineKeys.alone]) otherwise, so
+ * no separator leads a line that has nothing to separate (issue #287).
+ */
+private fun rowLineMessage(book: Book, keys: RowLineKeys, vararg values: Any?): AppMessage {
+    val author = book.author?.takeIf { name -> name.isNotBlank() }
+    return if (author == null) {
+        AppMessage.of(keys.alone, *values)
+    } else {
+        AppMessage.of(keys.withAuthor, author, *values)
     }
 }
 

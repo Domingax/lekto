@@ -58,3 +58,9 @@ removes the finished record with the book and leaves its tombstone. The Library 
 multi-select filter over the three states, defaulting to Unread and In progress, and the reader
 gains the end-of-book state that declares and undoes the fact. There is no migration: no finished
 record exists before this decision, so the absence of one already means "not declared finished".
+
+## Update — the row names the author, not the format (issue #287)
+
+The Library row's second line now leads with the book's **Author** rather than its format, so a
+finished book reads `Author · Finished` — or `Finished` alone when the book names no author. The
+decision above is unchanged: a finished book still carries the check and no progress rule.
