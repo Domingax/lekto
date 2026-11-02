@@ -74,9 +74,15 @@ _Avoid_: Password, token
 
 **Book**:
 An imported piece of reading content — EPUB or TXT as first-class, PDF as best-effort
-text extraction. Comprises an original file plus the text Lekto renders, and, when the
-original carries one, a **Cover** derived from it.
+text extraction. Comprises an original file plus the text Lekto renders, the **Author**
+its original names, and, when the original carries one, a **Cover** derived from it.
 _Avoid_: Document, text
+
+**Author**:
+The person an **EPUB** names as its book's creator, carried on the **Book** beside its
+title. It is the name a reader would read on the cover, never a sort key or a placeholder.
+A **TXT**, and a book whose original names no author, have none.
+_Avoid_: Writer, creator, byline
 
 **Book original**:
 The file the user imported — an EPUB or a TXT — stored in the vault as the book's

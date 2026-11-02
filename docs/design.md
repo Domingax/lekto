@@ -231,6 +231,12 @@ TXT never carries art, and an EPUB whose cover is undeclared, SVG or corrupt kee
 plaque. The file name is not on the row: it survives in import errors and the delete
 confirmation, where it identifies a file rather than a book.
 
+An EPUB's **Author** is read at import from its package document — the book's creator,
+never an editor or illustrator, and never the `file-as` sort key — and travels on the
+book's record beside the title, so a surface can name it without re-opening the
+original. The row's line keeps to `FORMAT · 28 %`; a TXT has no author, and neither does
+a book that names none.
+
 A book is deleted **from its row**, and never from a red word that sits on every book. On a touch
 screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's wash and a trash
 appear when it is hovered, and a drag does nothing — the gesture is the thumb's idiom, not the

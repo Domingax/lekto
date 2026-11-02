@@ -85,6 +85,32 @@ object EpubFixtures {
     )
 
     /**
+     * An EPUB whose OPF names three creators (issue #286): an editor, then the
+     * author, and finally an unroled creator. The editor and the author each
+     * carry the `opf:file-as` sort key a display name must never show.
+     */
+    fun creators(): ByteArray = withCreators(
+        """<dc:creator opf:file-as="Editor, Ed" opf:role="edt">Ed Editor</dc:creator>""",
+        """<dc:creator opf:file-as="Author, Ada" opf:role="aut">Ada Author</dc:creator>""",
+        """<dc:creator>Second Author</dc:creator>""",
+    )
+
+    /** An EPUB whose only creator is blank, which names no author (issue #286). */
+    fun blankCreator(): ByteArray = withCreators("""<dc:creator>   </dc:creator>""")
+
+    /** An EPUB whose only creator is the placeholder `Unknown` (issue #286). */
+    fun unknownCreator(): ByteArray = withCreators("""<dc:creator>Unknown</dc:creator>""")
+
+    /**
+     * An EPUB whose selected creator is the placeholder `Unknown` even though a
+     * named creator follows it, so the placeholder names no one (issue #286).
+     */
+    fun unknownThenNamedCreator(): ByteArray = withCreators(
+        """<dc:creator>Unknown</dc:creator>""",
+        """<dc:creator>Ada Author</dc:creator>""",
+    )
+
+    /**
      * A book whose text is interleaved with pictures: a figure of its own, an
      * image inside a paragraph, and three that must fall back to their `alt` —
      * a remote source, an entry the archive does not carry, and a file that is
@@ -192,6 +218,35 @@ object EpubFixtures {
      * assert `XmlHardening` tolerates the parser they run on.
      */
     fun opfDocument(): ByteArray = OPF_DOCUMENT.toByteArray(UTF_8)
+
+    /**
+     * An EPUB whose package document carries [creators] verbatim as its
+     * `dc:creator` elements, so a test can pin which one is the author.
+     */
+    private fun withCreators(vararg creators: String): ByteArray = archive(
+        "META-INF/container.xml" to CONTAINER,
+        "OEBPS/content.opf" to metadataOpf(creators.joinToString(separator = "\n")),
+        "OEBPS/text/chapter.xhtml" to COVER_CHAPTER,
+    )
+
+    /** A package document with [creatorElements] as its only creators (issue #286). */
+    private fun metadataOpf(creatorElements: String): String = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="en">
+          <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <dc:identifier id="bookid">urn:isbn:9780000000013</dc:identifier>
+            <dc:title>Creations</dc:title>
+            <dc:language>en</dc:language>
+            <!-- creators -->
+          </metadata>
+          <manifest>
+            <item id="ch" href="text/chapter.xhtml" media-type="application/xhtml+xml"/>
+          </manifest>
+          <spine>
+            <itemref idref="ch"/>
+          </spine>
+        </package>
+    """.trimIndent().replace("<!-- creators -->", creatorElements)
 
     /**
      * Assembles a ZIP with a stored `mimetype` first — the one structural rule

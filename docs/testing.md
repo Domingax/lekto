@@ -82,6 +82,15 @@ self-closing leaves the HTML parser with an `<a>` it never closes, and the rest
 of the chapter lands inside it, which imported three real books as their table
 of contents alone (issue #190).
 
+An EPUB's **Author** (issue #286) is read by the same OPF pass, so its selection
+is `EpubParserTest`'s: the one creator, the first creator whose role is absent or
+`aut` (with its `file-as` never shown), the absent and blank cases, and the
+placeholder `Unknown`, which names no one even when a named creator follows it.
+The field travels on the book record, so `VaultBookLibraryTest` pins that an
+import copies it, a re-parse re-derives it, and a record written before the field
+decodes with no author; `BookRecordPropertyTest` rounds it through generated
+data, and the app lanes import a real authorless TXT onto the shelf.
+
 The platform-backed implementation lives in `core/src/jvmSharedMain`, a source
 set shared by the JVM target and the Android target, so `EpubParser`,
 `IcuTextSegmenter` and the directory-backed vault run on both. `core`'s Android
