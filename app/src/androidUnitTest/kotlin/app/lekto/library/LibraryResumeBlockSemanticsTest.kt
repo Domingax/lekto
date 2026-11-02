@@ -234,11 +234,12 @@ class LibraryResumeBlockSemanticsTest {
     }
 
     @Test
-    fun theOverflowMenuAsksForConfirmationBeforeDeletingTheBlock() {
+    fun theDeleteControlAsksForConfirmationBeforeDeletingTheBlock() {
         var deleted: Book? = null
         compose.setContent { Library(resumable(), onDelete = { deleted = it }) }
 
-        compose.onNodeWithTag(libraryResumeDeleteTag(resumeBook.id)).performClick()
+        // On a touch screen the trash is always on the card, beside the swipe.
+        compose.onNodeWithTag(libraryResumeDeleteTag(resumeBook.id)).assertIsDisplayed().performClick()
 
         compose.onNodeWithText("Delete « The Return »?").assertIsDisplayed()
         assertNull("the vault must be untouched until the user confirms", deleted)

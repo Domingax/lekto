@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -204,11 +205,14 @@ class LibraryResumeBlockSemanticsTest {
     }
 
     @Test
-    fun theOverflowMenuAsksForConfirmationBeforeDeletingTheBlock() = runComposeUiTest {
+    fun theDeleteControlAsksForConfirmationBeforeDeletingTheBlock() = runComposeUiTest {
         var deleted: Book? = null
         setContent { Library(resumable(), onDelete = { deleted = it }) }
 
-        onNodeWithTag(libraryResumeDeleteTag(resumeBook.id)).performClick()
+        // The mouse idiom: the trash is not on the card until the pointer rests on it.
+        onNodeWithTag(libraryResumeDeleteTag(resumeBook.id)).assertDoesNotExist()
+        onNodeWithTag(libraryResumeBlockTag(resumeBook.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryResumeDeleteTag(resumeBook.id)).assertIsDisplayed().performClick()
 
         onNodeWithText("Delete « The Return »?").assertIsDisplayed()
         assertNull(deleted, "the vault must be untouched until the user confirms")

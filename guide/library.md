@@ -109,13 +109,14 @@ There is no Delete word on the shelf. On a phone or a tablet, swipe a row from
 the right and the action appears; with a mouse, point at the row — it picks up a
 faint tint and a small trash appears at its end. The book in the resume block
 deletes the same way, and because a block that large cannot rely on a gesture
-alone, its `⋮` in the corner opens the same confirmation. Either way Lekto asks
-you to confirm first — *Delete « title »?* — and names the imported file, so you
-can tell which file is about to go. Only then does it remove the **Book**: its
-original file, the text derived from it, your **Reading position** for it and
-your **Finished** declaration. If sync is on, the deletion travels to your other
-devices instead of the book coming back; see [Vault and sync](/vault-and-sync)
-for how a deletion is remembered.
+alone, a trash appears in its corner — always on a phone or tablet, on hover with
+a mouse — and opens the same confirmation. Either way Lekto asks you to confirm
+first — *Delete « title »?* — and names the imported file, so you can tell which
+file is about to go. Only then does it remove the **Book**: its original file,
+the text derived from it, your **Reading position** for it and your **Finished**
+declaration. If sync is on, the deletion travels to your other devices instead of
+the book coming back; see [Vault and sync](/vault-and-sync) for how a deletion is
+remembered.
 
 Deleting a book is permanent, so Lekto offers it only from the Library, never
 from inside a [reading session](/reading).

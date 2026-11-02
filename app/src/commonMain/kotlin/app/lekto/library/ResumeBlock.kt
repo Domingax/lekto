@@ -3,10 +3,13 @@ package app.lekto.library
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -19,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,18 +42,21 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
+import app.lekto.theme.ReadingSnippet
+import app.lekto.ui.DELETE_ICON_SIZE
 import app.lekto.ui.DeleteAction
 import app.lekto.ui.DeletingRow
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.handCursor
-import app.lekto.ui.icons.EllipsisVertical
 import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.icons.Trash
 import app.lekto.ui.plainClickable
+import app.lekto.ui.touchClient
 
 /** The test tag on the resume block, so a UI test can read it apart from the shelf. */
 internal fun libraryResumeBlockTag(bookId: String): String = "library-resume-$bookId"
 
-/** The test tag on the block's overflow menu, which opens the same delete confirmation as a row. */
+/** The test tag on the block's delete control, which opens the same confirmation as a row. */
 internal fun libraryResumeDeleteTag(bookId: String): String = "library-resume-delete-$bookId"
 
 /** The block's cover: 64 dp wide, and at most 92 dp tall so a portrait cover keeps its ratio (§7.1). */
@@ -58,28 +66,30 @@ internal val RESUME_COVER_HEIGHT = 92.dp
 /** How many lines of the saved paragraph the block shows (docs/design.md §7.1; issue #288). */
 private const val SNIPPET_LINES = 2
 
-/**
- * What the block states about its book: the **Reading progress** and the
- * **Chapter** the **Reading position** sits in, or `null` when no chapter is
- * known. Two independent facts, bundled so the block's signatures stay short.
- */
-internal data class ResumeFacts(val progress: BookProgress, val chapter: String?)
+/** The gap between the block's title and the **Author** under it. */
+private val TITLE_TO_AUTHOR = 2.dp
 
-/** The overflow icon's size: the same 20 dp a control's glyph takes in the identity (§5). */
-private val MENU_ICON_SIZE = 20.dp
+/**
+ * What the block states about its book: the **Reading progress**, the
+ * **Chapter** the **Reading position** sits in (or `null` when no chapter is
+ * known), and the **Resume snippet** once it is read. Independent facts, bundled
+ * so the block's signatures stay short.
+ */
+internal data class ResumeFacts(val progress: BookProgress, val chapter: String?, val snippet: String? = null)
 
 /**
  * The **Resume block**: the most recently read unfinished book leaves the shelf
- * and leads above it (issue #288; docs/design.md §7.1). Its cover, title,
- * **Author**, current **Chapter** and percentage, the row's own 3 dp rule, a
- * filled `Resume`, then a hairline and the first **Paragraph** at the saved
- * position.
+ * and leads above it (issue #288; docs/design.md §7.1). One card holds its
+ * cover, title, **Author**, current **Chapter** and percentage, the row's own
+ * 3 dp rule, a filled `Resume`, a hairline and the first **Paragraph** at the
+ * saved position.
  *
- * The card is one accessible item: its facts merge into a single node and
- * `Resume` is its action, so a screen reader reaches the book in one stop. The
- * `⋮` in the corner is the block's own control — a block that large cannot rely
- * on the row's trailing-edge swipe alone — and it opens the same delete
- * confirmation, as does the swipe. Delete never sits on the shelf as a red word.
+ * The facts and the action are one accessible item: the children merge into a
+ * single node, a tap anywhere on the card resumes, and `Resume` is the action a
+ * screen reader invokes. The snippet is the page below it, its own text, and
+ * delete is a trash in the card's corner — always on a touch screen, on hover
+ * with a mouse — beside the row's trailing-edge swipe. Delete never sits on the
+ * shelf as a red word.
  *
  * Each missing piece drops on its own: no snippet ends the block at its button,
  * no chapter leaves the percentage, and no cover keeps the **Reading language**'s
@@ -92,35 +102,53 @@ internal fun ResumeBlock(book: Book, facts: ResumeFacts, actions: BookRowActions
         delete = DeleteAction(tag = libraryResumeDeleteTag(book.id), onDelete = { actions.onDelete(book) }),
         modifier = modifier,
         verticalAlignment = Alignment.Top,
-        // The block carries its own always-visible overflow menu, so the row's
-        // hover trash would be a second affordance for the same confirmation.
+        // The card carries its own trash, so the row's hover slot would be a
+        // second affordance for the same confirmation.
         hoverDelete = false,
     ) { content ->
-        BlockFrame(book, facts, actions, content)
+        val snippets = LocalBookSnippets.current
+        val snippet by rememberDerivedAsset(book.id, snippets) { snippets.snippet(book.id) }
+        BlockCard(book, facts.copy(snippet = snippet), actions, content)
     }
 }
 
-/** The block's card, its hairline and its snippet. */
+/**
+ * The block's one card: the cover, the facts, the filled action, then the
+ * hairline and the snippet, all on the theme's surface (docs/design.md §7.1).
+ */
 @Composable
-private fun BlockFrame(book: Book, facts: ResumeFacts, actions: BookRowActions, modifier: Modifier) {
-    val snippets = LocalBookSnippets.current
-    val snippet by rememberDerivedAsset(book.id, snippets) { snippets.snippet(book.id) }
-    Column(modifier.fillMaxWidth()) {
+private fun BlockCard(book: Book, facts: ResumeFacts, actions: BookRowActions, modifier: Modifier) {
+    val theme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(theme.surface, LektoRadii.Surface)
+            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface)
+            .padding(LektoSpacing.InsidePanel)
+            .hoverable(interaction)
+            .plainClickable(role = Role.Button) { actions.onOpen(book) },
+    ) {
         Box(Modifier.fillMaxWidth()) {
-            BlockCard(book, facts, actions)
-            BlockMenu(book, actions, Modifier.align(Alignment.TopEnd).padding(LektoSpacing.InsideLabelPair))
+            BlockFacts(book, facts, actions)
+            // The trash is the pointer's idiom on a row; on a block it is always
+            // there for a thumb, and appears on hover for a mouse (issue #288).
+            if (touchClient || hovered) {
+                BlockDelete(book, actions, Modifier.align(Alignment.TopEnd))
+            }
         }
-        if (snippet != null) {
+        facts.snippet?.let { snippet ->
             Box(
                 Modifier
                     .fillMaxWidth()
                     .padding(top = LektoSpacing.InsidePanel)
                     .height(HAIRLINE_THICKNESS)
-                    .background(MaterialTheme.colorScheme.outline),
+                    .background(theme.outline),
             )
             Text(
-                text = snippet.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
+                text = snippet,
+                style = ReadingSnippet,
                 maxLines = SNIPPET_LINES,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
@@ -130,42 +158,27 @@ private fun BlockFrame(book: Book, facts: ResumeFacts, actions: BookRowActions, 
 }
 
 /**
- * The bordered card: the cover, the facts and the filled action. It is the
- * block's one accessible item — the children merge into it, a tap anywhere on it
- * resumes, and the `Resume` button is the visible control that says so — while
- * the overflow menu sits beside it in the frame, a control of its own.
+ * The block's accessible item: the cover, the title, the **Author**, the chapter
+ * and percentage, the rule and the `Resume` action, merged so a screen reader
+ * reaches the book in one stop.
  */
 @Composable
-private fun BlockCard(book: Book, facts: ResumeFacts, actions: BookRowActions) {
+private fun BlockFacts(book: Book, facts: ResumeFacts, actions: BookRowActions) {
     val texts = LocalAppTexts.current
-    val theme = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface)
-            .padding(LektoSpacing.InsidePanel)
-            .semantics(mergeDescendants = true) {}
-            // The card is the block's action: a tap anywhere on it resumes, and
-            // the filled `Resume` is the visible control that says so.
-            .plainClickable(role = Role.Button, onClickLabel = texts[TextKey.RESUME]) { actions.onOpen(book) }
+            .semantics(mergeDescendants = true) {
+                onClick(label = texts[TextKey.RESUME]) {
+                    actions.onOpen(book)
+                    true
+                }
+            }
             .testTag(libraryResumeBlockTag(book.id)),
     ) {
         Row(verticalAlignment = Alignment.Top) {
             BlockCover(book)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    // The overflow menu overlays this end of the first line, so
-                    // the title and the state never run under it.
-                    .padding(start = LektoSpacing.BetweenRows, end = LektoSpacing.TouchTarget),
-                verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
-            ) {
-                Text(book.title, style = MaterialTheme.typography.titleMedium)
-                book.author?.takeIf { name -> name.isNotBlank() }?.let { author ->
-                    Text(author, style = MaterialTheme.typography.bodySmall, color = theme.onSurfaceVariant)
-                }
-                BlockLine(book, facts)
-            }
+            BlockTexts(book, facts)
         }
         Button(
             onClick = { actions.onOpen(book) },
@@ -173,13 +186,37 @@ private fun BlockCard(book: Book, facts: ResumeFacts, actions: BookRowActions) {
                 .fillMaxWidth()
                 .padding(top = LektoSpacing.InsidePanel)
                 .handCursor()
-                // The card owns the block's action, so the button is its visible
+                // The facts own the block's action, so the button is its visible
                 // control, not a second stop for a screen reader.
                 .clearAndSetSemantics {},
             shape = LektoRadii.Control,
         ) {
             Text(texts[TextKey.RESUME])
         }
+    }
+}
+
+/** The block's title, **Author** and line, beside the cover. */
+@Composable
+private fun RowScope.BlockTexts(book: Book, facts: ResumeFacts) {
+    val theme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            // The trash overlays this end of the first line, so the title and the
+            // state never run under it.
+            .padding(start = LektoSpacing.BetweenRows, end = LektoSpacing.TouchTarget),
+    ) {
+        Text(book.title, style = MaterialTheme.typography.titleMedium)
+        book.author?.takeIf { name -> name.isNotBlank() }?.let { author ->
+            Text(
+                text = author,
+                style = MaterialTheme.typography.bodyMedium,
+                color = theme.onSurfaceVariant,
+                modifier = Modifier.padding(top = TITLE_TO_AUTHOR),
+            )
+        }
+        BlockLine(book, facts)
     }
 }
 
@@ -207,9 +244,9 @@ private fun BlockCover(book: Book) {
     )
 }
 
-/** The `⋮`: the block's always-visible way to the delete confirmation, never a red word. */
+/** The block's delete: the row's trash, always on a thumb and on hover with a mouse. */
 @Composable
-private fun BlockMenu(book: Book, actions: BookRowActions, modifier: Modifier = Modifier) {
+private fun BlockDelete(book: Book, actions: BookRowActions, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(LektoSpacing.TouchTarget)
@@ -219,10 +256,10 @@ private fun BlockMenu(book: Book, actions: BookRowActions, modifier: Modifier = 
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = LektoIcons.EllipsisVertical,
+            imageVector = LektoIcons.Trash,
             contentDescription = LocalAppTexts.current[TextKey.DELETE],
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(MENU_ICON_SIZE),
+            modifier = Modifier.size(DELETE_ICON_SIZE),
         )
     }
 }
@@ -258,13 +295,17 @@ private fun BlockLine(book: Book, facts: ResumeFacts) {
     Text(
         text = texts.message(message),
         style = MaterialTheme.typography.bodySmall,
-        // `…` alone is not something a screen reader can read, so the block says
-        // what the data is waiting for until the measurement lands.
-        modifier = if (measuring) {
-            Modifier.semantics { contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION] }
-        } else {
-            Modifier
-        },
+        modifier = Modifier
+            .padding(top = LektoSpacing.BetweenRelatedLines)
+            // `…` alone is not something a screen reader can read, so the block
+            // says what the data is waiting for until the measurement lands.
+            .then(
+                if (measuring) {
+                    Modifier.semantics { contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION] }
+                } else {
+                    Modifier
+                },
+            ),
     )
     if (progress is BookProgress.Measured) ProgressRule(book.id, progress.percent)
 }
