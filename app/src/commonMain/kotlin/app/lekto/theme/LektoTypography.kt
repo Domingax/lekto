@@ -88,14 +88,25 @@ private val FieldLabel = TextStyle(
 
 /**
  * The **Resume block**'s snippet (issue #288; docs/design.md §7.1): the reading
- * serif at 16 sp in the theme's full ink, because the line is the page the
- * reader is about to read, not interface prose.
+ * serif in the theme's full ink, because the line is the page the reader is
+ * about to read, not interface prose.
  */
 val ReadingSnippet = TextStyle(
     fontFamily = FontFamily.Serif,
     fontWeight = FontWeight.Normal,
-    fontSize = 16.sp,
-    lineHeight = 24.sp,
+    fontSize = 15.sp,
+    lineHeight = 22.sp,
+)
+
+/**
+ * The **Resume block**'s chapter and percentage (issue #288): the author's sans,
+ * one step smaller, so the two facts read as one caption.
+ */
+val ResumeLine = TextStyle(
+    fontFamily = FontFamily.SansSerif,
+    fontWeight = FontWeight.Normal,
+    fontSize = 13.sp,
+    lineHeight = 18.sp,
 )
 
 /**

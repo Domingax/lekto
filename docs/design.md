@@ -109,7 +109,8 @@ The scale actually used, and nothing else:
 | Screen title | serif | 26 sp | bold |
 | Section or panel title | serif | 19–24 sp | bold |
 | A vocabulary word | serif | 18 sp | bold |
-| Resume snippet | serif | 16 sp | normal |
+| Resume snippet | serif | 15 sp | normal |
+| Resume line | sans | 13 sp | normal |
 | Row title | sans | 15–16 sp | medium |
 | Body, panels | sans | 13–15 sp | normal |
 | Value under a row title | sans | 12 sp | normal |
@@ -244,9 +245,8 @@ not what a reader chooses a book by, so it leaves the row.
 A book is deleted **from its row or from its block**, and never from a red word that sits on every
 book. On a touch screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's
 wash and a trash appear when it is hovered, and a drag does nothing — the gesture is the thumb's
-idiom, not the pointer's. The **Resume block** adds one affordance, a trash in its corner that is
-always there on a touch screen and appears on hover with a mouse, because a block that large cannot
-rely on a gesture alone; it opens the same confirmation as the swipe. Neither path deletes anything
+idiom, not the pointer's. The **Resume block** deletes the same way: a thumb swipes it, and a mouse gets the
+row's trash in its corner on hover, because a pointer has no swipe. Neither path deletes anything
 by itself: both open the confirmation (§8), because there is no undo. The row exposes the same
 action to a screen reader as an accessibility action, and the block's trash is its own labelled
 control.

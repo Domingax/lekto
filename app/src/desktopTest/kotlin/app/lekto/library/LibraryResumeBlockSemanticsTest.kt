@@ -90,7 +90,8 @@ class LibraryResumeBlockSemanticsTest {
 
         onNodeWithTag(libraryResumeBlockTag(resumeBook.id))
             .assertTextContains("Émile Zola", substring = true)
-            .assertTextContains("$CHAPTER · $MEASURED_PERCENT %", substring = true)
+            .assertTextContains(CHAPTER, substring = true)
+            .assertTextContains("· $MEASURED_PERCENT %", substring = true)
     }
 
     @Test
@@ -114,7 +115,7 @@ class LibraryResumeBlockSemanticsTest {
 
         onNodeWithTag(libraryResumeBlockTag(resumeBook.id))
             .assertTextContains("$MEASURED_PERCENT %", substring = true)
-        onNodeWithText("$CHAPTER · $MEASURED_PERCENT %").assertDoesNotExist()
+        onNodeWithText(CHAPTER).assertDoesNotExist()
     }
 
     @Test
