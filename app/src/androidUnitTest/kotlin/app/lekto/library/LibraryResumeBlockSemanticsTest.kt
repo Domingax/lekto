@@ -17,7 +17,6 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
@@ -28,7 +27,6 @@ import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingState
-import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -104,7 +102,8 @@ class LibraryResumeBlockSemanticsTest {
 
         compose.onNodeWithTag(libraryResumeBlockTag(resumeBook.id))
             .assertTextContains("Émile Zola", substring = true)
-            .assertTextContains("$CHAPTER · $MEASURED_PERCENT %", substring = true)
+            .assertTextContains(CHAPTER, substring = true)
+            .assertTextContains("· $MEASURED_PERCENT %", substring = true)
     }
 
     @Test
@@ -128,7 +127,7 @@ class LibraryResumeBlockSemanticsTest {
 
         compose.onNodeWithTag(libraryResumeBlockTag(resumeBook.id))
             .assertTextContains("$MEASURED_PERCENT %", substring = true)
-        compose.onNodeWithText("$CHAPTER · $MEASURED_PERCENT %").assertDoesNotExist()
+        compose.onNodeWithText(CHAPTER).assertDoesNotExist()
     }
 
     @Test
@@ -231,21 +230,6 @@ class LibraryResumeBlockSemanticsTest {
 
         compose.onNodeWithText("Delete « The Return »?").assertIsDisplayed()
         assertNull("the vault must be untouched until the user confirms", deleted)
-    }
-
-    @Test
-    fun theDeleteControlAsksForConfirmationBeforeDeletingTheBlock() {
-        var deleted: Book? = null
-        compose.setContent { Library(resumable(), onDelete = { deleted = it }) }
-
-        // On a touch screen the trash is always on the card, beside the swipe.
-        compose.onNodeWithTag(libraryResumeDeleteTag(resumeBook.id)).assertIsDisplayed().performClick()
-
-        compose.onNodeWithText("Delete « The Return »?").assertIsDisplayed()
-        assertNull("the vault must be untouched until the user confirms", deleted)
-        compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
-
-        assertEquals(resumeBook, deleted)
     }
 
     @Test

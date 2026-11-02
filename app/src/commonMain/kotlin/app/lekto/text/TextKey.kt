@@ -63,14 +63,15 @@ enum class TextKey {
 
     /**
      * The resume block's line: the percentage alone when the book names no
-     * **Chapter**, and the two facts together otherwise (issue #288).
+     * **Chapter**, and the same percentage after the chapter otherwise, so the
+     * chapter can truncate without taking the number with it (issue #288).
      */
     LIBRARY_BLOCK_PROGRESS,
-    LIBRARY_BLOCK_CHAPTER_PROGRESS,
+    LIBRARY_BLOCK_PROGRESS_AFTER_CHAPTER,
 
     /** The block's line while the book's length is still being measured (issue #288). */
     LIBRARY_BLOCK_MEASURING,
-    LIBRARY_BLOCK_CHAPTER_MEASURING,
+    LIBRARY_BLOCK_MEASURING_AFTER_CHAPTER,
 
     /** The block's filled action, the only filled control on the Library (issue #288). */
     RESUME,

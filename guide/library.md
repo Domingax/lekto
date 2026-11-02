@@ -108,9 +108,8 @@ position** automatically, so you continue where you left off; see
 There is no Delete word on the shelf. On a phone or a tablet, swipe a row from
 the right and the action appears; with a mouse, point at the row — it picks up a
 faint tint and a small trash appears at its end. The book in the resume block
-deletes the same way, and because a block that large cannot rely on a gesture
-alone, a trash appears in its corner — always on a phone or tablet, on hover with
-a mouse — and opens the same confirmation. Either way Lekto asks you to confirm
+deletes the same way: swipe it from the right on a phone or tablet, or point at
+it with a mouse and use the trash in its corner. Either way Lekto asks you to confirm
 first — *Delete « title »?* — and names the imported file, so you can tell which
 file is about to go. Only then does it remove the **Book**: its original file,
 the text derived from it, your **Reading position** for it and your **Finished**

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -43,6 +44,7 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.ReadingSnippet
+import app.lekto.theme.ResumeLine
 import app.lekto.ui.DELETE_ICON_SIZE
 import app.lekto.ui.DeleteAction
 import app.lekto.ui.DeletingRow
@@ -66,6 +68,9 @@ internal val RESUME_COVER_HEIGHT = 92.dp
 /** How many lines of the saved paragraph the block shows (docs/design.md §7.1; issue #288). */
 private const val SNIPPET_LINES = 2
 
+/** How many lines the block's title takes before it truncates, so the card's height stays bounded. */
+private const val TITLE_LINES = 2
+
 /** The gap between the block's title and the **Author** under it. */
 private val TITLE_TO_AUTHOR = 2.dp
 
@@ -86,10 +91,10 @@ internal data class ResumeFacts(val progress: BookProgress, val chapter: String?
  *
  * The facts and the action are one accessible item: the children merge into a
  * single node, a tap anywhere on the card resumes, and `Resume` is the action a
- * screen reader invokes. The snippet is the page below it, its own text, and
- * delete is a trash in the card's corner — always on a touch screen, on hover
- * with a mouse — beside the row's trailing-edge swipe. Delete never sits on the
- * shelf as a red word.
+ * screen reader invokes. The snippet is the page below it, its own text. Delete
+ * is the row's trailing-edge swipe on a touch screen, and a trash in the card's
+ * corner on hover with a mouse, because a pointer has no swipe. Delete never
+ * sits on the shelf as a red word.
  *
  * Each missing piece drops on its own: no snippet ends the block at its button,
  * no chapter leaves the percentage, and no cover keeps the **Reading language**'s
@@ -102,8 +107,8 @@ internal fun ResumeBlock(book: Book, facts: ResumeFacts, actions: BookRowActions
         delete = DeleteAction(tag = libraryResumeDeleteTag(book.id), onDelete = { actions.onDelete(book) }),
         modifier = modifier,
         verticalAlignment = Alignment.Top,
-        // The card carries its own trash, so the row's hover slot would be a
-        // second affordance for the same confirmation.
+        // The card draws its own hover trash in the corner, so the row's reserved
+        // slot would only narrow the card.
         hoverDelete = false,
     ) { content ->
         val snippets = LocalBookSnippets.current
@@ -132,9 +137,9 @@ private fun BlockCard(book: Book, facts: ResumeFacts, actions: BookRowActions, m
     ) {
         Box(Modifier.fillMaxWidth()) {
             BlockFacts(book, facts, actions)
-            // The trash is the pointer's idiom on a row; on a block it is always
-            // there for a thumb, and appears on hover for a mouse (issue #288).
-            if (touchClient || hovered) {
+            // A thumb swipes the card; a mouse gets the row's hover trash, which
+            // is the only way a pointer can reach the delete (issue #288).
+            if (!touchClient && hovered) {
                 BlockDelete(book, actions, Modifier.align(Alignment.TopEnd))
             }
         }
@@ -203,11 +208,16 @@ private fun RowScope.BlockTexts(book: Book, facts: ResumeFacts) {
     Column(
         modifier = Modifier
             .weight(1f)
-            // The trash overlays this end of the first line, so the title and the
-            // state never run under it.
-            .padding(start = LektoSpacing.BetweenRows, end = LektoSpacing.TouchTarget),
+            // A mouse's hover trash overlays this end of the first line, so the
+            // title and the state never run under it; a thumb has no trash there.
+            .padding(start = LektoSpacing.BetweenRows, end = if (touchClient) 0.dp else LektoSpacing.TouchTarget),
     ) {
-        Text(book.title, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = book.title,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = TITLE_LINES,
+            overflow = TextOverflow.Ellipsis,
+        )
         book.author?.takeIf { name -> name.isNotBlank() }?.let { author ->
             Text(
                 text = author,
@@ -269,43 +279,64 @@ private fun BlockDelete(book: Book, actions: BookRowActions, modifier: Modifier 
  * **Chapter**, with the row's own 3 dp rule under it at the text column's width
  * (docs/design.md §7.1; issues #196, #260, #288). A book whose length is still
  * being measured reads `…` rather than a percentage it does not have.
+ *
+ * The chapter is the part that gives way: it truncates on one line so the
+ * percentage beside it never wraps away from its number.
  */
 @Composable
 private fun BlockLine(book: Book, facts: ResumeFacts) {
     val texts = LocalAppTexts.current
-    val progress = facts.progress
-    val chapter = facts.chapter
-    val message = when (progress) {
-        is BookProgress.Measured -> if (chapter == null) {
-            AppMessage.of(TextKey.LIBRARY_BLOCK_PROGRESS, progress.percent)
-        } else {
-            AppMessage.of(TextKey.LIBRARY_BLOCK_CHAPTER_PROGRESS, chapter, progress.percent)
+    val message = blockLineMessage(facts) ?: return
+    val measuring = facts.progress == BookProgress.Unmeasured
+    Row(
+        modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        facts.chapter?.let { chapter ->
+            Text(
+                text = chapter,
+                style = ResumeLine,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Spacer(Modifier.width(LektoSpacing.InsideLabelPair))
         }
-
-        BookProgress.Unmeasured -> if (chapter == null) {
-            AppMessage.of(TextKey.LIBRARY_BLOCK_MEASURING)
-        } else {
-            AppMessage.of(TextKey.LIBRARY_BLOCK_CHAPTER_MEASURING, chapter)
-        }
-
-        BookProgress.NotStarted -> null
-    }
-    if (message == null) return
-    val measuring = progress == BookProgress.Unmeasured
-    Text(
-        text = texts.message(message),
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier
-            .padding(top = LektoSpacing.BetweenRelatedLines)
+        Text(
+            text = texts.message(message),
+            style = ResumeLine,
+            maxLines = 1,
             // `…` alone is not something a screen reader can read, so the block
             // says what the data is waiting for until the measurement lands.
-            .then(
-                if (measuring) {
-                    Modifier.semantics { contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION] }
-                } else {
-                    Modifier
-                },
-            ),
-    )
-    if (progress is BookProgress.Measured) ProgressRule(book.id, progress.percent)
+            modifier = if (measuring) {
+                Modifier.semantics { contentDescription = texts[TextKey.LIBRARY_ROW_MEASURING_DESCRIPTION] }
+            } else {
+                Modifier
+            },
+        )
+    }
+    if (facts.progress is BookProgress.Measured) ProgressRule(book.id, facts.progress.percent)
+}
+
+/**
+ * The message the block's line carries: the percentage alone, or the same
+ * percentage after the chapter, or the measuring placeholder. `null` is a book
+ * with no **Reading position**, which the block never leads with.
+ */
+private fun blockLineMessage(facts: ResumeFacts): AppMessage? = when (val progress = facts.progress) {
+    is BookProgress.Measured ->
+        if (facts.chapter == null) {
+            AppMessage.of(TextKey.LIBRARY_BLOCK_PROGRESS, progress.percent)
+        } else {
+            AppMessage.of(TextKey.LIBRARY_BLOCK_PROGRESS_AFTER_CHAPTER, progress.percent)
+        }
+
+    BookProgress.Unmeasured ->
+        if (facts.chapter == null) {
+            AppMessage.of(TextKey.LIBRARY_BLOCK_MEASURING)
+        } else {
+            AppMessage.of(TextKey.LIBRARY_BLOCK_MEASURING_AFTER_CHAPTER)
+        }
+
+    BookProgress.NotStarted -> null
 }
