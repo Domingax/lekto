@@ -106,7 +106,23 @@ class VaultBookLibrary(
         }
     }
 
-    override fun cover(bookId: String): ByteArray? = covers.coverOf(bookId)
+    override fun cover(bookId: String): ByteArray? = covers.coverOf(bookId) ?: deriveCover(bookId)
+
+    /**
+     * Re-derives a cover this device has never stored — a book that arrived by
+     * **Sync**, whose original is in the vault but whose derived store is empty —
+     * from the original's bytes, without rendering its text (issue #259). A book
+     * with no usable cover yields `null`, and the row keeps its language plaque.
+     */
+    private fun deriveCover(bookId: String): ByteArray? {
+        val book = vault.get(bookId)?.let { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
+        val parser = book?.let { target -> parsers[target.format] }
+        val original = if (parser?.carriesCover == true) vault.getAttachment(book.id) else null
+        val cover = original?.let { bytes ->
+            parser?.let { textParser -> runCatching { textParser.cover(bytes) }.getOrNull() }
+        }
+        return cover?.also { bytes -> storeCover(bookId, bytes) }
+    }
 
     override fun position(bookId: String): ReadingPosition? = vault.get(ReadingPositionRecord.idOf(bookId))
         ?.let { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }

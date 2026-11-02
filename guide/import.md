@@ -46,6 +46,10 @@ An imported book is stored as two things:
 - For an EPUB that declares a cover, the cover image — also a **Derived asset**,
   rebuilt from the original and never synced.
 
+On a device that receives a book by [sync](/vault-and-sync), these derived assets
+do not travel: Lekto rebuilds them from the original when the book is first
+listed or opened.
+
 Because the original stays in the Vault, a book is never lost when its parsed
 text is discarded or rebuilt; Lekto regenerates that text on demand.
 

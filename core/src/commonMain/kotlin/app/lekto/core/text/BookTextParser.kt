@@ -14,6 +14,16 @@ package app.lekto.core.text
 fun interface BookTextParser {
     /** Parses [bytes] in the format this parser owns. */
     fun parse(bytes: ByteArray): ParsedBook
+
+    /**
+     * The cover image [bytes] carry, or `null` when the format has none or none
+     * it can read (issue #259). A cheap read for a surface that needs only the
+     * art: it must not render the book, and a failure is never fatal.
+     */
+    fun cover(bytes: ByteArray): ByteArray? = null
+
+    /** Whether this format can carry a cover at all; only **EPUB** does today. */
+    val carriesCover: Boolean get() = false
 }
 
 /**

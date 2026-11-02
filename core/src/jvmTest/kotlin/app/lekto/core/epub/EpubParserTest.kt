@@ -132,4 +132,11 @@ class EpubParserTest :
         test("a book with no cover declaration carries none") {
             parser.parse(EpubFixtures.minimal()).cover shouldBe null
         }
+
+        test("the cheap cover read returns the same bytes without parsing the text") {
+            val bytes = EpubFixtures.coverImage()
+
+            parser.cover(bytes)?.contentEquals(parser.parse(bytes).cover) shouldBe true
+            parser.cover(EpubFixtures.minimal()) shouldBe null
+        }
     })

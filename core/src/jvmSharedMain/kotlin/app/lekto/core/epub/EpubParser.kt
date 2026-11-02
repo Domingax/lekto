@@ -35,11 +35,13 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
 
     constructor() : this(OpfXmlReader())
 
+    override val carriesCover: Boolean get() = true
+
     override fun parse(bytes: ByteArray): ParsedBook {
-        val archive = EpubArchive.of(bytes)
-        val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER), opfXml)
-        val packageDocument = OpfDocument.parse(archive.read(opfPath), opfXml)
-        val baseDirectory = opfPath.substringBeforeLast('/', missingDelimiterValue = "")
+        val bookPackage = packageOf(bytes)
+        val archive = bookPackage.archive
+        val packageDocument = bookPackage.document
+        val baseDirectory = bookPackage.baseDirectory
         val documents = packageDocument.spine.map { item ->
             val path = EpubArchive.resolve(baseDirectory, item.href)
             SpineDocument(
@@ -65,6 +67,30 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
             cover = coverImage(archive, packageDocument.cover, baseDirectory),
         )
     }
+
+    /**
+     * Reads only the container, the package and the cover entry, so a Library
+     * that meets a book for the first time can show its art without parsing the
+     * book's text (issue #259). A failure is `null`, never an exception.
+     */
+    override fun cover(bytes: ByteArray): ByteArray? = runCatching {
+        val bookPackage = packageOf(bytes)
+        coverImage(bookPackage.archive, bookPackage.document.cover, bookPackage.baseDirectory)
+    }.getOrNull()
+
+    /** The archive, its package document and the directory the OPF names, read once. */
+    private fun packageOf(bytes: ByteArray): EpubPackage {
+        val archive = EpubArchive.of(bytes)
+        val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER), opfXml)
+        return EpubPackage(
+            archive = archive,
+            document = OpfDocument.parse(archive.read(opfPath), opfXml),
+            baseDirectory = opfPath.substringBeforeLast('/', missingDelimiterValue = ""),
+        )
+    }
+
+    /** The EPUB's container and package, plus the directory an OPF href resolves against. */
+    private data class EpubPackage(val archive: EpubArchive, val document: OpfDocument, val baseDirectory: String)
 
     /**
      * The cover's raw bytes, or `null` for anything this build cannot show: no

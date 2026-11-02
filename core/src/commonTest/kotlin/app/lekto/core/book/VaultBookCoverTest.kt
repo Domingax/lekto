@@ -34,7 +34,13 @@ class VaultBookCoverTest :
         )
 
         fun parsers(cover: ByteArray? = null) = mapOf<BookFormat, BookTextParser>(
-            BookFormat.EPUB to BookTextParser { ParsedBook(text, cover = cover) },
+            BookFormat.EPUB to object : BookTextParser {
+                override val carriesCover: Boolean get() = true
+
+                override fun parse(bytes: ByteArray): ParsedBook = ParsedBook(text, cover = cover)
+
+                override fun cover(bytes: ByteArray): ByteArray? = cover
+            },
         )
 
         fun libraryOver(
@@ -78,6 +84,19 @@ class VaultBookCoverTest :
 
             library.cover(book.id)?.contentEquals(cover) shouldBe true
             library.cover("absent") shouldBe null
+        }
+
+        test("a book synced to a fresh device derives its cover on first read") {
+            val vault = InMemoryVaultStore()
+            val book = libraryOver(InMemoryVaultFileSystem(), vault).import("Book.epub", byteArrayOf(1, 2, 3))
+
+            // The record and its original travelled; the derived store did not.
+            val fresh = InMemoryVaultFileSystem()
+            val synced = libraryOver(fresh, vault)
+            DerivedAssetStore(fresh).get("book-cover/${book.id}") shouldBe null
+
+            synced.cover(book.id)?.contentEquals(cover) shouldBe true
+            DerivedAssetStore(fresh).get("book-cover/${book.id}")?.contentEquals(cover) shouldBe true
         }
 
         test("a cover never enters a vault export") {
