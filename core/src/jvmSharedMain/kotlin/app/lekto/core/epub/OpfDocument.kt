@@ -9,7 +9,8 @@ import org.w3c.dom.Element
  * It reads `META-INF/container.xml` for the path to the OPF, then the OPF's
  * manifest (id to [ManifestItem]) and spine (ordered idrefs). Spine items marked
  * `linear="no"` — covers, navigation — are dropped, and so is any item that is
- * not an XHTML content document.
+ * not an XHTML content document. Its metadata pass reads the title, the language
+ * and the book's **Author** (issue #286).
  *
  * It also names the two tables of contents an EPUB can carry (ADR-0037): the
  * EPUB 3 navigation document, found by its `properties="nav"` manifest entry and
@@ -25,9 +26,10 @@ import org.w3c.dom.Element
  * run the whole parse against a parser that rejects the Xerces-only feature
  * names — the Android behaviour that broke a real import (issue #15).
  */
-@Suppress("LongParameterList") // The OPF's named parts: title, language, spine, nav, ncx and cover.
+@Suppress("LongParameterList") // The OPF's named parts: title, author, language, spine, nav, ncx and cover.
 internal class OpfDocument(
     val title: String?,
+    val author: String?,
     val language: String?,
     val spine: List<ManifestItem>,
     val nav: ManifestItem? = null,
@@ -55,6 +57,12 @@ internal class OpfDocument(
         private const val DC_NAMESPACE = "http://purl.org/dc/elements/1.1/"
         private const val NCX_MEDIA_TYPE = "application/x-dtbncx+xml"
 
+        /** The `opf:role` a creator carries when it names the book's author. */
+        private const val AUTHOR_ROLE = "aut"
+
+        /** The placeholder a producer writes when it knows no author; it is not one. */
+        private const val UNKNOWN_AUTHOR = "Unknown"
+
         /** The OPF path named by the first rootfile in `container.xml`. */
         fun containerRootfile(containerXml: ByteArray, reader: OpfXmlReader = OpfXmlReader()): String {
             val rootfiles = reader.read(containerXml).getElementsByTagNameNS(CONTAINER_NAMESPACE, "rootfile")
@@ -65,12 +73,13 @@ internal class OpfDocument(
             throw EpubParseException("container.xml names no rootfile")
         }
 
-        /** Parses the OPF: its title, language, linear reading order and tables of contents. */
+        /** Parses the OPF: its title, author, language, linear reading order and tables of contents. */
         fun parse(opfXml: ByteArray, reader: OpfXmlReader = OpfXmlReader()): OpfDocument {
             val document = reader.read(opfXml)
             val manifest = manifest(document)
             return OpfDocument(
                 title = text(document, DC_NAMESPACE, "title"),
+                author = author(document),
                 language = text(document, DC_NAMESPACE, "language"),
                 spine = spine(document, manifest),
                 nav = manifest.values.firstOrNull { item -> item.isNavigationDocument },
@@ -78,6 +87,30 @@ internal class OpfDocument(
                 cover = cover(document, manifest),
             )
         }
+
+        /**
+         * The book's **Author** (issue #286): the first non-blank `dc:creator`
+         * whose `opf:role` is absent or `aut`, as the element's display text.
+         * `opf:file-as` is a sort key and is never shown. A blank creator is
+         * skipped, but a chosen `Unknown` placeholder names no one — the book
+         * has no author rather than falling through to a later creator.
+         */
+        private fun author(document: Document): String? {
+            val creators = document.getElementsByTagNameNS(DC_NAMESPACE, "creator")
+            val chosen = (0 until creators.length)
+                .map { index -> creators.item(index) as Element }
+                .filter { creator -> creator.isAuthor }
+                .firstOrNull { creator -> creator.displayName.isNotEmpty() }
+            return chosen?.displayName?.takeIf { name -> name != UNKNOWN_AUTHOR }
+        }
+
+        /** Whether a creator's `opf:role` marks it as the book's author. */
+        private val Element.isAuthor: Boolean
+            get() = getAttributeNS(OPF_NAMESPACE, "role").let { role -> role.isEmpty() || role == AUTHOR_ROLE }
+
+        /** The creator's display name: its condensed text, never its `file-as` sort key. */
+        private val Element.displayName: String
+            get() = textContent?.trim().orEmpty()
 
         private fun manifest(document: Document): Map<String, ManifestItem> {
             val items = document.getElementsByTagNameNS(OPF_NAMESPACE, "item")

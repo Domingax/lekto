@@ -10,7 +10,10 @@ import kotlinx.serialization.Serializable
  * (ADR-0005, ADR-0016).
  *
  * [id] is both the book's identity and its vault record id; [fileName] keeps the
- * imported file's name for display and error messages.
+ * imported file's name for display and error messages. [author] is the **Author**
+ * the original names, read at **Import** (issue #286); a TXT, a book that names
+ * none, and a placeholder carry `null`. It is appended last and defaulted, so a
+ * record written before it existed still decodes (ADR-0003).
  */
 @Serializable
 data class Book(
@@ -19,6 +22,7 @@ data class Book(
     val language: String? = null,
     val format: BookFormat,
     val fileName: String,
+    val author: String? = null,
 )
 
 /**

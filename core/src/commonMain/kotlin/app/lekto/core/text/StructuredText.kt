@@ -86,6 +86,12 @@ data class TextBlock(
 data class StructuredText(
     val title: String?,
     val language: String?,
+    /**
+     * The **Author** the original names, so a re-parse re-derives it and the
+     * parsed-text cache stays the single source (issue #286). A TXT, a book that
+     * names none, and a placeholder carry `null`.
+     */
+    val author: String? = null,
     val blocks: List<TextBlock>,
     /**
      * The book's **Chapter list**: the chapters its original file declares, or the

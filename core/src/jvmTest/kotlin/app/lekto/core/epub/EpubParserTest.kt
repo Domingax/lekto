@@ -27,6 +27,29 @@ class EpubParserTest :
 
             book.title shouldBe "Awkward & Real"
             book.language shouldBe "en"
+            book.author shouldBe "Spike Author"
+        }
+
+        test("the author is the first creator whose role is absent or aut, never its file-as") {
+            val book = parser.parseText(EpubFixtures.creators())
+
+            book.author shouldBe "Ada Author"
+        }
+
+        test("a book that declares no creator has no author") {
+            parser.parseText(EpubFixtures.minimal()).author shouldBe null
+        }
+
+        test("a blank creator is no author") {
+            parser.parseText(EpubFixtures.blankCreator()).author shouldBe null
+        }
+
+        test("the placeholder Unknown is no author") {
+            parser.parseText(EpubFixtures.unknownCreator()).author shouldBe null
+        }
+
+        test("a selected Unknown names no one, even when a named creator follows it") {
+            parser.parseText(EpubFixtures.unknownThenNamedCreator()).author shouldBe null
         }
 
         test("turns the spine into blocks, headings and list items in order") {

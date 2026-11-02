@@ -60,6 +60,7 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
             text = StructuredText(
                 title = packageDocument.title,
                 language = packageDocument.language,
+                author = packageDocument.author,
                 blocks = parts.blocks,
                 chapters = chapters,
             ),

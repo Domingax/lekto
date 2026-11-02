@@ -23,6 +23,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import kotlinx.serialization.json.JsonObject
 import kotlin.test.assertFailsWith
 import kotlin.time.Duration.Companion.minutes
 
@@ -40,6 +41,7 @@ class VaultBookLibraryTest :
         val epubText = StructuredText(
             title = "An EPUB",
             language = "en",
+            author = "Spike Author",
             blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("Hello world")))),
         )
         val parsers = mapOf(
@@ -75,6 +77,35 @@ class VaultBookLibraryTest :
             vault.getAttachment(book.id) shouldBe byteArrayOf(1, 2, 3)
         }
 
+        test("the author travels on the book record and survives a re-parse") {
+            val vault = InMemoryVaultStore()
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val library = newLibrary(vault = vault, derived = derived)
+
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+
+            book.author shouldBe "Spike Author"
+            BookRecord.bookOf(checkNotNull(vault.get(book.id))).author shouldBe "Spike Author"
+            library.open(book.id)?.text?.author shouldBe "Spike Author"
+
+            derived.clear()
+
+            library.open(book.id)?.text?.author shouldBe "Spike Author"
+        }
+
+        test("a book record written before the author field still opens, with no author") {
+            val vault = InMemoryVaultStore()
+            val library = newLibrary(vault)
+            val book = library.import("Lantern.epub", byteArrayOf(1))
+            val record = vault.get(book.id)!!
+            vault.put(record.copy(body = JsonObject(record.body - "author")))
+
+            val opened = library.open(book.id)
+
+            opened?.book?.title shouldBe "An EPUB"
+            opened?.book?.author shouldBe null
+        }
+
         test("importing a plain-text file stores it in the vault and lists it in the library") {
             val vault = InMemoryVaultStore()
             val library = newLibrary(vault)
@@ -85,6 +116,7 @@ class VaultBookLibraryTest :
             book.title shouldBe "Article"
             book.format shouldBe BookFormat.TXT
             book.language shouldBe null
+            book.author shouldBe null
         }
 
         test("a title the text reads as wins over the file name") {

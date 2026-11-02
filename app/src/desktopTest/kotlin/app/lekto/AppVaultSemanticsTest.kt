@@ -14,6 +14,8 @@ import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.BookRecord
 import app.lekto.core.book.VaultBookLibrary
+import app.lekto.core.text.BookTextParser
+import app.lekto.core.text.TxtParser
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.VaultCodec
@@ -31,6 +33,7 @@ import app.lekto.testkit.testVaultRecord
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.time.Instant
 
 /**
@@ -97,6 +100,20 @@ class AppVaultSemanticsTest {
     }
 
     @Test
+    fun anAuthorlessImportLandsOnTheShelf() = runComposeUiTest {
+        val library = libraryOver(InMemoryVaultStore(), mapOf(BookFormat.TXT to TxtParser()))
+        val book = library.import("notes.txt", "Un texte sans auteur.".encodeToByteArray()) { }
+
+        setContent { App(environment(library)) }
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText(book.title).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText(book.title).assertIsDisplayed()
+        assertNull(book.author, "a TXT names no author")
+    }
+
+    @Test
     fun settingsOfferNoVaultTransferWhenNoneIsWired() = runComposeUiTest {
         setContent { App(environment(libraryOver(InMemoryVaultStore()))) }
 
@@ -116,15 +133,16 @@ private fun androidx.compose.ui.test.ComposeUiTest.openVault() {
     onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
 }
 
-/** The real vault-backed library over [vault]; no parsers, because these tests only list books. */
-private fun libraryOver(vault: VaultStore): BookLibrary = VaultBookLibrary(
-    vault = vault,
-    derived = DerivedAssetStore(InMemoryVaultFileSystem()),
-    parsers = emptyMap(),
-    tombstones = InMemoryTombstoneStore(),
-    seams = deterministicSeams(),
-    deviceId = DeviceId("test-device"),
-)
+/** The real vault-backed library over [vault], with the [parsers] a given test needs. */
+private fun libraryOver(vault: VaultStore, parsers: Map<BookFormat, BookTextParser> = emptyMap()): BookLibrary =
+    VaultBookLibrary(
+        vault = vault,
+        derived = DerivedAssetStore(InMemoryVaultFileSystem()),
+        parsers = parsers,
+        tombstones = InMemoryTombstoneStore(),
+        seams = deterministicSeams(),
+        deviceId = DeviceId("test-device"),
+    )
 
 /** A book record the way an import stores it, so the library can list it. */
 private fun bookRecord(id: String, title: String): VaultRecord = BookRecord.of(

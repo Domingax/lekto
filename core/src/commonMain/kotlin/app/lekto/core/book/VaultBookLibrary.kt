@@ -90,6 +90,7 @@ class VaultBookLibrary(
             language = text.language,
             format = format,
             fileName = name,
+            author = text.author,
         )
         store(book, bytes, parsed)
         onProgress(ImportProgress(ImportStage.SAVING, 1f))
