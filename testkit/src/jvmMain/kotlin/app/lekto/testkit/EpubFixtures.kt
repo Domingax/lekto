@@ -60,7 +60,7 @@ object EpubFixtures {
         "OEBPS/text/extra.xhtml" to FALLBACK_EXTRA,
     )
 
-    /** An EPUB 2 book whose only table of contents is the NCX. */
+    /** An EPUB 2 book whose only table of contents is the NCX, DOCTYPE and all (issue #291). */
     fun ncxOnly(): ByteArray = archive(
         "META-INF/container.xml" to CONTAINER,
         "OEBPS/content.opf" to NCX_OPF,
@@ -675,6 +675,7 @@ object EpubFixtures {
 
     private val NCX = """
         <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
         <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
           <navMap>
             <navPoint id="n2" playOrder="1">

@@ -105,7 +105,13 @@ desktop and failed on Android (ticket #15). The test runs the **whole OPF parse*
 through a factory that rejects every non-JAXP feature — the exact Android
 condition — and asserts it succeeds, so a future change that sets an optional
 feature without tolerating rejection fails here even though the desktop JDK would
-accept it. The structural guard is the Robolectric lane below (ticket #49), which
+accept it. It also pins the hardening's boundary: a `DOCTYPE` is accepted — an
+EPUB 2's `.ncx` carries one, and rejecting it lost those books' own chapter list
+(issue #291) — while the blank resolver answers an external entity with an empty
+source and entities stay unexpanded. The Android-host lane parses the same
+DOCTYPE NCX through Android's own parser, where the Xerces DTD feature is
+unknown and the resolver is the only defence. The structural guard is the
+Robolectric lane below (ticket #49), which
 runs the pipeline through Android's own parser; `XmlHardeningTest` stays as the
 fast, SDK-free twin.
 

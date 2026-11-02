@@ -54,7 +54,7 @@ class EpubChaptersTest :
                 listOf("First", "First A", "Second")
         }
 
-        test("the NCX is read when there is no nav, ordered by the spine not by playOrder") {
+        test("the NCX is read when there is no nav, DOCTYPE and all, ordered by the spine not by playOrder") {
             val book = parser.parseText(EpubFixtures.ncxOnly())
 
             book.chapters shouldContainExactly listOf(

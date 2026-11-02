@@ -50,6 +50,18 @@ class EpubParserAndroidHostTest {
 
         assertEquals("Resilient", title)
     }
+
+    /**
+     * Android ignores the Xerces `load-external-dtd` feature, so the blank entity
+     * resolver is the only defence there; a DOCTYPE in an EPUB 2 NCX must still
+     * parse and keep the book's own chapter list (issue #291).
+     */
+    @Test
+    fun `an EPUB 2 NCX with a DOCTYPE yields its own chapters on Android`() {
+        val book = EpubParser(OpfXmlReader(androidFactory())).parseText(EpubFixtures.ncxOnly())
+
+        assertEquals(listOf("First Document", "Second Document"), book.chapters.map { chapter -> chapter.title })
+    }
 }
 
 /** Android's own parser, hardened the way production hardens the host JVM's. */

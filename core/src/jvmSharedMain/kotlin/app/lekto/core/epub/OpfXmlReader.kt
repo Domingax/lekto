@@ -1,9 +1,7 @@
 package app.lekto.core.epub
 
 import org.w3c.dom.Document
-import org.xml.sax.InputSource
 import java.io.ByteArrayInputStream
-import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -15,14 +13,11 @@ import javax.xml.parsers.DocumentBuilderFactory
  * behaviour that made a real EPUB import on desktop and fail on Android
  * (issue #15). Production takes the tolerant default, [XmlHardening.hardenedFactory].
  *
- * The defence that does not depend on a feature name is applied to the builder
- * here: a blank entity resolver, so a document can never make the parser fetch a
- * URL. (`isExpandEntityReferences = false` is set on the factory itself.)
+ * The defences a factory cannot carry — the blank entity resolver and the quiet
+ * error handler — come from [XmlHardening.hardenedBuilder] (issue #291).
  */
 internal class OpfXmlReader(private val factory: DocumentBuilderFactory = XmlHardening.hardenedFactory()) {
 
     /** Parses [xml] into a [Document]. */
-    fun read(xml: ByteArray): Document = factory.newDocumentBuilder()
-        .apply { setEntityResolver { _, _ -> InputSource(StringReader("")) } }
-        .parse(ByteArrayInputStream(xml))
+    fun read(xml: ByteArray): Document = XmlHardening.hardenedBuilder(factory).parse(ByteArrayInputStream(xml))
 }
