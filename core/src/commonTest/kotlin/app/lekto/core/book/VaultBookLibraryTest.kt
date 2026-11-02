@@ -12,12 +12,12 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
 import app.lekto.core.vault.VaultCodec
-import app.lekto.core.vault.VaultFileSystem
 import app.lekto.core.vault.VaultStore
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
+import app.lekto.testkit.TextBlindFileSystem
 import app.lekto.testkit.deterministicSeams
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -256,6 +256,7 @@ class VaultBookLibraryTest :
 
             library.open(book.id)?.text shouldBe epubText
             derived.paths() shouldContainExactly listOf(
+                "book-text/${book.id}.chapters",
                 "book-text/${book.id}.json",
                 "book-text/${book.id}.length",
             )
@@ -290,7 +291,7 @@ class VaultBookLibraryTest :
 
         test("the listing reports a positioned book's progress without decoding its text") {
             // A derived store that would fail if listing read the parsed text: only
-            // the tiny length entry may be opened (issue #196).
+            // the tiny length and chapter entries may be opened (issues #196, #260).
             val derived = DerivedAssetStore(TextBlindFileSystem(InMemoryVaultFileSystem()))
             val library = newLibrary(derived = derived)
             val book = library.import("Lantern.epub", byteArrayOf(1))
@@ -532,17 +533,6 @@ class VaultBookLibraryTest :
             tombstones.get(book.id) shouldNotBe null
         }
     })
-
-/**
- * A derived store that refuses to read the parsed text, so a test can prove the
- * Library's listing reads only the length entry (issue #196).
- */
-private class TextBlindFileSystem(private val backing: VaultFileSystem) : VaultFileSystem by backing {
-    override fun read(path: String): ByteArray? {
-        check(!path.endsWith(".json")) { "listing decoded the parsed text: $path" }
-        return backing.read(path)
-    }
-}
 
 /** A vault whose [remove] fails for one id, so a delete can be made to fail part-way. */
 private class FailingRemoval(private val backing: VaultStore, private val failingId: String) : VaultStore by backing {

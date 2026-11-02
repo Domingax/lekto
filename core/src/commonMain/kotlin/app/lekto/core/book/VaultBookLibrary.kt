@@ -7,6 +7,7 @@ import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.ParsedBook
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
+import app.lekto.core.text.chapterTitleAt
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
@@ -20,11 +21,11 @@ import kotlin.time.Instant
  * A book is a vault record of kind [BookRecord.KIND] plus its original bytes as
  * that record's attachment (ADR-0016). The parser turns the original into
  * [StructuredText], which is cached in the derived store — device-local and
- * never exported (ADR-0005). The same store holds the book's images and its
- * cover, both re-derived with the text when a cache is wiped, and its **Resume
- * snippet**, rewritten on the next position save. Opening a book reads the
- * cache, or re-parses and re-caches when the cache is missing, so a wiped cache
- * is not data loss.
+ * never exported (ADR-0005). The same store holds the book's images, its cover
+ * and the chapter starts a shelf reads, all re-derived with the text when a
+ * cache is wiped, and its **Resume snippet**, rewritten on the next position
+ * save. Opening a book reads the cache, or re-parses and re-caches when the
+ * cache is missing, so a wiped cache is not data loss.
  *
  * The composition root supplies the [parsers] and the installation's stable
  * [deviceId] (ADR-0003); the domain reads neither a platform nor a global.
@@ -57,13 +58,17 @@ class VaultBookLibrary(
 
     override fun listing(): LibraryListing {
         val records = vault.all()
-        // Only the position, finished and tiny length entries are read here: the
-        // parsed text is never decoded to list a shelf (issues #196, #200).
+        // Only the position, finished, tiny length and chapter entries are read
+        // here: the parsed text is never decoded to list a shelf (issues #196,
+        // #200, #260).
         val positions = positionsIn(records)
         val finished = finishedIn(records).keys
         val progress = positions.mapValues { (bookId, position) ->
             BookProgress.forPosition(position, cache.lengthOf(bookId))
         }
+        val chapters = positions.mapNotNull { (bookId, position) ->
+            cache.chaptersOf(bookId)?.chapterTitleAt(position.offset)?.let { title -> bookId to title }
+        }.toMap()
         val books = booksIn(records)
         val states = books.associate { book ->
             book.id to ReadingState.of(hasPosition = book.id in positions, finished = book.id in finished)
@@ -73,7 +78,7 @@ class VaultBookLibrary(
             lastReadByBook = lastReadIn(records),
             progressByBook = progress,
             readingStateByBook = states,
-        )
+        ).copy(chapterTitleByBook = chapters)
     }
 
     override fun import(fileName: String, bytes: ByteArray, onProgress: (ImportProgress) -> Unit): Book {
@@ -104,6 +109,10 @@ class VaultBookLibrary(
         val book = vault.get(id)?.let { record -> runCatching { BookRecord.bookOf(record) }.getOrNull() }
         val text = book?.let { cache.textOf(it.id) ?: reparse(it) }
         return if (book != null && text != null) {
+            // A book cached before the chapter index existed gains one here, so a
+            // shelf can name the chapter as soon as the book has been opened once
+            // (issue #260).
+            cache.ensureChapters(book.id, text)
             ReadingSession(book, text, position(book.id), finished(book.id))
         } else {
             null

@@ -101,6 +101,12 @@ A titled division of a **Book**, beginning at a place in the book's text. A chap
 contain other chapters.
 _Avoid_: Section, division
 
+**Chapter start**:
+The place a **Chapter** begins in the text the reader renders, held as a character
+offset so a **Reading position** can be mapped to the chapter holding it. A derived
+fact, re-derived from the book original and never synced.
+_Avoid_: Anchor, chapter offset
+
 **Part**:
 A **Chapter** that contains other chapters. It may also have text of its own before its
 first child.

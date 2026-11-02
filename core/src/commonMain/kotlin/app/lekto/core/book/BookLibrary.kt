@@ -23,7 +23,9 @@ interface BookLibrary {
      * three most recently read unfinished books first, most recent first, then
      * every other book by title (CONTEXT.md, "Library"; issues #188 and #200).
      * Each book carries its [ReadingState], so the screen can filter without a
-     * second read.
+     * second read, and the **Chapter** its **Reading position** sits in, when
+     * that is cached (issue #260). The parsed text is never decoded to list a
+     * shelf.
      */
     fun listing(): LibraryListing
 

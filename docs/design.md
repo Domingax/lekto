@@ -252,6 +252,12 @@ A **Finished** book reads `FORMAT · Finished` with a check and carries **no pro
 declaration is not a percentage, and a book read to the end may have been reread or skipped
 (ADR-0038).
 
+The Library can also name the **Chapter** a Reading position sits in, using the same words as the
+reader's chapter list (ADR-0039). It derives the name from the chapter list cached beside the
+parsed text (ADR-0037) through a small index of chapter starts (ADR-0043), so it names a chapter
+without opening the book. A book whose chapter list is not cached yet, that sits before its first
+chapter, or that has only one chapter names none (#260).
+
 The **Resume snippet** is the first **Paragraph** at or after the **Reading position**, captured
 when the position is saved. It is a **Derived asset** beside the parsed text: every device derives
 it from the same book and offset, so it never enters the **Vault**, never syncs, and deleting a

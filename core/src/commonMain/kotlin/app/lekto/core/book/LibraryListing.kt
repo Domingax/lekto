@@ -30,6 +30,15 @@ data class LibraryListing(
     val progressByBook: Map<String, BookProgress> = emptyMap(),
 
     /**
+     * Each positioned book's current **Chapter** title, keyed by book id (issue
+     * #260). A book whose chapter list is not cached, that sits before its first
+     * chapter, or that has only one chapter has no entry: a surface names no
+     * chapter for it. Like [progressByBook] it is a derived map beside the books,
+     * read from a **Derived asset** rather than the **Vault** (ADR-0005).
+     */
+    val chapterTitleByBook: Map<String, String> = emptyMap(),
+
+    /**
      * Each book's **Reading state**, keyed by book id (issue #200). A finished
      * book is in the listing — it falls into the title-ordered rest — but never
      * leads the **Library**, because that group is for books the reader can
@@ -40,6 +49,12 @@ data class LibraryListing(
 
     /** What [book]'s row says about its **Reading progress**, defaulting to `Not started`. */
     fun progressOf(book: Book): BookProgress = progressByBook[book.id] ?: BookProgress.NotStarted
+
+    /**
+     * The **Chapter** [book]'s **Reading position** sits in, or `null` when it is
+     * unknown. A surface hides the chapter rather than inventing one (issue #260).
+     */
+    fun chapterTitleOf(book: Book): String? = chapterTitleByBook[book.id]
 
     /**
      * [book]'s **Reading state**. A listing built before the states existed, or
@@ -90,7 +105,9 @@ data class LibraryListing(
          * an empty map leaves every row at `Not started`, which is what a vault
          * with no positions holds. [readingStateByBook] carries the
          * declaration-derived state; a book missing from it falls back to the
-         * progress map ([readingStateOf]).
+         * progress map ([readingStateOf]). The current chapter is per-device
+         * derived data too, but a caller adds it to the built listing
+         * ([chapterTitleByBook]) so the split's arguments stay the ones it reads.
          */
         fun of(
             books: List<Book>,

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import app.lekto.core.text.IMAGE_PLACEHOLDER
 import app.lekto.core.text.ImageRef
+import app.lekto.core.text.blockOffsets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -80,7 +81,7 @@ fun ImageRef.placeholderIn(layout: ImageLayout): Placeholder {
  * measure around a picture without decoding it.
  */
 fun ReaderText.imagePlaceholders(layout: ImageLayout): List<AnnotatedString.Range<Placeholder>> {
-    val starts = blockOffsets(blocks)
+    val starts = blocks.blockOffsets()
     return blocks.mapIndexedNotNull { index, block ->
         block.image?.let { image ->
             AnnotatedString.Range(
@@ -98,7 +99,7 @@ fun ReaderText.imagePlaceholders(layout: ImageLayout): List<AnnotatedString.Rang
  * hands the text can never name a picture the slice does not carry.
  */
 fun ReaderText.imagesIn(page: ReaderPage): List<ImageRef> {
-    val starts = blockOffsets(blocks)
+    val starts = blocks.blockOffsets()
     return blocks.mapIndexedNotNull { index, block ->
         val image = block.image ?: return@mapIndexedNotNull null
         val start = starts[index]
