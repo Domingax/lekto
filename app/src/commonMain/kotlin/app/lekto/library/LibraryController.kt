@@ -59,7 +59,7 @@ data class LibraryUiState(
     val visibleBooks: List<Book>
         get() = listing.matching(query).filter { book -> listing.readingStateOf(book) in selectedStates }
 
-    /** The leading **Continue reading** group after the filter, so a hidden book takes no heading with it. */
+    /** The recently read group after the filter, so a hidden book takes no heading with it. */
     val visibleLastRead: List<Book>
         get() = listing.lastRead.filter { book -> listing.readingStateOf(book) in selectedStates }
 
@@ -67,7 +67,21 @@ data class LibraryUiState(
     val visibleOthers: List<Book>
         get() = listing.others.filter { book -> listing.readingStateOf(book) in selectedStates }
 
-    /** Whether a query narrows the list, so the screen drops the `Continue reading` split. */
+    /**
+     * The book the **Resume block** leads with (issue #288): the most recently
+     * read unfinished book, when the block is shown. The block obeys the same two
+     * narrowings as the list under it, so it is absent while a query is non-empty
+     * and when the filter excludes **In progress**. `null` is today's shelf: the
+     * books keep their rows and their headings.
+     */
+    val resumeBook: Book?
+        get() = when {
+            searching -> null
+            ReadingState.IN_PROGRESS !in selectedStates -> null
+            else -> visibleLastRead.firstOrNull { book -> listing.readingStateOf(book) == ReadingState.IN_PROGRESS }
+        }
+
+    /** Whether a query narrows the list, so the screen drops the grouped shelf. */
     val searching: Boolean get() = query.isNotBlank()
 
     /** Whether the query matches no title at all, whatever the filter would then hide. */

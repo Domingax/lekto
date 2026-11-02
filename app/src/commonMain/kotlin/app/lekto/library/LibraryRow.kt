@@ -17,8 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +30,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookProgress
@@ -50,8 +49,6 @@ import app.lekto.ui.handCursor
 import app.lekto.ui.icons.Check
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.plainClickable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
@@ -162,14 +159,9 @@ private fun BookFrame(
  * the book has none. A cover is a **Derived asset** the app decodes with its own
  * platform (ADR-0005, ADR-0011), never a dependency the reader has to wait for.
  */
-@Suppress("InjectDispatcher") // The decode is the point: a JPEG must not block the shelf.
 @Composable
-private fun rememberCover(bookId: String, covers: BookCoverLoader): ImageBitmap? {
-    val cover by produceState<ImageBitmap?>(initialValue = null, bookId, covers) {
-        value = withContext(Dispatchers.Default) { covers.load(bookId) }
-    }
-    return cover
-}
+internal fun rememberCover(bookId: String, covers: BookCoverLoader): ImageBitmap? =
+    rememberDerivedAsset(bookId, covers) { covers.load(bookId) }.value
 
 /**
  * The book's plate (docs/design.md §7.1; issue #259): its cover when one decoded,
@@ -189,23 +181,31 @@ internal fun BookPlate(language: String?, cover: ImageBitmap?, modifier: Modifie
                 .clip(LektoRadii.Control),
         )
     } else {
-        LanguageVignette(language, modifier)
+        LanguageVignette(language, modifier = modifier)
     }
 }
 
 /**
- * The language vignette (docs/design.md §2.4, §7.1; issue #208): a 44 × 60 dp
- * control-shaped tile in the **Reading language**'s hue, carrying its two-letter
- * code. The code is the signal — a reader who cannot tell the hues apart reads
- * the letters — so the hue never has to carry a meaning on its own.
+ * The language vignette (docs/design.md §2.4, §7.1; issue #208): a control-shaped
+ * tile in the **Reading language**'s hue, carrying its two-letter code. The code
+ * is the signal — a reader who cannot tell the hues apart reads the letters — so
+ * the hue never has to carry a meaning on its own.
+ *
+ * The size is a parameter because the resume block's plate is larger than a
+ * row's (issue #288); the hue, the code and the radius are the same.
  */
 @Composable
-private fun LanguageVignette(language: String?, modifier: Modifier = Modifier) {
+internal fun LanguageVignette(
+    language: String?,
+    width: Dp = LANGUAGE_VIGNETTE_WIDTH,
+    height: Dp = LANGUAGE_VIGNETTE_HEIGHT,
+    modifier: Modifier = Modifier,
+) {
     val fill = LanguageHues.fill(language, MaterialTheme.colorScheme)
     Box(
         modifier = modifier
-            .width(LANGUAGE_VIGNETTE_WIDTH)
-            .height(LANGUAGE_VIGNETTE_HEIGHT)
+            .width(width)
+            .height(height)
             .background(fill, LektoRadii.Control),
         contentAlignment = Alignment.Center,
     ) {

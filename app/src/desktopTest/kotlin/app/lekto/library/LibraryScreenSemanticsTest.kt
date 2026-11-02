@@ -68,47 +68,6 @@ class LibraryScreenSemanticsTest {
     )
 
     @Test
-    fun theContinueReadingSectionLeadsTheTitleList() = runComposeUiTest {
-        setContent {
-            Library(
-                LibraryUiState(
-                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
-                ),
-            )
-        }
-
-        onNodeWithText("Continue reading").assertIsDisplayed()
-        val lastRead = onNodeWithText(book.title).getBoundsInRoot()
-        val other = onNodeWithText(otherBook.title).getBoundsInRoot()
-        assertTrue(lastRead.top < other.top, "the recently read book must lead: $lastRead vs $other")
-    }
-
-    @Test
-    fun theContinueReadingHeadingIsAbsentUntilABookIsRead() = runComposeUiTest {
-        setContent { Library(books(book)) }
-
-        onNodeWithText("Continue reading").assertDoesNotExist()
-        onNodeWithText("Other books").assertDoesNotExist()
-        onNodeWithText(book.title).assertIsDisplayed()
-    }
-
-    @Test
-    fun theUnreadBooksAreSetApartFromTheRecentlyReadOnes() = runComposeUiTest {
-        // Two named groups, so the shelf says where "read recently" ends instead
-        // of leaving one heading floating over every book (issue #208 review).
-        setContent {
-            Library(LibraryUiState(listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook))))
-        }
-
-        val recent = onNodeWithText(book.title).getBoundsInRoot()
-        val heading = onNodeWithText("Other books").assertIsDisplayed().getBoundsInRoot()
-        val other = onNodeWithText(otherBook.title).getBoundsInRoot()
-
-        assertTrue(recent.bottom < heading.top, "the heading parts the two groups: $recent vs $heading")
-        assertTrue(heading.bottom < other.top, "the second group follows its heading: $heading vs $other")
-    }
-
-    @Test
     fun showsTheEmptyStateUntilABookExists() = runComposeUiTest {
         setContent { Library(LibraryUiState()) }
 
@@ -270,22 +229,6 @@ class LibraryScreenSemanticsTest {
         onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput("lant")
 
         kotlin.test.assertEquals("lant", query)
-    }
-
-    @Test
-    fun aQueryShowsOnlyItsMatchesAndDropsTheContinueReadingHeading() = runComposeUiTest {
-        setContent {
-            Library(
-                LibraryUiState(
-                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
-                    query = "smaller",
-                ),
-            )
-        }
-
-        onNodeWithText(otherBook.title).assertIsDisplayed()
-        onNodeWithText(book.title).assertDoesNotExist()
-        onNodeWithText("Continue reading").assertDoesNotExist()
     }
 
     @Test

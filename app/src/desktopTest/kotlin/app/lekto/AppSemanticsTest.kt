@@ -93,6 +93,7 @@ import app.lekto.language.languageLevelPickerTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
+import app.lekto.library.libraryResumeBlockTag
 import app.lekto.library.libraryRowTag
 import app.lekto.library.libraryStateTag
 import app.lekto.navigation.SHELL_NAV_TAG
@@ -317,19 +318,19 @@ class AppSemanticsTest {
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         setContent { App(environment(library)) }
 
-        onNodeWithText("Continue reading").assertDoesNotExist()
+        onNodeWithTag(libraryResumeBlockTag("b1")).assertDoesNotExist()
         openBook()
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         // Leave at once: the position write is still in flight, and the library
         // still has to re-read when it lands (issue #188).
         leaveReader()
 
-        // Only a refresh after the write can fill the section, so its
-        // appearance proves the library re-read the vault (issue #188).
+        // Only a refresh after the write can fill the block, so its appearance
+        // proves the library re-read the vault (issues #188, #288).
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            onAllNodesWithText("Continue reading").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag(libraryResumeBlockTag("b1")).fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Continue reading").assertIsDisplayed()
+        onNodeWithTag(libraryResumeBlockTag("b1")).assertIsDisplayed()
     }
 
     @Test

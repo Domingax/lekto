@@ -64,16 +64,18 @@ internal data class DeleteAction(val tag: String, val onDelete: () -> Unit)
  * delete without the gesture.
  */
 @Composable
+@Suppress("LongParameterList") // The row's action, its frame, its alignment and its content are independent.
 internal fun DeletingRow(
     delete: DeleteAction,
     modifier: Modifier = Modifier,
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
+    hoverDelete: Boolean = true,
     row: @Composable (Modifier) -> Unit,
 ) {
     // A drag is the touch idiom and only that: with a pointer, the delete waits
     // for the row's hover instead.
     if (!touchClient) {
-        DeleteRowFrame(delete, modifier, verticalAlignment, row)
+        DeleteRowFrame(delete, modifier, verticalAlignment, hoverDelete, row)
         return
     }
     val dismiss = rememberSwipeToDismissBoxState()
@@ -90,7 +92,7 @@ internal fun DeletingRow(
         },
         backgroundContent = { SwipeDeleteBackground() },
     ) {
-        DeleteRowFrame(delete, Modifier, verticalAlignment, row)
+        DeleteRowFrame(delete, Modifier, verticalAlignment, hoverDelete, row)
     }
 }
 
@@ -120,10 +122,12 @@ private fun SwipeDeleteBackground() {
 
 /** The row itself: its content and the trash the mouse uncovers. */
 @Composable
+@Suppress("LongParameterList") // The same four independent values [DeletingRow] passes through.
 private fun DeleteRowFrame(
     delete: DeleteAction,
     modifier: Modifier,
     verticalAlignment: Alignment.Vertical,
+    hoverDelete: Boolean,
     row: @Composable (Modifier) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -144,8 +148,11 @@ private fun DeleteRowFrame(
     ) {
         row(Modifier.weight(1f))
         // The action's place is reserved, so revealing it never shifts the row.
-        Box(Modifier.size(LektoSpacing.TouchTarget)) {
-            if (hovered) DeleteIcon(delete, alignedToFirstLine = verticalAlignment == Alignment.Top)
+        // A block with its own always-visible menu claims the width instead.
+        if (hoverDelete) {
+            Box(Modifier.size(LektoSpacing.TouchTarget)) {
+                if (hovered) DeleteIcon(delete, alignedToFirstLine = verticalAlignment == Alignment.Top)
+            }
         }
     }
 }

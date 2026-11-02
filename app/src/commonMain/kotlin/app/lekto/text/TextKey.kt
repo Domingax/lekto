@@ -61,7 +61,19 @@ enum class TextKey {
     LIBRARY_NO_BOOKS_IN_STATE,
     SHOW_ALL_BOOKS,
 
-    CONTINUE_READING,
+    /**
+     * The resume block's line: the percentage alone when the book names no
+     * **Chapter**, and the two facts together otherwise (issue #288).
+     */
+    LIBRARY_BLOCK_PROGRESS,
+    LIBRARY_BLOCK_CHAPTER_PROGRESS,
+
+    /** The block's line while the book's length is still being measured (issue #288). */
+    LIBRARY_BLOCK_MEASURING,
+    LIBRARY_BLOCK_CHAPTER_MEASURING,
+
+    /** The block's filled action, the only filled control on the Library (issue #288). */
+    RESUME,
 
     /** The heading over the books that did not lead: what is left to read. */
     OTHER_BOOKS,

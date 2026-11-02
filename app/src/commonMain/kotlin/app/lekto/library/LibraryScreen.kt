@@ -64,8 +64,20 @@ internal fun libraryStateTag(state: ReadingState): String = "library-state-${sta
 /** The test tag on the action that clears both the filter and the search. */
 internal const val LIBRARY_SHOW_ALL_TAG: String = "library-show-all"
 
-/** The lazy item key of the "Continue reading" heading, which is not a book. */
-private const val CONTINUE_READING_KEY: String = "continue-reading"
+/** The lazy item key of the **Resume block**, which leads the shelf (issue #288). */
+private fun resumeBlockKey(bookId: String): String = "resume-block-$bookId"
+
+/** The lazy item key of the `In progress` heading over the books that did not lead. */
+private const val IN_PROGRESS_KEY: String = "in-progress"
+
+/** The test tag on the `In progress` heading, which shares its words with a filter chip. */
+internal const val LIBRARY_IN_PROGRESS_HEADING_TAG: String = "library-heading-in-progress"
+
+/** The test tag on the `Other books` heading. */
+internal const val LIBRARY_OTHER_BOOKS_HEADING_TAG: String = "library-heading-other-books"
+
+/** The test tag on the shelf's scrolling list, so a test can scroll to a group below the fold. */
+internal const val LIBRARY_LIST_TAG: String = "library-list"
 
 /** The lazy item key of the "Other books" heading, which is not a book either. */
 private const val OTHER_BOOKS_KEY: String = "other-books"
@@ -96,18 +108,25 @@ internal const val LIBRARY_TITLE_TAG: String = "library-title"
  * language**'s vignette otherwise (issue #259). The states stay distinct (§8):
  * an empty vault says what to do, a shelf being read shows skeleton rows rather
  * than the empty message, and a query that matches nothing names itself back.
+ *
+ * The most recently read unfinished book leaves the list for the **Resume
+ * block** above it (issue #288); [covers] and [snippets] are the derived assets
+ * that block shows, resolved off the main thread so the shelf never waits on a
+ * file.
  */
 @Composable
+@Suppress("LongParameterList") // The state, its actions, the frame, and the two derived-asset loaders are independent.
 fun LibraryScreen(
     state: LibraryUiState,
     actions: LibraryActions = LibraryActions(),
     modifier: Modifier = Modifier,
     covers: BookCoverLoader = BookCoverLoader.None,
+    snippets: BookSnippetLoader = BookSnippetLoader.None,
 ) {
     var pendingDelete by remember { mutableStateOf<Book?>(null) }
     val texts = LocalAppTexts.current
 
-    CompositionLocalProvider(LocalBookCovers provides covers) {
+    CompositionLocalProvider(LocalBookCovers provides covers, LocalBookSnippets provides snippets) {
         Column(
             modifier.fillMaxSize().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         ) {
@@ -293,19 +312,26 @@ private val ReadingState.textKey: TextKey
     }
 
 /**
- * The scrollable book list (issue #188; docs/design.md §7.1): the recently read
- * books under `Continue reading`, then the rest under `Other books`, every group
- * by title. A search flattens them, so neither heading shows while the reader is
- * browsing a query (issue #173).
+ * The scrollable book list (issue #188; docs/design.md §7.1): the **Resume
+ * block** for the most recently read unfinished book (issue #288), then the
+ * remaining recently read books under `In progress`, then the rest under `Other
+ * books`, every group by title. A search flattens them, so no heading and no
+ * block shows while the reader is browsing a query (issue #173).
  *
  * Two named groups, not one heading over everything: a single heading left the
  * reader unable to see where "read recently" ended, which was the first note on
- * issue #208's review.
+ * issue #208's review. The block is the hierarchy that note asked for.
  */
 @Composable
 private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
     val texts = LocalAppTexts.current
-    LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.BetweenRelatedLines)) {
+    LazyColumn(
+        Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(top = LektoSpacing.BetweenRelatedLines)
+            .testTag(LIBRARY_LIST_TAG),
+    ) {
         if (state.searching) {
             bookItems(state.visibleBooks, state, onOpen, onDelete)
         } else {
@@ -314,32 +340,61 @@ private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Uni
     }
 }
 
-/** The two groups of a shelf the reader is browsing: the recent books, then the rest, each named. */
+/**
+ * The groups of a shelf the reader is browsing: the resume block, then the
+ * recently read books that did not lead, then the rest, each named (issues #188,
+ * #288). A shelf with no reading history keeps one list by title and neither
+ * heading.
+ */
 private fun LazyListScope.shelfGroups(
     state: LibraryUiState,
     texts: AppTexts,
     onOpen: (Book) -> Unit,
     onDelete: (Book) -> Unit,
 ) {
-    val recent = state.visibleLastRead
+    val resume = state.resumeBook
+    if (resume != null) {
+        item(key = resumeBlockKey(resume.id)) {
+            ResumeBlock(
+                book = resume,
+                facts = ResumeFacts(
+                    progress = state.listing.progressOf(resume),
+                    chapter = state.listing.chapterTitleOf(resume),
+                ),
+                actions = BookRowActions(onOpen = onOpen, onDelete = onDelete),
+            )
+        }
+    }
+    val recent = state.visibleLastRead.filterNot { book -> book.id == resume?.id }
     val rest = state.visibleOthers
     if (recent.isNotEmpty()) {
-        headingItem(CONTINUE_READING_KEY, texts[TextKey.CONTINUE_READING], top = LektoSpacing.BetweenRelatedLines)
+        headingItem(
+            key = IN_PROGRESS_KEY,
+            tag = LIBRARY_IN_PROGRESS_HEADING_TAG,
+            text = texts[TextKey.READING_STATE_IN_PROGRESS],
+            top = LektoSpacing.BetweenRelatedLines,
+        )
         bookItems(recent, state, onOpen, onDelete)
     }
     if (rest.isNotEmpty()) {
         // A shelf with no reading history is one list by title, so only a shelf
-        // that has a leading group needs the second heading.
-        if (recent.isNotEmpty()) {
-            headingItem(OTHER_BOOKS_KEY, texts[TextKey.OTHER_BOOKS], top = LektoSpacing.BetweenBlocks)
+        // that has a leading group — the block or the books under it — needs the
+        // second heading.
+        if (resume != null || recent.isNotEmpty()) {
+            headingItem(
+                key = OTHER_BOOKS_KEY,
+                tag = LIBRARY_OTHER_BOOKS_HEADING_TAG,
+                text = texts[TextKey.OTHER_BOOKS],
+                top = LektoSpacing.BetweenBlocks,
+            )
         }
         bookItems(rest, state, onOpen, onDelete)
     }
 }
 
 /** A group's heading item, keyed so a lazy list keeps its place when the shelf moves. */
-private fun LazyListScope.headingItem(key: String, text: String, top: Dp) {
-    item(key = key) { SectionHeading(text, top) }
+private fun LazyListScope.headingItem(key: String, tag: String, text: String, top: Dp) {
+    item(key = key) { SectionHeading(text, top, tag) }
 }
 
 /** A group's rows, each keyed by its book so the lazy list can reuse them. */
@@ -357,11 +412,13 @@ private fun LazyListScope.bookItems(
 
 /** A group's heading: the design's serif section title, so the two groups read as sections (§3). */
 @Composable
-private fun SectionHeading(text: String, top: Dp) {
+private fun SectionHeading(text: String, top: Dp, tag: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(top = top, bottom = LektoSpacing.BetweenRelatedLines),
+        modifier = Modifier
+            .padding(top = top, bottom = LektoSpacing.BetweenRelatedLines)
+            .testTag(tag),
     )
 }
 
