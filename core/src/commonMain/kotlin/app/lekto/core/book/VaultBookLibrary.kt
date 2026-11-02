@@ -6,6 +6,7 @@ import app.lekto.core.text.BookAsset
 import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.ParsedBook
 import app.lekto.core.text.StructuredText
+import app.lekto.core.text.TextBlock
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
@@ -20,9 +21,10 @@ import kotlin.time.Instant
  * that record's attachment (ADR-0016). The parser turns the original into
  * [StructuredText], which is cached in the derived store — device-local and
  * never exported (ADR-0005). The same store holds the book's images and its
- * cover, both re-derived with the text when a cache is wiped. Opening a book
- * reads the cache, or re-parses and re-caches when the cache is missing, so a
- * wiped cache is not data loss.
+ * cover, both re-derived with the text when a cache is wiped, and its **Resume
+ * snippet**, rewritten on the next position save. Opening a book reads the
+ * cache, or re-parses and re-caches when the cache is missing, so a wiped cache
+ * is not data loss.
  *
  * The composition root supplies the [parsers] and the installation's stable
  * [deviceId] (ADR-0003); the domain reads neither a platform nor a global.
@@ -49,6 +51,7 @@ class VaultBookLibrary(
 
     private val cache = BookTextCache(derived)
     private val covers = BookCoverCache(derived)
+    private val snippets = BookSnippetCache(derived)
 
     override fun books(): List<Book> = booksIn(vault.all())
 
@@ -127,11 +130,21 @@ class VaultBookLibrary(
     override fun position(bookId: String): ReadingPosition? = vault.get(ReadingPositionRecord.idOf(bookId))
         ?.let { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }
 
+    override fun snippet(bookId: String): String? = snippets.snippetOf(bookId)
+
     override fun finished(bookId: String): FinishedBook? = vault.get(FinishedBookRecord.idOf(bookId))
         ?.let { record -> runCatching { FinishedBookRecord.finishedOf(record) }.getOrNull() }
 
-    override fun savePosition(position: ReadingPosition) {
+    override fun savePosition(position: ReadingPosition, blocks: List<TextBlock>) {
         vault.put(ReadingPositionRecord.of(position, seams.clock.now(), deviceId))
+        // The snippet is decoration beside the position, so a derived write that
+        // fails loses the line and never the position or its sync signal. A save
+        // with no text — a legacy caller — removes the old line: nothing can be
+        // derived for the new offset, and a stale one would be worse than none.
+        runCatching {
+            val snippet = blocks.paragraphAt(position.offset)?.text
+            if (snippet == null) snippets.remove(position.bookId) else snippets.put(position.bookId, snippet)
+        }
     }
 
     /**
@@ -177,9 +190,10 @@ class VaultBookLibrary(
     }
 
     /**
-     * Removes the book's original, cached text, images, cover, reading position
-     * and finished declaration, then the book record itself, leaving a tombstone
-     * for the book and for each fact (issue #131; ADR-0015, ADR-0038).
+     * Removes the book's original, cached text, images, cover, **Resume
+     * snippet**, reading position and finished declaration, then the book record
+     * itself, leaving a tombstone for the book and for each fact (issue #131;
+     * ADR-0015, ADR-0038).
      *
      * Each tombstone is written **before** the record it marks is removed, so a
      * failure leaves the book fully listed and a replayed delete completes it:
@@ -194,6 +208,7 @@ class VaultBookLibrary(
         val now = seams.clock.now()
         cache.remove(id)
         covers.remove(id)
+        snippets.remove(id)
         derived.removeUnder(imagesOf(id))
         removeWithTombstone(ReadingPositionRecord.idOf(id), now)
         removeWithTombstone(FinishedBookRecord.idOf(id), now)

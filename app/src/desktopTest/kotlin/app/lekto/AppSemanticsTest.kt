@@ -38,6 +38,7 @@ import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.book.ReadingState
+import app.lekto.core.book.paragraphAt
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.language.LanguageCatalog
@@ -262,6 +263,23 @@ class AppSemanticsTest {
         openBook()
 
         assertEquals(leftAt, awaitPastTheFirstPage(), "the session resumes where it was left")
+    }
+
+    @Test
+    fun aPageTurnStoresTheResumeSnippet() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library)) }
+
+        openBook()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+
+        // The turn writes the paragraph the reader landed in, from the open
+        // document's own blocks (issue #258).
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { library.savedSnippet() != null }
+        assertTrue(
+            library.savedSnippet()?.startsWith("On the quiet evening") == true,
+            "the saved snippet is the paragraph on the page",
+        )
     }
 
     @Test
@@ -1757,6 +1775,7 @@ internal class InMemoryLibrary(
     private val positions = mutableMapOf<String, Int>()
     private val lastRead = mutableMapOf<String, Long>()
     private val finished = mutableMapOf<String, FinishedBook>()
+    private val snippets = mutableMapOf<String, String>()
     private var reads = 0L
 
     @Synchronized override fun books(): List<Book> = stored
@@ -1807,11 +1826,14 @@ internal class InMemoryLibrary(
 
     @Synchronized override fun cover(bookId: String): ByteArray? = covers[bookId]
 
+    @Synchronized override fun snippet(bookId: String): String? = snippets[bookId]
+
     @Synchronized override fun delete(id: String) {
         stored = stored.filterNot { book -> book.id == id }
         positions.remove(id)
         lastRead.remove(id)
         finished.remove(id)
+        snippets.remove(id)
     }
 
     @Synchronized
@@ -1829,10 +1851,16 @@ internal class InMemoryLibrary(
         finished.remove(bookId)
     }
 
-    @Synchronized override fun savePosition(position: ReadingPosition) {
+    @Synchronized override fun savePosition(position: ReadingPosition, blocks: List<TextBlock>) {
         positions[position.bookId] = position.offset
         lastRead[position.bookId] = ++reads
+        if (blocks.isEmpty()) return
+        val snippet = blocks.paragraphAt(position.offset)?.text
+        if (snippet == null) snippets.remove(position.bookId) else snippets[position.bookId] = snippet
     }
+
+    /** The last snippet written, so a test can wait for the asynchronous save. */
+    @Synchronized fun savedSnippet(): String? = snippets.values.firstOrNull()
 
     /** The last offset written, so a test can wait for the asynchronous save. */
     @Synchronized fun savedOffset(): Int? = positions.values.firstOrNull()

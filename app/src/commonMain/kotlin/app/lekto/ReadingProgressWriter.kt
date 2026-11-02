@@ -1,6 +1,7 @@
 package app.lekto
 
 import app.lekto.core.book.ReadingPosition
+import app.lekto.core.text.TextBlock
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,10 @@ import kotlinx.coroutines.launch
  * queueing every turn. A save that fails is swallowed: losing one position is
  * better than bringing the reader down, and the next page turn writes again.
  *
+ * Each turn carries the **ReaderDocument**'s blocks with its position, so the
+ * save can store the **Resume snippet** beside the position without opening the
+ * book again (issue #258). A caller without a document records none.
+ *
  * A landed save notifies [changes], so sync pushes the new position after the
  * reader pauses rather than waiting for its timer (issue #121; ADR-0028).
  */
@@ -26,20 +31,26 @@ class ReadingProgressWriter(
     dispatcher: CoroutineDispatcher,
     /** Notified after each position write, so sync pushes reading progress (issue #121). */
     private val changes: LocalChanges,
-    private val save: suspend (ReadingPosition) -> Unit,
+    private val save: suspend (ReadingPosition, List<TextBlock>) -> Unit,
 ) {
-    private val latest = MutableStateFlow<ReadingPosition?>(null)
+    private data class PendingSave(val position: ReadingPosition, val blocks: List<TextBlock>)
+
+    private val latest = MutableStateFlow<PendingSave?>(null)
 
     init {
         scope.launch(dispatcher) {
-            latest.filterNotNull().collect { position ->
-                runCatching { save(position) }.onSuccess { changes.progressChanged() }
+            latest.filterNotNull().collect { pending ->
+                runCatching { save(pending.position, pending.blocks) }.onSuccess { changes.progressChanged() }
             }
         }
     }
 
-    /** Records [position] as the latest; positions superseded before a save ran are dropped. */
-    fun record(position: ReadingPosition) {
-        latest.value = position
+    /**
+     * Records [position] as the latest, with the [blocks] the reader rendered so
+     * its snippet can be stored; positions superseded before a save ran are
+     * dropped. [blocks] defaults to empty for a caller that has no document.
+     */
+    fun record(position: ReadingPosition, blocks: List<TextBlock> = emptyList()) {
+        latest.value = PendingSave(position, blocks)
     }
 }

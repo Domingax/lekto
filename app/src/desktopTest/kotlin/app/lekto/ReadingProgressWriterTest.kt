@@ -33,7 +33,7 @@ class ReadingProgressWriterTest {
             backgroundScope,
             StandardTestDispatcher(testScheduler),
             LocalChanges(),
-        ) { position ->
+        ) { position, _ ->
             saved += position
             delay(50)
         }
@@ -58,7 +58,7 @@ class ReadingProgressWriterTest {
             backgroundScope,
             UnconfinedTestDispatcher(testScheduler),
             LocalChanges(),
-        ) { position ->
+        ) { position, _ ->
             saved += position
         }
 
@@ -72,7 +72,11 @@ class ReadingProgressWriterTest {
 
     @Test
     fun aFailingSaveDoesNotEscape() = runTest {
-        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler), LocalChanges()) {
+        val writer = ReadingProgressWriter(
+            backgroundScope,
+            UnconfinedTestDispatcher(testScheduler),
+            LocalChanges(),
+        ) { _, _ ->
             error("disk full")
         }
 
@@ -86,7 +90,11 @@ class ReadingProgressWriterTest {
         val changes = LocalChanges()
         val received = mutableListOf<Unit>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.progress.collect { received += it } }
-        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler), changes) { }
+        val writer = ReadingProgressWriter(
+            backgroundScope,
+            UnconfinedTestDispatcher(testScheduler),
+            changes,
+        ) { _, _ -> }
 
         writer.record(ReadingPosition("book", 1))
         advanceUntilIdle()
@@ -99,7 +107,11 @@ class ReadingProgressWriterTest {
         val changes = LocalChanges()
         val received = mutableListOf<Unit>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { changes.progress.collect { received += it } }
-        val writer = ReadingProgressWriter(backgroundScope, UnconfinedTestDispatcher(testScheduler), changes) {
+        val writer = ReadingProgressWriter(
+            backgroundScope,
+            UnconfinedTestDispatcher(testScheduler),
+            changes,
+        ) { _, _ ->
             error("disk full")
         }
 

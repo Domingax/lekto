@@ -285,8 +285,8 @@ fun App(
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
     val progress = remember(environment.library, environment.dispatcher, scope, changes) {
-        ReadingProgressWriter(scope, environment.dispatcher, changes) { position ->
-            environment.library.savePosition(position)
+        ReadingProgressWriter(scope, environment.dispatcher, changes) { position, blocks ->
+            environment.library.savePosition(position, blocks)
         }
     }
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
@@ -707,7 +707,9 @@ private fun ReaderDestination(
         onBack = onBack,
         onMarkFinished = onMarkFinished,
         onMarkUnfinished = onMarkUnfinished,
-        onPositionChange = { offset -> progress.record(ReadingPosition(session.book.id, offset)) },
+        onPositionChange = { offset ->
+            progress.record(ReadingPosition(session.book.id, offset), session.text.blocks)
+        },
     )
 }
 
