@@ -72,6 +72,7 @@ import app.lekto.language.LanguageController
 import app.lekto.language.LanguageSettingsController
 import app.lekto.language.LanguagesDestination
 import app.lekto.library.LibraryActions
+import app.lekto.library.LibraryBookCovers
 import app.lekto.library.LibraryController
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
@@ -796,6 +797,7 @@ private fun LibraryDestination(
     LibraryScreen(
         state = state,
         actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
+        covers = remember(environment.library) { LibraryBookCovers(environment.library) },
     )
 }
 

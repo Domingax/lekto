@@ -68,6 +68,16 @@ class VaultBookCoverTest :
             val book = library.import("Book.epub", byteArrayOf(1, 2, 3))
 
             DerivedAssetStore(files).get("book-cover/${book.id}") shouldBe null
+            library.cover(book.id) shouldBe null
+        }
+
+        test("the library hands back the stored cover") {
+            val files = InMemoryVaultFileSystem()
+            val library = libraryOver(files)
+            val book = library.import("Book.epub", byteArrayOf(1, 2, 3))
+
+            library.cover(book.id)?.contentEquals(cover) shouldBe true
+            library.cover("absent") shouldBe null
         }
 
         test("a cover never enters a vault export") {

@@ -1748,7 +1748,10 @@ private const val FIRST_FETCH_MILLIS: Long = 300
  * without standing a vault up.
  */
 @Suppress("TooManyFunctions") // It stands in for the whole BookLibrary seam; one function per member.
-internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibrary {
+internal class InMemoryLibrary(
+    private val chapters: Boolean = false,
+    private val covers: Map<String, ByteArray> = emptyMap(),
+) : BookLibrary {
 
     private var stored: List<Book> = emptyList()
     private val positions = mutableMapOf<String, Int>()
@@ -1801,6 +1804,8 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
             finished = finished[book.id],
         )
     }
+
+    @Synchronized override fun cover(bookId: String): ByteArray? = covers[bookId]
 
     @Synchronized override fun delete(id: String) {
         stored = stored.filterNot { book -> book.id == id }

@@ -106,6 +106,8 @@ class VaultBookLibrary(
         }
     }
 
+    override fun cover(bookId: String): ByteArray? = covers.coverOf(bookId)
+
     override fun position(bookId: String): ReadingPosition? = vault.get(ReadingPositionRecord.idOf(bookId))
         ?.let { record -> runCatching { ReadingPositionRecord.positionOf(record) }.getOrNull() }
 

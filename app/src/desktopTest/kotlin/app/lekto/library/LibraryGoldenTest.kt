@@ -21,7 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -51,12 +55,13 @@ import kotlin.test.Test
  * rendered with the host's fonts and would not verify on another machine.
  * Instead it records the frame of a shelf of four books across three **Reading
  * languages**: the search surface with its hairline and the `Search` icon, then
- * each row's 44 × 60 vignette in the language's own hue, its title and second
- * line as ink bars, its 3 dp progress rule, and the hairline that parts two
- * rows. The vignette's frame, the search surface, the spacing and the rule are
- * the screen's own constants and composables; only the words are bars, because
- * glyphs are the one thing a golden cannot pin. A hue, a radius or a spacing
- * step that moves is caught here — the semantics suite covers the text.
+ * each row's 44 × 60 plate — the first one a solid stand-in for a **Cover**, the
+ * others in the language's own hue — its title and second line as ink bars, its
+ * 3 dp progress rule, and the hairline that parts two rows. The plate's frame,
+ * the search surface, the spacing and the rule are the screen's own constants
+ * and composables; only the words are bars, because glyphs are the one thing a
+ * golden cannot pin. A hue, a radius or a spacing step that moves is caught
+ * here — the semantics suite covers the text and the cover's fallback.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with
  * `./gradlew :app:verifyRoborazziDesktop`.
@@ -79,15 +84,20 @@ class LibraryGoldenTest {
     }
 }
 
-/** A book the preview draws: its language, the share of its rule that is filled, and whether it recently led. */
-private data class PreviewBook(val language: String, val percent: Int, val recentlyRead: Boolean)
+/** A book the preview draws: its language, its rule, whether it recently led, and whether it carries art. */
+private data class PreviewBook(
+    val language: String,
+    val percent: Int,
+    val recentlyRead: Boolean,
+    val hasCover: Boolean = false,
+)
 
 /** A bar where a line of text would be: its height, and the share of the width it takes. */
 private data class LineBar(val height: Dp, val share: Float)
 
-/** Four books across three languages, two of them in the leading group. */
+/** Four books across three languages, two of them in the leading group; the first carries art. */
 private val PREVIEW_BOOKS = listOf(
-    PreviewBook(language = "en", percent = 32, recentlyRead = true),
+    PreviewBook(language = "en", percent = 32, recentlyRead = true, hasCover = true),
     PreviewBook(language = "fr", percent = 4, recentlyRead = true),
     PreviewBook(language = "es", percent = 0, recentlyRead = false),
     PreviewBook(language = "en", percent = 61, recentlyRead = false),
@@ -201,7 +211,7 @@ private fun SectionHeading(top: Dp) {
     }
 }
 
-/** One row's frame: the vignette, the title and second line, and the rule. Rows part by rhythm alone. */
+/** One row's frame: the plate, the title and second line, and the rule. Rows part by rhythm alone. */
 @Composable
 private fun PreviewRow(book: PreviewBook) {
     val theme = MaterialTheme.colorScheme
@@ -209,7 +219,11 @@ private fun PreviewRow(book: PreviewBook) {
         modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LanguageVignette(book.language)
+        if (book.hasCover) {
+            BookPlate(language = book.language, cover = PREVIEW_COVER)
+        } else {
+            LanguageVignette(book.language)
+        }
         Spacer(Modifier.width(LektoSpacing.BetweenRows))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
             Line(theme.onBackground, TITLE_BAR)
@@ -217,6 +231,20 @@ private fun PreviewRow(book: PreviewBook) {
             ProgressRule(bookId = "preview", percent = book.percent)
         }
     }
+}
+
+/**
+ * A solid stand-in for a cover: the golden pins the plate's frame and radius,
+ * never the pixels of a real book's art, which no two machines share.
+ */
+private val PREVIEW_COVER: ImageBitmap = ImageBitmap(
+    width = LANGUAGE_VIGNETTE_WIDTH.value.toInt(),
+    height = LANGUAGE_VIGNETTE_HEIGHT.value.toInt(),
+).also { bitmap ->
+    Canvas(bitmap).drawRect(
+        Rect(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat()),
+        Paint().apply { color = Color(0xFF5C6B52) },
+    )
 }
 
 /** The vignette: the language's hue, and a bar where its two-letter code sits. */

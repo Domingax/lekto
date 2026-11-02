@@ -14,6 +14,9 @@ import app.lekto.core.vault.DerivedAssetStore
  */
 internal class BookCoverCache(private val derived: DerivedAssetStore) {
 
+    /** The cover bytes for [bookId], or `null` when the book has no cover. */
+    fun coverOf(bookId: String): ByteArray? = derived.get(pathOf(bookId))
+
     /** Stores [bytes] as [bookId]'s cover. */
     fun put(bookId: String, bytes: ByteArray) {
         derived.put(pathOf(bookId), bytes)

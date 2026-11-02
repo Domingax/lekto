@@ -36,3 +36,10 @@ class DerivedBookImages(private val derived: DerivedAssetStore) : BookImageStore
  * added and the licence gate (ADR-0011) is untouched.
  */
 internal expect fun decodeImageBitmap(path: String): ImageBitmap?
+
+/**
+ * Decodes [bytes] when they are an image this platform can read, or `null`
+ * otherwise. The small, already-materialised counterpart of the file seam above,
+ * used for a book's cover in the Library (issue #259).
+ */
+internal expect fun decodeImageBitmap(bytes: ByteArray): ImageBitmap?

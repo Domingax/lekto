@@ -224,11 +224,11 @@ Each screen below is one row of what it shows, and one note on what it must not 
 A row is a **plate** (44 × 60) — the book's **Cover** when it has one, its language vignette
 otherwise — the title, a line of `FORMAT · 28 %`, and a **3 dp progress rule**. Rows are parted by
 **rhythm alone** — no rule between two books: the plates are the shelf's columns, and a divider
-saws through them. **Covers are allowed.** An EPUB's cover image is extracted at import and kept
-as a **Derived asset** — device-local and never synced — so a surface that shows one paints it in
-the plate; a book without one is never a hole. **The typographic vignette stays the mandatory
-fallback**: a TXT never carries art, and an EPUB whose cover is undeclared, SVG or corrupt keeps
-its language plaque. The file name is not on the row: it survives in import errors and the delete
+saws through them. **Covers are shown.** An EPUB's cover image is extracted at import and kept
+as a **Derived asset** — device-local and never synced — and the row paints it in the plate; a
+book without one is never a hole. **The typographic vignette stays the mandatory fallback**: a
+TXT never carries art, and an EPUB whose cover is undeclared, SVG or corrupt keeps its language
+plaque. The file name is not on the row: it survives in import errors and the delete
 confirmation, where it identifies a file rather than a book.
 
 A book is deleted **from its row**, and never from a red word that sits on every book. On a touch

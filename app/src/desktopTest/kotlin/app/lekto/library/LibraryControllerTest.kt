@@ -527,6 +527,8 @@ private class FakeLibrary(
 
     override fun open(id: String): ReadingSession? = null
 
+    override fun cover(bookId: String): ByteArray? = null
+
     override fun position(bookId: String): ReadingPosition? = null
 
     override fun finished(bookId: String): FinishedBook? = finishedBooks[bookId]
