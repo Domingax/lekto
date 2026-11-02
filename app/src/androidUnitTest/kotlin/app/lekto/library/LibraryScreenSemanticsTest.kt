@@ -6,14 +6,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertRangeInfoEquals
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,9 +41,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The whole percentage the measured-row test uses; [FULL_PERCENT] is its denominator. */
+/** The whole percentage the finished-row test uses. */
 private const val MEASURED_PERCENT = 28
-private const val FULL_PERCENT = 100
 
 /**
  * The library screen on a **simulated Android runtime** (issue #74): the
@@ -353,47 +351,9 @@ class LibraryScreenSemanticsTest {
         assertTrue("a row is never shorter than 48 dp: $row", row.bottom - row.top >= 48.dp)
     }
 
-    @Test
-    fun aMeasuredReadingProgressShowsItsWholePercentageAndRule() {
-        compose.setContent { Library(stateWith(BookProgress.Measured(MEASURED_PERCENT))) }
-
-        compose.onNodeWithText("EPUB · $MEASURED_PERCENT %").assertIsDisplayed()
-        // The rule fills to the same whole percentage the line says (issue #196).
-        // It is read from the unmerged tree: the row's clickable column merges its
-        // children, and the rule is a child with no text of its own.
-        compose.onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true)
-            .assertRangeInfoEquals(
-                ProgressBarRangeInfo(current = MEASURED_PERCENT / FULL_PERCENT.toFloat(), range = 0f..1f),
-            )
-        compose.onNodeWithText(book.fileName).assertDoesNotExist()
-    }
-
-    @Test
-    fun aBookWithNoReadingPositionSaysNotStartedWithoutARule() {
-        compose.setContent { Library(books(book)) }
-
-        compose.onNodeWithText("EPUB · Not started").assertIsDisplayed()
-        compose.onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithText(book.fileName).assertDoesNotExist()
-    }
-
-    @Test
-    fun aBookAwaitingMeasurementShowsTheUnknownStateWithoutARule() {
-        compose.setContent { Library(stateWith(BookProgress.Unmeasured)) }
-
-        compose.onNodeWithText("EPUB · …")
-            .assertIsDisplayed()
-            .assertContentDescriptionEquals("Reading progress is being measured.")
-        compose.onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true).assertDoesNotExist()
-    }
-
     /** A state whose books are all unread, so only the title list shows. */
     private fun books(vararg books: Book): LibraryUiState =
         LibraryUiState(listing = LibraryListing(others = books.toList()))
-
-    /** A state whose one book carries [progress], so a test can render each row state. */
-    private fun stateWith(progress: BookProgress): LibraryUiState =
-        LibraryUiState(listing = LibraryListing(others = listOf(book), progressByBook = mapOf(book.id to progress)))
 
     @Test
     fun theReadingStateChipsOpenOnUnreadAndInProgress() {
@@ -446,9 +406,9 @@ class LibraryScreenSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("EPUB · Finished").assertIsDisplayed()
+        compose.onNodeWithTag(libraryRowTag(book.id)).assertTextContains("Finished", substring = true)
         compose.onNodeWithTag(libraryProgressTag(book.id), useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithText("EPUB · $MEASURED_PERCENT %").assertDoesNotExist()
+        compose.onNodeWithText("$MEASURED_PERCENT %").assertDoesNotExist()
     }
 
     @Test

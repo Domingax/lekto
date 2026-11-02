@@ -17,10 +17,12 @@ no headings: the list is just your books, by title.
 
 Each row is one book: a small plate showing the book's cover when Lekto has
 one, or else a coloured tile carrying its **Reading language** — `EN`, `FR`,
-`ES`, `DE` or `IT` — then its title, then a line with its format and its
-**Reading progress**, like `EPUB · 28 %`. A thin rule under the line fills to the
-same whole percentage. A book you have declared finished reads `EPUB · Finished`
-with a check, and carries no rule: the declaration is not a percentage. When the
+`ES`, `DE` or `IT` — then its title, then a line naming its author and its
+**Reading progress**, like `Victor Hugo · 28 %`. A book Lekto cannot name an
+author for reads the progress alone, like `28 %`, with no separator in front. A
+thin rule under the line fills to the same whole percentage. A book you have
+declared finished reads `Victor Hugo · Finished` (or `Finished` alone) with a
+check, and carries no rule: the declaration is not a percentage. When the
 plate shows the language, the tile's colour is decoration: the two letters are
 what tells you the language, so it reads the same if you cannot tell the colours
 apart. A text file, and an EPUB whose cover Lekto cannot read, keeps the
@@ -36,10 +38,11 @@ The percentage is how far you are now, not the furthest you have read: paging
 back lowers it. It is the share of the book's text that lies before your
 **Reading position**, rounded down, so the last page reads a little under 100 %.
 
-A book with no Reading position reads `EPUB · Not started`, with no rule. That
-describes the data, not your history: opening a book without turning a page
-writes no position. A book whose text Lekto is still measuring on this device
-reads `EPUB · …` until the measurement lands, then shows its percentage.
+A book with no Reading position reads `Victor Hugo · Not started` (or `Not
+started` alone), with no rule. That describes the data, not your history:
+opening a book without turning a page writes no position. A book whose text
+Lekto is still measuring on this device reads `Victor Hugo · …` (or `…` alone)
+until the measurement lands, then shows its percentage.
 
 The Library is a view of the Vault, not the storage itself: the books are one
 part of the Vault, and your vocabulary and your **Reading positions** live in

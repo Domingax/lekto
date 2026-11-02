@@ -154,7 +154,11 @@ in `ReaderTextTest`, so the share and the text the reader lays out cannot drift.
 The whole percentage is `ReadingProgress.percent`, pinned by `ReadingProgressTest`
 for the floor (`28.9 %` → `28 %`), a position at 0, an offset past the end
 clamped to 100, the absence of a 99 % cap, and a property over generated offsets
-and lengths. The length is a **Derived asset** written and removed beside the
+and lengths. The row's line names the **Author** before that state (issue #287):
+`Author · 28 %`, and the state alone (`28 %`) when the book names none, with no
+leading separator and no placeholder. `LibraryRowSemanticsTest` on both lanes
+pins the four states with and without an author, and that the format never
+appears on the row. The length is a **Derived asset** written and removed beside the
 parsed text, so `VaultBookLibraryTest` proves the entry lands and goes with the
 text, a re-parse rewrites it, and a **derived store that refuses to read
 `book-text/<id>.json`** still lists progress — the list reads only the length
@@ -165,7 +169,7 @@ injected dispatcher and moves the row to its percentage, a failed measurement
 leaves `…` rather than `Not started`, and neither the content nor the reading
 sync signal fires. The row's three states — a percentage with a rule that
 carries `ProgressBarRangeInfo`, `Not started` without one, and `…` with its
-localized description and no rule — are `LibraryScreenSemanticsTest` on both
+localized description and no rule — are `LibraryRowSemanticsTest` on both
 lanes, and the file name is absent from the row and present in the delete
 confirmation on both.
 
@@ -203,8 +207,9 @@ wins, a position means **In progress**, and the rest is **Unread**. The filter i
 view state, so `LibraryControllerTest` pins the default two states, the toggle
 whose last chip cannot be turned off, the two narrowings applying together, and
 `Show all books` clearing both; `LibraryScreenSemanticsTest` on both lanes pins
-the chips' on-and-off state, the finished row (`FORMAT · Finished`, a check, no
-rule), the three empty states, and that the browse list itself hides a finished
+the chips' on-and-off state, the finished row (`Author · Finished`, or `Finished`
+when the book names none; a check, no rule), the three empty states, and that the
+browse list itself hides a finished
 row until its chip is on, while `AppSemanticsTest` runs the whole loop — the end
 state's `Mark as finished`, the record it writes, the Library's
 `All your books are finished.` on return, and the row once **Finished** is
