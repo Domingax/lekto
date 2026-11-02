@@ -2,11 +2,12 @@ package app.lekto.reader
 
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
-import app.lekto.core.text.BLOCK_SEPARATOR
 import app.lekto.core.text.Chapter
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextSegmenter
+import app.lekto.core.text.blockOffsets
+import app.lekto.core.text.characterOffsetIn
 import app.lekto.core.text.flattened
 import app.lekto.core.text.renderedLength
 
@@ -39,11 +40,11 @@ data class ReaderChapterEntry(val chapter: Chapter, val depth: Int, val startOff
  */
 fun ReaderText.chapterEntries(): List<ReaderChapterEntry> {
     if (chapters.isEmpty()) return emptyList()
-    val starts = blockOffsets(blocks)
+    val starts = blocks.blockOffsets()
     val end = blocks.renderedLength()
 
     fun walk(list: List<Chapter>, depth: Int): List<ReaderChapterEntry> = list.flatMap { chapter ->
-        val offset = starts.getOrElse(chapter.startBlock) { end }
+        val offset = chapter.characterOffsetIn(starts, end)
         val entry = ReaderChapterEntry(chapter = chapter, depth = depth, startOffset = offset)
         listOf(entry) + walk(chapter.children, depth + 1)
     }
@@ -61,18 +62,9 @@ fun List<ReaderChapterEntry>.entryAt(offset: Int): ReaderChapterEntry? =
  * measuring the chapters before it (ADR-0037).
  */
 fun ReaderText.chapterStartOffsets(): Set<Int> {
-    val starts = blockOffsets(blocks)
+    val starts = blocks.blockOffsets()
     val end = blocks.renderedLength()
-    return chapters.flattened().map { chapter -> starts.getOrElse(chapter.startBlock) { end } }.toSet()
-}
-
-/** The character offset of each block's start, the text's own block separator counted. */
-internal fun blockOffsets(blocks: List<TextBlock>): List<Int> = buildList {
-    var offset = 0
-    blocks.forEach { block ->
-        add(offset)
-        offset += block.text.length + BLOCK_SEPARATOR.length
-    }
+    return chapters.flattened().map { chapter -> chapter.characterOffsetIn(starts, end) }.toSet()
 }
 
 /**
@@ -81,7 +73,7 @@ internal fun blockOffsets(blocks: List<TextBlock>): List<Int> = buildList {
  * look up, so it is neither coloured nor tappable.
  */
 internal fun ReaderText.markerRanges(): List<IntRange> {
-    val starts = blockOffsets(blocks)
+    val starts = blocks.blockOffsets()
     return blocks.mapIndexedNotNull { index, block ->
         block.listMarker
             .takeIf { marker -> marker.isNotEmpty() }

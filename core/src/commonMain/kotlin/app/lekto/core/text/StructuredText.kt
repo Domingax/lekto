@@ -133,6 +133,20 @@ fun List<TextBlock>.renderedLength(): Int =
     sumOf { block -> block.text.length } + BLOCK_SEPARATOR.length * (size - 1).coerceAtLeast(0)
 
 /**
+ * The character offset of each block's start in the rendered text, the block
+ * separator counted. It is the one rule **Reading progress**, pagination and a
+ * **Chapter**'s start share, so a surface that holds a character offset can find
+ * the block it lands in without laying the text out (issue #196).
+ */
+fun List<TextBlock>.blockOffsets(): List<Int> = buildList {
+    var offset = 0
+    this@blockOffsets.forEach { block ->
+        add(offset)
+        offset += block.text.length + BLOCK_SEPARATOR.length
+    }
+}
+
+/**
  * The text between two rendered blocks: a blank line. The reader lays the blocks
  * out with it (`buildChapterText`), and [StructuredText.renderedLength] counts it,
  * so the denominator of **Reading progress** cannot drift from the text on screen

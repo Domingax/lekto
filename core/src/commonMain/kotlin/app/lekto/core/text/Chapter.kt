@@ -48,3 +48,47 @@ fun List<Chapter>.readingUnits(): List<Chapter> = flattened().filter { chapter -
  */
 fun List<Chapter>.chapterAt(blockIndex: Int): Chapter? =
     flattened().lastOrNull { chapter -> chapter.startBlock <= blockIndex }
+
+/**
+ * The chapter's first character in the rendered text: [blockStarts] indexed by
+ * [Chapter.startBlock], with [textEnd] for a chapter the parser placed past the
+ * text. It is the one rule the reader's chapter offsets and the cached index
+ * share, so a shelf and the page cannot name a different start.
+ */
+fun Chapter.characterOffsetIn(blockStarts: List<Int>, textEnd: Int): Int = blockStarts.getOrElse(startBlock) { textEnd }
+
+/**
+ * A **Chapter**'s start as a character offset into the rendered text: the shape
+ * a surface holds when it must name the chapter holding a **Reading position**
+ * without the blocks that offset was measured from (issue #260).
+ *
+ * It is a **Derived asset** beside the parsed text (ADR-0043), so it carries no
+ * block index — a block is only meaningful with the text it came from.
+ */
+@Serializable
+data class ChapterStart(val title: String, val startOffset: Int)
+
+/**
+ * The chapter list flattened to its starts in reading order, a part before its
+ * children. A chapter whose [Chapter.startBlock] is past the text reads as the
+ * text's end, exactly as the reader's own chapter offsets do (ADR-0037).
+ */
+fun StructuredText.chapterStarts(): List<ChapterStart> {
+    if (chapters.isEmpty()) return emptyList()
+    val starts = blocks.blockOffsets()
+    val end = blocks.renderedLength()
+    return chapters.flattened()
+        .map { chapter -> ChapterStart(chapter.title, chapter.characterOffsetIn(starts, end)) }
+        .sortedBy { start -> start.startOffset }
+}
+
+/**
+ * The title of the deepest chapter whose range holds [offset], or `null` before
+ * the first chapter (ADR-0037). A book with one chapter names none: it has no
+ * chapter list, so the title would only repeat the book's own (ADR-0039). A
+ * surface that shows no chapter list shows no chapter either.
+ */
+fun List<ChapterStart>.chapterTitleAt(offset: Int): String? {
+    if (size <= 1) return null
+    return lastOrNull { start -> start.startOffset <= offset }?.title
+}

@@ -105,4 +105,15 @@ class LibraryListingTest :
             listing.readingStateOf(started) shouldBe ReadingState.IN_PROGRESS
             listing.readingStateOf(unread) shouldBe ReadingState.UNREAD
         }
+
+        test("a book names its current chapter only when the listing carries one") {
+            val alpha = book("Alpha")
+
+            LibraryListing.of(listOf(alpha), emptyMap()).chapterTitleOf(alpha) shouldBe null
+
+            LibraryListing.of(
+                books = listOf(alpha),
+                lastReadByBook = mapOf(alpha.id to moment(1)),
+            ).copy(chapterTitleByBook = mapOf(alpha.id to "XI")).chapterTitleOf(alpha) shouldBe "XI"
+        }
     })
