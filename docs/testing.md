@@ -181,14 +181,30 @@ not name takes. The row's frame — the vignette's two-letter code, the title, a
 the 48 dp floor a row never shrinks below — and the three states — the empty
 shelf with its one filled action, the skeleton rows that are distinguishable
 from the empty message, and the no-match state — are `LibraryScreenSemanticsTest`
-on both lanes, together with the two named groups (`Other books` parts the unread
-books from the recently read ones) and the delete idiom of each: the Android twin
+on both lanes, together with the named groups (`In progress` over the recently
+read books that did not lead, `Other books` over the rest) and the delete idiom of each: the Android twin
 swipes the row and finds the confirmation, and the desktop twin proves the trash
 appears on hover, that a drag on a pointer platform does nothing, and that the
 confirmation guards the vault either way. The shelf's loading state is the controller's: `LibraryControllerTest`
 pins that a refresh reports it while the vault is read, so the skeleton is real
 state and not a still. The golden lane records the frame on four books across
 three languages, one sheet per paper.
+
+Leading with the book in progress (issue #288) is a view over the listing, so the
+block's candidate is `LibraryUiState.resumeBook` and `LibraryResumeBlockSemanticsTest`
+on both lanes pins it: the block leads and the shelf loses exactly that row, a
+finished book never becomes the block, a shelf with no reading history keeps its
+plain list, and the block disappears during a search and when the filter excludes
+`In progress`. The three degradations are the same suite — no snippet ends the
+block at its button, no chapter leaves `28 %`, and no cover keeps the language
+plaque — and so is the delete: the desktop twin opens the confirmation from the
+`⋮`, the Android twin from the swipe as well, and both prove the vault is
+untouched until it is confirmed. The block is one accessible item whose action is
+`Resume` — its suite activates that action through semantics and proves the
+button is not a second stop — and it says what its line is waiting for while the
+length is measured. `AppSemanticsTest` proves the block appears after a page
+turned just before leaving, which is the refresh the composition root wires, and
+the golden lane records its frame beside the rows.
 
 Declaring a book **Finished** (issue #200; ADR-0038) is a second vault fact beside
 the reading position, so it is proved at its own levels. `FinishedBookRecord` is
@@ -568,7 +584,7 @@ row and each demanded level to a red → green before the commit.
 The icon set (issue #184) is generated once and committed, so the Kotlin it adds
 is not hand-written and the generator is not run in tests. `LektoIconsTest` pins
 what a regeneration could silently change: the 24 dp grid, the 2-unit round
-stroke, the fourteen-name set, and the back arrow as the only icon that mirrors in
+stroke, the fifteen-name set, and the back arrow as the only icon that mirrors in
 a right-to-left layout.
 
 The desktop installers (issue #29) are proved by the artefact, not by a unit

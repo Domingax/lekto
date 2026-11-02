@@ -54,10 +54,12 @@ import kotlin.test.Test
  * It is deliberately text-free, like the theme and mastery goldens: glyphs are
  * rendered with the host's fonts and would not verify on another machine.
  * Instead it records the frame of a shelf of four books across three **Reading
- * languages**: the search surface with its hairline and the `Search` icon, then
- * each row's 44 × 60 plate — the first one a solid stand-in for a **Cover**, the
- * others in the language's own hue — its title and second line as ink bars, its
- * 3 dp progress rule, and the hairline that parts two rows. The plate's frame,
+ * languages**: the search surface with its hairline and the `Search` icon, the
+ * **Resume block** with its larger plate, its facts, its filled action and its
+ * two snippet lines (issue #288), then each row's 44 × 60 plate — the first one a
+ * solid stand-in for a **Cover**, the others in the language's own hue — its
+ * title and second line as ink bars, its 3 dp progress rule, and the hairline
+ * that parts two rows. The plate's frame,
  * the search surface, the spacing and the rule are the screen's own constants
  * and composables; only the words are bars, because glyphs are the one thing a
  * golden cannot pin. A hue, a radius or a spacing step that moves is caught
@@ -103,9 +105,9 @@ private val PREVIEW_BOOKS = listOf(
     PreviewBook(language = "en", percent = 61, recentlyRead = false),
 )
 
-/** The preview's window, the size the planche draws a phone at. */
+/** The preview's window; taller than a phone so the block and both groups fit. */
 private val SHELF_WIDTH = 360.dp
-private val SHELF_HEIGHT = 640.dp
+private val SHELF_HEIGHT = 820.dp
 
 /** The bars that stand in for a row's title, its second line and the chrome's words. */
 private val TITLE_BAR = LineBar(height = 16.dp, share = 0.6f)
@@ -118,9 +120,18 @@ private val SEARCH_PLACEHOLDER_BAR = LineBar(height = 12.dp, share = 0.35f)
 /** The vignette's two-letter code, drawn as a bar. */
 private val CODE_BAR = 22.dp to 10.dp
 
+/** The resume block's cover stand-in: a solid plate where a real book's art goes. */
+private val PREVIEW_COVER_COLOUR = Color(0xFF5C6B52)
+
+/** The block's overflow glyph, the filled `Resume`'s word, and its snippet's two lines (issue #288). */
+private val MENU_BAR = 4.dp to 18.dp
+private val RESUME_WORD_BAR = 16.dp to 10.dp
+private val SNIPPET_BAR = LineBar(height = 12.dp, share = 0.9f)
+
 /**
  * The shelf's frame, drawn without glyphs: the screen title and the Import word,
- * the search surface, then the rows (docs/design.md §7.1).
+ * the search surface, the **Resume block** (issue #288), then the rows
+ * (docs/design.md §7.1).
  */
 @Composable
 private fun ShelfPreview() {
@@ -141,10 +152,77 @@ private fun ShelfPreview() {
         }
         SearchSurface()
         FilterChips()
+        ResumeBlockPreview(PREVIEW_BOOKS.first { book -> book.recentlyRead })
         SectionHeading(top = LektoSpacing.BetweenRelatedLines)
-        PREVIEW_BOOKS.filter { book -> book.recentlyRead }.forEach { book -> PreviewRow(book) }
+        PREVIEW_BOOKS.filter { book -> book.recentlyRead }.drop(1).forEach { book -> PreviewRow(book) }
         SectionHeading(top = LektoSpacing.BetweenBlocks)
         PREVIEW_BOOKS.filterNot { book -> book.recentlyRead }.forEach { book -> PreviewRow(book) }
+    }
+}
+
+/**
+ * The **Resume block**'s frame (issue #288): the larger cover, the facts, the
+ * `⋮`, the filled `Resume`, then the hairline and the two snippet lines. The
+ * plate, the radius, the rule and the spacing are the screen's own constants;
+ * only the words are bars.
+ */
+@Composable
+private fun ResumeBlockPreview(book: PreviewBook) {
+    val theme = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows)) {
+        ResumeCardPreview(book)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = LektoSpacing.InsidePanel)
+                .height(HAIRLINE_THICKNESS)
+                .background(theme.outline),
+        )
+        Column(Modifier.padding(top = LektoSpacing.BetweenRelatedLines)) {
+            Line(theme.onSurfaceVariant, SNIPPET_BAR)
+            Line(theme.onSurfaceVariant, SNIPPET_BAR)
+        }
+    }
+}
+
+/** The block's bordered card: the larger plate, the facts, the `⋮` and the filled `Resume`. */
+@Composable
+private fun ResumeCardPreview(book: PreviewBook) {
+    val theme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface)
+            .padding(LektoSpacing.InsidePanel),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Block(
+                colour = if (book.hasCover) PREVIEW_COVER_COLOUR else LanguageHues.fill(book.language, theme),
+                size = RESUME_COVER_WIDTH to RESUME_COVER_HEIGHT,
+            )
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(start = LektoSpacing.BetweenRows, end = LektoSpacing.TouchTarget),
+                verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
+            ) {
+                Line(theme.onBackground, TITLE_BAR)
+                Line(theme.onSurfaceVariant, LINE_BAR)
+                Line(theme.onSurfaceVariant, LINE_BAR)
+                ProgressRule(bookId = "preview-block", percent = book.percent)
+            }
+            Block(theme.onSurfaceVariant, MENU_BAR)
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = LektoSpacing.InsidePanel)
+                .height(LektoSpacing.TouchTarget)
+                .background(theme.primary, LektoRadii.Control),
+            contentAlignment = Alignment.Center,
+        ) {
+            Block(contentColorOn(theme.primary), RESUME_WORD_BAR)
+        }
     }
 }
 

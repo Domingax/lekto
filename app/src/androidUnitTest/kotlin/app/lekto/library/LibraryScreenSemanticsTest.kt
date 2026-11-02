@@ -55,7 +55,7 @@ private const val MEASURED_PERCENT = 28
  */
 @RunWith(RobolectricTestRunner::class)
 @Suppress("TooManyFunctions") // One test per behaviour; the list is the screen's.
-@Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
+@Config(sdk = [36], qualifiers = "w360dp-h800dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
 class LibraryScreenSemanticsTest {
 
     @get:Rule
@@ -76,47 +76,6 @@ class LibraryScreenSemanticsTest {
         format = BookFormat.TXT,
         fileName = "smaller.txt",
     )
-
-    @Test
-    fun theContinueReadingSectionLeadsTheTitleList() {
-        compose.setContent {
-            Library(
-                LibraryUiState(
-                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
-                ),
-            )
-        }
-
-        compose.onNodeWithText("Continue reading").assertIsDisplayed()
-        val lastRead = compose.onNodeWithText(book.title).getBoundsInRoot()
-        val other = compose.onNodeWithText(otherBook.title).getBoundsInRoot()
-        assertTrue("the recently read book must lead: $lastRead vs $other", lastRead.top < other.top)
-    }
-
-    @Test
-    fun theContinueReadingHeadingIsAbsentUntilABookIsRead() {
-        compose.setContent { Library(books(book)) }
-
-        compose.onNodeWithText("Continue reading").assertDoesNotExist()
-        compose.onNodeWithText("Other books").assertDoesNotExist()
-        compose.onNodeWithText(book.title).assertIsDisplayed()
-    }
-
-    @Test
-    fun theUnreadBooksAreSetApartFromTheRecentlyReadOnes() {
-        // Two named groups, so the shelf says where "read recently" ends instead
-        // of leaving one heading floating over every book (issue #208 review).
-        compose.setContent {
-            Library(LibraryUiState(listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook))))
-        }
-
-        val recent = compose.onNodeWithText(book.title).getBoundsInRoot()
-        val heading = compose.onNodeWithText("Other books").assertIsDisplayed().getBoundsInRoot()
-        val other = compose.onNodeWithText(otherBook.title).getBoundsInRoot()
-
-        assertTrue("the heading parts the two groups: $recent vs $heading", recent.bottom < heading.top)
-        assertTrue("the second group follows its heading: $heading vs $other", heading.bottom < other.top)
-    }
 
     @Test
     fun showsTheEmptyStateUntilABookExists() {
@@ -258,22 +217,6 @@ class LibraryScreenSemanticsTest {
         compose.onNodeWithTag(LIBRARY_SEARCH_TAG).performTextInput("lant")
 
         assertEquals("lant", query)
-    }
-
-    @Test
-    fun aQueryShowsOnlyItsMatchesAndDropsTheContinueReadingHeading() {
-        compose.setContent {
-            Library(
-                LibraryUiState(
-                    listing = LibraryListing(lastRead = listOf(book), others = listOf(otherBook)),
-                    query = "smaller",
-                ),
-            )
-        }
-
-        compose.onNodeWithText(otherBook.title).assertIsDisplayed()
-        compose.onNodeWithText(book.title).assertDoesNotExist()
-        compose.onNodeWithText("Continue reading").assertDoesNotExist()
     }
 
     @Test

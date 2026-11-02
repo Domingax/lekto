@@ -133,9 +133,9 @@ The scale actually used, and nothing else:
 - The set is **Lucide geometry**: a 24-unit grid, a 2-unit stroke, round caps and joins. It is
   generated once, committed as `ImageVector` Kotlin, and carries no runtime dependency — the
   reasoning and the alternatives are in `docs/research/icones-compose.md`.
-- **The set is fourteen icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
+- **The set is fifteen icons**: `book-open`, `bookmark`, `settings`, `search`, `import`,
   `arrow-left`, `volume-2`, `a-large-small`, `x`, `trash`, `chevron-left`, `chevron-right`,
-  `info`, `check`.
+  `info`, `check`, `ellipsis-vertical`.
   `tools/icons/fetch.sh` fetches them at the pinned Lucide tag and regenerates the Kotlin; the
   generated files are never edited by hand. Their ISC and Feather/MIT notices live in
   `THIRD-PARTY-NOTICES.md` at the root, and the app names them in **Attribution**, reached from
@@ -239,11 +239,14 @@ neither does a book that names none, so its line is the state alone (`28 %`), wi
 no leading separator and no placeholder word. The format is where a file came from,
 not what a reader chooses a book by, so it leaves the row.
 
-A book is deleted **from its row**, and never from a red word that sits on every book. On a touch
-screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's wash and a trash
-appear when it is hovered, and a drag does nothing — the gesture is the thumb's idiom, not the
-pointer's. Neither path deletes anything by itself: both open the confirmation (§8), because there
-is no undo. The row exposes the same action to a screen reader as an accessibility action.
+A book is deleted **from its row or from its block**, and never from a red word that sits on every
+book. On a touch screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's
+wash and a trash appear when it is hovered, and a drag does nothing — the gesture is the thumb's
+idiom, not the pointer's. The **Resume block** adds one affordance, a `⋮` in its corner, because a
+block that large cannot rely on a gesture alone; it opens the same confirmation as the swipe.
+Neither path deletes anything by itself: both open the confirmation (§8), because there is no
+undo. The row exposes the same action to a screen reader as an accessibility action, and the
+block's `⋮` is its own labelled control.
 
 **Reading progress** is where the reader is now, not the furthest point reached: the share of the
 book's rendered text before the **Reading position**, rounded down, so a book on its last page
@@ -273,8 +276,8 @@ The `Search` field sits under the title, always visible, and hides while the vau
 It matches the title alone — a case- and accent-insensitive substring of the trimmed query —
 because a book found by a string its row does not show, its file name or its language, reads as a
 mistake (#173). An empty query leaves the list exactly as it is. A non-empty query flattens it: no
-`Continue reading` heading, every match by title. The query is **view state** too: it is cleared on
-leaving the Library, survives backgrounding, and never reaches the **Vault**.
+**Resume block** and no group heading, every match by title. The query is **view state** too: it is
+cleared on leaving the Library, survives backgrounding, and never reaches the **Vault**.
 
 Under `Search` sits one row of filter chips once the vault has a book: `Unread`, `In progress`,
 `Finished`. They are **multi-select**, and the Library opens with **Unread and In progress**
@@ -284,15 +287,28 @@ cannot be turned off. The row scrolls horizontally when a translation overflows 
 no counts. The filter is **view state**: it survives leaving the Library and coming back, and
 resets to Unread and In progress when the app restarts. It is never written to the **Vault**.
 
-The three most recently read unfinished books lead under the `Continue reading` heading, most
-recent first; then, under `Other books`, every other listed book by title. Both headings are the
-serif section title, and the gap between the groups is wider than between two rows, so the shelf
-says where "read recently" ends. A shelf with no reading history is one list by title, and carries
-neither heading. A finished book is never in the leading group,
-even if it was the last book read, because that group is for books the reader can continue
-(ADR-0038). The leading group is hidden when it is empty. A query narrows the shelf in one more
-step, not instead of the filter: the two apply together, so a book the filter hides stays hidden by
-a query that matches it, and `Show all books` clears both (#173, #200).
+The most recently read unfinished book leads in a **Resume block**, under the search and the
+filter chips because it obeys them: its cover in its own ratio, never cropped, with the language
+plaque as the fallback where a book has none; the title, then the **Author** — the author's line is
+absent when the book names none; `Chapter N · 28 %`, with the row's own 3 dp rule under it at the
+width of the text column, the number and the rule stating the same percentage; a filled `Resume`,
+the only filled control on the screen; a hairline; then the first **Paragraph** at the saved
+position, roman and unquoted, on two lines — not a citation, but the page the reader is about to
+read. Each missing piece drops on its own: no snippet ends the block at its button, no chapter
+leaves `28 %`, no cover keeps the plaque. A shelf with no unfinished book carrying a reading
+position has no block, and the shelf is exactly what it was. The block is one accessible item — it
+announces the title, the author, the chapter and the percentage, and `Resume` is its action — and
+it is absent while a query is non-empty and when the filter excludes `In progress`.
+
+After the block come the remaining recently read unfinished books under `In progress`, most recent
+first, then `Other books`, every other listed book by title. `Continue reading` is no heading any
+more: the block says it. Both headings are the serif section title, and the gap between the groups
+is wider than between two rows, so the shelf says where "read recently" ends. A shelf with no
+reading history is one list by title, and carries neither heading. A finished book is never the
+block or in the leading group, even if it was the last book read, because that group is for books
+the reader can continue (ADR-0038). The leading group is hidden when it is empty. A query narrows
+the shelf in one more step, not instead of the filter: the two apply together, so a book the filter
+hides stays hidden by a query that matches it, and `Show all books` clears both (#173, #200).
 
 **States**: an empty vault says what to do and carries the action. A Library whose filter matches
 nothing says why — "All your books are finished." with `Show all books`, or "No books in this

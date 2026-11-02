@@ -42,6 +42,7 @@ ICONS=(
     chevron-right   # next chapter
     check           # the chosen entry, on Appearance and App language
     info            # the vault's folder-sync caution
+    ellipsis-vertical # a book's overflow menu, on the Library's resume block
 )
 
 # Only these mirror in a right-to-left layout. Valkyrie's `--auto-mirror` is

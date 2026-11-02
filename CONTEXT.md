@@ -168,6 +168,12 @@ were; a heading, a list item or a picture is never the snippet, and a position p
 the last paragraph holds none.
 _Avoid_: Excerpt, preview, quote
 
+**Resume block**:
+The leading item of the **Library**: the most recently read unfinished **Book** shown with its
+**Cover**, **Author**, current **Chapter**, **Reading progress** and **Resume snippet**, and the
+action that reopens it. It replaces that book's row, and a **Finished** book never becomes it.
+_Avoid_: Hero, featured book, continue card
+
 **Last read**:
 The moment a book's **Reading position** last moved — a page turned, not the book
 opened. It orders the **Library** and is distinct from **Reading progress**, which

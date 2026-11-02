@@ -6,14 +6,21 @@ desktop alike.
 
 ## What you see
 
-The three books you read most recently lead the list, under **Continue
-reading**, the most recent first. A book joins that section as soon as you turn
-a page in it, and turning back to its first page does not remove it. A book you
-have declared **Finished** never leads, even if it was the last one you read:
-that section is for books you can carry on with. Below it, under **Other
-books**, every other book — including a finished one, and one you have not
-opened yet — is listed by title. When you have not read anything yet, there are
-no headings: the list is just your books, by title.
+The book you read most recently, and have not finished, leads the Library in a
+larger block above the shelf: its cover, its title and author, the chapter and
+percentage you are at, and a **Resume** button that opens it where you left off.
+Under the button comes the first paragraph at your reading position, so you can
+see the page you are about to read. Each piece stands on its own: a book with no
+snippet ends the block at the button, a book with no chapter shows the percentage
+alone, and a book with no cover keeps its language tile. A book you have declared
+**Finished** never leads, even if it was the last one you read: that place is for
+a book you can carry on with.
+
+The other books you have read recently follow under **In progress**, the most
+recent first. Below them, under **Other books**, every other book — including a
+finished one, and one you have not opened yet — is listed by title. When you have
+not read anything yet, there is no block and no headings: the list is just your
+books, by title.
 
 Each row is one book: a small plate showing the book's cover when Lekto has
 one, or else a coloured tile carrying its **Reading language** — `EN`, `FR`,
@@ -79,12 +86,12 @@ title. Type part of a title and the list narrows to the books that contain it:
 matching ignores capitals and accents, so *emile* finds *Émile*. Only titles are
 searched, not file names.
 
-While you are searching, the **Continue reading** section disappears and the
-matches are listed by title. An empty field shows the Library as usual. The
-search narrows the shelf in one more step, not instead of the reading-state
-filter: the two apply together, so a book the filter hides stays hidden by a
-query that matches it. If nothing matches, Lekto names what you typed and offers
-**Clear search** and **Show all books**.
+While you are searching, the resume block disappears and the matches are listed
+by title. An empty field shows the Library as usual. The search narrows the shelf
+in one more step, not instead of the reading-state filter: the two apply together,
+so a book the filter hides stays hidden by a query that matches it. If nothing
+matches, Lekto names what you typed and offers **Clear search** and **Show all
+books**.
 
 The search is a view of your Library, not a setting: leaving the Library — to
 read a book, to open Vocabulary or Settings, or to open the Languages surface
@@ -98,14 +105,17 @@ position** automatically, so you continue where you left off; see
 
 ## Deleting a book
 
-There is no Delete on the shelf itself. On a phone or a tablet, swipe a row from
+There is no Delete word on the shelf. On a phone or a tablet, swipe a row from
 the right and the action appears; with a mouse, point at the row — it picks up a
-faint tint and a small trash appears at its end. Either way Lekto asks you to confirm first — *Delete
-« title »?* — and names the imported file, so you can tell which file is about to
-go. Only then does it remove the **Book**: its original file, the text derived
-from it, your **Reading position** for it and your **Finished** declaration. If
-sync is on, the deletion travels to your other devices instead of the book coming
-back; see [Vault and sync](/vault-and-sync) for how a deletion is remembered.
+faint tint and a small trash appears at its end. The book in the resume block
+deletes the same way, and because a block that large cannot rely on a gesture
+alone, its `⋮` in the corner opens the same confirmation. Either way Lekto asks
+you to confirm first — *Delete « title »?* — and names the imported file, so you
+can tell which file is about to go. Only then does it remove the **Book**: its
+original file, the text derived from it, your **Reading position** for it and
+your **Finished** declaration. If sync is on, the deletion travels to your other
+devices instead of the book coming back; see [Vault and sync](/vault-and-sync)
+for how a deletion is remembered.
 
 Deleting a book is permanent, so Lekto offers it only from the Library, never
 from inside a [reading session](/reading).

@@ -32,6 +32,7 @@ class LektoIconsTest {
         "ChevronLeft" to LektoIcons.ChevronLeft,
         "ChevronRight" to LektoIcons.ChevronRight,
         "Check" to LektoIcons.Check,
+        "EllipsisVertical" to LektoIcons.EllipsisVertical,
         "Import" to LektoIcons.Import,
         "Info" to LektoIcons.Info,
         "Search" to LektoIcons.Search,
@@ -43,7 +44,7 @@ class LektoIconsTest {
 
     @Test
     fun `every icon is a 24 dp Lucide stroke drawing`() {
-        assertEquals(ICON_COUNT, icons.size, "the committed set is fourteen icons")
+        assertEquals(ICON_COUNT, icons.size, "the committed set is fifteen icons")
         for ((name, icon) in icons) {
             assertEquals(gridSize, icon.defaultWidth, "$name width")
             assertEquals(gridSize, icon.defaultHeight, "$name height")
@@ -76,7 +77,7 @@ class LektoIconsTest {
 
     private companion object {
         /** Lucide's grid and stroke (`docs/design.md` §5). */
-        const val ICON_COUNT = 14
+        const val ICON_COUNT = 15
         val gridSize = 24.dp
         const val STROKE_WIDTH = 2f
     }
