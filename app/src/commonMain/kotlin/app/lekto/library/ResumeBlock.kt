@@ -286,6 +286,7 @@ private fun BlockDelete(book: Book, actions: BookRowActions, modifier: Modifier 
 @Composable
 private fun BlockLine(book: Book, facts: ResumeFacts) {
     val texts = LocalAppTexts.current
+    val ink = MaterialTheme.colorScheme.onSurfaceVariant
     val message = blockLineMessage(facts) ?: return
     val measuring = facts.progress == BookProgress.Unmeasured
     Row(
@@ -296,6 +297,7 @@ private fun BlockLine(book: Book, facts: ResumeFacts) {
             Text(
                 text = chapter,
                 style = ResumeLine,
+                color = ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
@@ -305,6 +307,7 @@ private fun BlockLine(book: Book, facts: ResumeFacts) {
         Text(
             text = texts.message(message),
             style = ResumeLine,
+            color = ink,
             maxLines = 1,
             // `…` alone is not something a screen reader can read, so the block
             // says what the data is waiting for until the measurement lands.
