@@ -1728,6 +1728,8 @@ internal class InMemoryLibrary(private val chapters: Boolean = false) : BookLibr
         )
     }
 
+    @Synchronized override fun cover(bookId: String): ByteArray? = null
+
     @Synchronized override fun delete(id: String) {
         stored = stored.filterNot { book -> book.id == id }
         positions.remove(id)

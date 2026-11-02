@@ -16,16 +16,23 @@ import org.w3c.dom.Element
  * allowed outside the spine, and the EPUB 2 NCX, found by the spine's `toc`
  * attribute or by its media type.
  *
+ * It names the book's cover image too (issue #259): the EPUB 3 manifest item with
+ * `properties="cover-image"`, or the item an EPUB 2 `<meta name="cover">` names by
+ * id. A `guide` reference of type `cover` points at a page, not an image, so it
+ * is deliberately not chased.
+ *
  * XML parsing goes through an [OpfXmlReader], which is injectable so a test can
  * run the whole parse against a parser that rejects the Xerces-only feature
  * names — the Android behaviour that broke a real import (issue #15).
  */
+@Suppress("LongParameterList") // The OPF's named parts: title, language, spine, nav, ncx and cover.
 internal class OpfDocument(
     val title: String?,
     val language: String?,
     val spine: List<ManifestItem>,
     val nav: ManifestItem? = null,
     val ncx: ManifestItem? = null,
+    val cover: ManifestItem? = null,
 ) {
 
     /** A manifest entry, with the properties and media type that classify it. */
@@ -35,6 +42,10 @@ internal class OpfDocument(
 
         val isNavigationDocument: Boolean
             get() = "nav" in properties
+
+        /** Whether this entry is the EPUB 3 cover image. */
+        val isCoverImage: Boolean
+            get() = "cover-image" in properties
     }
 
     companion object {
@@ -64,6 +75,7 @@ internal class OpfDocument(
                 spine = spine(document, manifest),
                 nav = manifest.values.firstOrNull { item -> item.isNavigationDocument },
                 ncx = ncx(document, manifest),
+                cover = cover(document, manifest),
             )
         }
 
@@ -105,6 +117,27 @@ internal class OpfDocument(
                 .firstOrNull { id -> id.isNotEmpty() }
             return tocId?.let { id -> manifest[id] }
                 ?: manifest.values.firstOrNull { item -> item.mediaType == NCX_MEDIA_TYPE }
+        }
+
+        /**
+         * The cover image: the EPUB 3 `cover-image` property first, then the
+         * EPUB 2 de-facto `<meta name="cover" content="<manifest id>"/>`. A
+         * `guide` reference names a page for readers to open, not an image, so
+         * it is not a fallback. The media type and the bytes are the caller's to
+         * validate, because only it can read the archive.
+         */
+        private fun cover(document: Document, manifest: Map<String, ManifestItem>): ManifestItem? =
+            manifest.values.firstOrNull { item -> item.isCoverImage }
+                ?: metaCoverId(document)?.let { id -> manifest[id] }
+
+        /** The manifest id an EPUB 2 `<meta name="cover">` names, if the OPF carries one. */
+        private fun metaCoverId(document: Document): String? {
+            val metas = document.getElementsByTagNameNS(OPF_NAMESPACE, "meta")
+            return (0 until metas.length)
+                .map { index -> metas.item(index) as Element }
+                .firstOrNull { meta -> meta.getAttribute("name") == "cover" }
+                ?.getAttribute("content")
+                ?.takeIf { id -> id.isNotEmpty() }
         }
 
         private fun text(document: Document, namespace: String, tag: String): String? =

@@ -15,15 +15,18 @@ books**, every other book — including a finished one, and one you have not
 opened yet — is listed by title. When you have not read anything yet, there are
 no headings: the list is just your books, by title.
 
-Each row is one book: a small coloured tile carrying its **Reading language** —
-`EN`, `FR`, `ES`, `DE` or `IT` — then its title, then a line with its
-format and its **Reading progress**, like `EPUB · 28 %`. A thin rule under the
-line fills to the same whole percentage. A book you have declared finished
-reads `EPUB · Finished` with a check, and carries no rule: the declaration is not
-a percentage. The tile's colour is decoration: the two letters are what tells you
-the language, so it reads the same if you cannot tell the colours apart. There is
-no file name on the row — the book is what you see, and its file is named only
-when an import fails or when you delete the book.
+Each row is one book: a small plate showing the book's cover when Lekto has
+one, or else a coloured tile carrying its **Reading language** — `EN`, `FR`,
+`ES`, `DE` or `IT` — then its title, then a line with its format and its
+**Reading progress**, like `EPUB · 28 %`. A thin rule under the line fills to the
+same whole percentage. A book you have declared finished reads `EPUB · Finished`
+with a check, and carries no rule: the declaration is not a percentage. When the
+plate shows the language, the tile's colour is decoration: the two letters are
+what tells you the language, so it reads the same if you cannot tell the colours
+apart. A text file, and an EPUB whose cover Lekto cannot read, keeps the
+language tile, so no row is ever blank. There is no file name on the row — the
+book is what you see, and its file is named only when an import fails or when
+you delete the book.
 
 When the Library is empty, it says so and offers one action: **Import a book**.
 While it is being read, the list shows skeleton rows instead of claiming there

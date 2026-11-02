@@ -5,22 +5,41 @@ package app.lekto.core.text
  * the reader renders. EPUB implements it first; TXT and PDF follow behind the
  * same seam so the reader never learns the source format (ADR-0007).
  *
- * A format that carries binaries beside its text — an EPUB's images — returns
- * them as [ParsedBook.assets], because the bytes must reach the **Derived
- * asset** store (`CONTEXT.md`, ADR-0005) and a parser only ever sees the
- * original. The parser names them; the library writes them.
+ * A format that carries binaries beside its text — an EPUB's images and its
+ * cover — returns them as [ParsedBook.assets] and [ParsedBook.cover], because
+ * the bytes must reach the **Derived asset** store (`CONTEXT.md`, ADR-0005) and
+ * a parser only ever sees the original. The parser names the images; the library
+ * writes them.
  */
 fun interface BookTextParser {
     /** Parses [bytes] in the format this parser owns. */
     fun parse(bytes: ByteArray): ParsedBook
+
+    /**
+     * The cover image [bytes] carry, or `null` when the format has none or none
+     * it can read (issue #259). A cheap read for a surface that needs only the
+     * art: it must not render the book, and a failure is never fatal.
+     */
+    fun cover(bytes: ByteArray): ByteArray? = null
+
+    /** Whether this format can carry a cover at all; only **EPUB** does today. */
+    val carriesCover: Boolean get() = false
 }
 
 /**
- * What a parser produced: the [text] and the binary [assets] it extracted from
- * the original. A format with no binaries returns none, which is the common case
- * for a TXT.
+ * What a parser produced: the [text], the binary [assets] it extracted from the
+ * original, and the book's [cover] image when it has one. A format with no
+ * binaries returns none, which is the common case for a TXT.
+ *
+ * The [cover] is the single image a shelf may show as the book's art: raw bytes,
+ * validated by the parser, and a **Derived asset** like the text beside it. It is
+ * deliberately not one of [assets], because no block refers to it.
  */
-data class ParsedBook(val text: StructuredText, val assets: List<BookAsset> = emptyList())
+data class ParsedBook(
+    val text: StructuredText,
+    val assets: List<BookAsset> = emptyList(),
+    val cover: ByteArray? = null,
+)
 
 /**
  * One binary a parser pulled out of the original: the [name] the parsed text

@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,59 +92,80 @@ internal const val LIBRARY_TITLE_TAG: String = "library-title"
  *
  * Its anatomy is the identity's (docs/design.md §7.1): the title is the theme's
  * screen title, the search is the shared [SearchField] rather than a Material
- * field, and a row opens with its **Reading language**'s vignette. The states
- * stay distinct (§8): an empty vault says what to do, a shelf being read shows
- * skeleton rows rather than the empty message, and a query that matches nothing
- * names itself back.
+ * field, and a row opens with its **Cover** when it has one — the **Reading
+ * language**'s vignette otherwise (issue #259). The states stay distinct (§8):
+ * an empty vault says what to do, a shelf being read shows skeleton rows rather
+ * than the empty message, and a query that matches nothing names itself back.
  */
 @Composable
-fun LibraryScreen(state: LibraryUiState, actions: LibraryActions = LibraryActions(), modifier: Modifier = Modifier) {
+fun LibraryScreen(
+    state: LibraryUiState,
+    actions: LibraryActions = LibraryActions(),
+    modifier: Modifier = Modifier,
+    covers: BookCoverLoader = BookCoverLoader.None,
+) {
     var pendingDelete by remember { mutableStateOf<Book?>(null) }
     val texts = LocalAppTexts.current
 
-    Column(
-        modifier.fillMaxSize().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
-    ) {
-        LibraryHeader(vaultEmpty = state.vaultEmpty, importing = state.importing, onImport = actions.onImport)
+    CompositionLocalProvider(LocalBookCovers provides covers) {
+        Column(
+            modifier.fillMaxSize().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+        ) {
+            LibraryHeader(vaultEmpty = state.vaultEmpty, importing = state.importing, onImport = actions.onImport)
 
-        // A field over an empty vault would search nothing; the empty state keeps
-        // its one sentence and its action (issue #173).
-        if (!state.vaultEmpty) {
-            SearchField(
-                query = state.query,
-                onSearch = actions.onSearch,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = LektoSpacing.InsidePanel)
-                    .testTag(LIBRARY_SEARCH_TAG),
-            )
-            StateFilters(
-                selected = state.selectedStates,
-                onToggle = actions.onToggleState,
-                modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-            )
+            // A field over an empty vault would search nothing; the empty state keeps
+            // its one sentence and its action (issue #173).
+            if (!state.vaultEmpty) {
+                SearchField(
+                    query = state.query,
+                    onSearch = actions.onSearch,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = LektoSpacing.InsidePanel)
+                        .testTag(LIBRARY_SEARCH_TAG),
+                )
+                StateFilters(
+                    selected = state.selectedStates,
+                    onToggle = actions.onToggleState,
+                    modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+                )
+            }
+
+            state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
+            if (state.importing) Importing(state.progress)
+
+            LibraryBody(state, actions, onDelete = { target -> pendingDelete = target })
         }
 
-        state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
-        if (state.importing) Importing(state.progress)
-
-        LibraryBody(state, actions, onDelete = { target -> pendingDelete = target })
+        pendingDelete?.let { target ->
+            BookDeleteDialog(
+                target = target,
+                onConfirm = {
+                    pendingDelete = null
+                    actions.onDelete(target)
+                },
+                onDismiss = { pendingDelete = null },
+            )
+        }
     }
+}
 
-    pendingDelete?.let { target ->
-        ConfirmationDialog(
-            title = texts.message(AppMessage.of(TextKey.DELETE_BOOK_TITLE, target.title)),
-            // The file name identifies the imported file, which is not on the row
-            // any more (docs/design.md §7.1).
-            message = texts.message(AppMessage.of(TextKey.DELETE_BOOK_MESSAGE, target.fileName)),
-            confirmLabel = texts[TextKey.DELETE],
-            onConfirm = {
-                pendingDelete = null
-                actions.onDelete(target)
-            },
-            onDismiss = { pendingDelete = null },
-        )
-    }
+/**
+ * The delete confirmation, in the reader's app language (docs/design.md §8;
+ * issue #131). The file name identifies the imported file, which is not on the
+ * row any more (§7.1); it is the one place besides an import error where the
+ * file is named.
+ */
+@Composable
+private fun BookDeleteDialog(target: Book, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val texts = LocalAppTexts.current
+    ConfirmationDialog(
+        title = texts.message(AppMessage.of(TextKey.DELETE_BOOK_TITLE, target.title)),
+        message = texts.message(AppMessage.of(TextKey.DELETE_BOOK_MESSAGE, target.fileName)),
+        confirmLabel = texts[TextKey.DELETE],
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+    )
 }
 
 /**

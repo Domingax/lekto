@@ -1,5 +1,6 @@
 package app.lekto.library
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,8 +17,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -44,6 +50,8 @@ import app.lekto.ui.handCursor
 import app.lekto.ui.icons.Check
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.plainClickable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** The test tag on a book's delete action, so a UI test can click exactly one. */
 internal fun libraryDeleteTag(bookId: String): String = "library-delete-$bookId"
@@ -54,13 +62,16 @@ internal fun libraryProgressTag(bookId: String): String = "library-progress-$boo
 /** The test tag on a row's frame, so a UI test can swipe or measure exactly one row. */
 internal fun libraryRowTag(bookId: String): String = "library-row-$bookId"
 
+/** The test tag on a book's cover, so a UI test can tell art from the language plaque. */
+internal fun libraryCoverTag(bookId: String): String = "library-cover-$bookId"
+
 /** The rule's thickness: 3 dp (docs/design.md §7.1). */
 internal val PROGRESS_RULE_HEIGHT = 3.dp
 
 /** The finished line's check: the row's own small mark, not a control (docs/design.md §7.1). */
 private val FINISHED_CHECK_SIZE = 16.dp
 
-/** The language vignette's frame: 44 × 60 dp, the place a cover would go (§7.1). */
+/** The language vignette's frame: 44 × 60 dp, the fallback plate where a cover may go (§7.1). */
 internal val LANGUAGE_VIGNETTE_WIDTH = 44.dp
 internal val LANGUAGE_VIGNETTE_HEIGHT = 60.dp
 
@@ -73,10 +84,13 @@ internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Bo
  * progress and rule, or `Finished` with a check) — the tap that opens it and the
  * way to delete it (issues #196, #200).
  *
- * There are no covers: a **Book** has no cover image in its record, and a shelf
- * with covers for some books and none for others reads as broken. The vignette is
- * where a cover would go if one ever exists, so its colour is decoration and its
- * two-letter code is what carries the language.
+ * A book's art is shown here (issue #259): an EPUB's cover is extracted at import
+ * as a **Derived asset**, decoded off the main thread and painted in the
+ * vignette's place. The typographic plaque is the **mandatory fallback** — a TXT
+ * never carries art, and an EPUB with no usable cover keeps its language code —
+ * so a row is never a hole. A covered book still announces its **Reading
+ * language** to a screen reader, because the cover carries the code the plaque
+ * used to show.
  *
  * **Delete never sits on the shelf as a red word.** The row's delete is the
  * shared gesture every list row uses ([DeletingRow], issue #212): a swipe from
@@ -126,7 +140,12 @@ private fun BookFrame(
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LanguageVignette(book.language)
+        val cover = rememberCover(book.id, LocalBookCovers.current)
+        BookPlate(
+            language = book.language,
+            cover = cover,
+            modifier = if (cover != null) Modifier.testTag(libraryCoverTag(book.id)) else Modifier,
+        )
         Spacer(Modifier.width(LektoSpacing.BetweenRows))
         Column(
             modifier = Modifier.weight(1f),
@@ -139,16 +158,52 @@ private fun BookFrame(
 }
 
 /**
+ * The book's cover, decoded off the main thread, or `null` while it loads or when
+ * the book has none. A cover is a **Derived asset** the app decodes with its own
+ * platform (ADR-0005, ADR-0011), never a dependency the reader has to wait for.
+ */
+@Suppress("InjectDispatcher") // The decode is the point: a JPEG must not block the shelf.
+@Composable
+private fun rememberCover(bookId: String, covers: BookCoverLoader): ImageBitmap? {
+    val cover by produceState<ImageBitmap?>(initialValue = null, bookId, covers) {
+        value = withContext(Dispatchers.Default) { covers.load(bookId) }
+    }
+    return cover
+}
+
+/**
+ * The book's plate (docs/design.md §7.1; issue #259): its cover when one decoded,
+ * the language vignette otherwise. The frame is the same 44 × 60 either way, so a
+ * shelf's columns stay aligned and a book is never a hole.
+ */
+@Composable
+internal fun BookPlate(language: String?, cover: ImageBitmap?, modifier: Modifier = Modifier) {
+    if (cover != null) {
+        Image(
+            bitmap = cover,
+            contentDescription = languageCode(language).ifEmpty { null },
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .width(LANGUAGE_VIGNETTE_WIDTH)
+                .height(LANGUAGE_VIGNETTE_HEIGHT)
+                .clip(LektoRadii.Control),
+        )
+    } else {
+        LanguageVignette(language, modifier)
+    }
+}
+
+/**
  * The language vignette (docs/design.md §2.4, §7.1; issue #208): a 44 × 60 dp
  * control-shaped tile in the **Reading language**'s hue, carrying its two-letter
  * code. The code is the signal — a reader who cannot tell the hues apart reads
  * the letters — so the hue never has to carry a meaning on its own.
  */
 @Composable
-private fun LanguageVignette(language: String?) {
+private fun LanguageVignette(language: String?, modifier: Modifier = Modifier) {
     val fill = LanguageHues.fill(language, MaterialTheme.colorScheme)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .width(LANGUAGE_VIGNETTE_WIDTH)
             .height(LANGUAGE_VIGNETTE_HEIGHT)
             .background(fill, LektoRadii.Control),

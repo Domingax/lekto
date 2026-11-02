@@ -35,11 +35,13 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
 
     constructor() : this(OpfXmlReader())
 
+    override val carriesCover: Boolean get() = true
+
     override fun parse(bytes: ByteArray): ParsedBook {
-        val archive = EpubArchive.of(bytes)
-        val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER), opfXml)
-        val packageDocument = OpfDocument.parse(archive.read(opfPath), opfXml)
-        val baseDirectory = opfPath.substringBeforeLast('/', missingDelimiterValue = "")
+        val bookPackage = packageOf(bytes)
+        val archive = bookPackage.archive
+        val packageDocument = bookPackage.document
+        val baseDirectory = bookPackage.baseDirectory
         val documents = packageDocument.spine.map { item ->
             val path = EpubArchive.resolve(baseDirectory, item.href)
             SpineDocument(
@@ -62,8 +64,62 @@ class EpubParser internal constructor(private val opfXml: OpfXmlReader) : BookTe
                 chapters = chapters,
             ),
             assets = parts.assets,
+            cover = coverImage(archive, packageDocument.cover, baseDirectory),
         )
     }
+
+    /**
+     * Reads only the container, the package and the cover entry, so a Library
+     * that meets a book for the first time can show its art without parsing the
+     * book's text (issue #259). A failure is `null`, never an exception.
+     */
+    override fun cover(bytes: ByteArray): ByteArray? = runCatching {
+        val bookPackage = packageOf(bytes)
+        coverImage(bookPackage.archive, bookPackage.document.cover, bookPackage.baseDirectory)
+    }.getOrNull()
+
+    /** The archive, its package document and the directory the OPF names, read once. */
+    private fun packageOf(bytes: ByteArray): EpubPackage {
+        val archive = EpubArchive.of(bytes)
+        val opfPath = OpfDocument.containerRootfile(archive.read(CONTAINER), opfXml)
+        return EpubPackage(
+            archive = archive,
+            document = OpfDocument.parse(archive.read(opfPath), opfXml),
+            baseDirectory = opfPath.substringBeforeLast('/', missingDelimiterValue = ""),
+        )
+    }
+
+    /** The EPUB's container and package, plus the directory an OPF href resolves against. */
+    private data class EpubPackage(val archive: EpubArchive, val document: OpfDocument, val baseDirectory: String)
+
+    /**
+     * The cover's raw bytes, or `null` for anything this build cannot show: no
+     * declaration, a media type that is not an image (or is an SVG), an entry
+     * the archive does not carry, or bytes whose header is not a raster image.
+     * A cover is never allowed to fail an import (issue #259).
+     */
+    private fun coverImage(archive: EpubArchive, item: OpfDocument.ManifestItem?, baseDirectory: String): ByteArray? {
+        val usable = item?.takeIf { candidate -> isCoverMediaType(candidate) }
+        return usable?.let { candidate ->
+            val path = EpubArchive.resolve(baseDirectory, candidate.href)
+            runCatching { archive.read(path) }.getOrNull()
+        }?.takeIf { bytes -> ImageHeader.sizeOf(bytes) != null }
+    }
+
+    /**
+     * Whether [item] declares an image a platform decoder may read. The header,
+     * not the label, decides the format; this only keeps a foreign type (a page,
+     * a stylesheet) and the spec-legal SVG out, including the `image/jpg` alias
+     * real EPUB 2 producers write.
+     */
+    private fun isCoverMediaType(item: OpfDocument.ManifestItem): Boolean {
+        val mediaType = mediaTypeOf(item)
+        return mediaType.startsWith("image/") && mediaType != "image/svg+xml"
+    }
+
+    /** The manifest media type, without parameters and case-insensitively. */
+    private fun mediaTypeOf(item: OpfDocument.ManifestItem): String =
+        item.mediaType.substringBefore(';').trim().lowercase()
 
     /** The book's chapters from its first usable table of contents, or `null` when it has none. */
     private fun tableOfContents(

@@ -10,6 +10,7 @@ package app.lekto.core.book
  * and file writes are blocking — so a caller that must not block (the UI) runs
  * it off the main thread and forwards [ImportProgress] to its own state.
  */
+@Suppress("TooManyFunctions") // One operation per member: the façade's size is its contract.
 interface BookLibrary {
 
     /** Every book in the vault, ordered by title. */
@@ -55,6 +56,14 @@ interface BookLibrary {
      * was never opened.
      */
     fun open(id: String): ReadingSession?
+
+    /**
+     * The cover image bytes stored for [bookId], or `null` when the book has none
+     * or none it could read (issue #259). A **Derived asset** regenerated from
+     * the **Book original**: a surface decodes it with its own platform, and
+     * nothing here ever entered the **Vault**.
+     */
+    fun cover(bookId: String): ByteArray?
 
     /** Where the user left off in the book with [bookId], or `null` when unread. */
     fun position(bookId: String): ReadingPosition?

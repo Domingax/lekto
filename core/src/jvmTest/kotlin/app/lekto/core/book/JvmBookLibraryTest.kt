@@ -76,6 +76,21 @@ class JvmBookLibraryTest :
             derived.paths().none { path -> path.startsWith("book-images/${book.id}/") } shouldBe true
         }
 
+        test("a real EPUB's cover lands in the derived store, beside the text") {
+            val root = newRoot()
+            val derived = derivedBeside(root)
+            val library = libraryOver(root, derived)
+
+            val book = library.import("covered.epub", EpubFixtures.coverImage())
+            val cover = File(root.parentFile, "${root.name}-derived/book-cover/${book.id}")
+
+            cover.isFile shouldBe true
+            cover.readBytes().contentEquals(EpubFixtures.coverImageBytes()) shouldBe true
+
+            library.delete(book.id)
+            cover.exists() shouldBe false
+        }
+
         test("a text file imports and opens with its paragraphs") {
             val library = libraryOver(newRoot())
 
