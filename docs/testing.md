@@ -198,8 +198,8 @@ plain list, and the block disappears during a search and when the filter exclude
 `In progress`. The three degradations are the same suite — no snippet ends the
 block at its button, no chapter leaves `28 %`, and no cover keeps the language
 plaque — and so is the delete: the desktop twin opens the confirmation from the
-`⋮`, the Android twin from the swipe as well, and both prove the vault is
-untouched until it is confirmed. The block is one accessible item whose action is
+trash on hover, the Android twin from its always-visible trash and the swipe,
+and both prove the vault is untouched until it is confirmed. The block is one accessible item whose action is
 `Resume` — its suite activates that action through semantics and proves the
 button is not a second stop — and it says what its line is waiting for while the
 length is measured. `AppSemanticsTest` proves the block appears after a page
@@ -584,7 +584,7 @@ row and each demanded level to a red → green before the commit.
 The icon set (issue #184) is generated once and committed, so the Kotlin it adds
 is not hand-written and the generator is not run in tests. `LektoIconsTest` pins
 what a regeneration could silently change: the 24 dp grid, the 2-unit round
-stroke, the fifteen-name set, and the back arrow as the only icon that mirrors in
+stroke, the fourteen-name set, and the back arrow as the only icon that mirrors in
 a right-to-left layout.
 
 The desktop installers (issue #29) are proved by the artefact, not by a unit

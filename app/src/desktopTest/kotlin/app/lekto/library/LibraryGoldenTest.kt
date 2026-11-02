@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -123,8 +124,8 @@ private val CODE_BAR = 22.dp to 10.dp
 /** The resume block's cover stand-in: a solid plate where a real book's art goes. */
 private val PREVIEW_COVER_COLOUR = Color(0xFF5C6B52)
 
-/** The block's overflow glyph, the filled `Resume`'s word, and its snippet's two lines (issue #288). */
-private val MENU_BAR = 4.dp to 18.dp
+/** The block's trash glyph, the filled `Resume`'s word, and its snippet's two lines (issue #288). */
+private val TRASH_BAR = 16.dp to 16.dp
 private val RESUME_WORD_BAR = 16.dp to 10.dp
 private val SNIPPET_BAR = LineBar(height = 12.dp, share = 0.9f)
 
@@ -161,16 +162,31 @@ private fun ShelfPreview() {
 }
 
 /**
- * The **Resume block**'s frame (issue #288): the larger cover, the facts, the
- * `⋮`, the filled `Resume`, then the hairline and the two snippet lines. The
- * plate, the radius, the rule and the spacing are the screen's own constants;
- * only the words are bars.
+ * The **Resume block**'s frame (issue #288): one card on the surface tone holding
+ * the larger plate, the facts, the trash, the filled `Resume`, the hairline and
+ * the two snippet lines. The plate, the radius, the rule and the spacing are the
+ * screen's own constants; only the words are bars.
  */
 @Composable
 private fun ResumeBlockPreview(book: PreviewBook) {
     val theme = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows)) {
-        ResumeCardPreview(book)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = LektoSpacing.BetweenRows)
+            .background(theme.surface, LektoRadii.Surface)
+            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface)
+            .padding(LektoSpacing.InsidePanel),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Block(
+                colour = if (book.hasCover) PREVIEW_COVER_COLOUR else LanguageHues.fill(book.language, theme),
+                size = RESUME_COVER_WIDTH to RESUME_COVER_HEIGHT,
+            )
+            ResumeFactsPreview(book)
+            Block(theme.onSurfaceVariant, TRASH_BAR)
+        }
+        ResumeActionPreview()
         Box(
             Modifier
                 .fillMaxWidth()
@@ -185,44 +201,35 @@ private fun ResumeBlockPreview(book: PreviewBook) {
     }
 }
 
-/** The block's bordered card: the larger plate, the facts, the `⋮` and the filled `Resume`. */
+/** The block's filled `Resume` control, as bars. */
 @Composable
-private fun ResumeCardPreview(book: PreviewBook) {
+private fun ResumeActionPreview() {
+    val theme = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.InsidePanel)
+            .height(LektoSpacing.TouchTarget)
+            .background(theme.primary, LektoRadii.Control),
+        contentAlignment = Alignment.Center,
+    ) {
+        Block(contentColorOn(theme.primary), RESUME_WORD_BAR)
+    }
+}
+
+/** The block's title, author and line, as bars. */
+@Composable
+private fun RowScope.ResumeFactsPreview(book: PreviewBook) {
     val theme = MaterialTheme.colorScheme
     Column(
         Modifier
-            .fillMaxWidth()
-            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface)
-            .padding(LektoSpacing.InsidePanel),
+            .weight(1f)
+            .padding(start = LektoSpacing.BetweenRows, end = LektoSpacing.TouchTarget),
     ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Block(
-                colour = if (book.hasCover) PREVIEW_COVER_COLOUR else LanguageHues.fill(book.language, theme),
-                size = RESUME_COVER_WIDTH to RESUME_COVER_HEIGHT,
-            )
-            Column(
-                Modifier
-                    .weight(1f)
-                    .padding(start = LektoSpacing.BetweenRows, end = LektoSpacing.TouchTarget),
-                verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
-            ) {
-                Line(theme.onBackground, TITLE_BAR)
-                Line(theme.onSurfaceVariant, LINE_BAR)
-                Line(theme.onSurfaceVariant, LINE_BAR)
-                ProgressRule(bookId = "preview-block", percent = book.percent)
-            }
-            Block(theme.onSurfaceVariant, MENU_BAR)
-        }
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = LektoSpacing.InsidePanel)
-                .height(LektoSpacing.TouchTarget)
-                .background(theme.primary, LektoRadii.Control),
-            contentAlignment = Alignment.Center,
-        ) {
-            Block(contentColorOn(theme.primary), RESUME_WORD_BAR)
-        }
+        Line(theme.onBackground, TITLE_BAR)
+        Line(theme.onSurfaceVariant, LINE_BAR, top = LektoSpacing.InsideLabelPair)
+        Line(theme.onSurfaceVariant, LINE_BAR, top = LektoSpacing.BetweenRelatedLines)
+        ProgressRule(bookId = "preview-block", percent = book.percent)
     }
 }
 
@@ -340,10 +347,16 @@ private fun LanguageVignette(language: String) {
     }
 }
 
-/** A bar where a line of text would be. */
+/** A bar where a line of text would be, with an optional gap above it. */
 @Composable
-private fun Line(colour: Color, bar: LineBar) {
-    Box(Modifier.fillMaxWidth(bar.share).height(bar.height).background(colour, LektoRadii.Control))
+private fun Line(colour: Color, bar: LineBar, top: Dp = 0.dp) {
+    Box(
+        Modifier
+            .padding(top = top)
+            .fillMaxWidth(bar.share)
+            .height(bar.height)
+            .background(colour, LektoRadii.Control),
+    )
 }
 
 /** A fixed-size block where the vignette's code would be. */

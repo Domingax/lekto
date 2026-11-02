@@ -87,11 +87,24 @@ private val FieldLabel = TextStyle(
 )
 
 /**
+ * The **Resume block**'s snippet (issue #288; docs/design.md §7.1): the reading
+ * serif at 16 sp in the theme's full ink, because the line is the page the
+ * reader is about to read, not interface prose.
+ */
+val ReadingSnippet = TextStyle(
+    fontFamily = FontFamily.Serif,
+    fontWeight = FontWeight.Normal,
+    fontSize = 16.sp,
+    lineHeight = 24.sp,
+)
+
+/**
  * The two voices of `docs/design.md` §3, and the scale the app actually uses.
  *
- * Interface text is the platform's sans-serif; a screen title, a section title
- * and a vocabulary word borrow the reading serif, so the app's own headings
- * sound like a book's. No face is bundled: the platform already has both.
+ * Interface text is the platform's sans-serif; a screen title, a section title,
+ * a vocabulary word and the resume block's snippet borrow the reading serif, so
+ * the app's own headings sound like a book's. No face is bundled: the platform
+ * already has both.
  *
  * The roles here are the design's, not Material 3's fifteen: an unused display
  * size aliases the screen title rather than introducing a size the identity does
