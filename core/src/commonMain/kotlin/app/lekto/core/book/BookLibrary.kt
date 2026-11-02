@@ -1,5 +1,7 @@
 package app.lekto.core.book
 
+import app.lekto.core.text.TextBlock
+
 /**
  * The library: the vault's books, imported and opened (CONTEXT.md, "Book";
  * issues #15 and #16).
@@ -36,10 +38,10 @@ interface BookLibrary {
 
     /**
      * Removes the book with [id] from the vault — its record, its original
-     * attachment, its cached parsed text, its reading position and its finished
-     * declaration — and leaves a **Tombstone** for the book, for its position and
-     * for its declaration (ADR-0015, ADR-0038), so none resurrects on the next
-     * sync. An unknown [id] is a no-op (issue #131).
+     * attachment, its cached parsed text, its **Resume snippet**, its reading
+     * position and its finished declaration — and leaves a **Tombstone** for the
+     * book, for its position and for its declaration (ADR-0015, ADR-0038), so none
+     * resurrects on the next sync. An unknown [id] is a no-op (issue #131).
      *
      * The steps are ordered so a failure never leaves a half-deleted book
      * visible: the derived cache goes first, the reading position next, and the
@@ -67,6 +69,14 @@ interface BookLibrary {
 
     /** Where the user left off in the book with [bookId], or `null` when unread. */
     fun position(bookId: String): ReadingPosition?
+
+    /**
+     * The **Resume snippet** stored for the book with [bookId] (issue #258), or
+     * `null` when the last save had no paragraph to name. It is a **Derived
+     * asset**, never a **Vault** record, so a surface that reads it on one device
+     * and not another loses nothing.
+     */
+    fun snippet(bookId: String): String?
 
     /**
      * The reader's declaration that the book with [bookId] is **Finished**, or
@@ -104,6 +114,16 @@ interface BookLibrary {
      */
     fun measure(bookId: String): ReadingProgress?
 
-    /** Stores [position] as the book's reading position. */
-    fun savePosition(position: ReadingPosition)
+    /**
+     * Stores [position] as the book's reading position, and the first paragraph
+     * at or after its offset as the book's **Resume snippet** (issue #258).
+     *
+     * [blocks] is the text the reader lays out, passed from the open session so
+     * the snippet costs no parse and no book opening. A legacy caller that has
+     * no text passes none; nothing is derived, and the stored snippet is removed
+     * so no stale line survives the move. When the offset falls past the last
+     * paragraph — the end of the book, an empty text — the snippet is removed
+     * too.
+     */
+    fun savePosition(position: ReadingPosition, blocks: List<TextBlock> = emptyList())
 }

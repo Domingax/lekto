@@ -144,6 +144,18 @@ book with no Reading position has none. Distinct from **Last read**, which recor
 when the position moved, not how far.
 _Avoid_: Percentage, completion, furthest read
 
+**Paragraph**:
+A block of a **Book**'s text that is not a heading, a list item or a picture: the
+unit the reader lays out, and the only kind of block a **Resume snippet** may name.
+_Avoid_: Line, section, chunk
+
+**Resume snippet**:
+The first **Paragraph** at or after a book's **Reading position**, captured when the
+position is saved and kept as a **Derived asset**. It reminds the reader where they
+were; a heading, a list item or a picture is never the snippet, and a position past
+the last paragraph holds none.
+_Avoid_: Excerpt, preview, quote
+
 **Last read**:
 The moment a book's **Reading position** last moved — a page turned, not the book
 opened. It orders the **Library** and is distinct from **Reading progress**, which

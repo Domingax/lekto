@@ -246,6 +246,14 @@ A **Finished** book reads `FORMAT · Finished` with a check and carries **no pro
 declaration is not a percentage, and a book read to the end may have been reread or skipped
 (ADR-0038).
 
+The **Resume snippet** is the first **Paragraph** at or after the **Reading position**, captured
+when the position is saved. It is a **Derived asset** beside the parsed text: every device derives
+it from the same book and offset, so it never enters the **Vault**, never syncs, and deleting a
+book removes it with the text. A heading, a list item or a picture is never the snippet — a
+heading alone does not say where the reader was — and a blank block is skipped for the next
+paragraph. A position past the last paragraph, or an empty text, stores none. Any surface shows
+the line only while a snippet exists.
+
 The `Search` field sits under the title, always visible, and hides while the vault holds no book.
 It matches the title alone — a case- and accent-insensitive substring of the trimmed query —
 because a book found by a string its row does not show, its file name or its language, reads as a

@@ -14,6 +14,7 @@ import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.book.ReadingState
+import app.lekto.core.text.TextBlock
 import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -531,6 +532,8 @@ private class FakeLibrary(
 
     override fun position(bookId: String): ReadingPosition? = null
 
+    override fun snippet(bookId: String): String? = null
+
     override fun finished(bookId: String): FinishedBook? = finishedBooks[bookId]
 
     override fun markFinished(bookId: String) {
@@ -541,5 +544,5 @@ private class FakeLibrary(
         finishedBooks.remove(bookId)
     }
 
-    override fun savePosition(position: ReadingPosition) = Unit
+    override fun savePosition(position: ReadingPosition, blocks: List<TextBlock>) = Unit
 }
