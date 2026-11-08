@@ -11,6 +11,7 @@ import app.lekto.dictionary.DictionaryServices
 import app.lekto.reader.WordTap
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.TEST_SHA256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -44,7 +45,7 @@ class WordTapHandlerTest {
         val services = DictionaryServices { reading, translation ->
             DictionaryPackInstaller(derived, files, files, reading, translation)
         }
-        services.installer("en", "fr").install("https://example.test/pack.sqlite.gz")
+        services.installer("en", "fr").install("https://example.test/pack.sqlite.gz", TEST_SHA256)
         val controller = DictionaryController(services, UnconfinedTestDispatcher())
         var result: WordLookup? = null
 
@@ -62,7 +63,7 @@ class WordTapHandlerTest {
         val services = DictionaryServices { reading, translation ->
             DictionaryPackInstaller(derived, files, files, reading, translation)
         }
-        services.installer("en", "fr").install("https://example.test/pack.sqlite.gz")
+        services.installer("en", "fr").install("https://example.test/pack.sqlite.gz", TEST_SHA256)
         val controller = DictionaryController(services, UnconfinedTestDispatcher())
         var result: WordLookup? = null
 

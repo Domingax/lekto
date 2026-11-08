@@ -11,5 +11,5 @@ package app.lekto.tools.dictionaries
  */
 object LanguageManifestFormat {
     /** The manifest format this build writes. Bump on any change to the schema. */
-    const val VERSION: Int = 1
+    const val VERSION: Int = 2
 }

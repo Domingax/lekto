@@ -7,24 +7,6 @@ import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.baseLanguage
 
 /**
- * The dictionary packs the published workflow produces, at the stable
- * `releases/latest` alias the workflow uploads: one per (Reading language ×
- * **Translation language**) pair (issue #149). [artifact] names the asset by the
- * same rule the pipeline does, and [url] addresses that name at the alias, so a
- * caller that holds the name the **Language manifest** published fetches exactly
- * it.
- */
-object DictionaryRelease {
-
-    /** The date-free asset the release publishes a pair's pack under. */
-    fun artifact(readingLanguage: String, translationLanguage: String): String =
-        "lekto-dictionary-$readingLanguage-$translationLanguage.sqlite.gz"
-
-    /** The stable, date-free URL the release publishes [artifact] at. */
-    fun url(artifact: String): String = "https://github.com/Domingax/lekto/releases/latest/download/$artifact"
-}
-
-/**
  * The dictionary's device-local services (issues #18, #149): a per-pair
  * [installer], built on demand and reused, and the [lookup] and [lemmas] the
  * reader queries. The platform composition root supplies the factory — its own

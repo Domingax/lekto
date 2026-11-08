@@ -5,7 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-/** The command line: required flags, defaults, the two modes and the errors a bad invocation must produce. */
+/** The command line: required flags, defaults, the four modes and the errors a bad invocation must produce. */
 class CliOptionsTest {
 
     @Test
@@ -165,6 +165,24 @@ class CliOptionsTest {
         ) as CliOptions.Measure
 
         assertEquals(listOf(MeasureInput("simple", "en", Path.of("/cache/simple.jsonl.gz"))), options.inputs)
+    }
+
+    @Test
+    fun `parses the publish mode from its own flags`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--publish-manifest",
+                "out/language-manifest.json",
+                "--asset-dir",
+                "out",
+                "--asset-url-base",
+                "https://data.test/releases/download/dictionary-20261101",
+            ),
+        ) as CliOptions.Publish
+
+        assertEquals("language-manifest.json", options.manifest.fileName.toString())
+        assertEquals("out", options.assetDir.fileName.toString())
+        assertEquals("https://data.test/releases/download/dictionary-20261101", options.assetBaseUrl)
     }
 
     @Test

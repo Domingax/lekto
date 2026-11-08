@@ -520,12 +520,12 @@ Each pack and table is a **Derived asset**: never committed.
 list for each configured difficulty language, runs the CLI over the configured
 set and publishes a GitHub Release tagged `dictionary-<YYYYMMDD>` with every
 asset, a `SHA256SUMS` and the per-artefact `NOTICE`/manifest sidecars. The asset
-names are date-free (`lekto-dictionary-en-fr.sqlite.gz`,
-`lekto-difficulty-es.sqlite.gz`), so
-the app fetches each from a stable URL built from the name the **language
-manifest** published, `releases/latest/download/<name>` (issues #18, #149, #161).
-Because `latest` is one release, the whole configured set is published together
-(ADR-0031). The release body is rendered from the committed template
+names stay date-free (`lekto-dictionary-en-fr.sqlite.gz`,
+`lekto-difficulty-es.sqlite.gz`), but the manifest names each one at that dated
+release's own address rather than at a moving alias, so the bytes behind an
+address never change (issue #305, ADR-0047). Because the release is one
+snapshot, the whole configured set is published together (ADR-0031). The release
+body is rendered from the committed template
 `.github/release-notes/dictionary-pack.md`; the full CC BY-SA 4.0 text stays in the
 `NOTICE` sidecars and in each pack's `license_text` metadata. The workflow runs on
 `workflow_dispatch` and a monthly `schedule`, so it can never block application
@@ -538,26 +538,31 @@ The same run also writes a **language manifest**
 (`--language-manifest`, default `language-manifest.json` in the output directory):
 the catalogue of what the release offers for reading — each **Reading language**
 with the **Difficulty table** published for it and the **Dictionary pack**s
-published for its pairs, each pair naming its **Translation language**, and each
-artefact carrying its compressed asset's size in bytes once the workflow has
-gzipped it (issues #145, #161, #215). It is built from the run's own output, so a
-run that published nothing yields an empty manifest and the catalogue can never
-advertise an artefact that was not built. The workflow compresses the assets,
-annotates the manifest with their sizes, then writes `SHA256SUMS` and uploads both
-under date-free names, so the app can fetch one constant address,
+published for its pairs, each pair naming its **Translation language**. Its
+format is 2 (issue #305, ADR-0047): every artefact carries the `url` the app
+follows, the `sha256` of the bytes behind it, and its compressed size in bytes.
+It is built from the run's own output, so a run that published nothing yields an
+empty manifest and the catalogue can never advertise an artefact that was not
+built. The workflow compresses the assets, then runs the CLI's publish mode
+(`--publish-manifest`, `--asset-dir`, `--asset-url-base`), which completes every
+entry with the compressed asset's immutable dated URL, the `sha256` of the bytes
+behind it and its size; an entry whose file the run did not produce fails the
+step. The workflow then writes `SHA256SUMS` and
+uploads both, the manifest under the one constant address
 `releases/latest/download/language-manifest.json`. Its format version is declared
 by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 `LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test
-(ADR-0013). The `sizeBytes` field is additive at that same version, so a build
-that predates it ignores it.
+(ADR-0013).
 
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
-each pair's alias into the device-local **derived store**, validates the format
-handshake and opens the SQLite file in place — `sqlite-jdbc` on the JVM, the
-Android framework's SQLite on Android (ADR-0018). The CLI and the JVM reader use
-**xerial sqlite-jdbc** (Apache-2.0, AGPL-compatible); it is now a production
-dependency of `core`'s JVM target (desktop) as well as the standalone tool, so it
-is held to the licence gate like any other. See ADR-0017, ADR-0018 and
+the address the manifest published into the device-local **derived store**,
+checks the bytes' SHA-256 against the manifest's digest and refuses a mismatch
+rather than installing it, then validates the format handshake and opens the
+SQLite file in place — `sqlite-jdbc` on the JVM, the
+Android framework's SQLite on Android (ADR-0018, ADR-0047). The CLI and the JVM
+reader use **xerial sqlite-jdbc** (Apache-2.0, AGPL-compatible); it is now a
+production dependency of `core`'s JVM target (desktop) as well as the standalone
+tool, so it is held to the licence gate like any other. See ADR-0017, ADR-0018 and
 `docs/research/open-dictionaries.md`.
 
 **KSafe** (Apache-2.0, AGPL-compatible) is the desktop secret store's dependency

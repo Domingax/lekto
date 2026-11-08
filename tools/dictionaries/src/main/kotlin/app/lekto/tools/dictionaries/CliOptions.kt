@@ -18,13 +18,16 @@ internal data class DifficultyOptions(val input: Path, val output: Path, val out
 internal data class MeasureInput(val edition: String, val language: String, val path: Path)
 
 /**
- * The parsed command line, in two shapes.
+ * The parsed command line, in four shapes.
  *
  * [Build] builds **one** pack for a (Reading language × Translation language) pair
  * and, optionally, one reading language's **Difficulty table** — the original
  * single-artefact run, now language-aware. [Catalogue] reads the committed
  * [LanguagesConfig] and builds **every** configured pack and table into one
  * output directory, so a release carries the whole offered set (issue #161).
+ * [Measure] is the full-edition coverage pass that chooses the roster (issue #302).
+ * [Publish] completes that run's **Language manifest** once the assets are
+ * compressed, writing the address, digest and size publication knows (issue #305).
  *
  * The input is the raw Wiktextract `.jsonl[.gz]`. The provenance values are
  * recorded, never a timestamp. The workflow supplies every path; defaults are
@@ -63,10 +66,18 @@ internal sealed interface CliOptions {
      */
     data class Measure(val inputs: List<MeasureInput>, val targets: List<String>, val output: Path) : CliOptions
 
+    /**
+     * Completes a built **Language manifest** for publication (issue #305,
+     * ADR-0047): the artefacts live in [assetDir], and [assetBaseUrl] is the
+     * address prefix the app will follow them at.
+     */
+    data class Publish(val manifest: Path, val assetDir: Path, val assetBaseUrl: String) : CliOptions
+
     companion object {
         fun parse(args: Array<String>): CliOptions {
             val values = parseFlags(args)
             return when {
+                values.containsKey("--publish-manifest") -> publish(values)
                 values.containsKey("--measure-input") -> measure(values)
                 values.containsKey("--languages-config") -> catalogue(values)
                 else -> build(values)
@@ -91,6 +102,12 @@ internal sealed interface CliOptions {
             }
             return MeasureInput(edition, language.lowercase(), Path.of(assignment.substring(separator + 1)))
         }
+
+        private fun publish(values: Map<String, List<String>>): Publish = Publish(
+            manifest = path(values, "--publish-manifest"),
+            assetDir = path(values, "--asset-dir"),
+            assetBaseUrl = required(values, "--asset-url-base"),
+        )
 
         private fun build(values: Map<String, List<String>>): Build {
             val output = path(values, "--output")
@@ -180,6 +197,9 @@ private val KNOWN_FLAGS = setOf(
     "--notice",
     "--manifest",
     "--language-manifest",
+    "--publish-manifest",
+    "--asset-dir",
+    "--asset-url-base",
     "--frequency",
     "--frequency-input",
     "--difficulty-output",

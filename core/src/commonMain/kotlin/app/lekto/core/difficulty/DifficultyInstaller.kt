@@ -1,5 +1,6 @@
 package app.lekto.core.difficulty
 
+import app.lekto.core.dictionary.AssetChecksumMismatch
 import app.lekto.core.dictionary.DictionaryPackMissing
 import app.lekto.core.dictionary.PackDatabaseFactory
 import app.lekto.core.dictionary.PackDownloader
@@ -34,9 +35,9 @@ sealed interface DifficultyState {
  * Downloading is blocking; the application runs [install] off the UI thread.
  *
  * The [install] address is a parameter rather than a field because the
- * **Language manifest** names the asset it published for a language, and the app
- * fetches exactly that name (issue #148): the installer owns the lifecycle, the
- * catalogue owns the address.
+ * **Language manifest** names the asset it published for a language, with its URL
+ * and digest, and the app fetches exactly that (issue #148, issue #305): the
+ * installer owns the lifecycle, the catalogue owns the address.
  */
 class DifficultyInstaller(
     private val derived: DerivedAssetStore,
@@ -59,11 +60,27 @@ class DifficultyInstaller(
 
     /**
      * Downloads the table from [url] and installs it, replacing any previous
-     * version. A table this build refuses leaves the store clean, so a later
-     * download can replace it.
+     * version. A table whose bytes do not hash to [sha256] is refused before it
+     * reaches the store, so a previously installed table survives and a first
+     * install reports the mismatch rather than a table (issue #305). A table this
+     * build otherwise refuses leaves the store clean, so a later download can
+     * replace it.
      */
-    fun install(url: String): DifficultyState {
-        downloader.download(url, destination())
+    fun install(url: String, sha256: String): DifficultyState {
+        try {
+            downloader.download(url, destination(), sha256)
+        } catch (_: AssetChecksumMismatch) {
+            // The downloader never replaced the destination, so a good table already
+            // installed stays installed; only a first install has nothing to open.
+            val inspected = inspect(destination())
+            val reported = if (inspected is DifficultyState.Ready) {
+                inspected
+            } else {
+                DifficultyState.Corrupt(CHECKSUM_MISMATCH)
+            }
+            state = reported
+            return reported
+        }
         val inspected = inspect(destination())
         state = inspected
         return inspected
@@ -124,5 +141,7 @@ class DifficultyInstaller(
         fun pathOf(language: String): String = "difficulty/${baseLanguage(language)}/table.sqlite"
 
         private const val UNREADABLE = "The reading-level data could not be read."
+        private const val CHECKSUM_MISMATCH =
+            "The downloaded reading-level data does not match the SHA-256 the manifest published."
     }
 }

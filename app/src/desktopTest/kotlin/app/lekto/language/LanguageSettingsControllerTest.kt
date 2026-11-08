@@ -1,8 +1,8 @@
 package app.lekto.language
 
 import app.lekto.core.language.LanguageSettings
-import app.lekto.core.language.OfferedDictionary
 import app.lekto.testkit.InMemoryLanguageSettingsStore
+import app.lekto.testkit.testOfferedDictionary
 import app.lekto.testkit.testOfferedLanguage
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,8 +21,8 @@ class LanguageSettingsControllerTest {
         testOfferedLanguage(
             "en",
             dictionaries = listOf(
-                OfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz"),
-                OfferedDictionary("es", "lekto-dictionary-en-es.sqlite.gz"),
+                testOfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz"),
+                testOfferedDictionary("es", "lekto-dictionary-en-es.sqlite.gz"),
             ),
         ),
     )

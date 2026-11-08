@@ -148,35 +148,30 @@ jobs:
           "$cli" "${args[@]}"
 
       # `-n` omits the gzip timestamp and filename, so compression adds no
-      # non-determinism of its own. The pack and table names are already date-free,
-      # so the app fetches them from stable
-      # `releases/latest/download/<name>` URLs (issues #18, #161).
+      # non-determinism of its own.
       - name: Compress the assets deterministically
         run: |
           for sqlite in "$RUNNER_TEMP/out"/*.sqlite; do
             gzip -9 -n "$sqlite"
           done
 
-      # The app shows a download's size before fetching it. The manifest is written
-      # before compression, so annotate each entry with its compressed asset's byte
-      # count here. `sizeBytes` is additive at the same format version: an older
-      # build ignores it (ADR-0013).
-      - name: Record the asset sizes in the manifest
+      # The app follows the address the manifest publishes rather than composing
+      # one from the name, so the manifest is the lock on the bytes (issue #305,
+      # ADR-0047). Publication runs after compression: the CLI completes each entry
+      # with the compressed asset's immutable dated URL, the digest of the bytes
+      # behind it and its size. An artefact the manifest names but the run did not
+      # produce fails the step rather than publishing an address that does not
+      # resolve.
+      - name: Publish the language manifest
+        env:
+          ASSET_BASE_URL: >-
+            ${{ github.server_url }}/${{ github.repository }}/releases/download/dictionary-${{ steps.release.outputs.date }}
         run: |
-          cd "$RUNNER_TEMP/out"
-          sizes="$(for asset in *.sqlite.gz; do
-            printf '%s\t%s\n' "$asset" "$(stat -c %s "$asset")"
-          done | jq -Rn '[inputs | split("\t") | {(.[0]): (.[1] | tonumber)}] | add')"
-          jq --argjson sizes "$sizes" '
-            .languages |= map(
-              (if (.difficulty != null) and ($sizes[.difficulty.name] != null)
-               then .difficulty.sizeBytes = $sizes[.difficulty.name] else . end)
-              | (if .dictionaries != null
-                 then .dictionaries |= map(
-                     if $sizes[.name] != null then .sizeBytes = $sizes[.name] else . end)
-                 else . end)
-            )' language-manifest.json > language-manifest.sized.json
-          mv language-manifest.sized.json language-manifest.json
+          cli=tools/dictionaries/build/install/dictionaries/bin/dictionaries
+          "$cli" \
+            --publish-manifest "$RUNNER_TEMP/out/language-manifest.json" \
+            --asset-dir "$RUNNER_TEMP/out" \
+            --asset-url-base "$ASSET_BASE_URL"
 
       - name: Write the checksums
         run: |

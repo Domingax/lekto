@@ -75,7 +75,7 @@ internal fun DifficultyControl(offered: OfferedLanguage, difficulty: DifficultyU
                     texts,
                     state.installing,
                     state.status !is DifficultyState.NotInstalled,
-                    offered.difficultySizeBytes,
+                    artifact.sizeBytes,
                 ),
                 enabled = !state.installing,
                 tag = languageDifficultyDownloadTag(offered.language),
@@ -110,7 +110,7 @@ internal fun DictionaryControls(
         return
     }
     offered.dictionaries.forEach { dictionary ->
-        DictionaryControl(offered.language, dictionary, dictionaries[dictionary.name], actions)
+        DictionaryControl(offered.language, dictionary, dictionaries[dictionary.artifact.name], actions)
     }
 }
 
@@ -132,7 +132,7 @@ private fun DictionaryControl(
     val pair = "${texts.languageName(readingLanguage)} → ${texts.languageName(dictionary.translationLanguage)}"
     ArtifactLine(
         status = "$pair · ${texts.dictionaryStatus(current.status)}",
-        stateTag = languageDictionaryStateTag(dictionary.name),
+        stateTag = languageDictionaryStateTag(dictionary.artifact.name),
         installing = current.installing,
         action = {
             DownloadAction(
@@ -140,20 +140,20 @@ private fun DictionaryControl(
                     texts,
                     current.installing,
                     current.status !is DictionaryPackState.NotInstalled,
-                    dictionary.sizeBytes,
+                    dictionary.artifact.sizeBytes,
                 ),
                 enabled = !current.installing,
-                tag = languageDictionaryDownloadTag(dictionary.name),
+                tag = languageDictionaryDownloadTag(dictionary.artifact.name),
                 onClickLabel = texts[TextKey.DOWNLOAD_DICTIONARY],
                 onClick = {
-                    actions.onDownloadDictionary(readingLanguage, dictionary.translationLanguage, dictionary.name)
+                    actions.onDownloadDictionary(readingLanguage, dictionary.translationLanguage, dictionary.artifact)
                 },
             )
         },
     )
     current.error?.let { message ->
-        ArtifactError(texts.message(message), languageDictionaryDismissTag(dictionary.name)) {
-            actions.onDismissDictionaryError(dictionary.name)
+        ArtifactError(texts.message(message), languageDictionaryDismissTag(dictionary.artifact.name)) {
+            actions.onDismissDictionaryError(dictionary.artifact.name)
         }
     }
 }

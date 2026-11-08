@@ -18,13 +18,21 @@ import kotlinx.serialization.json.Json
 data class OfferedLanguage(
     val language: String,
     val displayName: String,
-    val difficulty: String?,
+    val difficulty: OfferedArtifact?,
     val dictionaries: List<OfferedDictionary>,
-    val difficultySizeBytes: Long? = null,
 )
 
+/**
+ * A **Derived asset** the manifest published (issue #305): the address the app
+ * follows, and the digest that proves the bytes behind it are the ones the
+ * manifest measured. [name] stays the asset's identity — the manifest and the
+ * surface key their state by it — while [url] is the only address the app
+ * fetches, so the app never composes one from the name (ADR-0047).
+ */
+data class OfferedArtifact(val name: String, val url: String, val sha256: String, val sizeBytes: Long? = null)
+
 /** A **Dictionary pack** offered for a (Reading language × **Translation language**) pair. */
-data class OfferedDictionary(val translationLanguage: String, val name: String, val sizeBytes: Long? = null)
+data class OfferedDictionary(val translationLanguage: String, val artifact: OfferedArtifact)
 
 /** What reading a **Language manifest**'s bytes produced. */
 sealed interface LanguageManifestRead {
@@ -44,6 +52,10 @@ sealed interface LanguageManifestRead {
  * function from bytes to a catalogue. The handshake is strict — a manifest whose
  * [ManifestDocument.formatVersion] is not [LanguageManifest.FORMAT_VERSION] is
  * [LanguageManifestRead.Refused], never misread as an older or newer shape.
+ *
+ * Every artefact must name its own address and digest: a manifest that omits
+ * either is malformed rather than silently fetched by a composed URL (issue #305,
+ * ADR-0047).
  *
  * Unknown keys are tolerated so an additive field at the same format version does
  * not break an older app; the version bump is what signals a breaking change.
@@ -72,20 +84,31 @@ private data class ManifestLanguage(
     val dictionaries: List<ManifestDictionary> = emptyList(),
 )
 
+/** A published artefact as the manifest names it: its name, address, digest and optional size. */
 @Serializable
-private data class ManifestArtifact(val name: String, val sizeBytes: Long? = null)
+private data class ManifestArtifact(val name: String, val url: String, val sha256: String, val sizeBytes: Long? = null)
 
 @Serializable
-private data class ManifestDictionary(val translationLanguage: String, val name: String, val sizeBytes: Long? = null)
+private data class ManifestDictionary(
+    val translationLanguage: String,
+    val name: String,
+    val url: String,
+    val sha256: String,
+    val sizeBytes: Long? = null,
+)
 
 private fun ManifestLanguage.toOffered(): OfferedLanguage = OfferedLanguage(
     language = language,
     displayName = readingLanguageName(language),
-    difficulty = difficulty?.name,
-    dictionaries = dictionaries.map { dictionary ->
-        OfferedDictionary(dictionary.translationLanguage, dictionary.name, dictionary.sizeBytes)
-    },
-    difficultySizeBytes = difficulty?.sizeBytes,
+    difficulty = difficulty?.toOffered(),
+    dictionaries = dictionaries.map(ManifestDictionary::toOffered),
+)
+
+private fun ManifestArtifact.toOffered(): OfferedArtifact = OfferedArtifact(name, url, sha256, sizeBytes)
+
+private fun ManifestDictionary.toOffered(): OfferedDictionary = OfferedDictionary(
+    translationLanguage = translationLanguage,
+    artifact = OfferedArtifact(name, url, sha256, sizeBytes),
 )
 
 private val manifestJson: Json = Json { ignoreUnknownKeys = true }
