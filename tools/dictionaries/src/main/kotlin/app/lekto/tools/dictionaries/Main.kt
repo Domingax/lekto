@@ -17,7 +17,9 @@ import kotlin.system.exitProcess
  * sanity gate, and writes the pack plus its NOTICE and manifest. A run over the
  * configured language set reads the committed `languages.json` and builds every
  * configured pack and **Difficulty table** into one directory, with one **Language
- * manifest** listing them all (issue #161). The CI workflow downloads the input, runs this CLI and
+ * manifest** listing them all (issue #161); a publish run then completes that
+ * manifest with each artefact's address, digest and size once the assets are
+ * compressed (issue #305). The CI workflow downloads the input, runs this CLI and
  * publishes the release (`.github/workflows/dictionary-pack.yml`); nothing here is
  * committed.
  */
@@ -27,6 +29,7 @@ fun main(args: Array<String>) {
             is CliOptions.Build -> runBuild(options)
             is CliOptions.Catalogue -> runCatalogue(options)
             is CliOptions.Measure -> runMeasure(options)
+            is CliOptions.Publish -> runPublish(options)
         }
     } catch (error: IllegalArgumentException) {
         fail(error)
@@ -132,6 +135,23 @@ internal fun runMeasure(options: CliOptions.Measure) {
     options.output.toAbsolutePath().parent?.let(Files::createDirectories)
     Files.writeString(options.output, json)
     println(json)
+}
+
+/**
+ * Completes a run's **Language manifest** for publication (issue #305): the
+ * assets are already compressed, so every entry gains its address, the SHA-256 of
+ * the bytes behind it and its size, and the manifest is written back. Publishing
+ * this last is what lets the app follow a URL without racing a moving alias
+ * (ADR-0047).
+ */
+internal fun runPublish(options: CliOptions.Publish) {
+    val manifest = languageManifestJson.decodeFromString(
+        LanguageManifest.serializer(),
+        Files.readString(options.manifest),
+    )
+    val published = publishLanguageManifest(manifest, options.assetDir, options.assetBaseUrl)
+    Files.writeString(options.manifest, published.canonicalJson())
+    println(published.canonicalJson())
 }
 
 /** Writes a pack and its two release sidecars (attribution and provenance). */

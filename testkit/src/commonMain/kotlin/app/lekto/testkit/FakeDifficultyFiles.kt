@@ -1,5 +1,6 @@
 package app.lekto.testkit
 
+import app.lekto.core.dictionary.AssetChecksumMismatch
 import app.lekto.core.dictionary.DictionaryPackMissing
 import app.lekto.core.dictionary.PackDatabase
 import app.lekto.core.dictionary.PackDatabaseFactory
@@ -48,13 +49,22 @@ class FakeDifficultyFiles(
     /** When set, opening the table throws it; used to test a corrupt table. */
     var openFailure: Exception? = null
 
+    /** The digest the fake reports for the bytes it serves; a test changes it to prove refusal (issue #305). */
+    var servedSha256: String = TEST_SHA256
+
+    /** The last address the installer asked for; a test asserts it is the manifest's own URL (issue #305). */
+    var lastUrl: String? = null
+        private set
+
     /** How many downloads have been attempted. */
     var downloads: Int = 0
         private set
 
-    override fun download(url: String, destination: String) {
+    override fun download(url: String, destination: String, sha256: String) {
         failure?.let { throw it }
         downloads++
+        lastUrl = url
+        if (!servedSha256.equals(sha256, ignoreCase = true)) throw AssetChecksumMismatch()
         derived.put(DifficultyInstaller.pathOf(language), MARKER)
     }
 

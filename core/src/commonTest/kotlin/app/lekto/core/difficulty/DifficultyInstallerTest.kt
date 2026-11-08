@@ -4,6 +4,7 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.MISMATCHED_SHA256
 import app.lekto.testkit.testVaultRecord
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -22,6 +23,7 @@ class DifficultyInstallerTest :
 
         val language = "en"
         val url = "https://example.test/lekto-difficulty-en.sqlite.gz"
+        val sha = app.lekto.testkit.TEST_SHA256
 
         fun installer(
             derived: DerivedAssetStore = DerivedAssetStore(InMemoryVaultFileSystem()),
@@ -38,7 +40,7 @@ class DifficultyInstallerTest :
         test("an install downloads the table, reports it ready and opens it") {
             val (installed, files) = installer()
 
-            val state = installed.install(url)
+            val state = installed.install(url, sha)
 
             state.shouldBeInstanceOf<DifficultyState.Ready>()
             installed.status().shouldBeInstanceOf<DifficultyState.Ready>()
@@ -58,7 +60,7 @@ class DifficultyInstallerTest :
             val (installed, files) = installer(derived)
             files.version = WordDifficulty.FORMAT_VERSION + 1
 
-            installed.install(url) shouldBe
+            installed.install(url, sha) shouldBe
                 DifficultyState.Incompatible(WordDifficulty.FORMAT_VERSION + 1, WordDifficulty.FORMAT_VERSION)
             installed.status() shouldBe
                 DifficultyState.Incompatible(WordDifficulty.FORMAT_VERSION + 1, WordDifficulty.FORMAT_VERSION)
@@ -66,12 +68,26 @@ class DifficultyInstallerTest :
             installer(derived).first.status() shouldBe DifficultyState.NotInstalled
         }
 
+        test("a download whose digest is not the manifest's is refused, not installed") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (installed, files) = installer(derived)
+            files.servedSha256 = MISMATCHED_SHA256
+
+            val state = installed.install(url, sha)
+
+            state.shouldBeInstanceOf<DifficultyState.Corrupt>().reason shouldBe
+                "The downloaded reading-level data does not match the SHA-256 the manifest published."
+            installed.status() shouldBe state
+            installed.open() shouldBe null
+            derived.paths() shouldBe emptyList()
+        }
+
         test("a corrupt table degrades to a corrupt state rather than throwing") {
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (installed, files) = installer(derived)
             files.openFailure = IllegalStateException("file is not a database")
 
-            val state = installed.install(url)
+            val state = installed.install(url, sha)
 
             state.shouldBeInstanceOf<DifficultyState.Corrupt>()
             state.reason shouldBe "file is not a database"
@@ -107,14 +123,14 @@ class DifficultyInstallerTest :
             val (installed, files) = installer()
             files.failure = java.io.IOException("offline")
 
-            assertFailsWith<java.io.IOException> { installed.install(url) }
+            assertFailsWith<java.io.IOException> { installed.install(url, sha) }
 
             installed.status() shouldBe DifficultyState.NotInstalled
         }
 
         test("removing the table uninstalls it, and removing an absent one is harmless") {
             val (installed, _) = installer()
-            installed.install(url)
+            installed.install(url, sha)
 
             installed.remove() shouldBe DifficultyState.NotInstalled
 
@@ -124,7 +140,7 @@ class DifficultyInstallerTest :
 
         test("closing the installer releases the open table") {
             val (installed, _) = installer()
-            installed.install(url)
+            installed.install(url, sha)
 
             installed.close()
 
@@ -138,7 +154,7 @@ class DifficultyInstallerTest :
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (installed, _) = installer(derived)
 
-            installed.install(url)
+            installed.install(url, sha)
 
             derived.paths() shouldBe listOf(DifficultyInstaller.pathOf(language))
             vault.exportBundle().decodeToString().contains("difficulty-table-bytes") shouldBe false

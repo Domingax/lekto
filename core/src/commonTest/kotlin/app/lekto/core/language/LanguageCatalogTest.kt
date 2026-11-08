@@ -5,6 +5,7 @@ import app.lekto.core.vault.JsonVaultStore
 import app.lekto.testkit.FakeManifestDownloader
 import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.testLanguageManifest
+import app.lekto.testkit.testOfferedArtifact
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.testkit.testVaultRecord
 import io.kotest.core.spec.style.FunSpec
@@ -35,7 +36,9 @@ class LanguageCatalogTest :
 
         test("a reload fetches the manifest and caches it") {
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
-            val offered = listOf(testOfferedLanguage("en", difficulty = "lekto-difficulty-en.sqlite.gz"))
+            val offered = listOf(
+                testOfferedLanguage("en", difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz")),
+            )
             val bytes = testLanguageManifest(offered)
             val (catalog, _) = catalog(derived = derived, downloader = FakeManifestDownloader(bytes))
 
@@ -112,7 +115,7 @@ class LanguageCatalogTest :
             val vault = JsonVaultStore(InMemoryVaultFileSystem())
             vault.put(testVaultRecord("a"))
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
-            val marker = """{"formatVersion":1,"languages":[{"language":"en"}],"marker":"manifest-marker"}"""
+            val marker = """{"formatVersion":2,"languages":[{"language":"en"}],"marker":"manifest-marker"}"""
             val (catalog, _) = catalog(
                 derived = derived,
                 downloader = FakeManifestDownloader(marker.encodeToByteArray()),

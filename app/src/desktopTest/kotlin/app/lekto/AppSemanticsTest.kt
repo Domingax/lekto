@@ -46,7 +46,7 @@ import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettings
 import app.lekto.core.language.LanguageSettingsStore
-import app.lekto.core.language.OfferedDictionary
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
@@ -74,13 +74,11 @@ import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.core.vocabulary.VocabularyRecord
-import app.lekto.dictionary.DictionaryRelease
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.LOOKUP_CLOSE_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
-import app.lekto.difficulty.DifficultyRelease
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_BACK_TAG
@@ -159,6 +157,8 @@ import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
 import app.lekto.testkit.inMemoryVocabulary
+import app.lekto.testkit.testOfferedArtifact
+import app.lekto.testkit.testOfferedDictionary
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.translation.PHRASE_CLOSE_TAG
 import app.lekto.translation.TRANSLATION_RESULT_TAG
@@ -679,7 +679,7 @@ class AppSemanticsTest {
     @Test
     fun theLanguagesSurfaceShowsAnInstalledDictionaryAndItsAttribution() = runComposeUiTest {
         val installed = dictionaryServices().also { services ->
-            services.installer("en", "fr").install(DictionaryRelease.url(DictionaryRelease.artifact("en", "fr")))
+            services.installer("en", "fr").install(MANIFEST_PACK.url, MANIFEST_PACK.sha256)
         }
         setContent { App(environment(InMemoryLibrary(), languages = dictionaryCatalog(), dictionary = installed)) }
 
@@ -1538,7 +1538,7 @@ private fun languageCatalog(): LanguageCatalog =
 /** A catalog whose English entry publishes a **Difficulty table**, so its download is offered. */
 private fun difficultyCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
     LanguageCatalogState.Available(
-        listOf(testOfferedLanguage("en", difficulty = DifficultyRelease.artifact("en"))),
+        listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz"))),
     ),
 )
 
@@ -1549,7 +1549,7 @@ private fun dictionaryCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
             testOfferedLanguage(
                 "en",
                 dictionaries = listOf(
-                    OfferedDictionary("fr", DictionaryRelease.artifact("en", "fr")),
+                    testOfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz"),
                 ),
             ),
         ),
@@ -1563,8 +1563,8 @@ private fun translationCatalog(): LanguageCatalog = InMemoryLanguageCatalog(
             testOfferedLanguage(
                 "en",
                 dictionaries = listOf(
-                    OfferedDictionary("fr", DictionaryRelease.artifact("en", "fr")),
-                    OfferedDictionary("es", DictionaryRelease.artifact("en", "es")),
+                    testOfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz"),
+                    testOfferedDictionary("es", "lekto-dictionary-en-es.sqlite.gz"),
                 ),
             ),
         ),
@@ -1733,6 +1733,9 @@ private fun ComposeUiTest.selectFirstPhrase() {
     }
 }
 
+/** The pack the fixture manifest publishes for English → French. */
+private val MANIFEST_PACK: OfferedArtifact = testOfferedArtifact("lekto-dictionary-en-fr.sqlite.gz")
+
 private fun dictionaryServices(): DictionaryServices {
     val derived = DerivedAssetStore(InMemoryVaultFileSystem())
     return DictionaryServices { reading, translation ->
@@ -1743,7 +1746,7 @@ private fun dictionaryServices(): DictionaryServices {
 
 /** The dictionary services with the en→fr pack installed, so a lookup answers the fixture words. */
 private fun installedDictionary(): DictionaryServices = dictionaryServices().also { services ->
-    services.installer("en", "fr").install(DictionaryRelease.url(DictionaryRelease.artifact("en", "fr")))
+    services.installer("en", "fr").install(MANIFEST_PACK.url, MANIFEST_PACK.sha256)
 }
 
 /** Enough paragraphs to span several pages at any test viewport. */

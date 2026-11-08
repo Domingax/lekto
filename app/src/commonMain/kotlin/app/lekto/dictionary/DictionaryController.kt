@@ -2,6 +2,7 @@ package app.lekto.dictionary
 
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
@@ -55,7 +56,7 @@ class DictionaryController(
         val current = _states.value
         val inspected = current + languages.flatMap { language ->
             language.dictionaries.map { dictionary ->
-                dictionary.name to (current[dictionary.name] ?: DictionaryUiState()).copy(
+                dictionary.artifact.name to (current[dictionary.artifact.name] ?: DictionaryUiState()).copy(
                     status = services.installer(language.language, dictionary.translationLanguage).status(),
                 )
             }
@@ -64,23 +65,24 @@ class DictionaryController(
     }
 
     /**
-     * Downloads and installs the pack [artifact] from the manifest for the
-     * [readingLanguage] × [translationLanguage] pair, reporting progress and
-     * catching failure so the surface stays usable.
+     * Downloads and installs the pack [artifact] the manifest published for the
+     * [readingLanguage] × [translationLanguage] pair, following the manifest's
+     * own URL and checking its digest, and reporting progress and catching failure
+     * so the surface stays usable (issue #305).
      */
     @Suppress("TooGenericExceptionCaught") // A failed download becomes a message; the app stays usable.
-    fun install(readingLanguage: String, translationLanguage: String, artifact: String) {
-        if (stateOf(artifact).installing) return
+    fun install(readingLanguage: String, translationLanguage: String, artifact: OfferedArtifact) {
+        if (stateOf(artifact.name).installing) return
         // Resolve the installer on this thread, so its per-pair cache is only
         // ever written from the surface's own thread (docs/testing.md, "Deterministic seams").
         val installer = services.installer(readingLanguage, translationLanguage)
-        update(artifact) { current -> current.copy(installing = true, error = null) }
+        update(artifact.name) { current -> current.copy(installing = true, error = null) }
         scope.launch {
             try {
-                val status = withContext(dispatcher) { installer.install(DictionaryRelease.url(artifact)) }
-                update(artifact) { current -> current.copy(status = status, installing = false) }
+                val status = withContext(dispatcher) { installer.install(artifact.url, artifact.sha256) }
+                update(artifact.name) { current -> current.copy(status = status, installing = false) }
             } catch (failure: Exception) {
-                update(artifact) { current ->
+                update(artifact.name) { current ->
                     current.copy(
                         installing = false,
                         error = AppMessage.failure(failure, TextKey.MESSAGE_DICTIONARY_DOWNLOAD_FAILED),

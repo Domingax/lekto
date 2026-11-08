@@ -3,10 +3,13 @@ package app.lekto.dictionary
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.MISMATCHED_SHA256
+import app.lekto.testkit.testOfferedArtifact
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -62,8 +65,8 @@ class DictionaryControllerTest {
             ),
         )
 
-        assertTrue(controller.states.value.getValue(artifact("en", "fr")).status is DictionaryPackState.Ready)
-        assertEquals(DictionaryPackState.NotInstalled, controller.states.value.getValue(artifact("fr", "en")).status)
+        assertTrue(controller.states.value.getValue(pack("en", "fr")).status is DictionaryPackState.Ready)
+        assertEquals(DictionaryPackState.NotInstalled, controller.states.value.getValue(pack("fr", "en")).status)
     }
 
     @Test
@@ -73,9 +76,36 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        assertTrue(controller.states.value.getValue(artifact("en", "fr")).status is DictionaryPackState.Ready)
+        assertTrue(controller.states.value.getValue(pack("en", "fr")).status is DictionaryPackState.Ready)
         assertEquals(1, files.getValue("en" to "fr").downloads)
-        assertNull(controller.states.value.getValue(artifact("en", "fr")).error)
+        assertNull(controller.states.value.getValue(pack("en", "fr")).error)
+    }
+
+    @Test
+    fun `an install follows the manifest's own address rather than composing one`() = runTest {
+        val controller = controller()
+        val artifact = testOfferedArtifact(
+            name = "lekto-dictionary-en-fr.sqlite.gz",
+            url = "https://data.test/lekto-data/releases/download/dictionary-20261101/lekto-dictionary-en-fr.sqlite.gz",
+        )
+
+        controller.install("en", "fr", artifact)
+        advanceUntilIdle()
+
+        assertEquals(artifact.url, files.getValue("en" to "fr").lastUrl)
+        assertTrue(controller.states.value.getValue(artifact.name).status is DictionaryPackState.Ready)
+    }
+
+    @Test
+    fun `an install refuses bytes whose digest is not the manifest's`() = runTest {
+        file("en", "fr").servedSha256 = MISMATCHED_SHA256
+        val controller = controller()
+
+        controller.install("en", "fr", artifact("en", "fr"))
+        advanceUntilIdle()
+
+        val state = controller.states.value.getValue(pack("en", "fr")).status
+        assertTrue(state is DictionaryPackState.Corrupt, "a mismatched download must not be installed")
     }
 
     @Test
@@ -91,7 +121,7 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        assertEquals(DictionaryPackState.NotInstalled, controller.states.value.getValue(artifact("fr", "en")).status)
+        assertEquals(DictionaryPackState.NotInstalled, controller.states.value.getValue(pack("fr", "en")).status)
         assertEquals(0, file("fr", "en").downloads, "no download for a pair that was not installed")
     }
 
@@ -103,8 +133,8 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        assertEquals(AppMessage.core("offline"), controller.states.value.getValue(artifact("en", "fr")).error)
-        assertTrue(!controller.states.value.getValue(artifact("en", "fr")).installing)
+        assertEquals(AppMessage.core("offline"), controller.states.value.getValue(pack("en", "fr")).error)
+        assertTrue(!controller.states.value.getValue(pack("en", "fr")).installing)
     }
 
     @Test
@@ -114,9 +144,9 @@ class DictionaryControllerTest {
         controller.install("en", "fr", artifact("en", "fr"))
         advanceUntilIdle()
 
-        controller.dismissError(artifact("en", "fr"))
+        controller.dismissError(pack("en", "fr"))
 
-        assertNull(controller.states.value.getValue(artifact("en", "fr")).error)
+        assertNull(controller.states.value.getValue(pack("en", "fr")).error)
     }
 
     @Test
@@ -174,7 +204,10 @@ class DictionaryControllerTest {
         assertTrue(controller.lookUp("zzzz", "en", "fr") is WordLookup.NotInDictionary)
     }
 
-    /** The asset name the manifest publishes a pair's pack under. */
-    private fun artifact(reading: String, translation: String): String =
-        DictionaryRelease.artifact(reading, translation)
+    /** The asset the manifest publishes a pair's pack under. */
+    private fun artifact(reading: String, translation: String): OfferedArtifact =
+        testOfferedArtifact("lekto-dictionary-$reading-$translation.sqlite.gz")
+
+    /** The name the surface keys a pair's state by — the manifest's artefact name. */
+    private fun pack(reading: String, translation: String): String = artifact(reading, translation).name
 }

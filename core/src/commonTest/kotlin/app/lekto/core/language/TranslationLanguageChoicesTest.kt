@@ -1,5 +1,6 @@
 package app.lekto.core.language
 
+import app.lekto.testkit.testOfferedDictionary
 import app.lekto.testkit.testOfferedLanguage
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -18,11 +19,11 @@ class TranslationLanguageChoicesTest :
                 testOfferedLanguage(
                     "en",
                     dictionaries = listOf(
-                        OfferedDictionary("fr", "en-fr"),
-                        OfferedDictionary("es", "en-es"),
+                        testOfferedDictionary("fr", "en-fr"),
+                        testOfferedDictionary("es", "en-es"),
                     ),
                 ),
-                testOfferedLanguage("fr", dictionaries = listOf(OfferedDictionary("en", "fr-en"))),
+                testOfferedLanguage("fr", dictionaries = listOf(testOfferedDictionary("en", "fr-en"))),
             )
 
             publishedTranslationLanguages(offered) shouldContainExactly listOf("en", "fr", "es")
@@ -33,25 +34,25 @@ class TranslationLanguageChoicesTest :
         }
 
         test("the device's language is the default when a pack translates into it") {
-            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(OfferedDictionary("fr", "en-fr"))))
+            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(testOfferedDictionary("fr", "en-fr"))))
 
             defaultTranslationLanguage("fr", offered) shouldBe "fr"
         }
 
         test("the device language is collapsed to its base tag before it is matched") {
-            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(OfferedDictionary("es", "en-es"))))
+            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(testOfferedDictionary("es", "en-es"))))
 
             defaultTranslationLanguage("es-419", offered) shouldBe "es"
         }
 
         test("a device language no pack translates into defaults to nothing") {
-            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(OfferedDictionary("fr", "en-fr"))))
+            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(testOfferedDictionary("fr", "en-fr"))))
 
             defaultTranslationLanguage("de", offered) shouldBe null
         }
 
         test("an unknown or absent device language defaults to nothing") {
-            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(OfferedDictionary("fr", "en-fr"))))
+            val offered = listOf(testOfferedLanguage("en", dictionaries = listOf(testOfferedDictionary("fr", "en-fr"))))
 
             defaultTranslationLanguage(null, offered) shouldBe null
             defaultTranslationLanguage("", offered) shouldBe null
