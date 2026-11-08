@@ -1,5 +1,6 @@
 package app.lekto.tools.dictionaries
 
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -124,6 +125,46 @@ class CliOptionsTest {
         assertEquals("wordfreq-es.tsv.gz", options.frequencies.getValue("es").fileName.toString())
         assertEquals(71_808, options.gate.previous.getValue("en"))
         assertEquals(options.outputDir.resolve("language-manifest.json"), options.languageManifest)
+    }
+
+    @Test
+    fun `parses the coverage mode with one input per reading language`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--measure-input",
+                "fr=/cache/fr.jsonl.gz",
+                "--measure-input",
+                "de=/cache/de.jsonl.gz",
+                "--measure-target",
+                "EN",
+                "--measure-output",
+                "coverage.json",
+            ),
+        ) as CliOptions.Measure
+
+        assertEquals(
+            listOf(
+                MeasureInput("fr", "fr", Path.of("/cache/fr.jsonl.gz")),
+                MeasureInput("de", "de", Path.of("/cache/de.jsonl.gz")),
+            ),
+            options.inputs,
+        )
+        assertEquals(listOf("en"), options.targets)
+        assertEquals("coverage.json", options.output.fileName.toString())
+    }
+
+    @Test
+    fun `separates the source edition from a reading language it does not name`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--measure-input",
+                "simple:en=/cache/simple.jsonl.gz",
+                "--measure-output",
+                "coverage.json",
+            ),
+        ) as CliOptions.Measure
+
+        assertEquals(listOf(MeasureInput("simple", "en", Path.of("/cache/simple.jsonl.gz"))), options.inputs)
     }
 
     @Test

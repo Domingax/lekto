@@ -1,6 +1,5 @@
 package app.lekto.tools.dictionaries
 
-import kotlinx.serialization.SerializationException
 import java.io.BufferedReader
 
 /**
@@ -18,53 +17,30 @@ import java.io.BufferedReader
 internal class PackBuilder(
     private val provenance: PackProvenance,
     private val readingLanguage: String = PackFormat.ENGLISH,
-    private val translationLanguage: String = PackFormat.FRENCH,
+    translationLanguage: String = PackFormat.FRENCH,
 ) {
 
-    private var totalLines = 0L
-    private var malformedLines = 0L
-    private var readingEntries = 0L
+    private val translationLanguage = canonicalLanguage(translationLanguage)
+    private var readingEntryCount = 0L
     private var entriesWithTranslation = 0L
 
+    private val reading = ReadingEntries(readingLanguage)
     private val entries = HashMap<EntryKey, EntryAccumulator>()
     private val forms = FormIndex(readingLanguage)
 
     fun build(reader: BufferedReader): PackContent {
-        reader.forEachLine(::processLine)
+        reading.forEach(reader, ::consumeEntry)
         return assemble()
     }
 
-    private fun processLine(line: String) {
-        totalLines++
-        if (couldBe(line, readingLanguage)) consumeReading(line)
-    }
-
-    private fun consumeReading(line: String) {
-        val raw = parse(line) ?: return
-        if (raw.langCode == readingLanguage) consumeEntry(raw)
-    }
-
     private fun consumeEntry(raw: RawEntry) {
-        readingEntries++
+        readingEntryCount++
         val lemma = raw.word?.let(::normaliseSurface)?.takeIf(::isSingleToken)
         val translations = translationsInto(raw, translationLanguage)
         if (lemma == null || translations.isEmpty()) return
         entriesWithTranslation++
         accumulateEntry(raw, lemma, translations)
         accumulateForms(raw, lemma)
-    }
-
-    private fun couldBe(line: String, language: String): Boolean =
-        line.contains(langCodeCompact(language)) || line.contains(langCodeSpaced(language))
-
-    private fun parse(line: String): RawEntry? = try {
-        wiktextractJson.decodeFromString<RawEntry>(line)
-    } catch (_: SerializationException) {
-        malformedLines++
-        null
-    } catch (_: IllegalArgumentException) {
-        malformedLines++
-        null
     }
 
     private fun accumulateEntry(raw: RawEntry, lemma: String, translations: List<Translation>) {
@@ -103,9 +79,9 @@ internal class PackBuilder(
         val packEntries = entries.values.map { it.toPackEntry() }.sortedWith(ENTRY_ORDER)
         val packForms = forms.toPackForms()
         val stats = PackStats(
-            totalLines = totalLines,
-            malformedLines = malformedLines,
-            readingEntries = readingEntries,
+            totalLines = reading.totalLines,
+            malformedLines = reading.malformedLines,
+            readingEntries = readingEntryCount,
             entriesWithTranslation = entriesWithTranslation,
             lemmaCount = packEntries.map(PackEntry::lemma).distinct().size,
             entryCount = packEntries.size,
@@ -120,6 +96,10 @@ internal class PackBuilder(
         val ENTRY_ORDER = compareBy<PackEntry>({ it.language }, { it.lemma }, { it.partOfSpeech.orEmpty() })
     }
 }
+
+/** Whether [line] could be an entry of [language], cheaply skipping the rest before a full parse. */
+internal fun couldBe(line: String, language: String): Boolean =
+    line.contains(langCodeCompact(language)) || line.contains(langCodeSpaced(language))
 
 /** The JSON line fragment a compact-serialised entry's language carries. */
 internal fun langCodeCompact(language: String): String = "\"lang_code\":\"$language\""

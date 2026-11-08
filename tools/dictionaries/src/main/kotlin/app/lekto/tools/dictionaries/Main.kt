@@ -26,6 +26,7 @@ fun main(args: Array<String>) {
         when (val options = CliOptions.parse(args)) {
             is CliOptions.Build -> runBuild(options)
             is CliOptions.Catalogue -> runCatalogue(options)
+            is CliOptions.Measure -> runMeasure(options)
         }
     } catch (error: IllegalArgumentException) {
         fail(error)
@@ -110,6 +111,27 @@ internal fun runCatalogue(options: CliOptions.Catalogue) {
     val languageManifest = buildLanguageManifest(config.dictionaries, config.difficulties)
     Files.writeString(options.languageManifest, languageManifest.canonicalJson())
     println(languageManifest.canonicalJson())
+}
+
+/**
+ * Measures every candidate edition's pair coverage over the full file (issue
+ * #302): one stream per reading language, so a language's edition is read once
+ * and every target is counted in the same pass.
+ */
+internal fun runMeasure(options: CliOptions.Measure) {
+    val targets = options.targets.ifEmpty { options.inputs.map(MeasureInput::language) }
+    require(targets.isNotEmpty()) { "no translation targets to measure" }
+    val editions = options.inputs.sortedBy(MeasureInput::edition).map { input ->
+        openInput(input.path).use { stream ->
+            BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { reader ->
+                CoverageBuilder(input.language, targets, edition = input.edition).build(reader)
+            }
+        }
+    }
+    val json = CoverageReport(editions).canonicalJson()
+    options.output.toAbsolutePath().parent?.let(Files::createDirectories)
+    Files.writeString(options.output, json)
+    println(json)
 }
 
 /** Writes a pack and its two release sidecars (attribution and provenance). */
