@@ -102,14 +102,12 @@ class LanguageManifestTest {
     @Test
     fun `the committed language set parses into the configured artefacts`() {
         val config = readLanguagesConfig(Files.readAllBytes(Path.of("languages.json")))
+        val roster = listOf("en", "zh", "es", "fr", "pt", "de", "ja", "tr", "ko", "it")
 
-        assertEquals(
-            listOf(
-                LanguagePair("en", "fr"),
-                LanguagePair("en", "es"),
-            ),
-            config.dictionaries,
-        )
-        assertEquals(listOf("en", "es", "fr"), config.difficulties)
+        assertEquals(roster, config.difficulties, "every reading language carries a Difficulty table")
+        assertEquals(roster.toSet(), config.dictionaries.map(LanguagePair::reading).toSet())
+        assertEquals(78, config.dictionaries.size, "the pairs measured above the 2,000-lemma floor")
+        assertEquals(config.dictionaries.size, config.dictionaries.distinct().size, "no pair is listed twice")
+        assertTrue(config.dictionaries.none { it.reading == it.translation }, "a pair never translates into itself")
     }
 }
