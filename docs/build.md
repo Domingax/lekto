@@ -458,6 +458,14 @@ client, not a footnote.
 
 ## Dictionary pipeline
 
+> **Being restructured (issue #301).** ADR-0044, ADR-0045, ADR-0046 and ADR-0047
+> replace this section's input model, its form-index rule and its publication
+> channel: one Wiktionary edition per **Reading language**, one shared form index
+> per language, a two-stage build, and a separate data repository behind a
+> movable manifest. The behaviour below is what the code does **today**; issues
+> #302–#306 are the tickets that change it. Where this section and those ADRs
+> disagree, the ADRs win.
+
 `tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
 extract (≈3 GiB gz, all languages) into a set of **trimmed SQLite dictionary
 packs** and per-language **Difficulty tables**, driven by a committed language set
