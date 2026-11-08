@@ -18,8 +18,9 @@ parsed book text, the dictionary pack. Lives device-local and is never synced.
 _Avoid_: Cache, generated data
 
 **Dictionary pack**:
-The offline EN→FR reference Lekto derives from Wiktionary: the words it knows,
-with their senses and French translations, and enough morphology to collapse an
+The offline reference Lekto derives from Wiktionary for one (Reading language ×
+Translation language) pair: the Reading language's words, with their senses and
+translations into the Translation language, and enough morphology to collapse an
 inflected form onto its lemma — or onto the normalised surface form when it knows
 no lemma. A **Derived asset**, versioned so a reader can refuse a pack it does
 not understand; never authored by the user and never synced.
