@@ -756,7 +756,9 @@ that the reading and translation languages are parameters and a non-default pair
 builds from the same source (issue #161) — `SqlitePackWriterTest` reads the written
 pack back and proves two builds are byte-for-byte identical, and
 `DictionaryPackGoldenTest` pins the canonical output of a committed JSONL fixture
-— the reproducibility evidence for ticket #17. The config-driven **build** is `CatalogueTest`: it builds every configured pack and
+— the reproducibility evidence for ticket #17. The coverage pass (issue #302) is
+pinned the same way by `CoverageGoldenTest`, over the same fixture, because its
+count is the pack's own. The config-driven **build** is `CatalogueTest`: it builds every configured pack and
 difficulty table into one directory and writes one **Language manifest** unioning
 them, so a release carries the whole offered set. The **language manifest** (issues #145, #161) is built from
 that same fixture's pack and difficulty table by `LanguageManifestGoldenTest`,

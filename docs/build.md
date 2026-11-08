@@ -510,6 +510,11 @@ writing a table behind its own `user_version` handshake and its own wordfreq
 `NOTICE`. `DifficultyGoldenTest` and `SqliteDifficultyWriterTest` pin the
 transform and its byte-for-byte reproducibility.
 
+A **coverage pass** (`--measure-input`, `--measure-target`, `--measure-output`)
+streams each candidate edition once and writes the per-pair lemma counts a roster
+decision needs, without building an artefact (issue #302). The measurement and the
+roster it chose are in `docs/research/dictionary-coverage.md`.
+
 Each pack and table is a **Derived asset**: never committed.
 `.github/workflows/dictionary-pack.yml` downloads the source, builds the wordfreq
 list for each configured difficulty language, runs the CLI over the configured

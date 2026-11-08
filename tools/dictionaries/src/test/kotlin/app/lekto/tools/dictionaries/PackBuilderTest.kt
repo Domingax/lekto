@@ -95,6 +95,17 @@ class PackBuilderTest {
     }
 
     @Test
+    fun `folds Mandarin translations into Chinese`() {
+        val pack = buildPack(
+            """{"word":"cat","lang_code":"en","pos":"noun","translations":[{"lang_code":"cmn","word":"猫"}]}""",
+            readingLanguage = "en",
+            translationLanguage = "zh",
+        )
+
+        assertEquals(listOf("猫"), pack.entries.single().senses.single().translations)
+    }
+
+    @Test
     fun `counts a malformed line without failing the whole build`() {
         val pack = buildPack(
             """

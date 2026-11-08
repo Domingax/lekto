@@ -1,8 +1,17 @@
 package app.lekto.tools.dictionaries
 
+/** The language [code] names in the app when Wiktextract labels the same language differently. */
+internal fun canonicalLanguage(code: String): String = when (code) {
+    // English Wiktionary codes Mandarin translations `cmn`; the app and the manifest
+    // name Chinese `zh`, the code the Reading language and every pack use.
+    "cmn" -> "zh"
+
+    else -> code
+}
+
 /** The [language] translations an entry carries, in source order, blank words dropped. */
 internal fun translationsInto(raw: RawEntry, language: String): List<Translation> = raw.translations
-    .filter { it.langCode == language }
+    .filter { it.langCode?.let(::canonicalLanguage) == language }
     .mapNotNull { translation ->
         translation.word?.takeIf(String::isNotBlank)?.let { Translation(it, translation.sense) }
     }

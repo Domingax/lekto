@@ -14,6 +14,9 @@ internal data class OutputPaths(val notice: Path, val manifest: Path)
  */
 internal data class DifficultyOptions(val input: Path, val output: Path, val outputs: OutputPaths)
 
+/** One measured edition: the source label, the reading language its entries carry, and the file. */
+internal data class MeasureInput(val edition: String, val language: String, val path: Path)
+
 /**
  * The parsed command line, in two shapes.
  *
@@ -52,10 +55,41 @@ internal sealed interface CliOptions {
         val languageManifest: Path,
     ) : CliOptions
 
+    /**
+     * The full-edition coverage pass (issue #302): one stream per reading
+     * language's edition, recording how many lemmas each measured translation
+     * language yields. Targets default to the input languages, so a run over the
+     * candidate editions measures the matrix among them.
+     */
+    data class Measure(val inputs: List<MeasureInput>, val targets: List<String>, val output: Path) : CliOptions
+
     companion object {
         fun parse(args: Array<String>): CliOptions {
             val values = parseFlags(args)
-            return if (values.containsKey("--languages-config")) catalogue(values) else build(values)
+            return when {
+                values.containsKey("--measure-input") -> measure(values)
+                values.containsKey("--languages-config") -> catalogue(values)
+                else -> build(values)
+            }
+        }
+
+        private fun measure(values: Map<String, List<String>>): Measure = Measure(
+            inputs = values["--measure-input"].orEmpty().map(::measureInput),
+            targets = values["--measure-target"].orEmpty().map(String::lowercase),
+            output = path(values, "--measure-output"),
+        )
+
+        /** Parses `<edition>[:<language>]=<path>`; the edition labels the source, the language filters its entries. */
+        private fun measureInput(assignment: String): MeasureInput {
+            val separator = assignment.indexOf('=')
+            require(separator > 0) { "--measure-input expects <edition>[:<language>]=<path>, got '$assignment'" }
+            val key = assignment.substring(0, separator)
+            val edition = key.substringBefore(':')
+            val language = if (':' in key) key.substringAfter(':') else edition
+            require(edition.isNotBlank() && language.isNotBlank()) {
+                "--measure-input expects a non-blank edition and language, got '$key'"
+            }
+            return MeasureInput(edition, language.lowercase(), Path.of(assignment.substring(separator + 1)))
         }
 
         private fun build(values: Map<String, List<String>>): Build {
@@ -154,6 +188,9 @@ private val KNOWN_FLAGS = setOf(
     "--reading-language",
     "--translation-language",
     "--difficulty-language",
+    "--measure-input",
+    "--measure-target",
+    "--measure-output",
 )
 
 /** Parses `--flag value` pairs, keeping a flag's repeated values in order. */
