@@ -25,13 +25,7 @@ import kotlin.system.exitProcess
  */
 fun main(args: Array<String>) {
     try {
-        when (val options = CliOptions.parse(args)) {
-            is CliOptions.Build -> runBuild(options)
-            is CliOptions.Catalogue -> runCatalogue(options)
-            is CliOptions.Measure -> runMeasure(options)
-            is CliOptions.Publish -> runPublish(options)
-            is CliOptions.Extract -> runExtract(options)
-        }
+        run(CliOptions.parse(args))
     } catch (error: IllegalArgumentException) {
         fail(error)
     } catch (error: IllegalStateException) {
@@ -40,6 +34,19 @@ fun main(args: Array<String>) {
         fail(error)
     } catch (error: SQLException) {
         fail(error)
+    }
+}
+
+/** Dispatches one parsed invocation to its pipeline stage. */
+private fun run(options: CliOptions) {
+    when (options) {
+        is CliOptions.Build -> runBuild(options)
+        is CliOptions.Catalogue -> runCatalogue(options)
+        is CliOptions.Measure -> runMeasure(options)
+        is CliOptions.Publish -> runPublish(options)
+        is CliOptions.Extract -> runExtract(options)
+        is CliOptions.Pair -> runPair(options)
+        is CliOptions.Difficulty -> runDifficulty(options)
     }
 }
 
@@ -60,7 +67,12 @@ private fun runBuild(options: CliOptions.Build) {
         extraction.contentFor(options.translationLanguage),
         extraction.index,
     ).build()
-    runGate(pack, options.readingLanguage, options.translationLanguage, options.gate)
+    runGate(
+        pack,
+        LanguagePair(options.readingLanguage, options.translationLanguage),
+        options.gate.previous[options.readingLanguage],
+        options.gate.collapseThreshold,
+    )
     writePack(pack, options.output, options.outputs.notice, options.outputs.manifest)
     println(packManifest(pack))
     val difficulty = options.difficulty?.let { diff ->
@@ -124,29 +136,7 @@ internal fun runCatalogue(options: CliOptions.Catalogue) {
     Files.createDirectories(options.outputDir)
     val pairsByReading = config.dictionaries.groupBy(LanguagePair::reading)
     pairsByReading.forEach { (reading, pairs) ->
-        val extraction = extractEdition(
-            options.input,
-            options.provenance,
-            reading,
-            pairs.map(LanguagePair::translation),
-        )
-        pairs.forEach { pair ->
-            val pack = PackBuilder(
-                extraction.contentFor(pair.translation),
-                extraction.index,
-            ).build()
-            runGate(pack, pair.reading, pair.translation, options.gate)
-            val stem = dictionaryStem(pair.reading, pair.translation)
-            writePack(
-                pack,
-                options.outputDir.resolve("$stem.sqlite"),
-                options.outputDir.resolve("NOTICE-$stem"),
-                options.outputDir.resolve("manifest-$stem.json"),
-            )
-        }
-        if (reading in config.difficulties) {
-            writeCatalogueDifficulty(reading, extraction.index.forms, options)
-        }
+        buildReadingLanguage(reading, pairs, reading in config.difficulties, options)
     }
     // A reading language with no pack (Spanish, in the starting set) has no lemmas
     // to key by, so its words take their normalised surface form (ADR-0029).
@@ -156,6 +146,33 @@ internal fun runCatalogue(options: CliOptions.Catalogue) {
     val languageManifest = buildLanguageManifest(config.dictionaries, config.difficulties)
     Files.writeString(options.languageManifest, languageManifest.canonicalJson())
     println(languageManifest.canonicalJson())
+}
+
+/** Builds one reading language's packs and, when the set asks for it, its Difficulty table. */
+private fun buildReadingLanguage(
+    reading: String,
+    pairs: List<LanguagePair>,
+    wantsDifficulty: Boolean,
+    options: CliOptions.Catalogue,
+) {
+    val extraction = extractEdition(
+        options.input,
+        options.provenance,
+        reading,
+        pairs.map(LanguagePair::translation),
+    )
+    pairs.forEach { pair ->
+        val pack = PackBuilder(extraction.contentFor(pair.translation), extraction.index).build()
+        runGate(pack, pair, options.gate.previous[pair.reading], options.gate.collapseThreshold)
+        val stem = dictionaryStem(pair.reading, pair.translation)
+        writePack(
+            pack,
+            options.outputDir.resolve("$stem.sqlite"),
+            options.outputDir.resolve("NOTICE-$stem"),
+            options.outputDir.resolve("manifest-$stem.json"),
+        )
+    }
+    if (wantsDifficulty) writeCatalogueDifficulty(reading, extraction.index.forms, options)
 }
 
 private fun writeCatalogueDifficulty(language: String, forms: List<PackForm>, options: CliOptions.Catalogue) {
@@ -209,64 +226,6 @@ internal fun runPublish(options: CliOptions.Publish) {
     println(published.canonicalJson())
 }
 
-/** Writes a pack and its two release sidecars (attribution and provenance). */
-private fun writePack(pack: PackContent, sqlite: Path, notice: Path, manifest: Path) {
-    SqlitePackWriter.write(pack, sqlite)
-    Files.writeString(notice, Attribution.notice(pack.provenance))
-    Files.writeString(manifest, packManifest(pack))
-}
-
-/** Writes a difficulty table and its two release sidecars (attribution and provenance). */
-private fun writeDifficulty(content: DifficultyContent, sqlite: Path, notice: Path, manifest: Path) {
-    SqliteDifficultyWriter.write(content, sqlite)
-    Files.writeString(notice, DifficultyAttribution.notice(content.provenance))
-    Files.writeString(manifest, difficultyManifest(content))
-}
-
-private fun runGate(pack: PackContent, readingLanguage: String, translationLanguage: String, gate: GateOptions) {
-    val problems = SanityGate.check(
-        stats = pack.stats,
-        readingLanguage = readingLanguage,
-        translationLanguage = translationLanguage,
-        previousLemmaCount = gate.previous[readingLanguage],
-        collapseThreshold = gate.collapseThreshold,
-    )
-    if (problems.isNotEmpty()) {
-        error(
-            "sanity gate failed for $readingLanguage→$translationLanguage:\n" +
-                problems.joinToString("\n") { "  - $it" },
-        )
-    }
-}
-
-private fun packManifest(content: PackContent): String =
-    manifestJson.encodeToString(PackManifest(PackFormat.VERSION, content.provenance, content.stats))
-
-private fun difficultyManifest(content: DifficultyContent): String = manifestJson.encodeToString(
-    DifficultyManifest(
-        formatVersion = DifficultyFormat.VERSION,
-        provenance = content.provenance,
-        calibration = content.calibration,
-        stats = content.stats,
-    ),
-)
-
-/**
- * Builds the reading language's **Difficulty table** (ADR-0029) from its frequency
- * list, keyed by the reading language's form index — the pack's lemmas where one
- * exists, the normalised surface form otherwise.
- */
-private fun buildDifficulty(
-    input: Path,
-    forms: List<PackForm>,
-    provenance: PackProvenance,
-    language: String,
-): DifficultyContent = openInput(input).use { stream ->
-    BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { reader ->
-        DifficultyBuilder(forms, provenance, language).build(reader)
-    }
-}
-
 private fun extractEdition(
     input: Path,
     provenance: PackProvenance,
@@ -278,7 +237,7 @@ private fun extractEdition(
     }
 }
 
-private fun openInput(path: Path): InputStream {
+internal fun openInput(path: Path): InputStream {
     val raw = Files.newInputStream(path)
     return if (path.fileName.toString().endsWith(".gz")) GZIPInputStream(raw, GZIP_BUFFER_BYTES) else raw
 }

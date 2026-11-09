@@ -762,7 +762,11 @@ pack back and proves two builds are byte-for-byte identical, and
 pinned the same way by `CoverageGoldenTest`, over the same fixture, because its
 count is the pack's own. The config-driven **build** is `CatalogueTest`: it builds every configured pack and
 difficulty table into one directory and writes one **Language manifest** unioning
-them, so a release carries the whole offered set. The **language manifest** (issues #145, #161, #305) is
+them, so a release carries the whole offered set. Stage two (issue #304) is
+`PairAssemblyTest`: it writes one pair from one content file and the shared index,
+proves two content files of a language yield the same form table, pins the pack
+and the difficulty table as byte-identical across two runs, and shows the drift
+gate failing one pair without touching its sibling. The **language manifest** (issues #145, #161, #305) is
 built from that same fixture's pack and difficulty table by
 `LanguageManifestGoldenTest`, pinned in `golden/language-manifest.json` so the
 catalogue and the artefacts cannot drift and the published format-2 shape — each
@@ -777,7 +781,7 @@ producer's `LanguageManifestFormat.VERSION` against `core`'s
 `LanguageManifest.FORMAT_VERSION`, which
 `LanguageManifestFormatSynchronisationTest` in `architecture` keeps in step
 (ADR-0013). The
-sanity gate and the command line (both modes, repeated `--frequency` and
+sanity gate and the command line (every mode, repeated `--frequency` and
 `--previous-lemma-count` assignments) are unit-tested the same way. The module's
 tests run in `check` like any other module's, but the module sits outside the
 application's coverage, licence and publication graph, so nothing it builds ships
