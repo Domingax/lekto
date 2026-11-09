@@ -207,6 +207,65 @@ class CliOptionsTest {
     }
 
     @Test
+    fun `parses the per-pair assembly mode from one content file and the shared index`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--content",
+                "intermediate/content-en-fr.json",
+                "--form-index",
+                "intermediate/form-index-en.json",
+                "--output-dir",
+                "out",
+                "--previous-lemma-count",
+                "71808",
+                "--collapse-threshold",
+                "0.9",
+            ),
+        ) as CliOptions.Pair
+
+        assertEquals("content-en-fr.json", options.content.fileName.toString())
+        assertEquals("form-index-en.json", options.formIndex.fileName.toString())
+        assertEquals("out", options.outputDir.fileName.toString())
+        assertEquals(71_808, options.previousLemmaCount)
+        assertEquals(0.9, options.collapseThreshold)
+    }
+
+    @Test
+    fun `a per-pair assembly without a previous count is ungated`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--content",
+                "content-en-fr.json",
+                "--form-index",
+                "form-index-en.json",
+                "--output-dir",
+                "out",
+            ),
+        ) as CliOptions.Pair
+
+        assertEquals(null, options.previousLemmaCount)
+        assertEquals(SanityGate.DEFAULT_COLLAPSE_THRESHOLD, options.collapseThreshold)
+    }
+
+    @Test
+    fun `parses the difficulty assembly mode from the shared index and a frequency list`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--form-index",
+                "intermediate/form-index-en.json",
+                "--frequency-input",
+                "wordfreq-en.tsv.gz",
+                "--output-dir",
+                "out",
+            ),
+        ) as CliOptions.Difficulty
+
+        assertEquals("form-index-en.json", options.formIndex.fileName.toString())
+        assertEquals("wordfreq-en.tsv.gz", options.frequency.fileName.toString())
+        assertEquals("out", options.outputDir.fileName.toString())
+    }
+
+    @Test
     fun `rejects a malformed assignment flag`() {
         assertFailsWith<IllegalArgumentException> {
             CliOptions.parse(

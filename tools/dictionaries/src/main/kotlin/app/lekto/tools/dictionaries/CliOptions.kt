@@ -18,16 +18,19 @@ internal data class DifficultyOptions(val input: Path, val output: Path, val out
 internal data class MeasureInput(val edition: String, val language: String, val path: Path)
 
 /**
- * The parsed command line, in four shapes.
+ * The parsed command line, one shape per pipeline stage.
  *
  * [Build] builds **one** pack for a (Reading language × Translation language) pair
  * and, optionally, one reading language's **Difficulty table** — the original
  * single-artefact run, now language-aware. [Catalogue] reads the committed
  * [LanguagesConfig] and builds **every** configured pack and table into one
  * output directory, so a release carries the whole offered set (issue #161).
- * [Measure] is the full-edition coverage pass that chooses the roster (issue #302).
- * [Publish] completes that run's **Language manifest** once the assets are
- * compressed, writing the address, digest and size publication knows (issue #305).
+ * [Extract] writes one language's intermediate (issue #303); [Pair] and
+ * [Difficulty] turn that intermediate into one pair's pack or one language's table
+ * (issue #304). [Measure] is the full-edition coverage pass that chooses the
+ * roster (issue #302). [Publish] completes that run's **Language manifest** once
+ * the assets are compressed, writing the address, digest and size publication
+ * knows (issue #305).
  *
  * The input is the raw Wiktextract `.jsonl[.gz]`. The provenance values are
  * recorded, never a timestamp. The workflow supplies every path; defaults are
@@ -86,6 +89,28 @@ internal sealed interface CliOptions {
         val translationLanguages: List<String>,
     ) : CliOptions
 
+    /**
+     * Stage two of the two-stage build (ADR-0046, issue #304): one pair's
+     * content file and the **Reading language**'s shared index in, only that
+     * pair's **Dictionary pack**, NOTICE and manifest out. The provenance comes
+     * from the content file; [previousLemmaCount] is the pair's count in the
+     * last published manifest, absent for a pair that has never been published.
+     */
+    data class Pair(
+        val content: Path,
+        val formIndex: Path,
+        val outputDir: Path,
+        val previousLemmaCount: Int?,
+        val collapseThreshold: Double,
+    ) : CliOptions
+
+    /**
+     * The difficulty stage (ADR-0046, issue #304): a **Reading language**'s
+     * shared index and its frequency list in, that language's **Difficulty
+     * table**, NOTICE and manifest out. The provenance comes from the index.
+     */
+    data class Difficulty(val formIndex: Path, val frequency: Path, val outputDir: Path) : CliOptions
+
     companion object {
         fun parse(args: Array<String>): CliOptions {
             val values = parseFlags(args)
@@ -93,6 +118,8 @@ internal sealed interface CliOptions {
                 values.containsKey("--publish-manifest") -> publish(values)
                 values.containsKey("--measure-input") -> measure(values)
                 values.containsKey("--extract-target") -> extract(values)
+                values.containsKey("--content") -> pair(values)
+                values.containsKey("--form-index") -> difficulty(values)
                 values.containsKey("--languages-config") -> catalogue(values)
                 else -> build(values)
             }
@@ -182,8 +209,7 @@ internal sealed interface CliOptions {
          * its one reading language; a `Catalogue` value is `<language>=<count>`.
          */
         private fun gate(values: Map<String, List<String>>, defaultLanguage: String?): GateOptions {
-            val threshold = optionalDouble(values, "--collapse-threshold") ?: SanityGate.DEFAULT_COLLAPSE_THRESHOLD
-            require(threshold > 0.0 && threshold <= 1.0) { "--collapse-threshold must be in (0, 1], got $threshold" }
+            val threshold = collapseThreshold(values)
             val counts = values["--previous-lemma-count"].orEmpty()
             val previous = if (defaultLanguage != null && counts.size == 1 && '=' !in counts.single()) {
                 mapOf(defaultLanguage to intValue(counts.single(), "--previous-lemma-count"))
@@ -206,6 +232,27 @@ internal sealed interface CliOptions {
             )
         }
     }
+}
+
+private fun pair(values: Map<String, List<String>>): CliOptions.Pair = CliOptions.Pair(
+    content = path(values, "--content"),
+    formIndex = path(values, "--form-index"),
+    outputDir = path(values, "--output-dir"),
+    previousLemmaCount = value(values, "--previous-lemma-count")
+        ?.let { intValue(it, "--previous-lemma-count") },
+    collapseThreshold = collapseThreshold(values),
+)
+
+private fun difficulty(values: Map<String, List<String>>): CliOptions.Difficulty = CliOptions.Difficulty(
+    formIndex = path(values, "--form-index"),
+    frequency = path(values, "--frequency-input"),
+    outputDir = path(values, "--output-dir"),
+)
+
+private fun collapseThreshold(values: Map<String, List<String>>): Double {
+    val threshold = optionalDouble(values, "--collapse-threshold") ?: SanityGate.DEFAULT_COLLAPSE_THRESHOLD
+    require(threshold > 0.0 && threshold <= 1.0) { "--collapse-threshold must be in (0, 1], got $threshold" }
+    return threshold
 }
 
 private val KNOWN_FLAGS = setOf(
@@ -236,6 +283,8 @@ private val KNOWN_FLAGS = setOf(
     "--measure-target",
     "--measure-output",
     "--extract-target",
+    "--content",
+    "--form-index",
 )
 
 /** Parses `--flag value` pairs, keeping a flag's repeated values in order. */

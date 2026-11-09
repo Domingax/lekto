@@ -2,6 +2,8 @@ package app.lekto.tools.dictionaries
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * The on-disk contract of the intermediate the extraction mode writes (ADR-0046).
@@ -64,6 +66,24 @@ internal val editionJson: Json = Json {
 internal fun FormIndex.canonicalJson(): String = editionJson.encodeToString(this)
 
 internal fun EditionContent.canonicalJson(): String = editionJson.encodeToString(this)
+
+/** Reads one stage-two input, refusing an intermediate from a different format version. */
+internal fun readFormIndex(file: Path): FormIndex {
+    val index = editionJson.decodeFromString<FormIndex>(Files.readString(file))
+    require(index.formatVersion == EditionFormat.VERSION) {
+        "the form index at $file is format ${index.formatVersion}, not ${EditionFormat.VERSION}"
+    }
+    return index
+}
+
+/** Reads one pair's content file, refusing an intermediate from a different format version. */
+internal fun readEditionContent(file: Path): EditionContent {
+    val content = editionJson.decodeFromString<EditionContent>(Files.readString(file))
+    require(content.formatVersion == EditionFormat.VERSION) {
+        "the content file at $file is format ${content.formatVersion}, not ${EditionFormat.VERSION}"
+    }
+    return content
+}
 
 /** The form index file's fixed name inside the extraction's output directory. */
 internal fun formIndexFileName(readingLanguage: String): String = "form-index-$readingLanguage.json"

@@ -474,8 +474,9 @@ client, not a footnote.
 > per language, a two-stage build, and a separate data repository behind a
 > movable manifest. The behaviour below is what the code does **today**; issues
 > #303–#306 are the tickets that change it. #303 has landed the extraction stage
-> and the shared form index; #305 has landed each artefact's own publish address.
-> The workflow still reads one source file. Where this section and those ADRs
+> and the shared form index; #304 has landed the per-pair pack and per-language
+> difficulty assembly; #305 has landed each artefact's own publish address. The
+> workflow still reads one source file. Where this section and those ADRs
 > disagree, the ADRs win.
 
 `tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
@@ -522,9 +523,37 @@ surface→lemma table, built from entries carrying at least one translation into
 configured target — and one `content-<reading>-<translation>.json` per target, in
 the pack's fixed order. Both carry the edition's provenance, contain no wall clock
 and are byte-identical across runs on the same input. They are workflow
-artefacts: stage two (issue #304) reads one content file and the index to write
-that single pair's release artefacts, and the intermediate never reaches a
-release.
+artefacts: stage two reads them to write one pair's release artefacts, and the
+intermediate never reaches a release.
+
+A **pair assembly run** (`--content`, `--form-index`, issue #304; ADR-0046) reads
+one content file and the shared index and writes only that pair's
+`lekto-dictionary-<reading>-<translation>.sqlite`,
+`NOTICE-lekto-dictionary-<reading>-<translation>` and
+`manifest-lekto-dictionary-<reading>-<translation>.json`:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--content content-en-fr.json \
+  --form-index form-index-en.json --output-dir out \
+  --previous-lemma-count <n>"
+```
+
+The pack records the edition the content file carries, not a flag passed now.
+`--previous-lemma-count` is optional and is **this pair's** count in its last
+published manifest: a pair below 80% of it fails its own job, while a pair with no
+previous count is not gated.
+
+A **difficulty assembly run** (`--form-index`, `--frequency-input`, issue #304;
+ADR-0046) keys one language's frequency list by the shared index and writes
+`lekto-difficulty-<language>` beside the same two sidecars:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--form-index form-index-en.json \
+  --frequency-input wordfreq-en.tsv.gz --output-dir out"
+```
+
+It records the edition the index carries. Both assembly modes are deterministic:
+fixed ordering, no wall clock, and byte-identical SQLite across runs on one input.
 
 A **single-artefact run** (`--reading-language`/`--translation-language`/
 `--difficulty-language`) builds one pack and, optionally, one reading language's
@@ -574,7 +603,7 @@ body is rendered from the committed template
 CI. The build is deterministic — fixed row ordering, no timestamps, gzip `-n` —
 and `DictionaryPackGoldenTest` proves the transform on a committed fixture; a
 sanity gate fails a run only on a changed source schema or a coverage collapse
-below 80% of the previous build's lemma count, per reading language.
+below 80% of the previous build's lemma count, per artefact.
 
 The same run also writes a **language manifest**
 (`--language-manifest`, default `language-manifest.json` in the output directory):
