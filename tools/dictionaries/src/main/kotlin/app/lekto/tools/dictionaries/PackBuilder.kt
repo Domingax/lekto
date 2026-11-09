@@ -1,100 +1,39 @@
 package app.lekto.tools.dictionaries
 
-import java.io.BufferedReader
-
 /**
- * The deterministic transform: raw Wiktextract JSONL in, the in-memory pack out.
+ * The deterministic assembly: one **Translation language**'s content file and the
+ * **Reading language**'s shared form index in, the in-memory pack out.
  *
- * Records are filtered to [readingLanguage] entries that carry a
- * [translationLanguage] translation, forms are reversed into a surface→lemma
- * index, and every key is normalised with [normaliseSurface] so the app's lookups
- * match. Ordering is fixed — entries by `(language, lemma, pos)`, forms by
- * `(surface, language)` — and no wall clock or timestamp enters, so the same input
- * yields the same pack (ticket #17). The pair is a parameter (issue #161), so one
- * build produces any (Reading language × Translation language) pack; the defaults
- * are the en→fr pack the app shipped with.
+ * It no longer streams the edition or accumulates forms. The index is an input
+ * (ADR-0045), so every pack of a language carries the same `form` table and
+ * `stats.formCount`; the ordering is already fixed by the intermediate, and no
+ * wall clock or timestamp enters.
  */
-internal class PackBuilder(
-    private val provenance: PackProvenance,
-    private val readingLanguage: String = PackFormat.ENGLISH,
-    translationLanguage: String = PackFormat.FRENCH,
-) {
+internal class PackBuilder(private val content: EditionContent, private val index: FormIndex) {
 
-    private val translationLanguage = canonicalLanguage(translationLanguage)
-    private var readingEntryCount = 0L
-    private var entriesWithTranslation = 0L
-
-    private val reading = ReadingEntries(readingLanguage)
-    private val entries = HashMap<EntryKey, EntryAccumulator>()
-    private val forms = FormIndex(readingLanguage)
-
-    fun build(reader: BufferedReader): PackContent {
-        reading.forEach(reader, ::consumeEntry)
-        return assemble()
-    }
-
-    private fun consumeEntry(raw: RawEntry) {
-        readingEntryCount++
-        val lemma = raw.word?.let(::normaliseSurface)?.takeIf(::isSingleToken)
-        val translations = translationsInto(raw, translationLanguage)
-        if (lemma == null || translations.isEmpty()) return
-        entriesWithTranslation++
-        accumulateEntry(raw, lemma, translations)
-        accumulateForms(raw, lemma)
-    }
-
-    private fun accumulateEntry(raw: RawEntry, lemma: String, translations: List<Translation>) {
-        val key = EntryKey(readingLanguage, lemma, raw.pos)
-        val accumulator = entries.getOrPut(key) { EntryAccumulator(lemma, readingLanguage, raw.pos) }
-        accumulator.pronunciation = accumulator.pronunciation ?: firstPronunciation(raw)
-        accumulator.audioUrl = accumulator.audioUrl ?: firstAudioUrl(raw)
-        mergeSenses(accumulator, raw, translations)
-    }
-
-    private fun mergeSenses(accumulator: EntryAccumulator, raw: RawEntry, translations: List<Translation>) {
-        val definitions = definitionsOf(raw).ifEmpty { listOf(SENSE_WITHOUT_DEFINITION) }
-        definitions.forEach(accumulator::addDefinition)
-        translations.forEach { translation ->
-            val definition = definitions[senseIndex(translation.sense, definitions)]
-            accumulator.addTranslation(definition, translation.word)
+    fun build(): PackContent {
+        require(index.readingLanguage == content.readingLanguage) {
+            "the form index is for ${index.readingLanguage}, not ${content.readingLanguage}"
         }
-    }
-
-    private fun accumulateForms(raw: RawEntry, lemma: String) {
-        if (raw.formOf.isNotEmpty()) {
-            raw.formOf.forEach { form -> addInflectedForm(lemma, form.word) }
-            return
-        }
-        forms.add(lemma, lemma)
-        raw.forms.forEach { form -> addInflectedForm(form.form, lemma) }
-    }
-
-    private fun addInflectedForm(surface: String?, lemma: String?) {
-        val normalisedSurface = surface?.let(::normaliseSurface)?.takeIf(::isSingleToken) ?: return
-        val normalisedLemma = lemma?.let(::normaliseSurface)?.takeIf(::isSingleToken) ?: return
-        forms.add(normalisedSurface, normalisedLemma)
-    }
-
-    private fun assemble(): PackContent {
-        val packEntries = entries.values.map { it.toPackEntry() }.sortedWith(ENTRY_ORDER)
-        val packForms = forms.toPackForms()
-        val stats = PackStats(
-            totalLines = reading.totalLines,
-            malformedLines = reading.malformedLines,
-            readingEntries = readingEntryCount,
-            entriesWithTranslation = entriesWithTranslation,
-            lemmaCount = packEntries.map(PackEntry::lemma).distinct().size,
-            entryCount = packEntries.size,
-            formCount = packForms.size,
-            senseCount = packEntries.sumOf { it.senses.size },
-            translationCount = packEntries.sumOf { entry -> entry.senses.sumOf { it.translations.size } },
+        return PackContent(
+            provenance = content.provenance,
+            stats = stats(),
+            entries = content.entries,
+            forms = index.forms,
         )
-        return PackContent(provenance, stats, packEntries, packForms)
     }
 
-    private companion object {
-        val ENTRY_ORDER = compareBy<PackEntry>({ it.language }, { it.lemma }, { it.partOfSpeech.orEmpty() })
-    }
+    private fun stats(): PackStats = PackStats(
+        totalLines = content.stats.totalLines,
+        malformedLines = content.stats.malformedLines,
+        readingEntries = content.stats.readingEntries,
+        entriesWithTranslation = content.stats.entriesWithTranslation,
+        lemmaCount = content.entries.map(PackEntry::lemma).distinct().size,
+        entryCount = content.entries.size,
+        formCount = index.forms.size,
+        senseCount = content.entries.sumOf { it.senses.size },
+        translationCount = content.entries.sumOf { entry -> entry.senses.sumOf { it.translations.size } },
+    )
 }
 
 /** Whether [line] could be an entry of [language], cheaply skipping the rest before a full parse. */
@@ -109,5 +48,3 @@ internal fun langCodeSpaced(language: String): String = "\"lang_code\": \"$langu
 
 /** A sense with no reading-language definition: a translation-only entry still needs one. */
 internal const val SENSE_WITHOUT_DEFINITION: String = ""
-
-private data class EntryKey(val language: String, val lemma: String, val partOfSpeech: String?)

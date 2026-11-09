@@ -30,6 +30,7 @@ fun main(args: Array<String>) {
             is CliOptions.Catalogue -> runCatalogue(options)
             is CliOptions.Measure -> runMeasure(options)
             is CliOptions.Publish -> runPublish(options)
+            is CliOptions.Extract -> runExtract(options)
         }
     } catch (error: IllegalArgumentException) {
         fail(error)
@@ -49,12 +50,22 @@ private fun fail(error: Exception) {
 
 /** Builds one pack and, optionally, one reading language's difficulty table. */
 private fun runBuild(options: CliOptions.Build) {
-    val pack = buildPack(options.input, options.provenance, options.readingLanguage, options.translationLanguage)
+    val extraction = extractEdition(
+        options.input,
+        options.provenance,
+        options.readingLanguage,
+        listOf(options.translationLanguage),
+    )
+    val pack = PackBuilder(
+        extraction.contentFor(options.translationLanguage),
+        extraction.index,
+    ).build()
     runGate(pack, options.readingLanguage, options.translationLanguage, options.gate)
     writePack(pack, options.output, options.outputs.notice, options.outputs.manifest)
     println(packManifest(pack))
     val difficulty = options.difficulty?.let { diff ->
-        val content = buildDifficulty(diff.input, pack.forms, options.provenance, options.difficultyLanguage)
+        val content =
+            buildDifficulty(diff.input, extraction.index.forms, options.provenance, options.difficultyLanguage)
         writeDifficulty(content, diff.output, diff.outputs.notice, diff.outputs.manifest)
         println(difficultyManifest(content))
         content
@@ -68,11 +79,42 @@ private fun runBuild(options: CliOptions.Build) {
 }
 
 /**
+ * Stage one of the two-stage build (ADR-0046, issue #303): streams one edition
+ * once and writes its **Reading language**'s form index beside one content file
+ * per Translation language. Every file carries the edition's provenance, and the
+ * same input yields the same bytes.
+ */
+internal fun runExtract(options: CliOptions.Extract) {
+    val extraction = extractEdition(
+        options.input,
+        options.provenance,
+        options.readingLanguage,
+        options.translationLanguages,
+    )
+    Files.createDirectories(options.outputDir)
+    Files.writeString(
+        options.outputDir.resolve(formIndexFileName(options.readingLanguage)),
+        extraction.index.canonicalJson(),
+    )
+    extraction.contentsByTranslation.forEach { (translation, content) ->
+        Files.writeString(
+            options.outputDir.resolve(contentFileName(options.readingLanguage, translation)),
+            content.canonicalJson(),
+        )
+    }
+    println(
+        "wrote ${formIndexFileName(options.readingLanguage)} " +
+            "and ${extraction.contentsByTranslation.size} content files",
+    )
+}
+
+/**
  * Builds every artefact the committed language set lists (issue #161) into one
  * output directory: each dictionary pack from the raw source, each reading
  * language's **Difficulty table** from its frequency list, and one **Language
- * manifest** unioning them. The manifest lists exactly what was written, so it
- * can never advertise an artefact the run did not build.
+ * manifest** unioning them. Each edition is streamed once per reading language
+ * and its form index is shared by every pack and table of that language
+ * (ADR-0045, ADR-0046), so the manifest lists exactly what was written.
  */
 internal fun runCatalogue(options: CliOptions.Catalogue) {
     val config = readLanguagesConfig(Files.readAllBytes(options.config))
@@ -80,40 +122,53 @@ internal fun runCatalogue(options: CliOptions.Catalogue) {
         "the language set ${options.config} lists no artefacts to build"
     }
     Files.createDirectories(options.outputDir)
-    val formsByReading = LinkedHashMap<String, List<PackForm>>()
-    config.dictionaries.forEach { pair ->
-        val pack = buildPack(options.input, options.provenance, pair.reading, pair.translation)
-        runGate(pack, pair.reading, pair.translation, options.gate)
-        val stem = dictionaryStem(pair.reading, pair.translation)
-        writePack(
-            pack,
-            options.outputDir.resolve("$stem.sqlite"),
-            options.outputDir.resolve("NOTICE-$stem"),
-            options.outputDir.resolve("manifest-$stem.json"),
+    val pairsByReading = config.dictionaries.groupBy(LanguagePair::reading)
+    pairsByReading.forEach { (reading, pairs) ->
+        val extraction = extractEdition(
+            options.input,
+            options.provenance,
+            reading,
+            pairs.map(LanguagePair::translation),
         )
-        // The reading language's first configured pack supplies the form index its
-        // difficulty is keyed by; the app's translation target is fixed, so the
-        // first pair must translate into it.
-        formsByReading.putIfAbsent(pair.reading, pack.forms)
+        pairs.forEach { pair ->
+            val pack = PackBuilder(
+                extraction.contentFor(pair.translation),
+                extraction.index,
+            ).build()
+            runGate(pack, pair.reading, pair.translation, options.gate)
+            val stem = dictionaryStem(pair.reading, pair.translation)
+            writePack(
+                pack,
+                options.outputDir.resolve("$stem.sqlite"),
+                options.outputDir.resolve("NOTICE-$stem"),
+                options.outputDir.resolve("manifest-$stem.json"),
+            )
+        }
+        if (reading in config.difficulties) {
+            writeCatalogueDifficulty(reading, extraction.index.forms, options)
+        }
     }
-    config.difficulties.forEach { language ->
-        val frequency = options.frequencies[language]
-            ?: error("no --frequency $language=<path> for the catalogued difficulty of $language")
-        // A reading language with no pack (Spanish, in the starting set) has no
-        // lemmas to key by, so its words take their normalised surface form
-        // (ADR-0029, issue #161).
-        val content = buildDifficulty(frequency, formsByReading[language].orEmpty(), options.provenance, language)
-        val stem = difficultyStem(language)
-        writeDifficulty(
-            content,
-            options.outputDir.resolve("$stem.sqlite"),
-            options.outputDir.resolve("NOTICE-$stem"),
-            options.outputDir.resolve("manifest-$stem.json"),
-        )
+    // A reading language with no pack (Spanish, in the starting set) has no lemmas
+    // to key by, so its words take their normalised surface form (ADR-0029).
+    (config.difficulties - pairsByReading.keys).forEach { language ->
+        writeCatalogueDifficulty(language, emptyList(), options)
     }
     val languageManifest = buildLanguageManifest(config.dictionaries, config.difficulties)
     Files.writeString(options.languageManifest, languageManifest.canonicalJson())
     println(languageManifest.canonicalJson())
+}
+
+private fun writeCatalogueDifficulty(language: String, forms: List<PackForm>, options: CliOptions.Catalogue) {
+    val frequency = options.frequencies[language]
+        ?: error("no --frequency $language=<path> for the catalogued difficulty of $language")
+    val content = buildDifficulty(frequency, forms, options.provenance, language)
+    val stem = difficultyStem(language)
+    writeDifficulty(
+        content,
+        options.outputDir.resolve("$stem.sqlite"),
+        options.outputDir.resolve("NOTICE-$stem"),
+        options.outputDir.resolve("manifest-$stem.json"),
+    )
 }
 
 /**
@@ -212,14 +267,14 @@ private fun buildDifficulty(
     }
 }
 
-private fun buildPack(
+private fun extractEdition(
     input: Path,
     provenance: PackProvenance,
     readingLanguage: String,
-    translationLanguage: String,
-): PackContent = openInput(input).use { stream ->
+    translationLanguages: Collection<String>,
+): EditionIntermediate = openInput(input).use { stream ->
     BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use { reader ->
-        PackBuilder(provenance, readingLanguage, translationLanguage).build(reader)
+        EditionExtractor(provenance, readingLanguage, translationLanguages).extract(reader)
     }
 }
 

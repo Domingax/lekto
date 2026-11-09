@@ -473,7 +473,9 @@ client, not a footnote.
 > channel: one Wiktionary edition per **Reading language**, one shared form index
 > per language, a two-stage build, and a separate data repository behind a
 > movable manifest. The behaviour below is what the code does **today**; issues
-> #302–#306 are the tickets that change it. Where this section and those ADRs
+> #303–#306 are the tickets that change it. #303 has landed the extraction stage
+> and the shared form index; #305 has landed each artefact's own publish address.
+> The workflow still reads one source file. Where this section and those ADRs
 > disagree, the ADRs win.
 
 `tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
@@ -492,18 +494,43 @@ application CI.
   --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
 
-The CLI streams the raw `.jsonl[.gz]` once per configured pair, keeps the
+The CLI streams the raw `.jsonl[.gz]` once per **Reading language** — sharing one
+form index across every pack and table of that language (ADR-0045) — keeps the
 `lang_code == "<reading>"` entries that carry a `<translation>` translation, drops
 multi-word surfaces, normalises every key with the same rule as `core`'s
 `normaliseSurface` (NFC + lower case), and writes a read-only SQLite file whose
 `user_version` is the pack format version, beside a `NOTICE` (attribution) and a
 `manifest.json` (provenance and counts).
 
+A **catalogue run** over `languages.json` groups the pairs by reading language, so
+one edition pass still yields every pack of that language and its **Difficulty
+table**; the table is keyed by the same index as the packs, not by whichever pair
+came first (ADR-0045).
+
+An **extraction run** (`--extract-target`, issue #303; ADR-0046) writes the
+intermediate the two-stage build needs, without building a pack:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--input fr-extract.jsonl.gz \
+  --reading-language fr --extract-target en --extract-target es \
+  --output-dir intermediate \
+  --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
+```
+
+It streams the edition once and writes `form-index-<reading>.json` — the language's
+surface→lemma table, built from entries carrying at least one translation into a
+configured target — and one `content-<reading>-<translation>.json` per target, in
+the pack's fixed order. Both carry the edition's provenance, contain no wall clock
+and are byte-identical across runs on the same input. They are workflow
+artefacts: stage two (issue #304) reads one content file and the index to write
+that single pair's release artefacts, and the intermediate never reaches a
+release.
+
 A **single-artefact run** (`--reading-language`/`--translation-language`/
 `--difficulty-language`) builds one pack and, optionally, one reading language's
 **Difficulty table** (issue #64; ADR-0029) from a wordfreq frequency list, keyed by
 the reading language's word identity. `--difficulty-language` defaults to the
-reading language, so the table is keyed by that pack's form index:
+reading language, so the table is keyed by that reading language's form index:
 
 ```sh
 ./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz --output pack.sqlite \
@@ -511,6 +538,11 @@ reading language, so the table is keyed by that pack's form index:
   --frequency-input wordfreq-en.tsv.gz --difficulty-output difficulty-en.sqlite \
   --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
+
+A single-artefact run has no sibling packs, so its index covers the one target it
+names. The catalogue and the extraction mode cover the reading language's whole
+configured target set, which is what keeps the shared `form` table identical across
+that language's packs (ADR-0045).
 
 `--frequency-input` is one `form<TAB>weight` line per surface form (for wordfreq,
 `10 ** zipf_frequency(form)`); the builder aggregates each form's weight onto the

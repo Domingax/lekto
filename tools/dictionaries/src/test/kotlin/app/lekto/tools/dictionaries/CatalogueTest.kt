@@ -3,7 +3,9 @@ package app.lekto.tools.dictionaries
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.sql.DriverManager
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -40,6 +42,19 @@ class CatalogueTest {
             "lekto-difficulty-en.sqlite.gz",
             "lekto-difficulty-es.sqlite.gz",
         ).forEach { name -> assertTrue(name in manifest, "$name must be listed in the manifest") }
+    }
+
+    @Test
+    fun `every pack of one reading language shares its form table`() {
+        val out = directory.resolve("out")
+
+        runCatalogue(options(DEFAULT_CONFIG))
+
+        val french = forms(out.resolve("lekto-dictionary-en-fr.sqlite"))
+        val spanish = forms(out.resolve("lekto-dictionary-en-es.sqlite"))
+
+        assertEquals(french, spanish, "the shared index must give one language's packs the same form rows")
+        assertTrue(french.isNotEmpty())
     }
 
     @Test
@@ -88,6 +103,26 @@ class CatalogueTest {
         Files.writeString(es, "cosa\t100\n")
         return mapOf("en" to en, "es" to es)
     }
+
+    private fun forms(path: Path): List<Triple<String, String, String>> =
+        DriverManager.getConnection("jdbc:sqlite:${path.toAbsolutePath()}").use { connection ->
+            connection.createStatement().use { statement ->
+                val sql = "SELECT surface, language, lemma FROM form ORDER BY surface, language"
+                statement.executeQuery(sql).use { result ->
+                    buildList {
+                        while (result.next()) {
+                            add(
+                                Triple(
+                                    result.getString("surface"),
+                                    result.getString("language"),
+                                    result.getString("lemma"),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
     private companion object {
         val DEFAULT_CONFIG = """

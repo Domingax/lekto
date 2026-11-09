@@ -76,14 +76,8 @@ class SqliteDifficultyWriterTest {
         }
 }
 
-private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")
-
 private fun fixtureDifficulty(): DifficultyContent {
-    val pack = PackBuilder(FIXTURE_PROVENANCE).build(
-        requireNotNull(SqliteDifficultyWriterTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {
-            "the committed pack fixture must be on the test classpath"
-        }.bufferedReader(),
-    )
+    val pack = EditionFixtures.pack()
     return DifficultyBuilder(
         forms = pack.forms,
         provenance = pack.provenance,

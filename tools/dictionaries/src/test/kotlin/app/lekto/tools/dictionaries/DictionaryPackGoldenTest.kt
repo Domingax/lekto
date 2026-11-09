@@ -18,23 +18,15 @@ class DictionaryPackGoldenTest {
 
     @Test
     fun `the same fixture yields the same canonical pack`() {
-        val first = fixturePack()
-        val second = fixturePack()
+        val first = EditionFixtures.pack()
+        val second = EditionFixtures.pack()
 
         assertEquals(first.canonicalJson(), second.canonicalJson(), "the transform must be deterministic")
         assertEquals(golden(), first.canonicalJson(), "update the golden only when the transform changes on purpose")
     }
 }
 
-private fun fixturePack(): PackContent = PackBuilder(FIXTURE_PROVENANCE).build(
-    requireNotNull(DictionaryPackGoldenTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {
-        "the committed fixture must be on the test classpath"
-    }.bufferedReader(),
-)
-
 private fun golden(): String =
     requireNotNull(DictionaryPackGoldenTest::class.java.getResourceAsStream("/golden/en-fr-sample.pack.json")) {
         "the committed golden must be on the test classpath"
     }.bufferedReader().use { it.readText() }.trimEnd('\n')
-
-private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")

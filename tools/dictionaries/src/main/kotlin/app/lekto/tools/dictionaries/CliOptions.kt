@@ -73,16 +73,40 @@ internal sealed interface CliOptions {
      */
     data class Publish(val manifest: Path, val assetDir: Path, val assetBaseUrl: String) : CliOptions
 
+    /**
+     * Stage one of the two-stage build (ADR-0046, issue #303): streams one
+     * edition once and writes its **Reading language**'s form index beside one
+     * content file per `--extract-target`.
+     */
+    data class Extract(
+        val input: Path,
+        val outputDir: Path,
+        val provenance: PackProvenance,
+        val readingLanguage: String,
+        val translationLanguages: List<String>,
+    ) : CliOptions
+
     companion object {
         fun parse(args: Array<String>): CliOptions {
             val values = parseFlags(args)
             return when {
                 values.containsKey("--publish-manifest") -> publish(values)
                 values.containsKey("--measure-input") -> measure(values)
+                values.containsKey("--extract-target") -> extract(values)
                 values.containsKey("--languages-config") -> catalogue(values)
                 else -> build(values)
             }
         }
+
+        private fun extract(values: Map<String, List<String>>): Extract = Extract(
+            input = path(values, "--input"),
+            outputDir = path(values, "--output-dir"),
+            provenance = provenance(values),
+            readingLanguage = required(values, "--reading-language").lowercase(),
+            translationLanguages = values["--extract-target"].orEmpty()
+                .map(String::lowercase)
+                .distinct(),
+        )
 
         private fun measure(values: Map<String, List<String>>): Measure = Measure(
             inputs = values["--measure-input"].orEmpty().map(::measureInput),
@@ -211,6 +235,7 @@ private val KNOWN_FLAGS = setOf(
     "--measure-input",
     "--measure-target",
     "--measure-output",
+    "--extract-target",
 )
 
 /** Parses `--flag value` pairs, keeping a flag's repeated values in order. */

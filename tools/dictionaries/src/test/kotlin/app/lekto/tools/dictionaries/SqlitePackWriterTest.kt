@@ -19,7 +19,7 @@ class SqlitePackWriterTest {
 
     @Test
     fun `writes the format version and the attribution metadata`() {
-        val pack = write(fixturePack(), "pack.sqlite")
+        val pack = write(EditionFixtures.pack(), "pack.sqlite")
 
         assertEquals(PackFormat.VERSION, query(pack, "PRAGMA user_version") { it.getInt(1) })
         assertEquals("CC BY-SA 4.0", value(pack, "SELECT value FROM pack_metadata WHERE key = 'license'"))
@@ -33,7 +33,7 @@ class SqlitePackWriterTest {
 
     @Test
     fun `round-trips entries senses and translations`() {
-        val pack = write(fixturePack(), "pack.sqlite")
+        val pack = write(EditionFixtures.pack(), "pack.sqlite")
 
         assertEquals(8, query(pack, "SELECT COUNT(*) FROM entry") { it.getInt(1) })
         assertEquals(
@@ -56,7 +56,7 @@ class SqlitePackWriterTest {
 
     @Test
     fun `answers a form lookup and a lemma lookup`() {
-        val pack = write(fixturePack(), "pack.sqlite")
+        val pack = write(EditionFixtures.pack(), "pack.sqlite")
 
         assertEquals("blorple", value(pack, "SELECT lemma FROM form WHERE surface = 'blorpled' AND language = 'en'"))
         assertEquals("plim", value(pack, "SELECT lemma FROM form WHERE surface = 'plimmer' AND language = 'en'"))
@@ -70,8 +70,8 @@ class SqlitePackWriterTest {
     fun `is reproducible byte for byte from the committed fixture`() {
         // Two independent end-to-end builds (JSONL -> SQLite), not one content
         // reused: this is the "same inputs yield the same pack" evidence.
-        val first = write(fixturePack(), "first.sqlite")
-        val second = write(fixturePack(), "second.sqlite")
+        val first = write(EditionFixtures.pack(), "first.sqlite")
+        val second = write(EditionFixtures.pack(), "second.sqlite")
 
         assertEquals(-1L, Files.mismatch(first, second), "the same input must yield identical bytes")
         assertEquals(sha256(first), sha256(second), "the same input must yield the same hash")
@@ -99,12 +99,3 @@ class SqlitePackWriterTest {
             }
         }
 }
-
-private fun fixturePack(): PackContent = PackBuilder(FIXTURE_PROVENANCE)
-    .build(
-        requireNotNull(SqlitePackWriterTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {
-            "the committed fixture must be on the test classpath"
-        }.bufferedReader(),
-    )
-
-private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")

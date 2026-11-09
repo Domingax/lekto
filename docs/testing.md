@@ -1334,6 +1334,8 @@ suite (ticket #9), so a drift fails `check` rather than the next review:
 - A test class lives in a test source set and its file is named `<Class>Test.kt`;
   a production file is never named `*Test.kt`. Shared fakes and fixtures belong in
   `testkit`, not in a test source set, so a test source set holds tests only.
+  `tools/dictionaries` is standalone and cannot depend on `testkit`, so its shared
+  fixture lives beside its tests.
 - A desktop `*SemanticsTest` has a same-named twin under `app/src/androidUnitTest`
   — same package, different lane — so a screen proved on the desktop is proved on
   Android too; `check` fails, naming the missing twin, unless the screen is on
