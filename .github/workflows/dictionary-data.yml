@@ -164,7 +164,6 @@ jobs:
   frequencies:
     needs: prepare
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
         with:
@@ -174,7 +173,7 @@ jobs:
 
       - name: Build the wordfreq frequency lists
         run: |
-          python3 -m pip install --quiet "wordfreq==3.0.2"
+          python3 -m pip install --quiet "wordfreq[cjk]==3.0.2"
           python3 - <<'PY'
           import json
           import os
@@ -340,8 +339,8 @@ jobs:
   # manifests the run produced, the thin pairs are dropped, and it is uploaded
   # only after every byte it names (ADR-0047).
   assemble:
-    needs: [prepare, pair, difficulty]
-    if: ${{ always() && needs.prepare.result == 'success' }}
+    needs: [prepare, frequencies, pair, difficulty]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.frequencies.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

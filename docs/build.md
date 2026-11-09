@@ -637,6 +637,10 @@ snapshot, so the address the app follows never names bytes that do not exist yet
 (ADR-0048). The three most recent snapshots are kept and older ones are deleted,
 which is safe because only the current manifest is referenced.
 
+The frequency lists are built once for the run with `wordfreq[cjk]`: the `cjk`
+extra brings the jieba and mecab tokenisers that Chinese, Japanese and Korean
+need, and the plain package raises on the first CJK word without them.
+
 The release body is rendered from the committed template
 `.github/release-notes/dictionary-data.md`; the full CC BY-SA 4.0 text stays in the
 `NOTICE` sidecars and in each pack's `license_text` metadata. The build is

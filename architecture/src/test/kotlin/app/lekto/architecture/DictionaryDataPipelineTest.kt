@@ -133,7 +133,7 @@ class DictionaryDataPipelineTest :
                 WorkflowJobs.needs(workflow, "difficulty") shouldBe setOf("prepare", "extract", "frequencies")
             }
             withClue("the assembly waits for every pair and table") {
-                WorkflowJobs.needs(workflow, "assemble") shouldBe setOf("prepare", "pair", "difficulty")
+                WorkflowJobs.needs(workflow, "assemble") shouldBe setOf("prepare", "frequencies", "pair", "difficulty")
             }
         }
 
