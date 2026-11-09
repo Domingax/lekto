@@ -93,6 +93,19 @@ class DictionaryPackInstallerTest :
             derived.paths() shouldBe emptyList()
         }
 
+        test("a refused download leaves a pack already installed in place") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (packInstaller, files) = installer(derived)
+            packInstaller.install(URL, SHA).shouldBeInstanceOf<DictionaryPackState.Ready>()
+            files.servedSha256 = MISMATCHED_SHA256
+
+            packInstaller.install(URL, SHA).shouldBeInstanceOf<DictionaryPackState.Ready>()
+
+            packInstaller.status().shouldBeInstanceOf<DictionaryPackState.Ready>()
+            packInstaller.open() shouldNotBe null
+            derived.paths() shouldBe listOf(DictionaryPackInstaller.pathOf("en", "fr"))
+        }
+
         test("a failed download propagates and leaves nothing installed") {
             val (packInstaller, files) = installer()
             files.failure = java.io.IOException("offline")
