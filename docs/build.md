@@ -180,9 +180,10 @@ standalone, and the last is test scaffolding.
 
 **SonarCloud** is the static-analysis service. It ingests that coverage report
 plus the ktlint and detekt findings, then evaluates its **quality gate on new
-code** — new-code coverage, duplicated lines and code smells. The `sonar` CI job
-generates all three reports and then scans (ticket #8); `sonar-project.properties`
-tells the scanner where each one lives. SonarCloud's Kotlin importer takes a
+code** — new-code coverage, duplicated lines and code smells. The `fast` CI job
+generates all three reports and uploads them; the `sonar` job downloads them and
+runs the scan, so the build and its tests happen once (ticket #8).
+`sonar-project.properties` tells the scanner where each one lives. SonarCloud's Kotlin importer takes a
 comma-separated list of report **files** and does not expand wildcards, while
 detekt and ktlint each write one report per Kotlin compilation or source set, so
 `mergeDetektReports` and `mergeKtlintReports` fold each tool's reports into a
@@ -210,28 +211,37 @@ The gate is only trustworthy if a regression trips it. To reproduce, on a branch
 
 ## CI lanes
 
-The workflows live in `.github/workflows/`. Every push and pull request runs the
-fast lane and the licence gate; pull requests also run the WebDAV and golden
-lanes; the emulator lane is nightly and never on the critical path (ticket #7).
+The workflows live in `.github/workflows/`. Every pull request, and every push to
+`main`, runs the fast lane and the licence gate; the `sonar` lane reuses the fast
+lane's reports instead of building a second time. The emulator lane is nightly and
+never on the critical path (ticket #7).
+
+A push to a feature branch starts no workflow of its own: the pull request runs
+the same commit, so an unfiltered `push` trigger would double every pipeline. The
+same filter keeps the lanes off a release tag, which `release.yml` already covers.
 
 | Lane | Trigger | Command |
 | ---- | ------- | ------- |
-| `fast` | push, pull request | `./gradlew check -x :integrations:webdav:jvmTest`, then `./gradlew :app:assembleRelease -Plekto.android=true` unsigned |
-| `licences` | push, pull request | `./gradlew checkDependencyLicences --no-configuration-cache` |
-| `sonar` | push, pull request | `./gradlew check koverXmlReport` then the SonarCloud scan |
-| `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
-| `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
+| `fast` | pull request, push to `main` | `./gradlew check koverXmlReport -Proborazzi.test.verify=true`, then `./gradlew :app:assembleRelease -Plekto.android=true` unsigned |
+| `licences` | pull request, push to `main` | `./gradlew checkDependencyLicences --no-configuration-cache` |
+| `sonar` | pull request, push to `main` | the SonarCloud scan over the reports `fast` uploaded |
 | `guide` | pull request; push to `main` when the guide changed | `npm ci`, `npm test`, `npm run check:licences` and `npm run build` in `guide/` |
 | `release` (`release.yml`) | version tag, manual | jpackage on Windows and both macOS architectures, `createDistributable` + `appimage.sh` on Linux, the signed Android APK on Linux, then `gh release create` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
 `fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
-must require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
-pull request has no secret, so the scan is skipped there and only the coverage and
-linter reports are produced. The `webdav` lane needs Docker for the driver's
-container cases — present on GitHub's runners — while its non-container tests run
-anywhere, so the task still passes where Docker is absent; the `fast` lane excludes
-that task so the two lanes do not overlap. The `fast` lane also runs the Android host suites —
+must require them. `fast` builds and tests the change once and uploads the merged
+coverage XML and the merged ktlint and detekt reports (`sonar-reports`); `sonar`
+downloads them and only runs the scanner, so no lane repeats the build. The
+`sonar` lane needs the `SONAR_TOKEN` repository secret; a fork pull request has no
+secret, so the scan is skipped there.
+
+`fast` runs every JVM suite, which includes the WebDAV driver's container cases
+and the committed UI goldens. The container cases need Docker, present on GitHub's
+runners; where it is absent they skip rather than fail, so the lane still passes.
+The goldens are compared inside the `desktopTest` run `check` already triggers
+(`-Proborazzi.test.verify=true`); the `verifyRoborazziDesktop` task would run that
+whole suite a second time. The lane also runs the Android host suites —
 `core`'s `:core:testAndroidHostTest`, the app's `:app:testDebugUnitTest` and
 `integrations/webdav`'s `:integrations:webdav:testAndroidHostTest` —
 which need the Android SDK the GitHub runners carry, and no emulator

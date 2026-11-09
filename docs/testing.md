@@ -49,9 +49,9 @@ test configuration. The Android-specific `ui-test-junit4` API runs the same
 screens under Robolectric in `app/androidUnitTest` (`:app:testDebugUnitTest`,
 wired into `check`), so an Android-only constraint is not left to the desktop
 lane — issue #69's `LazyColumn` key crashed on Android while every JVM test was
-green. The slower lanes — screenshot goldens, the containerised WebDAV driver and
-instrumented end-to-end runs — run on pull requests or nightly; the CI fast lane
-excludes the WebDAV test so the two lanes do not overlap.
+green. The screenshot goldens and the containerised WebDAV driver run inside the
+CI fast lane, in the same pass as everything else; the instrumented end-to-end
+runs are nightly.
 `docs/build.md#ci-lanes` lists the workflow jobs that run each one.
 
 The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
@@ -187,7 +187,7 @@ swipes the row and finds the confirmation, and the desktop twin proves the trash
 appears on hover, that a drag on a pointer platform does nothing, and that the
 confirmation guards the vault either way. The shelf's loading state is the controller's: `LibraryControllerTest`
 pins that a refresh reports it while the vault is read, so the skeleton is real
-state and not a still. The golden lane records the frame on four books across
+state and not a still. The golden suite records the frame on four books across
 three languages, one sheet per paper.
 
 Leading with the book in progress (issue #288) is a view over the listing, so the
@@ -204,7 +204,7 @@ untouched until it is confirmed. The block is one accessible item whose action i
 button is not a second stop — and it says what its line is waiting for while the
 length is measured. `AppSemanticsTest` proves the block appears after a page
 turned just before leaving, which is the refresh the composition root wires, and
-the golden lane records its frame beside the rows.
+the golden suite records its frame beside the rows.
 
 Declaring a book **Finished** (issue #200; ADR-0038) is a second vault fact beside
 the reading position, so it is proved at its own levels. `FinishedBookRecord` is
@@ -347,9 +347,11 @@ pinned reading typography (a bundled font); until then, typography is pinned by
 ./gradlew :app:recordRoborazziDesktop
 ```
 
-and verify with `./gradlew :app:verifyRoborazziDesktop`, the task the `golden` CI
-lane runs. `app/build.gradle.kts` turns on `separateOutputDirs` so the record and
-verify tasks cannot race over one directory.
+and verify with `./gradlew :app:verifyRoborazziDesktop`. The CI fast lane instead
+passes `-Proborazzi.test.verify=true` to `check`, which compares the goldens in
+the `desktopTest` run it already triggers rather than running the suite twice.
+`app/build.gradle.kts` turns on `separateOutputDirs` so the record and verify
+tasks cannot race over one directory.
 
 ## WebDAV integration lane
 
@@ -489,10 +491,10 @@ JaCoCo-compatible coverage report to `build/reports/kover/report.xml` (Kover;
 `docs/build.md#coverage-and-the-quality-gate`). The root project is the merging
 module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`,
 `tools/dictionaries` and `architecture` are not aggregated. The report is a
-measurement, not a
-gate on its own — the `sonar` CI lane feeds it, with the ktlint and detekt
-findings, to SonarCloud, whose quality gate on new code (coverage, duplication,
-smells) blocks the pull request. Reproduce a gate failure with the drill in
+measurement, not a gate on its own — the `fast` CI lane produces it and the
+`sonar` lane feeds it, with the ktlint and detekt findings, to SonarCloud, whose
+quality gate on new code (coverage, duplication, smells) blocks the pull request.
+Reproduce a gate failure with the drill in
 `docs/build.md#the-quality-gate-drill`.
 
 ## The framework
