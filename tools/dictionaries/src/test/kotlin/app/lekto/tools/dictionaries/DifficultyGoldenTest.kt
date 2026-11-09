@@ -29,10 +29,7 @@ class DifficultyGoldenTest {
 }
 
 private fun fixtureDifficulty(): DifficultyContent {
-    val pack = PackBuilder(FIXTURE_PROVENANCE).build(
-        requireNotNull(DifficultyGoldenTest::class.java.getResourceAsStream("/en-fr-sample.jsonl"))
-            .bufferedReader(),
-    )
+    val pack = EditionFixtures.pack()
     return DifficultyBuilder(
         forms = pack.forms,
         provenance = pack.provenance,
@@ -51,5 +48,3 @@ private fun golden(): String =
     requireNotNull(DifficultyGoldenTest::class.java.getResourceAsStream("/golden/difficulty-en-sample.json")) {
         "the committed golden must be on the test classpath"
     }.bufferedReader().use { it.readText() }.trimEnd('\n')
-
-private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")

@@ -4,6 +4,7 @@ import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.JsonVaultStore
 import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.MISMATCHED_SHA256
 import app.lekto.testkit.testVaultRecord
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -38,7 +39,7 @@ class DictionaryPackInstallerTest :
         test("an install downloads the pack, reports it ready and opens it") {
             val (packInstaller, files) = installer()
 
-            val state = packInstaller.install(URL)
+            val state = packInstaller.install(URL, SHA)
 
             state.shouldBeInstanceOf<DictionaryPackState.Ready>()
             packInstaller.status().shouldBeInstanceOf<DictionaryPackState.Ready>()
@@ -58,7 +59,7 @@ class DictionaryPackInstallerTest :
             val (packInstaller, files) = installer(derived)
             files.version = DictionaryPack.FORMAT_VERSION + 1
 
-            packInstaller.install(URL) shouldBe
+            packInstaller.install(URL, SHA) shouldBe
                 DictionaryPackState.Incompatible(DictionaryPack.FORMAT_VERSION + 1, DictionaryPack.FORMAT_VERSION)
             packInstaller.status() shouldBe
                 DictionaryPackState.Incompatible(DictionaryPack.FORMAT_VERSION + 1, DictionaryPack.FORMAT_VERSION)
@@ -71,25 +72,52 @@ class DictionaryPackInstallerTest :
             val (packInstaller, files) = installer(derived)
             files.openFailure = IllegalStateException("file is not a database")
 
-            val state = packInstaller.install(URL)
+            val state = packInstaller.install(URL, SHA)
 
             state.shouldBeInstanceOf<DictionaryPackState.Corrupt>()
             state.reason shouldBe "file is not a database"
             installer(derived).first.status() shouldBe DictionaryPackState.NotInstalled
         }
 
+        test("a download whose digest is not the manifest's is refused, not installed") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (packInstaller, files) = installer(derived)
+            files.servedSha256 = MISMATCHED_SHA256
+
+            val state = packInstaller.install(URL, SHA)
+
+            state.shouldBeInstanceOf<DictionaryPackState.Corrupt>().reason shouldBe
+                "The downloaded dictionary pack does not match the SHA-256 the manifest published."
+            packInstaller.status() shouldBe state
+            packInstaller.open() shouldBe null
+            derived.paths() shouldBe emptyList()
+        }
+
+        test("a refused download leaves a pack already installed in place") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (packInstaller, files) = installer(derived)
+            packInstaller.install(URL, SHA).shouldBeInstanceOf<DictionaryPackState.Ready>()
+            files.servedSha256 = MISMATCHED_SHA256
+
+            packInstaller.install(URL, SHA).shouldBeInstanceOf<DictionaryPackState.Ready>()
+
+            packInstaller.status().shouldBeInstanceOf<DictionaryPackState.Ready>()
+            packInstaller.open() shouldNotBe null
+            derived.paths() shouldBe listOf(DictionaryPackInstaller.pathOf("en", "fr"))
+        }
+
         test("a failed download propagates and leaves nothing installed") {
             val (packInstaller, files) = installer()
             files.failure = java.io.IOException("offline")
 
-            assertFailsWith<java.io.IOException> { packInstaller.install(URL) }
+            assertFailsWith<java.io.IOException> { packInstaller.install(URL, SHA) }
 
             packInstaller.status() shouldBe DictionaryPackState.NotInstalled
         }
 
         test("removing the pack uninstalls it") {
             val (packInstaller, _) = installer()
-            packInstaller.install(URL)
+            packInstaller.install(URL, SHA)
 
             packInstaller.remove()
 
@@ -119,7 +147,7 @@ class DictionaryPackInstallerTest :
             val (english, _) = installer(derived, reading = "en", translation = "fr")
             val (french, _) = installer(derived, reading = "fr", translation = "en")
 
-            english.install(URL)
+            english.install(URL, SHA)
 
             english.status().shouldBeInstanceOf<DictionaryPackState.Ready>()
             french.status() shouldBe DictionaryPackState.NotInstalled
@@ -135,7 +163,7 @@ class DictionaryPackInstallerTest :
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (packInstaller, _) = installer(derived)
 
-            packInstaller.install(URL)
+            packInstaller.install(URL, SHA)
 
             derived.paths() shouldBe listOf(DictionaryPackInstaller.pathOf("en", "fr"))
             vault.exportBundle().decodeToString().contains("dictionary-pack-bytes") shouldBe false
@@ -144,3 +172,6 @@ class DictionaryPackInstallerTest :
 
 /** A stand-in download address; the installer only hands it to the downloader. */
 private const val URL: String = "https://example.test/pack.sqlite.gz"
+
+/** The digest the fake reports and the manifest vouches for; one test changes the fake's to prove refusal. */
+private const val SHA: String = app.lekto.testkit.TEST_SHA256

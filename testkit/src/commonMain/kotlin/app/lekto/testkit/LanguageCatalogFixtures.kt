@@ -4,9 +4,12 @@ import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageManifest
 import app.lekto.core.language.ManifestDownloader
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.language.OfferedLanguage
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -87,14 +90,8 @@ fun testLanguageManifest(
             languages.map { offered ->
                 buildJsonObject {
                     put("language", offered.language)
-                    offered.difficulty?.let { name ->
-                        put(
-                            "difficulty",
-                            buildJsonObject {
-                                put("name", name)
-                                offered.difficultySizeBytes?.let { bytes -> put("sizeBytes", bytes) }
-                            },
-                        )
+                    offered.difficulty?.let { artifact ->
+                        put("difficulty", artifact.toJson())
                     }
                     put(
                         "dictionaries",
@@ -103,8 +100,7 @@ fun testLanguageManifest(
                                 add(
                                     buildJsonObject {
                                         put("translationLanguage", dictionary.translationLanguage)
-                                        put("name", dictionary.name)
-                                        dictionary.sizeBytes?.let { bytes -> put("sizeBytes", bytes) }
+                                        putArtifact(dictionary.artifact)
                                     },
                                 )
                             }
@@ -116,16 +112,50 @@ fun testLanguageManifest(
     )
 }.toString().encodeToByteArray()
 
+/** One published artefact as the manifest names it: its name, address, digest and optional size. */
+fun testOfferedArtifact(
+    name: String,
+    url: String = "https://data.test/$name",
+    sha256: String = TEST_SHA256,
+    sizeBytes: Long? = null,
+): OfferedArtifact = OfferedArtifact(name, url, sha256, sizeBytes)
+
+/** The digest the fakes report, so a test can fetch an artefact the manifest vouches for. */
+const val TEST_SHA256: String = "0000000000000000000000000000000000000000000000000000000000000000"
+
+/** A digest no fixture asset has, so a test can prove a download whose bytes do not match is refused. */
+const val MISMATCHED_SHA256: String = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+private fun JsonObjectBuilder.putArtifact(artifact: OfferedArtifact) {
+    put("name", artifact.name)
+    put("url", artifact.url)
+    put("sha256", artifact.sha256)
+    artifact.sizeBytes?.let { bytes -> put("sizeBytes", bytes) }
+}
+
+private fun OfferedArtifact.toJson(): JsonObject = buildJsonObject { putArtifact(this@toJson) }
+
+/** A published **Dictionary pack** as the manifest names it, with a fetchable test address and digest. */
+@Suppress("LongParameterList") // One fixture mirroring the manifest entry's fields, each independently overridable.
+fun testOfferedDictionary(
+    translationLanguage: String,
+    name: String,
+    url: String = "https://data.test/$name",
+    sha256: String = TEST_SHA256,
+    sizeBytes: Long? = null,
+): OfferedDictionary = OfferedDictionary(
+    translationLanguage = translationLanguage,
+    artifact = testOfferedArtifact(name, url, sha256, sizeBytes),
+)
+
 /** One offered language, with a display name the manifest's tag implies. */
 fun testOfferedLanguage(
     language: String,
-    difficulty: String? = null,
+    difficulty: OfferedArtifact? = null,
     dictionaries: List<OfferedDictionary> = emptyList(),
-    difficultySizeBytes: Long? = null,
 ): OfferedLanguage = OfferedLanguage(
     language = language,
     displayName = app.lekto.core.language.readingLanguageName(language),
     difficulty = difficulty,
     dictionaries = dictionaries,
-    difficultySizeBytes = difficultySizeBytes,
 )

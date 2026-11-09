@@ -1,10 +1,11 @@
 package app.lekto.tools.dictionaries
 
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-/** The command line: required flags, defaults, the two modes and the errors a bad invocation must produce. */
+/** The command line: required flags, defaults, the four modes and the errors a bad invocation must produce. */
 class CliOptionsTest {
 
     @Test
@@ -124,6 +125,144 @@ class CliOptionsTest {
         assertEquals("wordfreq-es.tsv.gz", options.frequencies.getValue("es").fileName.toString())
         assertEquals(71_808, options.gate.previous.getValue("en"))
         assertEquals(options.outputDir.resolve("language-manifest.json"), options.languageManifest)
+    }
+
+    @Test
+    fun `parses the coverage mode with one input per reading language`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--measure-input",
+                "fr=/cache/fr.jsonl.gz",
+                "--measure-input",
+                "de=/cache/de.jsonl.gz",
+                "--measure-target",
+                "EN",
+                "--measure-output",
+                "coverage.json",
+            ),
+        ) as CliOptions.Measure
+
+        assertEquals(
+            listOf(
+                MeasureInput("fr", "fr", Path.of("/cache/fr.jsonl.gz")),
+                MeasureInput("de", "de", Path.of("/cache/de.jsonl.gz")),
+            ),
+            options.inputs,
+        )
+        assertEquals(listOf("en"), options.targets)
+        assertEquals("coverage.json", options.output.fileName.toString())
+    }
+
+    @Test
+    fun `parses the extraction mode with one target per content file`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--input", "fr-extract.jsonl.gz",
+                "--output-dir", "intermediate",
+                "--reading-language", "FR",
+                "--extract-target", "EN",
+                "--extract-target", "es",
+                "--source-url", "u",
+                "--source-sha256", "s",
+                "--extraction-date", "2026-10-04",
+            ),
+        ) as CliOptions.Extract
+
+        assertEquals("fr-extract.jsonl.gz", options.input.fileName.toString())
+        assertEquals("intermediate", options.outputDir.fileName.toString())
+        assertEquals("fr", options.readingLanguage)
+        assertEquals(listOf("en", "es"), options.translationLanguages)
+    }
+
+    @Test
+    fun `separates the source edition from a reading language it does not name`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--measure-input",
+                "simple:en=/cache/simple.jsonl.gz",
+                "--measure-output",
+                "coverage.json",
+            ),
+        ) as CliOptions.Measure
+
+        assertEquals(listOf(MeasureInput("simple", "en", Path.of("/cache/simple.jsonl.gz"))), options.inputs)
+    }
+
+    @Test
+    fun `parses the publish mode from its own flags`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--publish-manifest",
+                "out/language-manifest.json",
+                "--asset-dir",
+                "out",
+                "--asset-url-base",
+                "https://data.test/releases/download/dictionary-20261101",
+            ),
+        ) as CliOptions.Publish
+
+        assertEquals("language-manifest.json", options.manifest.fileName.toString())
+        assertEquals("out", options.assetDir.fileName.toString())
+        assertEquals("https://data.test/releases/download/dictionary-20261101", options.assetBaseUrl)
+    }
+
+    @Test
+    fun `parses the per-pair assembly mode from one content file and the shared index`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--content",
+                "intermediate/content-en-fr.json",
+                "--form-index",
+                "intermediate/form-index-en.json",
+                "--output-dir",
+                "out",
+                "--previous-lemma-count",
+                "71808",
+                "--collapse-threshold",
+                "0.9",
+            ),
+        ) as CliOptions.Pair
+
+        assertEquals("content-en-fr.json", options.content.fileName.toString())
+        assertEquals("form-index-en.json", options.formIndex.fileName.toString())
+        assertEquals("out", options.outputDir.fileName.toString())
+        assertEquals(71_808, options.previousLemmaCount)
+        assertEquals(0.9, options.collapseThreshold)
+    }
+
+    @Test
+    fun `a per-pair assembly without a previous count is ungated`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--content",
+                "content-en-fr.json",
+                "--form-index",
+                "form-index-en.json",
+                "--output-dir",
+                "out",
+            ),
+        ) as CliOptions.Pair
+
+        assertEquals(null, options.previousLemmaCount)
+        assertEquals(SanityGate.DEFAULT_COLLAPSE_THRESHOLD, options.collapseThreshold)
+    }
+
+    @Test
+    fun `parses the difficulty assembly mode from the shared index and a frequency list`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--form-index",
+                "intermediate/form-index-en.json",
+                "--frequency-input",
+                "wordfreq-en.tsv.gz",
+                "--output-dir",
+                "out",
+            ),
+        ) as CliOptions.Difficulty
+
+        assertEquals("form-index-en.json", options.formIndex.fileName.toString())
+        assertEquals("wordfreq-en.tsv.gz", options.frequency.fileName.toString())
+        assertEquals("out", options.outputDir.fileName.toString())
     }
 
     @Test

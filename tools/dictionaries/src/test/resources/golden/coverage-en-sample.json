@@ -1,0 +1,31 @@
+{
+    "editions": [
+        {
+            "edition": "en",
+            "language": "en",
+            "totalLines": 12,
+            "malformedLines": 0,
+            "readingEntries": 11,
+            "pairs": [
+                {
+                    "translation": "de",
+                    "entriesWithTranslation": 1,
+                    "lemmas": 1,
+                    "entries": 1
+                },
+                {
+                    "translation": "es",
+                    "entriesWithTranslation": 0,
+                    "lemmas": 0,
+                    "entries": 0
+                },
+                {
+                    "translation": "fr",
+                    "entriesWithTranslation": 9,
+                    "lemmas": 8,
+                    "entries": 8
+                }
+            ]
+        }
+    ]
+}

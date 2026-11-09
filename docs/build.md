@@ -180,9 +180,10 @@ standalone, and the last is test scaffolding.
 
 **SonarCloud** is the static-analysis service. It ingests that coverage report
 plus the ktlint and detekt findings, then evaluates its **quality gate on new
-code** — new-code coverage, duplicated lines and code smells. The `sonar` CI job
-generates all three reports and then scans (ticket #8); `sonar-project.properties`
-tells the scanner where each one lives. SonarCloud's Kotlin importer takes a
+code** — new-code coverage, duplicated lines and code smells. The `fast` CI job
+generates all three reports and uploads them; the `sonar` job downloads them and
+runs the scan, so the build and its tests happen once (ticket #8).
+`sonar-project.properties` tells the scanner where each one lives. SonarCloud's Kotlin importer takes a
 comma-separated list of report **files** and does not expand wildcards, while
 detekt and ktlint each write one report per Kotlin compilation or source set, so
 `mergeDetektReports` and `mergeKtlintReports` fold each tool's reports into a
@@ -210,28 +211,37 @@ The gate is only trustworthy if a regression trips it. To reproduce, on a branch
 
 ## CI lanes
 
-The workflows live in `.github/workflows/`. Every push and pull request runs the
-fast lane and the licence gate; pull requests also run the WebDAV and golden
-lanes; the emulator lane is nightly and never on the critical path (ticket #7).
+The workflows live in `.github/workflows/`. Every pull request, and every push to
+`main`, runs the fast lane and the licence gate; the `sonar` lane reuses the fast
+lane's reports instead of building a second time. The emulator lane is nightly and
+never on the critical path (ticket #7).
+
+A push to a feature branch starts no workflow of its own: the pull request runs
+the same commit, so an unfiltered `push` trigger would double every pipeline. The
+same filter keeps the lanes off a release tag, which `release.yml` already covers.
 
 | Lane | Trigger | Command |
 | ---- | ------- | ------- |
-| `fast` | push, pull request | `./gradlew check -x :integrations:webdav:jvmTest`, then `./gradlew :app:assembleRelease -Plekto.android=true` unsigned |
-| `licences` | push, pull request | `./gradlew checkDependencyLicences --no-configuration-cache` |
-| `sonar` | push, pull request | `./gradlew check koverXmlReport` then the SonarCloud scan |
-| `webdav` | pull request | `./gradlew :integrations:webdav:jvmTest` |
-| `golden` | pull request | `./gradlew :app:verifyRoborazziDesktop` |
+| `fast` | pull request, push to `main` | `./gradlew check koverXmlReport -Proborazzi.test.verify=true`, then `./gradlew :app:assembleRelease -Plekto.android=true` unsigned |
+| `licences` | pull request, push to `main` | `./gradlew checkDependencyLicences --no-configuration-cache` |
+| `sonar` | pull request, push to `main` | the SonarCloud scan over the reports `fast` uploaded |
 | `guide` | pull request; push to `main` when the guide changed | `npm ci`, `npm test`, `npm run check:licences` and `npm run build` in `guide/` |
 | `release` (`release.yml`) | version tag, manual | jpackage on Windows and both macOS architectures, `createDistributable` + `appimage.sh` on Linux, the signed Android APK on Linux, then `gh release create` |
 | `instrumented` (`nightly.yml`) | schedule, manual | `./gradlew :app:connectedCheck` on an emulator |
 
 `fast`, `licences`, `sonar` and `guide` gate merging: branch protection on `main`
-must require them. The `sonar` lane needs the `SONAR_TOKEN` repository secret; a fork
-pull request has no secret, so the scan is skipped there and only the coverage and
-linter reports are produced. The `webdav` lane needs Docker for the driver's
-container cases — present on GitHub's runners — while its non-container tests run
-anywhere, so the task still passes where Docker is absent; the `fast` lane excludes
-that task so the two lanes do not overlap. The `fast` lane also runs the Android host suites —
+must require them. `fast` builds and tests the change once and uploads the merged
+coverage XML and the merged ktlint and detekt reports (`sonar-reports`); `sonar`
+downloads them and only runs the scanner, so no lane repeats the build. The
+`sonar` lane needs the `SONAR_TOKEN` repository secret; a fork pull request has no
+secret, so the scan is skipped there.
+
+`fast` runs every JVM suite, which includes the WebDAV driver's container cases
+and the committed UI goldens. The container cases need Docker, present on GitHub's
+runners; where it is absent they skip rather than fail, so the lane still passes.
+The goldens are compared inside the `desktopTest` run `check` already triggers
+(`-Proborazzi.test.verify=true`); the `verifyRoborazziDesktop` task would run that
+whole suite a second time. The lane also runs the Android host suites —
 `core`'s `:core:testAndroidHostTest`, the app's `:app:testDebugUnitTest` and
 `integrations/webdav`'s `:integrations:webdav:testAndroidHostTest` —
 which need the Android SDK the GitHub runners carry, and no emulator
@@ -458,6 +468,17 @@ client, not a footnote.
 
 ## Dictionary pipeline
 
+> **Being restructured (issue #301).** ADR-0044, ADR-0045, ADR-0046 and ADR-0047
+> replace this section's input model, its form-index rule and its publication
+> channel: one Wiktionary edition per **Reading language**, one shared form index
+> per language, a two-stage build, and a separate data repository behind a
+> movable manifest. The behaviour below is what the code does **today**; issues
+> #303–#306 are the tickets that change it. #303 has landed the extraction stage
+> and the shared form index; #304 has landed the per-pair pack and per-language
+> difficulty assembly; #305 has landed each artefact's own publish address. The
+> workflow still reads one source file. Where this section and those ADRs
+> disagree, the ADRs win.
+
 `tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
 extract (≈3 GiB gz, all languages) into a set of **trimmed SQLite dictionary
 packs** and per-language **Difficulty tables**, driven by a committed language set
@@ -474,18 +495,71 @@ application CI.
   --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
 
-The CLI streams the raw `.jsonl[.gz]` once per configured pair, keeps the
+The CLI streams the raw `.jsonl[.gz]` once per **Reading language** — sharing one
+form index across every pack and table of that language (ADR-0045) — keeps the
 `lang_code == "<reading>"` entries that carry a `<translation>` translation, drops
 multi-word surfaces, normalises every key with the same rule as `core`'s
 `normaliseSurface` (NFC + lower case), and writes a read-only SQLite file whose
 `user_version` is the pack format version, beside a `NOTICE` (attribution) and a
 `manifest.json` (provenance and counts).
 
+A **catalogue run** over `languages.json` groups the pairs by reading language, so
+one edition pass still yields every pack of that language and its **Difficulty
+table**; the table is keyed by the same index as the packs, not by whichever pair
+came first (ADR-0045).
+
+An **extraction run** (`--extract-target`, issue #303; ADR-0046) writes the
+intermediate the two-stage build needs, without building a pack:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--input fr-extract.jsonl.gz \
+  --reading-language fr --extract-target en --extract-target es \
+  --output-dir intermediate \
+  --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
+```
+
+It streams the edition once and writes `form-index-<reading>.json` — the language's
+surface→lemma table, built from entries carrying at least one translation into a
+configured target — and one `content-<reading>-<translation>.json` per target, in
+the pack's fixed order. Both carry the edition's provenance, contain no wall clock
+and are byte-identical across runs on the same input. They are workflow
+artefacts: stage two reads them to write one pair's release artefacts, and the
+intermediate never reaches a release.
+
+A **pair assembly run** (`--content`, `--form-index`, issue #304; ADR-0046) reads
+one content file and the shared index and writes only that pair's
+`lekto-dictionary-<reading>-<translation>.sqlite`,
+`NOTICE-lekto-dictionary-<reading>-<translation>` and
+`manifest-lekto-dictionary-<reading>-<translation>.json`:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--content content-en-fr.json \
+  --form-index form-index-en.json --output-dir out \
+  --previous-lemma-count <n>"
+```
+
+The pack records the edition the content file carries, not a flag passed now.
+`--previous-lemma-count` is optional and is **this pair's** count in its last
+published manifest: a pair below 80% of it fails its own job, while a pair with no
+previous count is not gated.
+
+A **difficulty assembly run** (`--form-index`, `--frequency-input`, issue #304;
+ADR-0046) keys one language's frequency list by the shared index and writes
+`lekto-difficulty-<language>` beside the same two sidecars:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--form-index form-index-en.json \
+  --frequency-input wordfreq-en.tsv.gz --output-dir out"
+```
+
+It records the edition the index carries. Both assembly modes are deterministic:
+fixed ordering, no wall clock, and byte-identical SQLite across runs on one input.
+
 A **single-artefact run** (`--reading-language`/`--translation-language`/
 `--difficulty-language`) builds one pack and, optionally, one reading language's
 **Difficulty table** (issue #64; ADR-0029) from a wordfreq frequency list, keyed by
 the reading language's word identity. `--difficulty-language` defaults to the
-reading language, so the table is keyed by that pack's form index:
+reading language, so the table is keyed by that reading language's form index:
 
 ```sh
 ./gradlew :tools:dictionaries:run --args="--input raw.jsonl.gz --output pack.sqlite \
@@ -493,6 +567,11 @@ reading language, so the table is keyed by that pack's form index:
   --frequency-input wordfreq-en.tsv.gz --difficulty-output difficulty-en.sqlite \
   --source-url <url> --source-sha256 <hex> --extraction-date <YYYY-MM-DD>"
 ```
+
+A single-artefact run has no sibling packs, so its index covers the one target it
+names. The catalogue and the extraction mode cover the reading language's whole
+configured target set, which is what keeps the shared `form` table identical across
+that language's packs (ADR-0045).
 
 `--frequency-input` is one `form<TAB>weight` line per surface form (for wordfreq,
 `10 ** zipf_frequency(form)`); the builder aggregates each form's weight onto the
@@ -502,49 +581,59 @@ writing a table behind its own `user_version` handshake and its own wordfreq
 `NOTICE`. `DifficultyGoldenTest` and `SqliteDifficultyWriterTest` pin the
 transform and its byte-for-byte reproducibility.
 
+A **coverage pass** (`--measure-input`, `--measure-target`, `--measure-output`)
+streams each candidate edition once and writes the per-pair lemma counts a roster
+decision needs, without building an artefact (issue #302). The measurement and the
+roster it chose are in `docs/research/dictionary-coverage.md`.
+
 Each pack and table is a **Derived asset**: never committed.
 `.github/workflows/dictionary-pack.yml` downloads the source, builds the wordfreq
 list for each configured difficulty language, runs the CLI over the configured
 set and publishes a GitHub Release tagged `dictionary-<YYYYMMDD>` with every
 asset, a `SHA256SUMS` and the per-artefact `NOTICE`/manifest sidecars. The asset
-names are date-free (`lekto-dictionary-en-fr.sqlite.gz`,
-`lekto-difficulty-es.sqlite.gz`), so
-the app fetches each from a stable URL built from the name the **language
-manifest** published, `releases/latest/download/<name>` (issues #18, #149, #161).
-Because `latest` is one release, the whole configured set is published together
-(ADR-0031). The release body is rendered from the committed template
+names stay date-free (`lekto-dictionary-en-fr.sqlite.gz`,
+`lekto-difficulty-es.sqlite.gz`), but the manifest names each one at that dated
+release's own address rather than at a moving alias, so the bytes behind an
+address never change (issue #305, ADR-0047). Because the release is one
+snapshot, the whole configured set is published together (ADR-0031). The release
+body is rendered from the committed template
 `.github/release-notes/dictionary-pack.md`; the full CC BY-SA 4.0 text stays in the
 `NOTICE` sidecars and in each pack's `license_text` metadata. The workflow runs on
 `workflow_dispatch` and a monthly `schedule`, so it can never block application
 CI. The build is deterministic — fixed row ordering, no timestamps, gzip `-n` —
 and `DictionaryPackGoldenTest` proves the transform on a committed fixture; a
 sanity gate fails a run only on a changed source schema or a coverage collapse
-below 80% of the previous build's lemma count, per reading language.
+below 80% of the previous build's lemma count, per artefact.
 
 The same run also writes a **language manifest**
 (`--language-manifest`, default `language-manifest.json` in the output directory):
 the catalogue of what the release offers for reading — each **Reading language**
 with the **Difficulty table** published for it and the **Dictionary pack**s
-published for its pairs, each pair naming its **Translation language**, and each
-artefact carrying its compressed asset's size in bytes once the workflow has
-gzipped it (issues #145, #161, #215). It is built from the run's own output, so a
-run that published nothing yields an empty manifest and the catalogue can never
-advertise an artefact that was not built. The workflow compresses the assets,
-annotates the manifest with their sizes, then writes `SHA256SUMS` and uploads both
-under date-free names, so the app can fetch one constant address,
+published for its pairs, each pair naming its **Translation language**. Its
+format is 2 (issue #305, ADR-0047): every artefact carries the `url` the app
+follows, the `sha256` of the bytes behind it, and its compressed size in bytes.
+It is built from the run's own output, so a run that published nothing yields an
+empty manifest and the catalogue can never advertise an artefact that was not
+built. The workflow compresses the assets, then runs the CLI's publish mode
+(`--publish-manifest`, `--asset-dir`, `--asset-url-base`), which completes every
+entry with the compressed asset's immutable dated URL, the `sha256` of the bytes
+behind it and its size; an entry whose file the run did not produce fails the
+step. The workflow then writes `SHA256SUMS` and
+uploads both, the manifest under the one constant address
 `releases/latest/download/language-manifest.json`. Its format version is declared
 by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 `LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test
-(ADR-0013). The `sizeBytes` field is additive at that same version, so a build
-that predates it ignores it.
+(ADR-0013).
 
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
-each pair's alias into the device-local **derived store**, validates the format
-handshake and opens the SQLite file in place — `sqlite-jdbc` on the JVM, the
-Android framework's SQLite on Android (ADR-0018). The CLI and the JVM reader use
-**xerial sqlite-jdbc** (Apache-2.0, AGPL-compatible); it is now a production
-dependency of `core`'s JVM target (desktop) as well as the standalone tool, so it
-is held to the licence gate like any other. See ADR-0017, ADR-0018 and
+the address the manifest published into the device-local **derived store**,
+checks the bytes' SHA-256 against the manifest's digest and refuses a mismatch
+rather than installing it, then validates the format handshake and opens the
+SQLite file in place — `sqlite-jdbc` on the JVM, the
+Android framework's SQLite on Android (ADR-0018, ADR-0047). The CLI and the JVM
+reader use **xerial sqlite-jdbc** (Apache-2.0, AGPL-compatible); it is now a
+production dependency of `core`'s JVM target (desktop) as well as the standalone
+tool, so it is held to the licence gate like any other. See ADR-0017, ADR-0018 and
 `docs/research/open-dictionaries.md`.
 
 **KSafe** (Apache-2.0, AGPL-compatible) is the desktop secret store's dependency

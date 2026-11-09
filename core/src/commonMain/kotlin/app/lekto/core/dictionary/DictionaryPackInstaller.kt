@@ -31,9 +31,9 @@ sealed interface DictionaryPackState {
  * Downloading is blocking; the application runs [install] off the UI thread.
  *
  * The [install] address is a parameter rather than a field because the
- * **Language manifest** names the asset it published for a pair, and the app
- * fetches exactly that name (issue #149): the installer owns the lifecycle, the
- * catalogue owns the address.
+ * **Language manifest** names the asset it published for a pair, with its URL and
+ * digest, and the app fetches exactly that (issue #149, issue #305): the installer
+ * owns the lifecycle, the catalogue owns the address.
  */
 class DictionaryPackInstaller(
     private val derived: DerivedAssetStore,
@@ -57,11 +57,27 @@ class DictionaryPackInstaller(
 
     /**
      * Downloads the pack from [url] and installs it, replacing any previous
-     * version. A pack this build refuses leaves the store clean, so a later
-     * download can replace it.
+     * version. A pack whose bytes do not hash to [sha256] is refused before it
+     * reaches the store, so a previously installed pack survives and a first
+     * install reports the mismatch rather than a pack (issue #305). A pack this
+     * build otherwise refuses leaves the store clean, so a later download can
+     * replace it.
      */
-    fun install(url: String): DictionaryPackState {
-        downloader.download(url, destination())
+    fun install(url: String, sha256: String): DictionaryPackState {
+        try {
+            downloader.download(url, destination(), sha256)
+        } catch (_: AssetChecksumMismatch) {
+            // The downloader never replaced the destination, so a good pack already
+            // installed stays installed; only a first install has nothing to open.
+            val inspected = inspect(destination())
+            val reported = if (inspected is DictionaryPackState.Ready) {
+                inspected
+            } else {
+                DictionaryPackState.Corrupt(CHECKSUM_MISMATCH)
+            }
+            state = reported
+            return reported
+        }
         val inspected = inspect(destination())
         if (inspected !is DictionaryPackState.Ready) discard()
         state = inspected
@@ -120,5 +136,7 @@ class DictionaryPackInstaller(
             "dictionary/${baseLanguage(readingLanguage)}-${baseLanguage(translationLanguage)}/pack.sqlite"
 
         private const val UNREADABLE = "The dictionary pack could not be read."
+        private const val CHECKSUM_MISMATCH =
+            "The downloaded dictionary pack does not match the SHA-256 the manifest published."
     }
 }

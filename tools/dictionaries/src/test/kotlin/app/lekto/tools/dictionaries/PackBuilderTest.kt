@@ -1,7 +1,5 @@
 package app.lekto.tools.dictionaries
 
-import java.io.BufferedReader
-import java.io.StringReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -95,6 +93,17 @@ class PackBuilderTest {
     }
 
     @Test
+    fun `folds Mandarin translations into Chinese`() {
+        val pack = buildPack(
+            """{"word":"cat","lang_code":"en","pos":"noun","translations":[{"lang_code":"cmn","word":"猫"}]}""",
+            readingLanguage = "en",
+            translationLanguage = "zh",
+        )
+
+        assertEquals(listOf("猫"), pack.entries.single().senses.single().translations)
+    }
+
+    @Test
     fun `counts a malformed line without failing the whole build`() {
         val pack = buildPack(
             """
@@ -109,18 +118,10 @@ class PackBuilderTest {
     }
 }
 
-private val FIXTURE_PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-10-04")
-
-private fun fixturePack(): PackContent = buildPack(fixtureText())
+private fun fixturePack(): PackContent = buildPack(EditionFixtures.text())
 
 private fun buildPack(
     jsonl: String,
     readingLanguage: String = PackFormat.ENGLISH,
     translationLanguage: String = PackFormat.FRENCH,
-): PackContent = PackBuilder(FIXTURE_PROVENANCE, readingLanguage, translationLanguage)
-    .build(BufferedReader(StringReader(jsonl)))
-
-private fun fixtureText(): String =
-    requireNotNull(PackBuilderTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {
-        "the committed fixture must be on the test classpath"
-    }.bufferedReader().use(BufferedReader::readText)
+): PackContent = EditionFixtures.pack(jsonl, readingLanguage, translationLanguage)

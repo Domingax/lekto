@@ -2,10 +2,13 @@ package app.lekto.difficulty
 
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.MISMATCHED_SHA256
+import app.lekto.testkit.testOfferedArtifact
 import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -73,6 +76,33 @@ class DifficultyControllerTest {
         assertTrue(controller.states.value.getValue("en").status is DifficultyState.Ready)
         assertEquals(1, files.getValue("en").downloads)
         assertNull(controller.states.value.getValue("en").error)
+    }
+
+    @Test
+    fun `an install follows the manifest's own address and digest`() = runTest {
+        val controller = controller()
+        val artifact = testOfferedArtifact(
+            name = "lekto-difficulty-en.sqlite.gz",
+            url = "https://data.test/lekto-data/releases/download/dictionary-20261101/lekto-difficulty-en.sqlite.gz",
+        )
+
+        controller.install("en", artifact)
+        advanceUntilIdle()
+
+        assertEquals(artifact.url, files.getValue("en").lastUrl)
+        assertTrue(controller.states.value.getValue("en").status is DifficultyState.Ready)
+    }
+
+    @Test
+    fun `an install refuses bytes whose digest is not the manifest's`() = runTest {
+        file("en").servedSha256 = MISMATCHED_SHA256
+        val controller = controller()
+
+        controller.install("en", artifact("en"))
+        advanceUntilIdle()
+
+        val state = controller.states.value.getValue("en").status
+        assertTrue(state is DifficultyState.Corrupt, "a mismatched download must not be installed")
     }
 
     @Test
@@ -160,6 +190,7 @@ class DifficultyControllerTest {
         assertNull(services.table("fr"), "a language with no table open reads nothing")
     }
 
-    /** The asset name the manifest publishes a language's table under. */
-    private fun artifact(language: String): String = DifficultyRelease.artifact(language)
+    /** The asset the manifest publishes a language's table under. */
+    private fun artifact(language: String): OfferedArtifact =
+        testOfferedArtifact("lekto-difficulty-$language.sqlite.gz")
 }

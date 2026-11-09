@@ -49,9 +49,9 @@ test configuration. The Android-specific `ui-test-junit4` API runs the same
 screens under Robolectric in `app/androidUnitTest` (`:app:testDebugUnitTest`,
 wired into `check`), so an Android-only constraint is not left to the desktop
 lane — issue #69's `LazyColumn` key crashed on Android while every JVM test was
-green. The slower lanes — screenshot goldens, the containerised WebDAV driver and
-instrumented end-to-end runs — run on pull requests or nightly; the CI fast lane
-excludes the WebDAV test so the two lanes do not overlap.
+green. The screenshot goldens and the containerised WebDAV driver run inside the
+CI fast lane, in the same pass as everything else; the instrumented end-to-end
+runs are nightly.
 `docs/build.md#ci-lanes` lists the workflow jobs that run each one.
 
 The reader's UI tests drive the word layer with `WhitespaceTextSegmenter` in
@@ -187,7 +187,7 @@ swipes the row and finds the confirmation, and the desktop twin proves the trash
 appears on hover, that a drag on a pointer platform does nothing, and that the
 confirmation guards the vault either way. The shelf's loading state is the controller's: `LibraryControllerTest`
 pins that a refresh reports it while the vault is read, so the skeleton is real
-state and not a still. The golden lane records the frame on four books across
+state and not a still. The golden suite records the frame on four books across
 three languages, one sheet per paper.
 
 Leading with the book in progress (issue #288) is a view over the listing, so the
@@ -204,7 +204,7 @@ untouched until it is confirmed. The block is one accessible item whose action i
 button is not a second stop — and it says what its line is waiting for while the
 length is measured. `AppSemanticsTest` proves the block appears after a page
 turned just before leaving, which is the refresh the composition root wires, and
-the golden lane records its frame beside the rows.
+the golden suite records its frame beside the rows.
 
 Declaring a book **Finished** (issue #200; ADR-0038) is a second vault fact beside
 the reading position, so it is proved at its own levels. `FinishedBookRecord` is
@@ -347,9 +347,11 @@ pinned reading typography (a bundled font); until then, typography is pinned by
 ./gradlew :app:recordRoborazziDesktop
 ```
 
-and verify with `./gradlew :app:verifyRoborazziDesktop`, the task the `golden` CI
-lane runs. `app/build.gradle.kts` turns on `separateOutputDirs` so the record and
-verify tasks cannot race over one directory.
+and verify with `./gradlew :app:verifyRoborazziDesktop`. The CI fast lane instead
+passes `-Proborazzi.test.verify=true` to `check`, which compares the goldens in
+the `desktopTest` run it already triggers rather than running the suite twice.
+`app/build.gradle.kts` turns on `separateOutputDirs` so the record and verify
+tasks cannot race over one directory.
 
 ## WebDAV integration lane
 
@@ -489,10 +491,10 @@ JaCoCo-compatible coverage report to `build/reports/kover/report.xml` (Kover;
 `docs/build.md#coverage-and-the-quality-gate`). The root project is the merging
 module, so the report covers `core`, `integrations/webdav` and `app`; `testkit`,
 `tools/dictionaries` and `architecture` are not aggregated. The report is a
-measurement, not a
-gate on its own — the `sonar` CI lane feeds it, with the ktlint and detekt
-findings, to SonarCloud, whose quality gate on new code (coverage, duplication,
-smells) blocks the pull request. Reproduce a gate failure with the drill in
+measurement, not a gate on its own — the `fast` CI lane produces it and the
+`sonar` lane feeds it, with the ktlint and detekt findings, to SonarCloud, whose
+quality gate on new code (coverage, duplication, smells) blocks the pull request.
+Reproduce a gate failure with the drill in
 `docs/build.md#the-quality-gate-drill`.
 
 ## The framework
@@ -756,19 +758,30 @@ that the reading and translation languages are parameters and a non-default pair
 builds from the same source (issue #161) — `SqlitePackWriterTest` reads the written
 pack back and proves two builds are byte-for-byte identical, and
 `DictionaryPackGoldenTest` pins the canonical output of a committed JSONL fixture
-— the reproducibility evidence for ticket #17. The config-driven **build** is `CatalogueTest`: it builds every configured pack and
+— the reproducibility evidence for ticket #17. The coverage pass (issue #302) is
+pinned the same way by `CoverageGoldenTest`, over the same fixture, because its
+count is the pack's own. The config-driven **build** is `CatalogueTest`: it builds every configured pack and
 difficulty table into one directory and writes one **Language manifest** unioning
-them, so a release carries the whole offered set. The **language manifest** (issues #145, #161) is built from
-that same fixture's pack and difficulty table by `LanguageManifestGoldenTest`,
-pinned in `golden/language-manifest.json`, so the catalogue and the artefacts
-cannot drift, and `LanguageManifestTest` pins that a run which published nothing
-yields an empty manifest, that a reading language with several packs lists them
-all, and that the committed `languages.json` parses; its format handshake is the
+them, so a release carries the whole offered set. Stage two (issue #304) is
+`PairAssemblyTest`: it writes one pair from one content file and the shared index,
+proves two content files of a language yield the same form table, pins the pack
+and the difficulty table as byte-identical across two runs, and shows the drift
+gate failing one pair without touching its sibling. The **language manifest** (issues #145, #161, #305) is
+built from that same fixture's pack and difficulty table by
+`LanguageManifestGoldenTest`, pinned in `golden/language-manifest.json` so the
+catalogue and the artefacts cannot drift and the published format-2 shape — each
+artefact naming its own `url`, `sha256` and size — cannot change by accident;
+`LanguageManifestPublicationTest` pins that completion against real asset files,
+refuses an entry the run did not produce, and leaves an unbuilt artefact absent.
+`LanguageManifestTest` also pins that a run which published nothing yields an
+empty manifest, that a reading language with several packs lists them all, and
+that the
+committed `languages.json` parses; its format handshake is the
 producer's `LanguageManifestFormat.VERSION` against `core`'s
 `LanguageManifest.FORMAT_VERSION`, which
 `LanguageManifestFormatSynchronisationTest` in `architecture` keeps in step
 (ADR-0013). The
-sanity gate and the command line (both modes, repeated `--frequency` and
+sanity gate and the command line (every mode, repeated `--frequency` and
 `--previous-lemma-count` assignments) are unit-tested the same way. The module's
 tests run in `check` like any other module's, but the module sits outside the
 application's coverage, licence and publication graph, so nothing it builds ships
@@ -781,12 +794,16 @@ committed as `dictionary/en-fr-sample.sqlite` under
 `core/src/commonTest/resources` — in `core/jvmTest`, and against the Android
 framework's SQLite in the Robolectric `androidHostTest` lane, so the two clients
 cannot answer a query differently. The installer's lifecycle — download, the
-format-handshake refusal, corruption, and the pack's exclusion from the vault's
+format-handshake refusal, a digest that does not match the manifest, corruption,
+and the pack's exclusion from the vault's
 export — is a `core/commonTest` behaviour over the fakes in `testkit`, one
 installer per (Reading language × **Translation language**) pair (issue #149), and
-the JVM downloader's stream-and-decompress path runs in `core/jvmTest` against a
-local HTTP server. The per-pair state holder is `DictionaryControllerTest` in
-`app/desktopTest`; the **Languages** surface's pack control, the attribution
+the JVM downloader's stream-and-decompress path, including its refusal of bytes
+whose digest is not the manifest's, runs in `core/jvmTest` against a local HTTP
+server; a real download whose digest is not the manifest's is refused by
+`JvmPackChecksumRefusalTest`. The per-pair state holder is `DictionaryControllerTest` in
+`app/desktopTest`, which also pins that the download follows the manifest's own
+address and refuses a mismatched digest; the **Languages** surface's pack control, the attribution
 screen and the lookup-panel UI are `app/desktopTest` semantics, each with its
 same-named `app/androidUnitTest` twin.
 
@@ -1107,9 +1124,9 @@ The **Difficulty table** is a seam: the shared
 committed as `difficulty/en-sample.sqlite` under `core/src/commonTest/resources` —
 in `core/jvmTest`, and against the Android framework's SQLite in the Robolectric
 `androidHostTest` lane, so the two clients cannot answer a band differently; the
-installer's lifecycle (download, the format-handshake refusal and removal,
-corruption, and the table's exclusion from the vault's export) is a
-`core/commonTest` behaviour over the `testkit` fakes. The transform that builds
+installer's lifecycle (download, the format-handshake refusal and removal, a
+digest that does not match the manifest, corruption, and the table's exclusion
+from the vault's export) is a `core/commonTest` behaviour over the `testkit` fakes. The transform that builds
 the artifact is pinned in `tools/dictionaries` by `DifficultyBuilderTest`,
 `SqliteDifficultyWriterTest` and `DifficultyGoldenTest`, and the producer and
 consumer agree on the format version through
@@ -1131,8 +1148,10 @@ does not — and the whole loop, download to shown as installed, runs through
 The **Languages** surface and its **Language manifest** (issues #146, #147) are proved at
 their own levels. Reading a manifest is a pure function from bytes to a
 catalogue, so `LanguageManifestReadTest` in `core/commonTest` pins that the
-offered languages and their artefacts are read — including each artefact's
-published size when the manifest carries it — that a manifest whose format this
+offered languages and their artefacts are read — including each artefact's own
+address, digest and published size — that an entry which omits its address or its
+digest is malformed rather than fetched from a guessed URL (issue #305), that a
+manifest whose format this
 build does not read is refused rather than misread, that malformed bytes are not
 mistaken for an empty catalogue, and a write/read round-trip over generated
 languages. `LanguageCatalog`'s lifecycle is a `core/commonTest` behaviour over the
@@ -1319,6 +1338,8 @@ suite (ticket #9), so a drift fails `check` rather than the next review:
 - A test class lives in a test source set and its file is named `<Class>Test.kt`;
   a production file is never named `*Test.kt`. Shared fakes and fixtures belong in
   `testkit`, not in a test source set, so a test source set holds tests only.
+  `tools/dictionaries` is standalone and cannot depend on `testkit`, so its shared
+  fixture lives beside its tests.
 - A desktop `*SemanticsTest` has a same-named twin under `app/src/androidUnitTest`
   — same package, different lane — so a screen proved on the desktop is proved on
   Android too; `check` fails, naming the missing twin, unless the screen is on

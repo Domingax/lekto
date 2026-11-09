@@ -16,10 +16,13 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.testkit.testDifficultyMetadata
+import app.lekto.testkit.testOfferedArtifact
+import app.lekto.testkit.testOfferedDictionary
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.testkit.testPackMetadata
 import app.lekto.text.AppMessage
@@ -134,7 +137,11 @@ class LanguagesScreenSemanticsTest {
         render(
             LanguagesUiState(
                 languages = listOf(
-                    testOfferedLanguage("en", difficulty = DIFFICULTY, dictionaries = listOf(PAIR)),
+                    testOfferedLanguage(
+                        "en",
+                        difficulty = testOfferedArtifact(DIFFICULTY),
+                        dictionaries = listOf(PAIR),
+                    ),
                 ),
             ),
             difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
@@ -158,11 +165,10 @@ class LanguagesScreenSemanticsTest {
                 languages = listOf(
                     testOfferedLanguage(
                         "en",
-                        difficulty = DIFFICULTY,
+                        difficulty = testOfferedArtifact(DIFFICULTY, sizeBytes = 12_345_678),
                         dictionaries = listOf(
-                            OfferedDictionary("fr", DICTIONARY, sizeBytes = 2_000_000),
+                            testOfferedDictionary("fr", DICTIONARY, sizeBytes = 2_000_000),
                         ),
-                        difficultySizeBytes = 12_345_678,
                     ),
                 ),
             ),
@@ -177,7 +183,11 @@ class LanguagesScreenSemanticsTest {
         render(
             LanguagesUiState(
                 languages = listOf(
-                    testOfferedLanguage("en", difficulty = DIFFICULTY, dictionaries = listOf(PAIR)),
+                    testOfferedLanguage(
+                        "en",
+                        difficulty = testOfferedArtifact(DIFFICULTY),
+                        dictionaries = listOf(PAIR),
+                    ),
                 ),
             ),
             difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
@@ -239,7 +249,9 @@ class LanguagesScreenSemanticsTest {
     @Test
     fun eachLanguageShowsItsDifficultyTableState() = runComposeUiTest {
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+            ),
             difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.Ready(testDifficultyMetadata()))),
         )
 
@@ -249,16 +261,18 @@ class LanguagesScreenSemanticsTest {
 
     @Test
     fun aDownloadIsOfferedWhereTheManifestPublishesATable() = runComposeUiTest {
-        var chosen: Pair<String, String>? = null
+        var chosen: Pair<String, OfferedArtifact>? = null
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+            ),
             onDownloadDifficulty = { language, artifact -> chosen = language to artifact },
         )
 
         onNodeWithTag(languageDifficultyDownloadTag("en")).performClick()
 
-        // The download carries the asset name the manifest published, not one re-derived here.
-        assertEquals("en" to DIFFICULTY, chosen)
+        // The download carries the manifest's own artefact, not a name re-derived here.
+        assertEquals("en" to testOfferedArtifact(DIFFICULTY), chosen)
     }
 
     @Test
@@ -272,7 +286,9 @@ class LanguagesScreenSemanticsTest {
     @Test
     fun downloadingDifficultyShowsProgressAndDisablesTheAction() = runComposeUiTest {
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+            ),
             difficulty = mapOf("en" to DifficultyUiState(installing = true)),
         )
 
@@ -284,7 +300,9 @@ class LanguagesScreenSemanticsTest {
     fun aDifficultyFailureShowsAndDismisses() = runComposeUiTest {
         var dismissed: String? = null
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", difficulty = DIFFICULTY))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+            ),
             difficulty = mapOf("en" to DifficultyUiState(error = AppMessage.core("The download failed."))),
             onDismissDifficultyError = { language -> dismissed = language },
         )
@@ -342,7 +360,7 @@ class LanguagesScreenSemanticsTest {
 
     @Test
     fun aDownloadIsOfferedWhereTheManifestPublishesAPair() = runComposeUiTest {
-        var chosen: Triple<String, String, String>? = null
+        var chosen: Triple<String, String, OfferedArtifact>? = null
         render(
             LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
             onDownloadDictionary = { reading, translation, artifact ->
@@ -352,8 +370,8 @@ class LanguagesScreenSemanticsTest {
 
         onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).performClick()
 
-        // The download carries the pair and the asset name the manifest published.
-        assertEquals(Triple("en", "fr", DICTIONARY), chosen)
+        // The download carries the pair and the manifest's own artefact.
+        assertEquals(Triple("en", "fr", testOfferedArtifact(DICTIONARY)), chosen)
     }
 
     @Test
@@ -454,7 +472,7 @@ private const val DIFFICULTY: String = "lekto-difficulty-en.sqlite.gz"
 private const val DICTIONARY: String = "lekto-dictionary-en-fr.sqlite.gz"
 
 /** The English → French dictionary pair the manifest publishes, as the surface reads it. */
-private val PAIR: OfferedDictionary = OfferedDictionary(translationLanguage = "fr", name = DICTIONARY)
+private val PAIR: OfferedDictionary = testOfferedDictionary(translationLanguage = "fr", name = DICTIONARY)
 
 /** Renders the Languages surface in the app theme, sized like a phone. */
 @OptIn(ExperimentalTestApi::class)
@@ -469,9 +487,9 @@ private fun ComposeUiTest.render(
     onReload: () -> Unit = {},
     onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     onClearLevel: (String) -> Unit = {},
-    onDownloadDifficulty: (String, String) -> Unit = { _, _ -> },
+    onDownloadDifficulty: (String, OfferedArtifact) -> Unit = { _, _ -> },
     onDismissDifficultyError: (String) -> Unit = {},
-    onDownloadDictionary: (String, String, String) -> Unit = { _, _, _ -> },
+    onDownloadDictionary: (String, String, OfferedArtifact) -> Unit = { _, _, _ -> },
     onDismissDictionaryError: (String) -> Unit = {},
     onSetTranslationLanguage: (String) -> Unit = {},
     onOpenAttribution: () -> Unit = {},

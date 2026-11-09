@@ -18,12 +18,21 @@ parsed book text, the dictionary pack. Lives device-local and is never synced.
 _Avoid_: Cache, generated data
 
 **Dictionary pack**:
-The offline EN→FR reference Lekto derives from Wiktionary: the words it knows,
-with their senses and French translations, and enough morphology to collapse an
+The offline reference Lekto derives from Wiktionary for one (Reading language ×
+Translation language) pair: the Reading language's words, with their senses and
+translations into the Translation language, and enough morphology to collapse an
 inflected form onto its lemma — or onto the normalised surface form when it knows
 no lemma. A **Derived asset**, versioned so a reader can refuse a pack it does
 not understand; never authored by the user and never synced.
 _Avoid_: Dictionary, lexicon, word list
+
+**Form index**:
+The surface→lemma table for one **Reading language**, built once from its edition
+and shared by every **Dictionary pack** and **Difficulty table** of that language,
+so the same word resolves to the same **Lemma** whichever translation language the
+reader installs (ADR-0045). An intermediate of the dictionary pipeline, never
+shipped on its own.
+_Avoid_: Morphology table, form map, lemma index
 
 **Difficulty table**:
 The per-language **Derived asset** that maps each **Word key** to its **Word
@@ -36,8 +45,9 @@ _Avoid_: Frequency list, word list, difficulty pack
 The catalogue of what Lekto offers for reading: each **Reading language** and the
 artefacts published for it — a **Difficulty table** per reading language, and a
 **Dictionary pack** per (Reading language × **Translation language**) pair, each
-naming its translation language and, once the release is compressed, the asset's
-size in bytes. A **Derived asset**, versioned so a reader can
+naming its translation language and carrying the asset's own address, the SHA-256
+digest of the bytes behind it and, once the release is compressed, its size in
+bytes. A **Derived asset**, versioned so a reader can
 refuse one it does not understand, and never authored by the user.
 _Avoid_: Catalog, index, registry
 

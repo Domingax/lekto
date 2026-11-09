@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.text.baseLanguage
 import app.lekto.dictionary.DictionaryUiState
@@ -88,9 +89,9 @@ data class LanguagesActions(
     val onReload: () -> Unit = {},
     val onSetLevel: (String, CefrLevel) -> Unit = { _, _ -> },
     val onClearLevel: (String) -> Unit = {},
-    val onDownloadDifficulty: (String, String) -> Unit = { _, _ -> },
+    val onDownloadDifficulty: (String, OfferedArtifact) -> Unit = { _, _ -> },
     val onDismissDifficultyError: (String) -> Unit = {},
-    val onDownloadDictionary: (String, String, String) -> Unit = { _, _, _ -> },
+    val onDownloadDictionary: (String, String, OfferedArtifact) -> Unit = { _, _, _ -> },
     val onDismissDictionaryError: (String) -> Unit = {},
     val onSetTranslationLanguage: (String) -> Unit = {},
     val onOpenAttribution: () -> Unit = {},

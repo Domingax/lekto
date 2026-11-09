@@ -1,6 +1,7 @@
 package app.lekto.difficulty
 
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.text.baseLanguage
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
@@ -56,14 +57,15 @@ class DifficultyController(
     }
 
     /**
-     * Downloads and installs [language]'s table from the manifest's [artifact],
+     * Downloads and installs [language]'s table from the [artifact] the manifest
+     * published, following the manifest's own URL and checking its digest, and
      * reporting progress and catching failure so the surface stays usable. On
      * success it notifies [onInstalled], so the mastery composition recolours the
      * open book the way a save does (ADR-0030) — the download's effect is visible
-     * without a relaunch.
+     * without a relaunch (issue #305).
      */
     @Suppress("TooGenericExceptionCaught") // A failed download becomes a message; the app stays usable.
-    fun install(language: String, artifact: String, onInstalled: () -> Unit = {}) {
+    fun install(language: String, artifact: OfferedArtifact, onInstalled: () -> Unit = {}) {
         val base = baseLanguage(language)
         if (stateOf(base).installing) return
         // Resolve the installer on this thread, so its per-language cache is only
@@ -72,7 +74,7 @@ class DifficultyController(
         update(base) { current -> current.copy(installing = true, error = null) }
         scope.launch {
             try {
-                val status = withContext(dispatcher) { installer.install(DifficultyRelease.url(artifact)) }
+                val status = withContext(dispatcher) { installer.install(artifact.url, artifact.sha256) }
                 update(base) { current -> current.copy(status = status, installing = false) }
                 if (status is DifficultyState.Ready) onInstalled()
             } catch (failure: Exception) {

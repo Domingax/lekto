@@ -29,7 +29,7 @@ class JvmManifestDownloaderTest :
         fun url(server: HttpServer): String = "http://127.0.0.1:${server.address.port}/language-manifest.json"
 
         test("it returns the manifest's bytes") {
-            val body = """{"formatVersion":1,"languages":[]}""".encodeToByteArray()
+            val body = """{"formatVersion":2,"languages":[]}""".encodeToByteArray()
             val server = serve(200, body)
             try {
                 JvmManifestDownloader().download(url(server)) shouldBe body
@@ -48,7 +48,7 @@ class JvmManifestDownloaderTest :
         }
 
         test("it follows the release alias's redirect") {
-            val body = """{"formatVersion":1,"languages":[{"language":"en"}]}""".encodeToByteArray()
+            val body = """{"formatVersion":2,"languages":[{"language":"en"}]}""".encodeToByteArray()
             val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
             server.createContext("/language-manifest.json") { exchange ->
                 exchange.responseHeaders.add("Location", "/asset.json")

@@ -5,22 +5,6 @@ import app.lekto.core.difficulty.WordDifficulty
 import app.lekto.core.text.baseLanguage
 
 /**
- * The **Difficulty table** the published workflow produces, at the stable
- * `releases/latest` alias the workflow uploads: one per reading language
- * (ADR-0029). [artifact] names the asset by the same rule the pipeline does, and
- * [url] addresses that name at the alias, so a caller that holds the name the
- * **Language manifest** published fetches exactly it (issue #148).
- */
-object DifficultyRelease {
-
-    /** The date-free asset the release publishes [language]'s table under. */
-    fun artifact(language: String): String = "lekto-difficulty-$language.sqlite.gz"
-
-    /** The stable, date-free URL the release publishes [artifact] at. */
-    fun url(artifact: String): String = "https://github.com/Domingax/lekto/releases/latest/download/$artifact"
-}
-
-/**
  * The difficulty table's device-local services (ADR-0029; issue #148): a
  * per-reading-language [installer], built on demand and reused, and the [table]
  * the mastery composition reads. The platform composition root supplies the

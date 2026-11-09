@@ -1,14 +1,14 @@
 package app.lekto.tools.dictionaries
 
 /**
- * The surface→lemma index built while the pack streams. A surface can be claimed
- * by several lemmas (English "better" under both "good" and "well"), so the build
- * resolves the ambiguity to **one** canonical row per `(surface, language)`: the
- * surface's own lemma when one exists, otherwise the most frequent claimant,
- * then the shorter, then the lexicographically smallest. The tie-breaks are
- * arbitrary but fixed, which is what reproducibility demands.
+ * The surface→lemma index built once while an edition streams. A surface can be
+ * claimed by several lemmas (English "better" under both "good" and "well"), so
+ * the build resolves the ambiguity to **one** canonical row per
+ * `(surface, language)`: the surface's own lemma when one exists, otherwise the
+ * most frequent claimant, then the shorter, then the lexicographically smallest.
+ * The tie-breaks are arbitrary but fixed, which is what reproducibility demands.
  */
-internal class FormIndex(private val language: String) {
+internal class FormIndexBuilder(private val language: String) {
 
     private val candidates = HashMap<String, HashMap<String, Int>>()
 
