@@ -114,7 +114,7 @@ private fun buildDifficulty(
     frequencies: String = fixtureFrequencyText(),
     cutSizes: List<Int> = CALIBRATION.cutSizes,
 ): DifficultyContent {
-    val pack = fixturePack()
+    val pack = EditionFixtures.pack()
     return DifficultyBuilder(
         forms = pack.forms,
         provenance = pack.provenance,
@@ -126,9 +126,3 @@ private fun fixtureFrequencyText(): String =
     requireNotNull(DifficultyBuilderTest::class.java.getResourceAsStream("/difficulty-frequency-sample.tsv")) {
         "the committed frequency fixture must be on the test classpath"
     }.bufferedReader().use(BufferedReader::readText)
-
-private fun fixturePack(): PackContent = PackBuilder(FIXTURE_PROVENANCE).build(
-    requireNotNull(DifficultyBuilderTest::class.java.getResourceAsStream("/en-fr-sample.jsonl")) {
-        "the committed pack fixture must be on the test classpath"
-    }.bufferedReader(),
-)

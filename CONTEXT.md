@@ -26,6 +26,14 @@ no lemma. A **Derived asset**, versioned so a reader can refuse a pack it does
 not understand; never authored by the user and never synced.
 _Avoid_: Dictionary, lexicon, word list
 
+**Form index**:
+The surface→lemma table for one **Reading language**, built once from its edition
+and shared by every **Dictionary pack** and **Difficulty table** of that language,
+so the same word resolves to the same **Lemma** whichever translation language the
+reader installs (ADR-0045). An intermediate of the dictionary pipeline, never
+shipped on its own.
+_Avoid_: Morphology table, form map, lemma index
+
 **Difficulty table**:
 The per-language **Derived asset** that maps each **Word key** to its **Word
 difficulty** band: one per language, built from an open frequency list, and

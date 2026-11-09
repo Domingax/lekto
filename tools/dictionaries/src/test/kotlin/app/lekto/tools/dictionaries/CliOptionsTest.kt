@@ -154,6 +154,27 @@ class CliOptionsTest {
     }
 
     @Test
+    fun `parses the extraction mode with one target per content file`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--input", "fr-extract.jsonl.gz",
+                "--output-dir", "intermediate",
+                "--reading-language", "FR",
+                "--extract-target", "EN",
+                "--extract-target", "es",
+                "--source-url", "u",
+                "--source-sha256", "s",
+                "--extraction-date", "2026-10-04",
+            ),
+        ) as CliOptions.Extract
+
+        assertEquals("fr-extract.jsonl.gz", options.input.fileName.toString())
+        assertEquals("intermediate", options.outputDir.fileName.toString())
+        assertEquals("fr", options.readingLanguage)
+        assertEquals(listOf("en", "es"), options.translationLanguages)
+    }
+
+    @Test
     fun `separates the source edition from a reading language it does not name`() {
         val options = CliOptions.parse(
             arrayOf(
