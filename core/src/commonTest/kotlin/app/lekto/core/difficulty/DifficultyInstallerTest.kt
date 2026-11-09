@@ -82,6 +82,19 @@ class DifficultyInstallerTest :
             derived.paths() shouldBe emptyList()
         }
 
+        test("a refused download leaves a table already installed in place") {
+            val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+            val (installed, files) = installer(derived)
+            installed.install(url, sha).shouldBeInstanceOf<DifficultyState.Ready>()
+            files.servedSha256 = MISMATCHED_SHA256
+
+            installed.install(url, sha).shouldBeInstanceOf<DifficultyState.Ready>()
+
+            installed.status().shouldBeInstanceOf<DifficultyState.Ready>()
+            installed.open() shouldNotBe null
+            derived.paths() shouldBe listOf(DifficultyInstaller.pathOf(language))
+        }
+
         test("a corrupt table degrades to a corrupt state rather than throwing") {
             val derived = DerivedAssetStore(InMemoryVaultFileSystem())
             val (installed, files) = installer(derived)
