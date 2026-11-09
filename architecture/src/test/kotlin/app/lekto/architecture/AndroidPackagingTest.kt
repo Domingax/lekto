@@ -35,7 +35,7 @@ class AndroidPackagingTest :
                     needs: [package, android]
             """.trimIndent()
 
-            AndroidPackaging.job(workflow, "android")?.trimEnd() shouldBe
+            WorkflowJobs.job(workflow, "android")?.trimEnd() shouldBe
                 """
                     |    runs-on: ubuntu-latest
                     |    steps:
@@ -53,7 +53,7 @@ class AndroidPackagingTest :
             """.trimIndent()
 
             withClue("prose must not satisfy a rule that asks for a command") {
-                requireNotNull(AndroidPackaging.job(workflow, "android")).contains("apksigner") shouldBe false
+                requireNotNull(WorkflowJobs.job(workflow, "android")).contains("apksigner") shouldBe false
             }
         }
 
@@ -66,14 +66,14 @@ class AndroidPackagingTest :
                     runs-on: ubuntu-latest
             """.trimIndent()
 
-            AndroidPackaging.needs(workflow, "release") shouldBe setOf("package", "android")
+            WorkflowJobs.needs(workflow, "release") shouldBe setOf("package", "android")
         }
 
         test("a job that is not declared has no body and no dependencies") {
             withClue("an unknown job must not read as an empty job") {
-                AndroidPackaging.job("jobs:\n  package:\n    runs-on: ubuntu-latest", "android").shouldBeNull()
+                WorkflowJobs.job("jobs:\n  package:\n    runs-on: ubuntu-latest", "android").shouldBeNull()
             }
-            AndroidPackaging.needs("jobs:\n  package:\n    runs-on: ubuntu-latest", "android") shouldBe emptySet()
+            WorkflowJobs.needs("jobs:\n  package:\n    runs-on: ubuntu-latest", "android") shouldBe emptySet()
         }
 
         test("the app derives the versionCode from the one shared version") {
@@ -109,7 +109,7 @@ class AndroidPackagingTest :
             val workflow = File(root, ".github/workflows/release.yml")
 
             withClue("no release lane publishes an APK") { workflow.isFile shouldBe true }
-            val lane = requireNotNull(AndroidPackaging.job(workflow.readText(), AndroidPackaging.ARTIFACT)) {
+            val lane = requireNotNull(WorkflowJobs.job(workflow.readText(), AndroidPackaging.ARTIFACT)) {
                 "release.yml has no '${AndroidPackaging.ARTIFACT}' job, so a tag publishes no APK"
             }
 
@@ -140,7 +140,7 @@ class AndroidPackagingTest :
             val workflow = File(root, ".github/workflows/release.yml").readText()
 
             withClue("a release without the APK is not the release the guide promises") {
-                AndroidPackaging.needs(workflow, "release") shouldBe setOf("package", AndroidPackaging.ARTIFACT)
+                WorkflowJobs.needs(workflow, "release") shouldBe setOf("package", AndroidPackaging.ARTIFACT)
             }
         }
 
@@ -148,7 +148,7 @@ class AndroidPackagingTest :
             val root = RepositoryScanner.repositoryRoot()
             val workflow = File(root, ".github/workflows/ci.yml").readText()
 
-            val lane = requireNotNull(AndroidPackaging.job(workflow, "fast")) {
+            val lane = requireNotNull(WorkflowJobs.job(workflow, "fast")) {
                 "ci.yml has no 'fast' job, so a broken release build only fails on a tag"
             }
             withClue("a resource or packaging failure must fail a pull request, not a tag") {

@@ -5,7 +5,7 @@
             "language": "en",
             "difficulty": {
                 "name": "lekto-difficulty-en.sqlite.gz",
-                "url": "https://github.com/Domingax/lekto/releases/download/dictionary-20261101/lekto-difficulty-en.sqlite.gz",
+                "url": "https://github.com/Domingax/lekto-data/releases/download/dictionary-20261101/lekto-difficulty-en.sqlite.gz",
                 "sha256": "cac53ac8da6e017b8ccae92557d471671e16fc29a7fe819fb7330ec91f4edb96",
                 "sizeBytes": 16
             },
@@ -13,7 +13,7 @@
                 {
                     "translationLanguage": "fr",
                     "name": "lekto-dictionary-en-fr.sqlite.gz",
-                    "url": "https://github.com/Domingax/lekto/releases/download/dictionary-20261101/lekto-dictionary-en-fr.sqlite.gz",
+                    "url": "https://github.com/Domingax/lekto-data/releases/download/dictionary-20261101/lekto-dictionary-en-fr.sqlite.gz",
                     "sha256": "a0482b5a9dc3973ddba625ec590e893049361dec73be3e844e218121f8c12102",
                     "sizeBytes": 17
                 }

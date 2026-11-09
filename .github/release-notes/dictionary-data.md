@@ -1,16 +1,14 @@
 Offline dictionary packs and word-difficulty tables built from Wiktionary and
 wordfreq.
 
-- **Source:** raw Wiktextract extract — <{{SOURCE_URL}}>
-- **Source SHA-256:** `{{SOURCE_SHA256}}`
-- **Upstream extraction date:** {{EXTRACTION_DATE}}
+- **Snapshot:** {{DATE}}
+- **Catalogue (movable, latest):** <https://github.com/{{REPOSITORY}}/releases/latest/download/manifest.json>
 
 This release publishes one **Dictionary pack** per (Reading language × Translation
-language) pair and one **Difficulty table** per reading language. The full
-catalogue — every offered language, its difficulty table and each pack's
-translation language — is in `language-manifest.json`.
-
-- **Catalogue (stable, latest):** <https://github.com/{{REPOSITORY}}/releases/latest/download/language-manifest.json>
+language) pair and one **Difficulty table** per reading language. Every pack and
+table keeps its own `NOTICE-*` and `manifest-*.json`: each provenance manifest
+records the edition it was built from, its URL, its SHA-256 and its extraction
+date. The catalogue names only the files this snapshot actually produced.
 
 **Verify:** download the assets and run `sha256sum -c SHA256SUMS`.
 

@@ -51,6 +51,13 @@ bytes. A **Derived asset**, versioned so a reader can
 refuse one it does not understand, and never authored by the user.
 _Avoid_: Catalog, index, registry
 
+**Snapshot**:
+One complete run's dictionary data: every **Dictionary pack** and **Difficulty
+table** built from the same source refresh, published as one dated release in the
+data repository. A **Language manifest** names only the current snapshot; the two
+or three most recent are kept.
+_Avoid_: Dictionary release, data version, generation
+
 **Tombstone**:
 The mark a deleted item leaves behind so the deletion itself can sync: the item's
 identity and update metadata without its content. A tombstone with a later update

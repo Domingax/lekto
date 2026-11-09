@@ -207,6 +207,21 @@ class CliOptionsTest {
     }
 
     @Test
+    fun `parses the release assembly mode from the asset directory`() {
+        val options = CliOptions.parse(
+            arrayOf(
+                "--assemble-release",
+                "out",
+                "--asset-url-base",
+                "https://data.test/releases/download/dictionary-20261101",
+            ),
+        ) as CliOptions.Assemble
+
+        assertEquals("out", options.assetDir.fileName.toString())
+        assertEquals("https://data.test/releases/download/dictionary-20261101", options.assetBaseUrl)
+    }
+
+    @Test
     fun `parses the per-pair assembly mode from one content file and the shared index`() {
         val options = CliOptions.parse(
             arrayOf(
