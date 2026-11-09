@@ -19,9 +19,9 @@ import kotlin.system.exitProcess
  * configured pack and **Difficulty table** into one directory, with one **Language
  * manifest** listing them all (issue #161); a publish run then completes that
  * manifest with each artefact's address, digest and size once the assets are
- * compressed (issue #305). The CI workflow downloads the input, runs this CLI and
- * publishes the release (`.github/workflows/dictionary-pack.yml`); nothing here is
- * committed.
+ * compressed (issue #305). The decomposed run is `.github/workflows/dictionary-data.yml`,
+ * a reusable workflow the data repository calls (issue #306, ADR-0047); nothing
+ * here is committed.
  */
 fun main(args: Array<String>) {
     try {
@@ -44,6 +44,7 @@ private fun run(options: CliOptions) {
         is CliOptions.Catalogue -> runCatalogue(options)
         is CliOptions.Measure -> runMeasure(options)
         is CliOptions.Publish -> runPublish(options)
+        is CliOptions.Assemble -> runAssemble(options)
         is CliOptions.Extract -> runExtract(options)
         is CliOptions.Pair -> runPair(options)
         is CliOptions.Difficulty -> runDifficulty(options)

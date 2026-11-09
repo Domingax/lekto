@@ -617,6 +617,17 @@ with the SDK on, signs from the decoded keystore, verifies the signature, names 
 asset and is waited for by the release job — each rule first against hand-built
 workflows, then against the real tree.
 
+The dictionary-data lane (issue #306) is a workflow whose failure is a monthly
+snapshot, so it is held by the same guard. `DictionaryDataPipelineTest` in
+`architecture` proves the reader first — the manifest-published-last rule, the
+build-from-produced-files rule, and the reusable-only trigger each against
+hand-built workflows — then asserts the real tree: the four layer jobs, their preparation
+jobs and dependencies, the CLI stage each runs, the three-snapshot retention, the caller
+that holds only the triggers, the absence of the retired application lane, and the
+one movable address the app follows. `tools/dictionaries`' `LanguageManifestAssemblyTest`
+proves the same contract at the code it drives, so neither the YAML nor the CLI
+can drift alone.
+
 `VaultStore` is the first seam to use the pattern: `testkit` holds
 `VaultStoreContract` and the `InMemoryVaultStore` fake, `core/commonTest` runs the
 contract against the fake, and `core/jvmTest` runs the same contract against the
@@ -773,6 +784,12 @@ catalogue and the artefacts cannot drift and the published format-2 shape — ea
 artefact naming its own `url`, `sha256` and size — cannot change by accident;
 `LanguageManifestPublicationTest` pins that completion against real asset files,
 refuses an entry the run did not produce, and leaves an unbuilt artefact absent.
+The decomposed run's assembly (issue #306) is `LanguageManifestAssemblyTest`: it builds the
+movable `manifest.json` from the per-artefact files a run produced, drops a pack
+below the 2,000-lemma entry floor while its sibling publishes, leaves a failed
+pair and an unbuilt table absent, refuses a manifest that names bytes the run did
+not write, and is deterministic; `LanguageManifestGoldenTest` proves the assembled
+bytes match the same golden as the one-process catalogue.
 `LanguageManifestTest` also pins that a run which published nothing yields an
 empty manifest, that a reading language with several packs lists them all, and
 that the

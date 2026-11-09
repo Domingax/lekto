@@ -30,7 +30,8 @@ internal data class MeasureInput(val edition: String, val language: String, val 
  * (issue #304). [Measure] is the full-edition coverage pass that chooses the
  * roster (issue #302). [Publish] completes that run's **Language manifest** once
  * the assets are compressed, writing the address, digest and size publication
- * knows (issue #305).
+ * knows (issue #305); [Assemble] builds that manifest from the artefacts a
+ * decomposed run actually produced (issue #306).
  *
  * The input is the raw Wiktextract `.jsonl[.gz]`. The provenance values are
  * recorded, never a timestamp. The workflow supplies every path; defaults are
@@ -77,6 +78,15 @@ internal sealed interface CliOptions {
     data class Publish(val manifest: Path, val assetDir: Path, val assetBaseUrl: String) : CliOptions
 
     /**
+     * The assembly stage (issue #306, ADR-0047): the decomposed run's separate
+     * jobs leave their pairs' and tables' per-artefact manifests in [assetDir], so
+     * this scans what succeeded, drops a pack below the published lemma floor, and
+     * writes the one movable `manifest.json` naming exactly the compressed files
+     * there.
+     */
+    data class Assemble(val assetDir: Path, val assetBaseUrl: String) : CliOptions
+
+    /**
      * Stage one of the two-stage build (ADR-0046, issue #303): streams one
      * edition once and writes its **Reading language**'s form index beside one
      * content file per `--extract-target`.
@@ -115,6 +125,7 @@ internal sealed interface CliOptions {
         fun parse(args: Array<String>): CliOptions {
             val values = parseFlags(args)
             return when {
+                values.containsKey("--assemble-release") -> assemble(values)
                 values.containsKey("--publish-manifest") -> publish(values)
                 values.containsKey("--measure-input") -> measure(values)
                 values.containsKey("--extract-target") -> extract(values)
@@ -157,6 +168,11 @@ internal sealed interface CliOptions {
         private fun publish(values: Map<String, List<String>>): Publish = Publish(
             manifest = path(values, "--publish-manifest"),
             assetDir = path(values, "--asset-dir"),
+            assetBaseUrl = required(values, "--asset-url-base"),
+        )
+
+        private fun assemble(values: Map<String, List<String>>): Assemble = Assemble(
+            assetDir = path(values, "--assemble-release"),
             assetBaseUrl = required(values, "--asset-url-base"),
         )
 
@@ -269,6 +285,7 @@ private val KNOWN_FLAGS = setOf(
     "--manifest",
     "--language-manifest",
     "--publish-manifest",
+    "--assemble-release",
     "--asset-dir",
     "--asset-url-base",
     "--frequency",

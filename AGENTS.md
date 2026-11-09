@@ -81,9 +81,10 @@ core ─────────────► nothing     (no app module, no A
 - `architecture` is the test-only module that turns these boundaries into tests
   (ticket #9); it reads the working tree and depends on no module, so it sits
   outside the graph it polices.
-- `tools/dictionaries` is standalone and never blocks application CI: its own
-  workflow builds and publishes the pack, while its fast unit tests run in
-  `check`.
+- `tools/dictionaries` is standalone and never blocks application CI: the
+  reusable dictionary-data workflow (called by the data repository) builds and
+  publishes the pack, while its fast unit tests run in `check` and the
+  architecture suite pins that workflow's layers.
 - `tools/icons` is not a module: it is the build-time scripts that fetch the
   pinned Lucide SVGs and regenerate the committed icon set, and that render the
   brand mark into the desktop installers' PNG, ICO and ICNS

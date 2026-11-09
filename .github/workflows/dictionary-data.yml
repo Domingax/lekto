@@ -1,0 +1,453 @@
+# The dictionary-data lane (issues #301, #306; ADR-0046, ADR-0047).
+#
+# Dictionary data lives in its own repository (Domingax/lekto-data), so the
+# application's `releases/latest` keeps meaning its latest version. This file is
+# the reusable workflow that repository calls: the triggers (monthly schedule and
+# manual dispatch) live there, and this file never runs on a push or a pull
+# request in the application, so the pipeline cannot block application CI.
+#
+# Four layers, one per ADR-0046:
+#   1. extract     one job per Reading language: download its edition, stream it
+#                  once, upload the form index and one content file per pair
+#   2. pair        one job per pair: one content file and the shared index -> one pack
+#   3. difficulty  one job per language: the shared index and its frequency list -> one table
+#   4. assemble    one job: keep what succeeded, apply the 2,000-lemma floor,
+#                  compress, publish the assets and *then* the movable manifest
+#
+# A failed language or pair is absent from the manifest; the other artefacts still
+# publish. Every run publishes a complete snapshot from that run's own bytes: no
+# asset is reused from a previous release (ADR-0047).
+name: dictionary-data
+
+on:
+  workflow_call:
+    inputs:
+      app-ref:
+        description: The application ref whose CLI builds the data.
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  APP_REPOSITORY: Domingax/lekto
+  RELEASE_MANIFEST: manifest.json
+
+jobs:
+  # Reads the committed language set into the matrices the layers run over, and
+  # resolves the one date the snapshot is tagged with. The manifest is never
+  # built from this list: it is built from the files the run produced.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      date: ${{ steps.release.outputs.date }}
+      readings: ${{ steps.matrix.outputs.readings }}
+      pairs: ${{ steps.matrix.outputs.pairs }}
+      difficulties: ${{ steps.matrix.outputs.difficulties }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+
+      - name: Resolve the snapshot date
+        id: release
+        run: echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Read the language set into matrices
+        id: matrix
+        run: |
+          languages=app/tools/dictionaries/languages.json
+          readings="$(jq -c '
+            . as $config
+            | ([($config.dictionaries[].reading), ($config.difficulties[])] | unique)
+            | map(. as $reading | {
+                language: $reading,
+                targets: ([$config.dictionaries[] | select(.reading == $reading) | .translation] | unique | join(","))
+              })
+          ' "$languages")"
+          pairs="$(jq -c '[.dictionaries[] | {reading, translation}]' "$languages")"
+          difficulties="$(jq -c '.difficulties' "$languages")"
+          {
+            echo "readings=$readings"
+            echo "pairs=$pairs"
+            echo "difficulties=$difficulties"
+          } >> "$GITHUB_OUTPUT"
+
+  # Layer one. One edition is downloaded and streamed once, and its form index is
+  # shared by every pack and table of that Reading language (ADR-0045, ADR-0046).
+  extract:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # A language that fails loses its own pairs, not the other languages' release.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        reading: ${{ fromJson(needs.prepare.outputs.readings) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the CLI
+        working-directory: app
+        run: ./gradlew --no-daemon :tools:dictionaries:installDist
+
+      - name: Download the reading language's edition
+        id: download
+        run: |
+          language="${{ matrix.reading.language }}"
+          if [ "$language" = "en" ]; then
+            url="https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz"
+          else
+            url="https://kaikki.org/${language}wiktionary/raw-wiktextract-data.jsonl.gz"
+          fi
+          curl -fL --retry 3 --retry-delay 5 \
+            -D "$RUNNER_TEMP/headers-$language.txt" \
+            -o "$RUNNER_TEMP/$language.jsonl.gz" "$url"
+          # The extract's own Last-Modified is its provenance date, never the day
+          # the workflow happens to run: the same input records the same date.
+          last_modified="$(grep -i '^last-modified:' "$RUNNER_TEMP/headers-$language.txt" | tail -1 \
+            | cut -d' ' -f2- | tr -d '\r')"
+          if [ -n "$last_modified" ]; then
+            extraction_date="$(date -u -d "$last_modified" +%Y-%m-%d)"
+          else
+            extraction_date="$(date -u +%Y-%m-%d)"
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "extraction_date=$extraction_date" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$RUNNER_TEMP/$language.jsonl.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Write the shared index and per-pair content
+        run: |
+          language="${{ matrix.reading.language }}"
+          targets=()
+          IFS=',' read -r -a configured <<< "${{ matrix.reading.targets }}"
+          for target in "${configured[@]}"; do
+            [ -n "$target" ] && targets+=(--extract-target "$target")
+          done
+          if (( ${#targets[@]} == 0 )); then
+            echo "::error::$language has no configured pair; an index-only extract mode is not implemented"
+            exit 1
+          fi
+          app/tools/dictionaries/build/install/dictionaries/bin/dictionaries \
+            --input "$RUNNER_TEMP/$language.jsonl.gz" \
+            --reading-language "$language" \
+            "${targets[@]}" \
+            --output-dir "$RUNNER_TEMP/intermediate" \
+            --source-url "${{ steps.download.outputs.url }}" \
+            --source-sha256 "${{ steps.download.outputs.sha256 }}" \
+            --extraction-date "${{ steps.download.outputs.extraction_date }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: intermediate-${{ matrix.reading.language }}
+          path: ${{ runner.temp }}/intermediate/*
+          if-no-files-found: error
+          retention-days: 3
+
+  # The wordfreq lists one job for all Difficulty tables: one install, and every
+  # language's list is ready before layer three starts (ADR-0029).
+  frequencies:
+    needs: prepare
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+
+      - name: Build the wordfreq frequency lists
+        run: |
+          python3 -m pip install --quiet "wordfreq==3.0.2"
+          python3 - <<'PY'
+          import json
+          import os
+          from wordfreq import iter_wordlist, zipf_frequency
+          difficulties = json.load(open("app/tools/dictionaries/languages.json"))["difficulties"]
+          for language in difficulties:
+              path = f"{os.environ['RUNNER_TEMP']}/wordfreq-{language}.tsv"
+              with open(path, "w", encoding="utf-8") as handle:
+                  for word in iter_wordlist(language):
+                      handle.write(f"{word}\t{10 ** zipf_frequency(word, language)}\n")
+          PY
+          for lang in $(jq -r '.difficulties[]' app/tools/dictionaries/languages.json); do
+            gzip -9 -n "$RUNNER_TEMP/wordfreq-$lang.tsv"
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frequency-lists
+          path: ${{ runner.temp }}/wordfreq-*.tsv.gz
+          if-no-files-found: error
+          retention-days: 3
+
+  # Layer two. One pair per job, so a pair can be retried, added or published
+  # alone. The drift gate compares the pair with its own previous published count;
+  # a pair that never published is not gated (issue #304).
+  pair:
+    needs: [prepare, extract]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # A drifted or failed pair is absent from the manifest; its siblings still
+    # publish. The failure stays visible as a job annotation.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: ${{ fromJson(needs.prepare.outputs.pairs) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the CLI
+        working-directory: app
+        run: ./gradlew --no-daemon :tools:dictionaries:installDist
+
+      - name: Look up this pair's previous lemma count
+        id: previous
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName \
+            --jq '[.[] | select(.tagName | startswith("dictionary-"))][0].tagName')"
+          if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            exit 0
+          fi
+          pair="lekto-dictionary-${{ matrix.pair.reading }}-${{ matrix.pair.translation }}"
+          mkdir -p "$RUNNER_TEMP/previous"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+            --pattern "manifest-$pair.json" --dir "$RUNNER_TEMP/previous" --clobber || exit 0
+          [ -f "$RUNNER_TEMP/previous/manifest-$pair.json" ] || exit 0
+          echo "count=$(jq -r '.stats.lemmaCount' "$RUNNER_TEMP/previous/manifest-$pair.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the language's shared index and content
+        id: intermediate
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: intermediate-${{ matrix.pair.reading }}
+          path: ${{ runner.temp }}/intermediate
+
+      - name: Write the pair's pack
+        if: ${{ steps.intermediate.outcome == 'success' }}
+        run: |
+          pair="lekto-dictionary-${{ matrix.pair.reading }}-${{ matrix.pair.translation }}"
+          args=()
+          if [ -n "${{ steps.previous.outputs.count }}" ]; then
+            args+=(--previous-lemma-count "${{ steps.previous.outputs.count }}")
+          fi
+          app/tools/dictionaries/build/install/dictionaries/bin/dictionaries \
+            --content "$RUNNER_TEMP/intermediate/content-${pair#lekto-dictionary-}.json" \
+            --form-index "$RUNNER_TEMP/intermediate/form-index-${{ matrix.pair.reading }}.json" \
+            --output-dir "$RUNNER_TEMP/out" \
+            "${args[@]}"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ steps.intermediate.outcome == 'success' }}
+        with:
+          name: pack-${{ matrix.pair.reading }}-${{ matrix.pair.translation }}
+          path: ${{ runner.temp }}/out/*
+          if-no-files-found: error
+          retention-days: 3
+
+  # Layer three. The table is keyed by the same shared index as the language's
+  # packs, never by whichever pair came first (ADR-0029, ADR-0045).
+  difficulty:
+    needs: [prepare, extract, frequencies]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        difficulty: ${{ fromJson(needs.prepare.outputs.difficulties) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the CLI
+        working-directory: app
+        run: ./gradlew --no-daemon :tools:dictionaries:installDist
+
+      - name: Fetch the shared index
+        id: intermediate
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: intermediate-${{ matrix.difficulty }}
+          path: ${{ runner.temp }}/intermediate
+
+      - name: Fetch the frequency lists
+        id: frequencies
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: frequency-lists
+          path: ${{ runner.temp }}/frequencies
+
+      - name: Write the language's Difficulty table
+        if: ${{ steps.intermediate.outcome == 'success' && steps.frequencies.outcome == 'success' }}
+        run: |
+          app/tools/dictionaries/build/install/dictionaries/bin/dictionaries \
+            --form-index "$RUNNER_TEMP/intermediate/form-index-${{ matrix.difficulty }}.json" \
+            --frequency-input "$RUNNER_TEMP/frequencies/wordfreq-${{ matrix.difficulty }}.tsv.gz" \
+            --output-dir "$RUNNER_TEMP/out"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ steps.intermediate.outcome == 'success' && steps.frequencies.outcome == 'success' }}
+        with:
+          name: table-${{ matrix.difficulty }}
+          path: ${{ runner.temp }}/out/*
+          if-no-files-found: error
+          retention-days: 3
+
+  # Layer four. The manifest is the lock: it is built from the per-artefact
+  # manifests the run produced, the thin pairs are dropped, and it is uploaded
+  # only after every byte it names (ADR-0047).
+  assemble:
+    needs: [prepare, pair, difficulty]
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the CLI
+        working-directory: app
+        run: ./gradlew --no-daemon :tools:dictionaries:installDist
+
+      # A run with no surviving pack publishes nothing: an empty manifest must
+      # never replace the catalogue with nothing.
+      - name: Collect the packs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: pack-*
+          path: ${{ runner.temp }}/assets
+          merge-multiple: true
+
+      - name: Collect the Difficulty tables
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: table-*
+          path: ${{ runner.temp }}/assets
+          merge-multiple: true
+
+      # `-n` omits the gzip timestamp and filename, so compression adds no
+      # non-determinism of its own.
+      - name: Compress the assets deterministically
+        run: |
+          for sqlite in "$RUNNER_TEMP"/assets/*.sqlite; do
+            [ -e "$sqlite" ] || continue
+            gzip -9 -n "$sqlite"
+          done
+
+      - name: Assemble the manifest from the run's own files
+        env:
+          ASSET_BASE_URL: >-
+            ${{ github.server_url }}/${{ github.repository }}/releases/download/dictionary-${{ needs.prepare.outputs.date }}
+        run: |
+          app/tools/dictionaries/build/install/dictionaries/bin/dictionaries \
+            --assemble-release "$RUNNER_TEMP/assets" \
+            --asset-url-base "$ASSET_BASE_URL"
+
+      - name: Write the checksums
+        run: |
+          cd "$RUNNER_TEMP/assets"
+          sha256sum *.sqlite.gz "$RELEASE_MANIFEST" > SHA256SUMS
+
+      - name: Write the release notes
+        run: |
+          sed \
+            -e "s|{{REPOSITORY}}|$GITHUB_REPOSITORY|g" \
+            -e "s|{{DATE}}|${{ needs.prepare.outputs.date }}|g" \
+            app/.github/release-notes/dictionary-data.md > "$RUNNER_TEMP/RELEASE_NOTES.md"
+          cat "$RUNNER_TEMP/RELEASE_NOTES.md"
+
+      # A draft is not `latest`: the previous manifest keeps resolving while this
+      # run uploads the bytes its own manifest will name. The draft becomes the
+      # latest release only after the manifest is attached, so the one movable
+      # address is never a 404 and never names a file that is not there.
+      - name: Publish the snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out="$RUNNER_TEMP/assets"
+          tag="dictionary-${{ needs.prepare.outputs.date }}"
+          notes="$RUNNER_TEMP/RELEASE_NOTES.md"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            if [ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = "true" ]; then
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            else
+              echo "::error::$tag is already public; the bytes behind a snapshot URL are immutable."
+              exit 1
+            fi
+          fi
+          assets=(
+            "$out"/*.sqlite.gz
+            "$out"/NOTICE-*
+            "$out"/manifest-*.json
+            "$out"/SHA256SUMS
+          )
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft "${assets[@]}" \
+            --title "Dictionary data ${{ needs.prepare.outputs.date }}" \
+            --notes-file "$notes"
+          gh release upload "$tag" --repo "$GITHUB_REPOSITORY" "$out/$RELEASE_MANIFEST" --clobber
+          # Publish only now: `--latest` replaces the movable manifest with this
+          # snapshot, whose every named byte is already uploaded.
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+
+      - name: Keep the three most recent snapshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("dictionary-"))] | sort_by(.createdAt) | reverse | .[3:] | .[].tagName' \
+            | while read -r old; do
+                if [ -n "$old" ]; then
+                  gh release delete "$old" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+                fi
+              done

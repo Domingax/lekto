@@ -10,14 +10,14 @@ import kotlinx.serialization.json.Json
  * **Dictionary pack** per (Reading language × **Translation language**) pair,
  * with the translation language named.
  *
- * It is a **Derived asset** the app fetches from one stable, date-free release
- * alias (`releases/latest/download/language-manifest.json`) and caches, so the
- * app never advertises data the pipeline did not publish. Format 2 (ADR-0047,
- * issue #305) makes each entry carry the `url` the app follows and the `sha256`
- * of the bytes behind it, so the manifest and the file cannot come from different
- * generations and a download is verifiable. The producer and the consumer each
- * declare the format version; an architecture test keeps the two in step
- * (ADR-0013).
+ * It is a **Derived asset** the app fetches from the data repository's one moving
+ * address (`releases/latest/download/manifest.json`) and caches, so the app never
+ * advertises data the pipeline did not publish. Format 2 (ADR-0047, issue #305)
+ * makes each entry carry the `url` the app follows and the `sha256` of the bytes
+ * behind it, so the manifest and the file cannot come from different generations
+ * and a download is verifiable. The decomposed run assembles it from the files its
+ * jobs produced (issue #306). The producer and the consumer each declare the
+ * format version; an architecture test keeps the two in step (ADR-0013).
  */
 @Serializable
 internal data class LanguageManifest(val formatVersion: Int, val languages: List<ManifestLanguage>)

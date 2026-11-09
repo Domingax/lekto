@@ -1,0 +1,32 @@
+# The data repository's lane (issue #306, ADR-0047).
+#
+# This file is installed at .github/workflows/dictionary-data.yml in
+# Domingax/lekto-data. It holds only the triggers: the four build layers are the
+# application's reusable workflow, so they are reviewed, tested and versioned with
+# the CLI they drive. Dictionary data is published here, never in the
+# application's releases.
+name: dictionary-data
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monthly, on the 1st at 03:17 UTC. Kaikki overwrites its raw files weekly and
+    # keeps no dated archive, so each run sees newer data.
+    - cron: "17 3 1 * *"
+
+concurrency:
+  group: dictionary-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    uses: Domingax/lekto/.github/workflows/dictionary-data.yml@main
+    permissions:
+      contents: write
+      actions: read
+    with:
+      app-ref: main

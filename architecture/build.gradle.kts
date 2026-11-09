@@ -53,6 +53,7 @@ tasks.withType<Test>().configureEach {
                 "**/src/**/*.kt",
                 "**/package.json",
                 ".github/**",
+                "tools/dictionaries/workflows/**",
                 "tools/packaging/**",
             )
             exclude("**/build/**", "**/node_modules/**", "**/.gradle/**", "**/.kotlin/**")

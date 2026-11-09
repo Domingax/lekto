@@ -253,8 +253,10 @@ The `instrumented` lane is the only one that needs an emulator; it is scheduled,
 so it never slows a change, and it runs the app's launch smoke test
 (`app/androidInstrumentedTest`, issue #71).
 
-`tools/dictionaries` builds and publishes by its own workflow (ticket #17), which
-never blocks application CI. Its fast unit tests still run in `check`.
+`tools/dictionaries` builds and publishes by the reusable dictionary-data
+workflow, which the data repository calls (issues #17, #306); it never blocks
+application CI. Its fast unit tests still run in `check`, and the architecture
+suite pins the workflow's four layers and its data-repository split.
 
 ## Alert triage
 
@@ -468,23 +470,25 @@ client, not a footnote.
 
 ## Dictionary pipeline
 
-> **Being restructured (issue #301).** ADR-0044, ADR-0045, ADR-0046 and ADR-0047
-> replace this section's input model, its form-index rule and its publication
-> channel: one Wiktionary edition per **Reading language**, one shared form index
-> per language, a two-stage build, and a separate data repository behind a
-> movable manifest. The behaviour below is what the code does **today**; issues
-> #303–#306 are the tickets that change it. #303 has landed the extraction stage
-> and the shared form index; #304 has landed the per-pair pack and per-language
-> difficulty assembly; #305 has landed each artefact's own publish address. The
-> workflow still reads one source file. Where this section and those ADRs
-> disagree, the ADRs win.
+> **Decomposed (issues #301, #303–#306).** ADR-0044, ADR-0045, ADR-0046,
+> ADR-0047 and ADR-0048 replace this section's input model, its form-index rule
+> and its publication channel: one Wiktionary edition per **Reading language**, one shared
+> form index per language, a four-layer build, and a separate data repository
+> behind a movable `manifest.json`. ADR-0047 is authoritative where this section
+> and it disagree.
+>
+> The build is one reusable workflow,
+> [`.github/workflows/dictionary-data.yml`](../.github/workflows/dictionary-data.yml),
+> and the data repository (`Domingax/lekto-data`) holds only its triggers. Nothing
+> in this repository publishes a dictionary release any more: the application's
+> `releases/latest` is its latest version, never a data snapshot.
 
-`tools/dictionaries` is a standalone JVM CLI that turns the raw Wiktextract
-extract (≈3 GiB gz, all languages) into a set of **trimmed SQLite dictionary
-packs** and per-language **Difficulty tables**, driven by a committed language set
-(`tools/dictionaries/languages.json`, issue #161): the (Reading language ×
+`tools/dictionaries` is a standalone JVM CLI that turns Kaikki's raw Wiktextract
+extract for each **Reading language** into that language's **trimmed SQLite
+dictionary packs** and its **Difficulty table**, driven by a committed language
+set (`tools/dictionaries/languages.json`, issue #161): the (Reading language ×
 Translation language) pairs to build and the reading languages that get a table.
-It is published by its own workflow (ticket #17); that build never blocks
+It is published by the reusable dictionary-data workflow; that build never blocks
 application CI.
 
 ```sh
@@ -555,6 +559,25 @@ ADR-0046) keys one language's frequency list by the shared index and writes
 It records the edition the index carries. Both assembly modes are deterministic:
 fixed ordering, no wall clock, and byte-identical SQLite across runs on one input.
 
+A **release assembly run** (`--assemble-release`, issue #306; ADR-0047) reads a
+directory holding the run's per-artefact `manifest-*.json` files and their
+compressed bytes, drops any pack below the 2,000-lemma entry floor, and writes the
+one movable `manifest.json` naming exactly the files that exist:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--assemble-release out \
+  --asset-url-base https://github.com/<owner>/<data-repo>/releases/download/dictionary-<YYYYMMDD>"
+```
+
+It is built from the produced files, never from `languages.json`: a failed,
+drifted or thin pair is simply absent. A pair below the 2,000-lemma floor is
+dropped, never published as an exception. Every entry is completed with the
+compressed asset's dated URL, the `sha256` of the bytes behind it and its size; an
+entry whose file is missing fails assembly rather than advertising a dead address.
+`LanguageManifestAssemblyTest` pins the floor, the absence rule and the determinism;
+`LanguageManifestGoldenTest` proves the assembled bytes match the published
+golden.
+
 A **single-artefact run** (`--reading-language`/`--translation-language`/
 `--difficulty-language`) builds one pack and, optionally, one reading language's
 **Difficulty table** (issue #64; ADR-0029) from a wordfreq frequency list, keyed by
@@ -587,43 +610,57 @@ decision needs, without building an artefact (issue #302). The measurement and t
 roster it chose are in `docs/research/dictionary-coverage.md`.
 
 Each pack and table is a **Derived asset**: never committed.
-`.github/workflows/dictionary-pack.yml` downloads the source, builds the wordfreq
-list for each configured difficulty language, runs the CLI over the configured
-set and publishes a GitHub Release tagged `dictionary-<YYYYMMDD>` with every
-asset, a `SHA256SUMS` and the per-artefact `NOTICE`/manifest sidecars. The asset
-names stay date-free (`lekto-dictionary-en-fr.sqlite.gz`,
-`lekto-difficulty-es.sqlite.gz`), but the manifest names each one at that dated
-release's own address rather than at a moving alias, so the bytes behind an
-address never change (issue #305, ADR-0047). Because the release is one
-snapshot, the whole configured set is published together (ADR-0031). The release
-body is rendered from the committed template
-`.github/release-notes/dictionary-pack.md`; the full CC BY-SA 4.0 text stays in the
-`NOTICE` sidecars and in each pack's `license_text` metadata. The workflow runs on
-`workflow_dispatch` and a monthly `schedule`, so it can never block application
-CI. The build is deterministic — fixed row ordering, no timestamps, gzip `-n` —
-and `DictionaryPackGoldenTest` proves the transform on a committed fixture; a
-sanity gate fails a run only on a changed source schema or a coverage collapse
-below 80% of the previous build's lemma count, per artefact.
+[`.github/workflows/dictionary-data.yml`](../.github/workflows/dictionary-data.yml)
+is a reusable workflow in four layers, and the data repository
+(`Domingax/lekto-data`) holds only its triggers
+([`tools/dictionaries/workflows/lekto-data.yml`](../tools/dictionaries/workflows/lekto-data.yml)
+is the reviewed caller). Two preparation jobs feed the layers: `prepare` reads the
+language set into the matrices, and `frequencies` builds one wordfreq list per
+difficulty language. Each layer is then a job matrix:
 
-The same run also writes a **language manifest**
-(`--language-manifest`, default `language-manifest.json` in the output directory):
-the catalogue of what the release offers for reading — each **Reading language**
-with the **Difficulty table** published for it and the **Dictionary pack**s
-published for its pairs, each pair naming its **Translation language**. Its
-format is 2 (issue #305, ADR-0047): every artefact carries the `url` the app
-follows, the `sha256` of the bytes behind it, and its compressed size in bytes.
-It is built from the run's own output, so a run that published nothing yields an
-empty manifest and the catalogue can never advertise an artefact that was not
-built. The workflow compresses the assets, then runs the CLI's publish mode
-(`--publish-manifest`, `--asset-dir`, `--asset-url-base`), which completes every
-entry with the compressed asset's immutable dated URL, the `sha256` of the bytes
-behind it and its size; an entry whose file the run did not produce fails the
-step. The workflow then writes `SHA256SUMS` and
-uploads both, the manifest under the one constant address
-`releases/latest/download/language-manifest.json`. Its format version is declared
-by the producer (`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
+1. **extract** — one job per **Reading language**: download that edition once,
+   stream it once, and upload its form index and one content file per pair as
+   workflow artefacts (ephemeral, three-day retention);
+2. **pair** — one job per pair: read one content file and the shared index, write
+   one pack, and resolve the drift gate against that pair's own previous count;
+3. **difficulty** — one job per language: key the shared index by the wordfreq
+   frequency list and write one table;
+4. **assemble** — read what succeeded, apply the 2,000-lemma entry floor,
+   compress, publish the release's assets, and only then its `manifest.json`.
+
+A failed language loses its own pairs; a failed or thin pair is absent from the
+manifest while its siblings publish. Every run publishes a complete snapshot from
+that run's own bytes, tagged `dictionary-<YYYYMMDD>` in the data repository. The
+release is created as a draft, every asset is uploaded, and the manifest is
+attached last; only then does `gh release edit --draft=false --latest` publish the
+snapshot, so the address the app follows never names bytes that do not exist yet
+(ADR-0048). The three most recent snapshots are kept and older ones are deleted,
+which is safe because only the current manifest is referenced.
+
+The release body is rendered from the committed template
+`.github/release-notes/dictionary-data.md`; the full CC BY-SA 4.0 text stays in the
+`NOTICE` sidecars and in each pack's `license_text` metadata. The build is
+deterministic — fixed row ordering, no timestamps, gzip `-n` — and
+`DictionaryPackGoldenTest` proves the transform on a committed fixture; a sanity
+gate fails a run only on a changed source schema or a coverage collapse below 80%
+of the previous build's lemma count, per artefact.
+
+The run writes a **Language manifest** (`manifest.json`): the catalogue of what
+the snapshot offers for reading — each **Reading language** with the **Difficulty
+table** published for it and the **Dictionary pack**s published for its pairs,
+each pair naming its **Translation language**. Its format is 2 (issue #305,
+ADR-0047): every artefact carries the `url` the app follows, the `sha256` of the
+bytes behind it, and its compressed size in bytes. The local catalogue and
+single-artefact modes still write a `language-manifest.json` for a one-process
+run (`--language-manifest`); the decomposed workflow instead hands its asset
+directory to the CLI's assembly mode, which builds the same manifest from the
+produced per-artefact files and writes `manifest.json`. The app follows the one
+constant address `https://github.com/Domingax/lekto-data/releases/latest/download/manifest.json`.
+Its format version is declared by the producer
+(`LanguageManifestFormat.VERSION`) and by the consumer (`core`'s
 `LanguageManifest.FORMAT_VERSION`), kept in step by an architecture test
-(ADR-0013).
+(ADR-0013), and `DictionaryDataPipelineTest` pins the workflow's layers,
+publication order and data-repository split.
 
 The app consumes the pack through `core`'s `DictionaryPack` seam: it downloads
 the address the manifest published into the device-local **derived store**,
