@@ -20,28 +20,37 @@ data class MasteryRamp(val unknown: Color, val recognized: Color, val familiar: 
  * active **App theme** to it (`docs/design.md` §2.2; ADR-0036).
  */
 object MasteryPalette {
-    /** The daylight paper's ramp: four dark hues, each at or above 4.6:1. */
+    /**
+     * The daylight paper's ramp: four earthy hues, each at or above 4.5:1 on
+     * `#FAF7F2` and at least 1.35:1 from its neighbour.
+     */
     val Light = MasteryRamp(
-        unknown = Color(0xFF1D4ED8),
-        recognized = Color(0xFFA16207),
-        familiar = Color(0xFFC2410C),
-        learned = Color(0xFF15803D),
+        unknown = Color(0xFF0E3074),
+        recognized = Color(0xFF464C06),
+        familiar = Color(0xFFA9320E),
+        learned = Color(0xFF1B8146),
     )
 
-    /** Warm night: the same meanings, lifted until they read on near-black. */
+    /**
+     * Warm night: the same meanings, lifted until they read on near-black and
+     * spread so no neighbour is the same blot.
+     */
     val Dark = MasteryRamp(
-        unknown = Color(0xFF8AB4F8),
-        recognized = Color(0xFFF2C14E),
-        familiar = Color(0xFFEE9A5F),
-        learned = Color(0xFF7BD88F),
+        unknown = Color(0xFF4A7FE9),
+        recognized = Color(0xFF96A20D),
+        familiar = Color(0xFFF59F85),
+        learned = Color(0xFF85E5AD),
     )
 
-    /** Rag paper: Light's ramp with its three warm hues darkened to 6:1. */
+    /**
+     * Rag paper: the same four meanings, tuned to `#F6ECD8` so each level clears
+     * both the paper bar and the neighbour bar.
+     */
     val Sepia = MasteryRamp(
-        unknown = Color(0xFF1D4ED8),
-        recognized = Color(0xFF92400E),
-        familiar = Color(0xFF9A3412),
-        learned = Color(0xFF166534),
+        unknown = Color(0xFF0D2A66),
+        recognized = Color(0xFF414606),
+        familiar = Color(0xFF9E2F0D),
+        learned = Color(0xFF1A7A42),
     )
 
     /** The ramp for [theme]'s paper. */

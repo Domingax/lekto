@@ -43,22 +43,39 @@ and never to Sepia, because no operating system has a sepia state.
 ### 2.2 The mastery ramps
 
 One ramp per theme, because a single table cannot serve both backgrounds (§ADR-0036). The hues
-keep their meanings; their darkness is chosen per paper.
+keep their meanings; their lightness is chosen per paper. The figure after each token is its
+measured ratio against that theme's paper.
 
-| Level | Meaning | Light & Sepia | Dark | Minimum |
-| ----- | ------- | ------------- | ---- | ------- |
-| 0 | unknown | `#1D4ED8` | `#8AB4F8` | 5.7:1 / 8.8:1 |
-| 1 | recognized | `#A16207` | `#F2C14E` | 4.6:1 / 11.1:1 |
-| 2 | familiar | `#C2410C` | `#EE9A5F` | 4.8:1 / 8.3:1 |
-| 3 | learned | `#15803D` | `#7BD88F` | 4.7:1 / 10.7:1 |
-| 4 | known | — | — | normal text |
+| Level | Meaning | Light | Sepia | Dark |
+| ----- | ------- | ----- | ----- | ---- |
+| 0 | unknown | `#0E3074` · 11.6:1 | `#0D2A66` · 11.6:1 | `#4A7FE9` · 4.9:1 |
+| 1 | recognized | `#464C06` · 8.5:1 | `#414606` · 8.5:1 | `#96A20D` · 6.6:1 |
+| 2 | familiar | `#A9320E` · 6.3:1 | `#9E2F0D` · 6.3:1 | `#F59F85` · 9.0:1 |
+| 3 | learned | `#1B8146` · 4.6:1 | `#1A7A42` · 4.6:1 | `#85E5AD` · 12.2:1 |
+| 4 | known | normal text | normal text | normal text |
 
-Sepia needs three hues very slightly darker than Light's: `#92400E` (recognized), `#9A3412`
-(familiar), `#166534` (learned), each at or above 6:1 on `#F6ECD8`.
+Two adjacent levels must also clear a minimum **against each other**, because the reader compares
+neighbours on the page, not each word with the paper. The bar is **1.35:1** — measured, not
+estimated: below it two neighbours read as one tone in greyscale:
+
+| Adjacent pair | Light | Sepia | Dark |
+| ------------- | ----- | ----- | ---- |
+| unknown / recognized | 1.36:1 | 1.36:1 | 1.36:1 |
+| recognized / familiar | 1.36:1 | 1.36:1 | 1.36:1 |
+| familiar / learned | 1.36:1 | 1.36:1 | 1.36:1 |
+
+The two middle hues sit at the ends of their families so the pairs read: `recognized` is olive,
+`familiar` is brick. The brightness rises through the ramp — unknown darkest, learned lightest — so
+the step between neighbours is a step in tone, not only in hue. Sepia keeps its own four tokens
+rather than borrowing Light's: the pair rule needs more room than a shared ramp gave it, and its
+lightest level sits at 4.6:1, still above the bar. The bar is not higher because the night paper
+bounds it: the four coloured levels must fit between the paper's 4.5:1 floor and the ink that paints
+a **known** word, and a wider uniform step would push `learned` to the ink itself. Level 4 is not a
+ramp token; on Dark the underline, not the tone, is what tells a learned word from a known one.
 
 **The rule that is not negotiable**: a coloured word is 18 sp of running text, so its bar is
-**4.5:1 against its own paper**, measured, not estimated. The palette as delivered fails it — the
-yellow was 1.5:1, the orange and green 2.3:1 — and that is a defect, not a style. Level 4 carries
+**4.5:1 against its own paper**, measured, not estimated. The palette as first delivered fails it —
+the yellow was 1.5:1, the orange and green 2.3:1 — and that is a defect, not a style. Level 4 carries
 no colour because "known" is normal text, and the absence is the reward.
 
 Colouring is applied to the **letters**, with the **single underline** the reader already renders
@@ -81,7 +98,8 @@ ceiling at which the level stops reading through.
   book's **Reading language**: `#4C6B8A` (en), `#8A5A44` (fr), `#9A7B33` (es), `#5F7A5A` (de),
   `#7A5F7A` (it). On Dark they are lightened by a third. They are **decoration**: the two-letter
   code printed inside the vignette is the signal, so a reader who cannot tell the hues apart
-  loses nothing.
+  loses nothing. The code takes whichever ink is more legible on the hue — white on the daylight
+  palette, the theme's ink on the lifted night palette.
 - **Red** — `#B3261E` on Light and Sepia, lightened to `#F2B8B5` on Dark, and only for
   irreversible actions (delete an entry, disconnect a server, remove a key) and for failures. It
   never appears as decoration, and never as a warning about something reversible: that is what
@@ -569,7 +587,8 @@ the page behind it.
 
 ## 9. Accessibility
 
-- **4.5:1** for any coloured word (§2.2), measured per theme.
+- **4.5:1** for any coloured word (§2.2), measured per theme, and **1.35:1** between two adjacent
+  levels — the reader compares neighbours, not only each word with the paper.
 - A **non-colour indicator** for every highlighted level: the underline.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.
