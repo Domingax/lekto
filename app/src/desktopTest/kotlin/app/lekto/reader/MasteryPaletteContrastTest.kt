@@ -7,6 +7,7 @@ import app.lekto.core.MasteryLevel
 import app.lekto.theme.Dark
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
+import app.lekto.theme.isDarkPaper
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.test.Test
@@ -73,6 +74,41 @@ class MasteryPaletteContrastTest {
             assertTrue(
                 MasteryLevel.KNOWN.readerColor(ramp) == Color.Unspecified,
                 "${paper.name} paints a known word",
+            )
+        }
+    }
+
+    @Test
+    fun everyHighlightedLevelKeepsAaOnItsWash() {
+        forEachPaper { paper, ramp ->
+            highlightedLevels().forEach { level ->
+                val wash = level.readerBackground(ramp, paper.theme.background)
+                if (isDarkPaper(paper.theme.background)) {
+                    assertTrue(
+                        wash == Color.Unspecified,
+                        "${paper.name} ${level.name}: the night paper carries a wash",
+                    )
+                } else {
+                    assertTrue(
+                        wash != Color.Unspecified,
+                        "${paper.name} ${level.name}: no wash on a daylight paper",
+                    )
+                    val ratio = contrast(level.readerColor(ramp), wash)
+                    assertTrue(
+                        ratio >= MINIMUM_PAPER_CONTRAST,
+                        "${paper.name} ${level.name}: $ratio:1 on its wash",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun aKnownWordCarriesNoWash() {
+        forEachPaper { paper, ramp ->
+            assertTrue(
+                MasteryLevel.KNOWN.readerBackground(ramp, paper.theme.background) == Color.Unspecified,
+                "${paper.name} washes a known word",
             )
         }
     }

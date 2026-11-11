@@ -48,10 +48,10 @@ measured ratio against that theme's paper.
 
 | Level | Meaning | Light | Sepia | Dark |
 | ----- | ------- | ----- | ----- | ---- |
-| 0 | unknown | `#123A3E` · 11.6:1 | `#144246` · 9.4:1 | `#328F97` · 4.9:1 |
-| 1 | recognized | `#68760D` · 4.7:1 | `#55600B` · 5.8:1 | `#A2B61A` · 8.2:1 |
-| 2 | familiar | `#842F13` · 8.2:1 | `#852F13` · 7.4:1 | `#E17A58` · 6.3:1 |
-| 3 | learned | `#176A39` · 6.2:1 | `#1A7A42` · 4.6:1 | `#68D997` · 10.6:1 |
+| 0 | unknown | `#0D2B2E` · 14.0:1 | `#103437` · 11.4:1 | `#328F97` · 4.9:1 |
+| 1 | recognized | `#515B0A` · 6.9:1 | `#5B670B` · 5.3:1 | `#A2B61A` · 8.2:1 |
+| 2 | familiar | `#63230E` · 11.1:1 | `#732910` · 8.7:1 | `#E17A58` · 6.3:1 |
+| 3 | learned | `#11522C` · 8.7:1 | `#145E33` · 6.7:1 | `#68D997` · 10.6:1 |
 | 4 | known | normal text | normal text | normal text |
 
 Any two **coloured** levels must also clear a minimum **against each other**, not only the neighbours
@@ -60,21 +60,25 @@ pairs are:
 
 | Pair | Light | Sepia | Dark |
 | ---- | ----- | ----- | ---- |
-| unknown / recognized | 2.46:1 | 1.61:1 | 1.68:1 |
-| unknown / familiar | 1.41:1 | 1.27:1 | 1.29:1 |
-| unknown / learned | 1.86:1 | 2.06:1 | 2.17:1 |
-| recognized / familiar | 1.75:1 | 1.27:1 | 1.30:1 |
-| recognized / learned | 1.33:1 | 1.27:1 | 1.29:1 |
-| familiar / learned | 1.32:1 | 1.62:1 | 1.68:1 |
+| unknown / recognized | 2.03:1 | 2.18:1 | 1.68:1 |
+| unknown / familiar | 1.27:1 | 1.32:1 | 1.29:1 |
+| unknown / learned | 1.62:1 | 1.72:1 | 2.17:1 |
+| recognized / familiar | 1.60:1 | 1.65:1 | 1.30:1 |
+| recognized / learned | 1.26:1 | 1.27:1 | 1.29:1 |
+| familiar / learned | 1.28:1 | 1.30:1 | 1.68:1 |
 
 The two middle hues sit at the ends of their families so the pairs read: `recognized` is olive,
 `familiar` is brick. The tone alternates rather than climbing — unknown and familiar sit dark,
 recognized and learned light — so the step between levels is a step in tone, not only in hue.
 Unknown is teal rather than blue: blue plus the underline reads as a hyperlink on the reading page.
-Sepia keeps its own four tokens rather than borrowing Light's: its warmer, lighter ink leaves less
-room between the paper and normal text, so this ramp is the tightest of the three and its smallest
-pair is 1.27:1. A per-level non-colour cue is still the separate issue: the underline says "this word
-is highlighted", not which level (WCAG 1.4.1).
+Sepia keeps its own four tokens rather than borrowing Light's: its warmer ink leaves less room
+between the paper and normal text, so this ramp is the tightest of the three.
+
+On Light and Sepia a highlighted word also carries a **pale tint** of its level: the paper lifted
+halfway to white, then tinted by 8 / 14 / 20 / 26 % of the level's hue. The tint is the second cue
+the four dark hues need. It is measured with the text against it, not against the bare paper, so the
+bar still holds: the lowest text-on-tint ratio is 4.7:1 on Sepia. The night paper keeps its lifted
+hues alone; a tint there would pull the paper toward the light text and lower the contrast.
 
 **The rule that is not negotiable**: a coloured word is 18 sp of running text, so its bar is
 **4.5:1 against its own paper**, measured, not estimated. The palette as first delivered fails it —
@@ -84,10 +88,11 @@ no colour because "known" is normal text, and the absence is the reward.
 Colouring is applied to the **letters**, with the **single underline** the reader already renders
 for every highlighted level. The underline is what carries "this is a word you are learning" to a
 reader who cannot read the hue; a different shape per level would need a custom `TextDecoration`
-renderer Compose does not offer. A **background wash** behind the word was prototyped
-(`traitements.png`) and rejected: it turns a page into an annotated workbook after three hundred
-pages. It remains the documented fallback if the four levels ever prove too close in hue — both
-ramps live in one file, so switching is a local change.
+renderer Compose does not offer. A **full background wash** was prototyped (`traitements.png`) and
+rejected as the default: it turns a page into an annotated workbook after three hundred pages. The
+daylight ramps proved too close without it, so the fallback now applies to Light and Sepia alone —
+the pale tint described above, kept to the word and to low alphas. The night paper keeps its hues
+alone.
 
 ### 2.3 The selected word
 
@@ -592,6 +597,8 @@ the page behind it.
 
 - **4.5:1** for any coloured word (§2.2), measured per theme, and **1.25:1** between any two
   coloured levels — a page puts any two words side by side, not only the neighbours of the scale.
+- On Light and Sepia, a highlighted word's **pale tint** is a second cue; its text is measured
+  against the tint, not the bare paper.
 - A **non-colour indicator** for every highlighted level: the underline.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.

@@ -238,7 +238,10 @@ class ReaderTextTest {
 
         assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "the").background)
         assertEquals(selectionHighlight(styles.body.color), styleOf(tokens, "lantern").background)
-        assertEquals(Color.Unspecified, styleOf(tokens, "glows").background)
+        assertEquals(
+            MasteryLevel.RECOGNIZED.readerBackground(styles.mastery, styles.paper),
+            styleOf(tokens, "glows").background,
+        )
     }
 
     @Test

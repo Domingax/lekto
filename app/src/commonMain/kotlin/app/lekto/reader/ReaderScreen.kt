@@ -149,7 +149,7 @@ fun ReaderScreen(
     val theme = MaterialTheme.colorScheme
     val ink = theme.onBackground
     val styles = remember(document.preferences, theme) {
-        ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink)
+        ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink, theme.background)
     }
     val entries = remember(document.text) { document.text.chapterEntries() }
     val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }

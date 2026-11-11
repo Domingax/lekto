@@ -2,6 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.isDarkPaper
@@ -21,15 +22,15 @@ data class MasteryRamp(val unknown: Color, val recognized: Color, val familiar: 
  */
 object MasteryPalette {
     /**
-     * The daylight paper's ramp: four earthy hues, each at or above 4.5:1 on
+     * The daylight paper's ramp: four dark hues, each at or above 4.5:1 on
      * `#FAF7F2` and at least 1.25:1 from every other level. Unknown is teal
      * rather than blue: blue plus the underline reads as a hyperlink.
      */
     val Light = MasteryRamp(
-        unknown = Color(0xFF123A3E),
-        recognized = Color(0xFF68760D),
-        familiar = Color(0xFF842F13),
-        learned = Color(0xFF176A39),
+        unknown = Color(0xFF0D2B2E),
+        recognized = Color(0xFF515B0A),
+        familiar = Color(0xFF63230E),
+        learned = Color(0xFF11522C),
     )
 
     /**
@@ -49,10 +50,10 @@ object MasteryPalette {
      * the daylight paper's, so this ramp is the tightest of the three.
      */
     val Sepia = MasteryRamp(
-        unknown = Color(0xFF144246),
-        recognized = Color(0xFF55600B),
-        familiar = Color(0xFF852F13),
-        learned = Color(0xFF1A7A42),
+        unknown = Color(0xFF103437),
+        recognized = Color(0xFF5B670B),
+        familiar = Color(0xFF732910),
+        learned = Color(0xFF145E33),
     )
 
     /** The ramp for [theme]'s paper. */
@@ -87,6 +88,41 @@ fun MasteryLevel.readerColor(ramp: MasteryRamp): Color = when (this) {
     MasteryLevel.FAMILIAR -> ramp.familiar
     MasteryLevel.LEARNED -> ramp.learned
     MasteryLevel.KNOWN -> Color.Unspecified
+}
+
+/** The share of white the wash's base paper is lifted by, so the tint sits behind the text. */
+private const val WASH_PAPER_LIFT: Float = 0.5f
+
+/** How much of the level's hue each wash carries: the palest on unknown, the deepest on learned. */
+private const val WASH_TINT_UNKNOWN: Float = 0.08f
+private const val WASH_TINT_RECOGNIZED: Float = 0.14f
+private const val WASH_TINT_FAMILIAR: Float = 0.20f
+private const val WASH_TINT_LEARNED: Float = 0.26f
+
+/**
+ * The pale tint behind a highlighted word on a daylight paper (`docs/design.md`
+ * §2.2): the paper lifted halfway to white, then tinted with the level's own hue.
+ * It is the second cue the four levels need on Light and Sepia, where four dark
+ * hues alone leave too little room. The tint is measured with the text against
+ * it, not against the bare paper, so it never eats the 4.5:1 bar.
+ *
+ * The night paper keeps its lifted hues alone: a tint there would pull the paper
+ * toward the light text and lower the contrast. A known word has no tint.
+ */
+fun MasteryLevel.readerBackground(ramp: MasteryRamp, paper: Color): Color {
+    val tint = when (this) {
+        MasteryLevel.UNKNOWN -> WASH_TINT_UNKNOWN
+        MasteryLevel.RECOGNIZED -> WASH_TINT_RECOGNIZED
+        MasteryLevel.FAMILIAR -> WASH_TINT_FAMILIAR
+        MasteryLevel.LEARNED -> WASH_TINT_LEARNED
+        MasteryLevel.KNOWN -> null
+    }
+    return if (tint == null || isDarkPaper(paper)) {
+        Color.Unspecified
+    } else {
+        val base = lerp(paper, Color.White, WASH_PAPER_LIFT)
+        lerp(base, readerColor(ramp), tint)
+    }
 }
 
 /**

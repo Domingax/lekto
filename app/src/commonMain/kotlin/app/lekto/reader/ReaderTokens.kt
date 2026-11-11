@@ -1,7 +1,6 @@
 package app.lekto.reader
 
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
@@ -232,7 +231,11 @@ private class WordWriter(
         val colour = level.readerColorOr(styles.body.color, styles.mastery)
         val decoration = level.readerDecoration()
         val washed = selected != null && word.start >= selected.first && word.end <= selected.last
-        val background = if (washed) selectionHighlight(styles.body.color) else Color.Unspecified
+        val background = if (washed) {
+            selectionHighlight(styles.body.color)
+        } else {
+            level.readerBackground(styles.mastery, styles.paper)
+        }
         builder.addStyle(
             SpanStyle(color = colour, textDecoration = decoration, background = background),
             word.start,

@@ -70,7 +70,7 @@ private const val WORDS_PER_ROW = 8
 @Composable
 private fun PalettePreview(theme: ColorScheme) {
     val styles = remember(theme) {
-        ReaderStyles.of(ReadingPreferences.DEFAULT, MasteryPalette.of(theme), theme.onBackground)
+        ReaderStyles.of(ReadingPreferences.DEFAULT, MasteryPalette.of(theme), theme.onBackground, theme.background)
     }
     val tokens = remember(styles) {
         buildReaderTokens(
@@ -101,8 +101,15 @@ private fun WordRow(words: List<WordToken>, styles: ReaderStyles) {
     ) {
         words.forEach { word ->
             val level = SampleChapter.mastery.levelOf(word.key)
-            Box(modifier = Modifier.width(wordWidth(word.surface)).height(14.dp).background(level.swatch(styles)))
-            Box(modifier = Modifier.width(5.dp).height(14.dp))
+            val wash = level.readerBackground(styles.mastery, styles.paper)
+            val washModifier = if (wash == Color.Unspecified) Modifier else Modifier.background(wash)
+            Box(
+                modifier = Modifier.width(wordWidth(word.surface) + 4.dp).height(18.dp).then(washModifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(modifier = Modifier.width(wordWidth(word.surface)).height(14.dp).background(level.swatch(styles)))
+            }
+            Box(modifier = Modifier.width(5.dp).height(18.dp))
         }
     }
 }
