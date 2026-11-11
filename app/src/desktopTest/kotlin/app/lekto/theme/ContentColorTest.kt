@@ -19,12 +19,12 @@ class ContentColorTest {
 
     @Test
     fun aDarkFillTakesWhite() {
-        assertEquals(Color.White, contentColorOn(Color(0xFF0C2861)))
+        assertEquals(Color.White, contentColorOn(Color(0xFF133E42)))
     }
 
     @Test
     fun aLiftedFillTakesInk() {
-        assertEquals(InkOnLightFill, contentColorOn(Color(0xFF4A7FE9)))
+        assertEquals(InkOnLightFill, contentColorOn(Color(0xFF35969F)))
     }
 
     @Test

@@ -74,6 +74,8 @@ appears at launch; the app's own window and every screen follow the choice from 
 
 The first per-theme ramp met the 4.5:1 paper bar but let neighbours collapse: on Light,
 recognized/familiar measured 1.05:1 and familiar/learned 1.03:1, and Sepia was no better. The hues
-keep their meanings, but `recognized` moves toward olive and `familiar` toward brick, and every
-theme's four levels are now also measured against each other: **1.35:1 minimum**, beside the 4.5:1
-paper bar. `docs/design.md` §2.2 carries the tokens and the measured values (issue #300).
+keep their meanings, but `recognized` moves toward olive, `familiar` toward brick, and `unknown` from
+blue to deep teal — blue plus the underline reads as a hyperlink on the reading page. The tone
+alternates rather than climbing, and every theme's four levels are now also measured against each
+other: **1.35:1 minimum**, beside the 4.5:1 paper bar. `docs/design.md` §2.2 carries the tokens and
+the measured values (issue #300).

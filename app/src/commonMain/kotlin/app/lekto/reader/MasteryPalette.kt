@@ -22,12 +22,13 @@ data class MasteryRamp(val unknown: Color, val recognized: Color, val familiar: 
 object MasteryPalette {
     /**
      * The daylight paper's ramp: four earthy hues, each at or above 4.5:1 on
-     * `#FAF7F2` and at least 1.35:1 from its neighbour.
+     * `#FAF7F2` and at least 1.35:1 from its neighbour. Unknown is teal rather
+     * than blue: blue plus the underline reads as a hyperlink on the page.
      */
     val Light = MasteryRamp(
-        unknown = Color(0xFF0E3074),
-        recognized = Color(0xFF464C06),
-        familiar = Color(0xFFA9320E),
+        unknown = Color(0xFF133E42),
+        recognized = Color(0xFF55610B),
+        familiar = Color(0xFF702810),
         learned = Color(0xFF1B8146),
     )
 
@@ -36,10 +37,10 @@ object MasteryPalette {
      * spread so no neighbour is the same blot.
      */
     val Dark = MasteryRamp(
-        unknown = Color(0xFF4A7FE9),
-        recognized = Color(0xFF96A20D),
-        familiar = Color(0xFFF59F85),
-        learned = Color(0xFF85E5AD),
+        unknown = Color(0xFF35969F),
+        recognized = Color(0xFFA8BE1B),
+        familiar = Color(0xFFE17855),
+        learned = Color(0xFF7FDFA7),
     )
 
     /**
@@ -47,9 +48,9 @@ object MasteryPalette {
      * both the paper bar and the neighbour bar.
      */
     val Sepia = MasteryRamp(
-        unknown = Color(0xFF0D2A66),
-        recognized = Color(0xFF414606),
-        familiar = Color(0xFF9E2F0D),
+        unknown = Color(0xFF144246),
+        recognized = Color(0xFF57630B),
+        familiar = Color(0xFF7B2C12),
         learned = Color(0xFF1A7A42),
     )
 
