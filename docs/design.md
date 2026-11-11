@@ -70,7 +70,7 @@ pairs are:
 The two middle hues sit at the ends of their families so the pairs read: `recognized` is olive,
 `familiar` is brick. The tone alternates rather than climbing — unknown and familiar sit dark,
 recognized and learned light — so the step between levels is a step in tone, not only in hue.
-Unknown is teal rather than blue: blue plus the underline reads as a hyperlink on the reading page.
+Unknown is teal rather than blue: blue reads as a hyperlink on the reading page.
 Sepia keeps its own four tokens rather than borrowing Light's: its warmer ink leaves less room
 between the paper and normal text, so this ramp is the tightest of the three.
 
@@ -85,14 +85,14 @@ hues alone; a tint there would pull the paper toward the light text and lower th
 the yellow was 1.5:1, the orange and green 2.3:1 — and that is a defect, not a style. Level 4 carries
 no colour because "known" is normal text, and the absence is the reward.
 
-Colouring is applied to the **letters**, with the **single underline** the reader already renders
-for every highlighted level. The underline is what carries "this is a word you are learning" to a
-reader who cannot read the hue; a different shape per level would need a custom `TextDecoration`
-renderer Compose does not offer. A **full background wash** was prototyped (`traitements.png`) and
-rejected as the default: it turns a page into an annotated workbook after three hundred pages. The
-daylight ramps proved too close without it, so the fallback now applies to Light and Sepia alone —
-the pale tint described above, kept to the word and to low alphas. The night paper keeps its hues
-alone.
+Colouring is applied to the **letters**, and on Light and Sepia a **pale tint** sits behind the
+word. The tint carries "this is a word you are learning" and which level it is; it is a tonal patch,
+so a reader who cannot read the hue still sees a lighter or darker paper under the word. The
+**underline is gone**: the tint replaces it. A per-level pattern remains the separate issue WCAG
+1.4.1 asks for. A **full background wash** was prototyped (`traitements.png`) and rejected as the
+default: it turns a page into an annotated workbook after three hundred pages. The palette proved
+too close without a cue, so the pale tint — the same idea at low alpha, kept to the word — is the
+fallback the daylight papers now use. The night paper keeps its lifted hues alone.
 
 ### 2.3 The selected word
 
@@ -599,7 +599,9 @@ the page behind it.
   coloured levels — a page puts any two words side by side, not only the neighbours of the scale.
 - On Light and Sepia, a highlighted word's **pale tint** is a second cue; its text is measured
   against the tint, not the bare paper.
-- A **non-colour indicator** for every highlighted level: the underline.
+- A **pale tint** behind a highlighted word on the daylight papers is the second cue; on Dark the
+  lifted hues stand alone. The tint is tonal, not a pattern — a per-level pattern is the separate
+  issue WCAG 1.4.1 asks for.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.
 - The reader's page also carries the two page turns as accessibility actions, beside the two

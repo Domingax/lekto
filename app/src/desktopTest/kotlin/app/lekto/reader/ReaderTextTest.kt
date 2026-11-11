@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
@@ -20,6 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -101,11 +101,11 @@ class ReaderTextTest {
     }
 
     @Test
-    fun highlightedWordsAreUnderlinedAndKnownWordsAreNot() {
+    fun noWordIsUnderlined() {
         val tokens = buildReaderTokens(chapter, renderer, styles)
 
-        assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
-        assertEquals(TextDecoration.None, styleOf(tokens, "the").textDecoration)
+        assertNull(styleOf(tokens, "lantern").textDecoration)
+        assertNull(styleOf(tokens, "the").textDecoration)
     }
 
     @Test
@@ -180,7 +180,7 @@ class ReaderTextTest {
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
-        assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
+        assertNull(styleOf(tokens, "lantern").textDecoration)
         assertTrue(
             tokens.text.getLinkAnnotations(0, tokens.text.length).isEmpty(),
             "a page carries no per-word links: the tap hit-tests the words instead (ADR-0007)",

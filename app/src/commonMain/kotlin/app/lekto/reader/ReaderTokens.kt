@@ -211,10 +211,10 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
 }
 
 /**
- * Paints one word's mastery: its colour, its underline and, while it is being
- * selected, its wash. Highlighted words (levels 0–3) get a colour span and an
- * underline; a known word (level 4) gets neither, so it reads as normal text. A
- * word inside the [selected] range is additionally washed with
+ * Paints one word's mastery: its colour and its pale tint and, while it is being
+ * selected, its wash. Highlighted words (levels 0–3) get a colour span and, on a
+ * daylight paper, a tint; a known word (level 4) gets neither, so it reads as
+ * normal text. A word inside the [selected] range is additionally washed with
  * [selectionHighlight], so a tapped word — or every word of a selected phrase —
  * stays visible behind the open lookup panel.
  *
@@ -229,7 +229,6 @@ private class WordWriter(
 ) {
     fun write(word: WordToken, level: MasteryLevel) {
         val colour = level.readerColorOr(styles.body.color, styles.mastery)
-        val decoration = level.readerDecoration()
         val washed = selected != null && word.start >= selected.first && word.end <= selected.last
         val background = if (washed) {
             selectionHighlight(styles.body.color)
@@ -237,7 +236,7 @@ private class WordWriter(
             level.readerBackground(styles.mastery, styles.paper)
         }
         builder.addStyle(
-            SpanStyle(color = colour, textDecoration = decoration, background = background),
+            SpanStyle(color = colour, background = background),
             word.start,
             word.end,
         )

@@ -3,7 +3,6 @@ package app.lekto.reader
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.isDarkPaper
 import app.lekto.theme.Sepia as SepiaScheme
@@ -24,7 +23,7 @@ object MasteryPalette {
     /**
      * The daylight paper's ramp: four dark hues, each at or above 4.5:1 on
      * `#FAF7F2` and at least 1.25:1 from every other level. Unknown is teal
-     * rather than blue: blue plus the underline reads as a hyperlink.
+     * rather than blue: blue reads as a hyperlink on the reading page.
      */
     val Light = MasteryRamp(
         unknown = Color(0xFF0D2B2E),
@@ -132,12 +131,3 @@ fun MasteryLevel.readerBackground(ramp: MasteryRamp, paper: Color): Color {
  */
 fun MasteryLevel.readerColorOr(normal: Color, ramp: MasteryRamp): Color =
     readerColor(ramp).takeIf { colour -> colour != Color.Unspecified } ?: normal
-
-/**
- * The non-colour indicator for [this] level, for colour-blind readers (UX spec
- * §Accessibility). Compose's [TextDecoration] offers only none/underline/
- * line-through, so the spike uses a single underline: highlighted words carry
- * one, known words do not. A distinct shape per level needs a custom
- * `TextDecoration` renderer and is recorded as follow-up in the spike report.
- */
-fun MasteryLevel.readerDecoration(): TextDecoration = if (highlighted) TextDecoration.Underline else TextDecoration.None

@@ -75,10 +75,10 @@ appears at launch; the app's own window and every screen follow the choice from 
 The first per-theme ramp met the 4.5:1 paper bar but let neighbours collapse: on Light,
 recognized/familiar measured 1.05:1 and familiar/learned 1.03:1, and Sepia was no better. The hues
 keep their meanings, but `recognized` moves toward olive, `familiar` toward brick, and `unknown` from
-blue to deep teal — blue plus the underline reads as a hyperlink on the reading page. The tone
-alternates rather than climbing, and **any two** of every theme's four coloured levels are now
-measured against each other: **1.25:1 minimum**, beside the 4.5:1 paper bar. The daylight papers add
-a pale tint of the level behind each highlighted word, measured with the text against it; the night
+blue to deep teal — blue reads as a hyperlink on the reading page. The tone alternates rather than
+climbing, and **any two** of every theme's four coloured levels are now measured against each other:
+**1.25:1 minimum**, beside the 4.5:1 paper bar. The underline is gone: the daylight papers add a pale
+tint of the level behind each highlighted word, measured with the text against it, and the night
 paper keeps its lifted hues alone. `docs/design.md` §2.2 carries the tokens and the measured values
-(issue #300). Colour still carries the level; the per-level non-colour cue WCAG 1.4.1 asks for is
+(issue #300). Colour still carries the level; the per-level non-colour pattern WCAG 1.4.1 asks for is
 its own issue.
