@@ -2,7 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.isDarkPaper
 import app.lekto.theme.Sepia as SepiaScheme
@@ -21,15 +21,15 @@ data class MasteryRamp(val unknown: Color, val recognized: Color, val familiar: 
  */
 object MasteryPalette {
     /**
-     * The daylight paper's ramp: four dark hues, each at or above 4.5:1 on
-     * `#FAF7F2` and at least 1.25:1 from every other level. Unknown is teal
-     * rather than blue: blue reads as a hyperlink on the reading page.
+     * The daylight paper's ramp: blue unknown, gold recognized, red familiar and
+     * green learned, each at or above 4.5:1 on `#FAF7F2` and at least 1.25:1 from
+     * every other level.
      */
     val Light = MasteryRamp(
-        unknown = Color(0xFF0D2B2E),
-        recognized = Color(0xFF515B0A),
-        familiar = Color(0xFF63230E),
-        learned = Color(0xFF11522C),
+        unknown = Color(0xFF09347C),
+        recognized = Color(0xFF8A6D00),
+        familiar = Color(0xFF941818),
+        learned = Color(0xFF006B3C),
     )
 
     /**
@@ -37,10 +37,10 @@ object MasteryPalette {
      * spread so no two levels are the same blot.
      */
     val Dark = MasteryRamp(
-        unknown = Color(0xFF328F97),
-        recognized = Color(0xFFA2B61A),
-        familiar = Color(0xFFE17A58),
-        learned = Color(0xFF68D997),
+        unknown = Color(0xFF2B7FFF),
+        recognized = Color(0xFFE0AB00),
+        familiar = Color(0xFFFF6D60),
+        learned = Color(0xFF73E19A),
     )
 
     /**
@@ -49,10 +49,10 @@ object MasteryPalette {
      * the daylight paper's, so this ramp is the tightest of the three.
      */
     val Sepia = MasteryRamp(
-        unknown = Color(0xFF103437),
-        recognized = Color(0xFF5B670B),
-        familiar = Color(0xFF732910),
-        learned = Color(0xFF145E33),
+        unknown = Color(0xFF092D6B),
+        recognized = Color(0xFF826600),
+        familiar = Color(0xFF871616),
+        learned = Color(0xFF006538),
     )
 
     /** The ramp for [theme]'s paper. */
@@ -89,41 +89,6 @@ fun MasteryLevel.readerColor(ramp: MasteryRamp): Color = when (this) {
     MasteryLevel.KNOWN -> Color.Unspecified
 }
 
-/** The share of white the wash's base paper is lifted by, so the tint sits behind the text. */
-private const val WASH_PAPER_LIFT: Float = 0.5f
-
-/** How much of the level's hue each wash carries: the palest on unknown, the deepest on learned. */
-private const val WASH_TINT_UNKNOWN: Float = 0.08f
-private const val WASH_TINT_RECOGNIZED: Float = 0.14f
-private const val WASH_TINT_FAMILIAR: Float = 0.20f
-private const val WASH_TINT_LEARNED: Float = 0.26f
-
-/**
- * The pale tint behind a highlighted word on a daylight paper (`docs/design.md`
- * §2.2): the paper lifted halfway to white, then tinted with the level's own hue.
- * It is the second cue the four levels need on Light and Sepia, where four dark
- * hues alone leave too little room. The tint is measured with the text against
- * it, not against the bare paper, so it never eats the 4.5:1 bar.
- *
- * The night paper keeps its lifted hues alone: a tint there would pull the paper
- * toward the light text and lower the contrast. A known word has no tint.
- */
-fun MasteryLevel.readerBackground(ramp: MasteryRamp, paper: Color): Color {
-    val tint = when (this) {
-        MasteryLevel.UNKNOWN -> WASH_TINT_UNKNOWN
-        MasteryLevel.RECOGNIZED -> WASH_TINT_RECOGNIZED
-        MasteryLevel.FAMILIAR -> WASH_TINT_FAMILIAR
-        MasteryLevel.LEARNED -> WASH_TINT_LEARNED
-        MasteryLevel.KNOWN -> null
-    }
-    return if (tint == null || isDarkPaper(paper)) {
-        Color.Unspecified
-    } else {
-        val base = lerp(paper, Color.White, WASH_PAPER_LIFT)
-        lerp(base, readerColor(ramp), tint)
-    }
-}
-
 /**
  * [readerColor], or [normal] when the level has no colour of its own — the
  * single place "a known word is normal text" is expressed, so the renderer and
@@ -131,3 +96,12 @@ fun MasteryLevel.readerBackground(ramp: MasteryRamp, paper: Color): Color {
  */
 fun MasteryLevel.readerColorOr(normal: Color, ramp: MasteryRamp): Color =
     readerColor(ramp).takeIf { colour -> colour != Color.Unspecified } ?: normal
+
+/**
+ * The non-colour indicator for [this] level, for colour-blind readers (UX spec
+ * §Accessibility). Compose's [TextDecoration] offers only none/underline/
+ * line-through, so the spike uses a single underline: highlighted words carry
+ * one, known words do not. A distinct shape per level needs a custom
+ * `TextDecoration` renderer and is recorded as follow-up in the spike report.
+ */
+fun MasteryLevel.readerDecoration(): TextDecoration = if (highlighted) TextDecoration.Underline else TextDecoration.None

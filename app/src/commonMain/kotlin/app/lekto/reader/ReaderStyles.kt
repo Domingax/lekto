@@ -33,8 +33,6 @@ data class ReaderStyles(
     val heading: TextStyle,
     val horizontalMargin: Dp,
     val mastery: MasteryRamp,
-    /** The active **App theme**'s paper, so a level's wash is measured against the surface it tints. */
-    val paper: Color,
     /**
      * One list level's indent, scaled from the body's size so the hanging indent
      * follows the size control. A marker sits at its level's indent and the item's
@@ -46,9 +44,6 @@ data class ReaderStyles(
         /** The Light paper's ink, used when no theme supplies one. */
         private val DefaultInk = Color(0xFF1C1A17)
 
-        /** The Light paper, used when no theme supplies one. */
-        private val DefaultPaper = Color(0xFFFAF7F2)
-
         /** The heading's size and leading as multiples of the body's, so they follow the size control. */
         private const val HEADING_SIZE_RATIO: Float = 24f / 18f
         private const val HEADING_LEADING_RATIO: Float = 34f / 18f
@@ -57,12 +52,7 @@ data class ReaderStyles(
         private const val LIST_INDENT_RATIO: Float = 1.5f
 
         /** [preferences] rendered as the styles the page and its pagination measure. */
-        fun of(
-            preferences: ReadingPreferences,
-            mastery: MasteryRamp,
-            ink: Color = DefaultInk,
-            paper: Color = DefaultPaper,
-        ): ReaderStyles {
+        fun of(preferences: ReadingPreferences, mastery: MasteryRamp, ink: Color = DefaultInk): ReaderStyles {
             val family = when (preferences.face) {
                 ReadingFace.SERIF -> FontFamily.Serif
                 ReadingFace.SANS_SERIF -> FontFamily.SansSerif
@@ -83,7 +73,6 @@ data class ReaderStyles(
                 ),
                 horizontalMargin = preferences.horizontalMargin.dp,
                 mastery = mastery,
-                paper = paper,
                 listIndent = (preferences.size * LIST_INDENT_RATIO).sp,
             )
         }

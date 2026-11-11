@@ -111,10 +111,8 @@ Every **Word token** is coloured by its **Mastery level**, on a five-point scale
 | 4 | Known | Normal text, no highlight |
 
 Levels 0–3 are highlighted so unfamiliar words stand out. Level 4 is invisible:
-a word you know sits in the text like any other. On the Light and Sepia themes a
-highlighted word also carries a pale tint of its level; on the Dark theme the
-colour of the letters is the cue. As you save words and raise their levels, the
-page slowly clears.
+a word you know sits in the text like any other. As you save words and raise their
+levels, the page slowly clears.
 
 ## Your reader level
 

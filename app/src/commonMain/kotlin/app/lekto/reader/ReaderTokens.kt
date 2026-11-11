@@ -1,6 +1,7 @@
 package app.lekto.reader
 
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
@@ -211,10 +212,10 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
 }
 
 /**
- * Paints one word's mastery: its colour and its pale tint and, while it is being
- * selected, its wash. Highlighted words (levels 0–3) get a colour span and, on a
- * daylight paper, a tint; a known word (level 4) gets neither, so it reads as
- * normal text. A word inside the [selected] range is additionally washed with
+ * Paints one word's mastery: its colour, its underline and, while it is being
+ * selected, its wash. Highlighted words (levels 0–3) get a colour span and an
+ * underline; a known word (level 4) gets neither, so it reads as normal text. A
+ * word inside the [selected] range is additionally washed with
  * [selectionHighlight], so a tapped word — or every word of a selected phrase —
  * stays visible behind the open lookup panel.
  *
@@ -229,14 +230,11 @@ private class WordWriter(
 ) {
     fun write(word: WordToken, level: MasteryLevel) {
         val colour = level.readerColorOr(styles.body.color, styles.mastery)
+        val decoration = level.readerDecoration()
         val washed = selected != null && word.start >= selected.first && word.end <= selected.last
-        val background = if (washed) {
-            selectionHighlight(styles.body.color)
-        } else {
-            level.readerBackground(styles.mastery, styles.paper)
-        }
+        val background = if (washed) selectionHighlight(styles.body.color) else Color.Unspecified
         builder.addStyle(
-            SpanStyle(color = colour, background = background),
+            SpanStyle(color = colour, textDecoration = decoration, background = background),
             word.start,
             word.end,
         )
