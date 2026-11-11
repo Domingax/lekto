@@ -4,6 +4,7 @@ import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.testkit.testSample
 import app.lekto.testkit.testSampleCatalog
+import app.lekto.testkit.testSampleGlossary
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.JsonPrimitive
@@ -62,18 +63,89 @@ class SampleCatalogReadTest :
             readSampleCatalog(testSampleCatalog(listOf(fiveMaps))) shouldBe SampleCatalogRead.Malformed
         }
 
-        test("a blank word key or a meaning without a definition is malformed") {
-            val blankWord = testSample(
-                colourMaps = testSample().colourMaps + (CefrLevel.A1 to mapOf(" " to MasteryLevel.UNKNOWN)),
+        test("a sample with no optional author, part of speech or pronunciation reads") {
+            val entries = SampleGlossary(
+                mapOf(
+                    "boat" to listOf(
+                        SampleGlossaryEntry(
+                            lemma = "boat",
+                            partOfSpeech = null,
+                            pronunciation = null,
+                            senses = listOf(SampleSense("A boat.", emptyList())),
+                        ),
+                    ),
+                ),
             )
-            val noSense = """
+            val sample = testSample(author = null, attribution = null, glossaries = mapOf("fr" to entries))
+
+            val read = readSampleCatalog(testSampleCatalog(listOf(sample))) as SampleCatalogRead.Read
+
+            read.catalogue.samples.single() shouldBe sample
+            read.catalogue.samples.single().text shouldBe "A calm boat waited near the rocks."
+        }
+
+        test("a minimal catalogue reads, with its absent optional fields empty") {
+            val bytes = """
                 {"formatVersion":1,"samples":[{"language":"en","title":"T","paragraphs":["A boat."],
-                "colourMaps":{"A1":{},"A2":{},"B1":{},"B2":{},"C1":{},"C2":{}},
-                "glossaries":{"fr":{"entries":{"boat":[{"lemma":"boat","senses":[]}]}}}}]}
+                "difficulty":{"boat":null},
+                "colourMaps":{"A1":{"boat":"UNKNOWN"},"A2":{"boat":"UNKNOWN"},"B1":{"boat":"UNKNOWN"},
+                "B2":{"boat":"UNKNOWN"},"C1":{"boat":"UNKNOWN"},"C2":{"boat":"UNKNOWN"}}}]}
             """.trimIndent().encodeToByteArray()
 
-            readSampleCatalog(testSampleCatalog(listOf(blankWord))) shouldBe SampleCatalogRead.Malformed
-            readSampleCatalog(noSense) shouldBe SampleCatalogRead.Malformed
+            val read = readSampleCatalog(bytes)
+
+            read shouldBe SampleCatalogRead.Read(
+                SampleCatalogContent(
+                    listOf(
+                        testSample(
+                            title = "T",
+                            paragraphs = listOf("A boat."),
+                            author = null,
+                            attribution = null,
+                            difficulty = mapOf("boat" to null),
+                            glossaries = emptyMap(),
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        test("a sample with no map for a band colours nothing and answers no unknown word") {
+            val sample = testSample(colourMaps = emptyMap())
+
+            sample.colourMap(CefrLevel.A1) shouldBe emptyMap()
+            sample.glossaries.getValue("fr").entriesOf("missing") shouldBe emptyList()
+        }
+
+        test("a blank text field, word key or form is malformed") {
+            val malformed = listOf(
+                testSample(language = " "),
+                testSample(paragraphs = listOf("a", " ")),
+                testSample(difficulty = mapOf(" " to null)),
+                testSample(forms = mapOf(" " to "boat")),
+                testSample(forms = mapOf("boats" to " ")),
+                testSample(glossaries = mapOf(" " to testSampleGlossary())),
+            )
+
+            malformed.forEach { sample ->
+                readSampleCatalog(testSampleCatalog(listOf(sample))) shouldBe SampleCatalogRead.Malformed
+            }
+        }
+
+        test("a glossary with a blank key, a blank lemma, no entry or no sense is malformed") {
+            val valid = SampleGlossaryEntry("boat", "noun", null, listOf(SampleSense("A boat.", emptyList())))
+            val malformed = listOf(
+                SampleGlossary(mapOf(" " to listOf(valid))),
+                SampleGlossary(mapOf("boat" to emptyList())),
+                SampleGlossary(mapOf("boat" to listOf(valid.copy(lemma = " ")))),
+                SampleGlossary(mapOf("boat" to listOf(valid.copy(senses = emptyList())))),
+                SampleGlossary(mapOf("boat" to listOf(valid.copy(senses = listOf(SampleSense(" ", emptyList())))))),
+            )
+
+            malformed.forEach { glossary ->
+                readSampleCatalog(testSampleCatalog(listOf(testSample(glossaries = mapOf("fr" to glossary))))) shouldBe
+                    SampleCatalogRead.Malformed
+            }
         }
 
         test("a form that points at a word the sample does not carry is malformed") {
