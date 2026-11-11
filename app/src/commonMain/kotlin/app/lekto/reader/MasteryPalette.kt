@@ -22,35 +22,36 @@ data class MasteryRamp(val unknown: Color, val recognized: Color, val familiar: 
 object MasteryPalette {
     /**
      * The daylight paper's ramp: four earthy hues, each at or above 4.5:1 on
-     * `#FAF7F2` and at least 1.35:1 from its neighbour. Unknown is teal rather
-     * than blue: blue plus the underline reads as a hyperlink on the page.
+     * `#FAF7F2` and at least 1.25:1 from every other level. Unknown is teal
+     * rather than blue: blue plus the underline reads as a hyperlink.
      */
     val Light = MasteryRamp(
-        unknown = Color(0xFF133E42),
-        recognized = Color(0xFF55610B),
-        familiar = Color(0xFF702810),
-        learned = Color(0xFF1B8146),
+        unknown = Color(0xFF123A3E),
+        recognized = Color(0xFF68760D),
+        familiar = Color(0xFF842F13),
+        learned = Color(0xFF176A39),
     )
 
     /**
      * Warm night: the same meanings, lifted until they read on near-black and
-     * spread so no neighbour is the same blot.
+     * spread so no two levels are the same blot.
      */
     val Dark = MasteryRamp(
-        unknown = Color(0xFF35969F),
-        recognized = Color(0xFFA8BE1B),
-        familiar = Color(0xFFE17855),
-        learned = Color(0xFF7FDFA7),
+        unknown = Color(0xFF328F97),
+        recognized = Color(0xFFA2B61A),
+        familiar = Color(0xFFE17A58),
+        learned = Color(0xFF68D997),
     )
 
     /**
      * Rag paper: the same four meanings, tuned to `#F6ECD8` so each level clears
-     * both the paper bar and the neighbour bar.
+     * both the paper bar and the pair bar. Its warmer ink leaves less room than
+     * the daylight paper's, so this ramp is the tightest of the three.
      */
     val Sepia = MasteryRamp(
         unknown = Color(0xFF144246),
-        recognized = Color(0xFF57630B),
-        familiar = Color(0xFF7B2C12),
+        recognized = Color(0xFF55600B),
+        familiar = Color(0xFF852F13),
         learned = Color(0xFF1A7A42),
     )
 

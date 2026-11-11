@@ -279,9 +279,9 @@ another machine. The theme goldens record each **App theme**'s colour scheme as
 swatches, one sheet per paper; the reader adds one `mastery-palette-<paper>.png`
 per paper (issue #183), its mastery ramp and the reader page's word layer as
 coloured blocks — the same layout a page of text produces, without the glyphs.
-The ramps' 4.5:1 floor against the paper and 1.35:1 floor between adjacent levels are
-`MasteryPaletteContrastTest`'s, measured against each paper and between neighbours, because a
-golden can pin a colour but not its readability. The Library
+The ramps' 4.5:1 floor against the paper and 1.25:1 floor between any two coloured levels are
+`MasteryPaletteContrastTest`'s, measured against each paper and across every pair, because a golden
+can pin a colour but not its readability. The Library
 adds one `library-<paper>.png` per paper (issue #208): the shelf's frame — the
 search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
 rule and the hairline that parts two rows — on four books across three languages.

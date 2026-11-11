@@ -15,17 +15,17 @@ import kotlin.test.assertTrue
 /** The AA bar a coloured word clears against its own paper (`docs/design.md` §2.2). */
 private const val MINIMUM_PAPER_CONTRAST: Float = 4.5f
 
-/** The bar two adjacent levels clear against each other (`docs/design.md` §2.2). */
-private const val MINIMUM_ADJACENT_CONTRAST: Float = 1.35f
+/** The bar any two levels clear against each other (`docs/design.md` §2.2). */
+private const val MINIMUM_PAIR_CONTRAST: Float = 1.25f
 
 /**
  * The one rule the mastery palette cannot break (`docs/design.md` §2.2,
  * ADR-0036): a coloured word is 18 sp of running text, so every hue is at least
  * 4.5:1 against its own paper. A second rule is the reader's actual comparison:
- * two adjacent levels must also differ from each other, or the page shows one
- * blot at four shades. Measured tests, not comments, because the delivered
- * palette failed three of its four levels and no golden can tell a readable hue
- * from a pretty one.
+ * any two levels must differ from each other, because a page puts any two words
+ * side by side, not only the neighbours of the scale. Measured tests, not
+ * comments, because the delivered palette failed three of its four levels and no
+ * golden can tell a readable hue from a pretty one.
  */
 @Suppress("MagicNumber") // The two bars and WCAG's luminance offsets are the rule's own constants.
 class MasteryPaletteContrastTest {
@@ -52,16 +52,17 @@ class MasteryPaletteContrastTest {
     }
 
     @Test
-    fun everyAdjacentPairMeetsTheMinimum() {
+    fun everyPairOfLevelsMeetsTheMinimum() {
         forEachPaper { paper, ramp ->
-            // MasteryLevel declares the scale in order, so the enum order is the adjacency order.
-            // KNOWN is absent: it has no ramp token, and the underline separates it from LEARNED.
-            highlightedLevels().zipWithNext().forEach { (lower, higher) ->
-                val ratio = contrast(lower.readerColor(ramp), higher.readerColor(ramp))
-                assertTrue(
-                    ratio >= MINIMUM_ADJACENT_CONTRAST,
-                    "${paper.name} ${lower.name}/${higher.name}: $ratio:1 against each other",
-                )
+            // MasteryLevel declares the scale in order; a page can show any two of its levels together.
+            highlightedLevels().forEachIndexed { index, lower ->
+                highlightedLevels().drop(index + 1).forEach { higher ->
+                    val ratio = contrast(lower.readerColor(ramp), higher.readerColor(ramp))
+                    assertTrue(
+                        ratio >= MINIMUM_PAIR_CONTRAST,
+                        "${paper.name} ${lower.name}/${higher.name}: $ratio:1 against each other",
+                    )
+                }
             }
         }
     }

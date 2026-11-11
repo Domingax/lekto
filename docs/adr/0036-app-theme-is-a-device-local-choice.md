@@ -76,6 +76,7 @@ The first per-theme ramp met the 4.5:1 paper bar but let neighbours collapse: on
 recognized/familiar measured 1.05:1 and familiar/learned 1.03:1, and Sepia was no better. The hues
 keep their meanings, but `recognized` moves toward olive, `familiar` toward brick, and `unknown` from
 blue to deep teal — blue plus the underline reads as a hyperlink on the reading page. The tone
-alternates rather than climbing, and every theme's four levels are now also measured against each
-other: **1.35:1 minimum**, beside the 4.5:1 paper bar. `docs/design.md` §2.2 carries the tokens and
-the measured values (issue #300).
+alternates rather than climbing, and **any two** of every theme's four coloured levels are now
+measured against each other: **1.25:1 minimum**, beside the 4.5:1 paper bar. `docs/design.md` §2.2
+carries the tokens and the measured values (issue #300). Colour alone still carries the level; the
+per-level non-colour cue WCAG 1.4.1 asks for is its own issue.

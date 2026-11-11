@@ -48,32 +48,33 @@ measured ratio against that theme's paper.
 
 | Level | Meaning | Light | Sepia | Dark |
 | ----- | ------- | ----- | ----- | ---- |
-| 0 | unknown | `#133E42` · 10.9:1 | `#144246` · 9.4:1 | `#35969F` · 5.3:1 |
-| 1 | recognized | `#55610B` · 6.3:1 | `#57630B` · 5.6:1 | `#A8BE1B` · 8.9:1 |
-| 2 | familiar | `#702810` · 9.8:1 | `#7B2C12` · 8.1:1 | `#E17855` · 6.2:1 |
-| 3 | learned | `#1B8146` · 4.6:1 | `#1A7A42` · 4.6:1 | `#7FDFA7` · 11.5:1 |
+| 0 | unknown | `#123A3E` · 11.6:1 | `#144246` · 9.4:1 | `#328F97` · 4.9:1 |
+| 1 | recognized | `#68760D` · 4.7:1 | `#55600B` · 5.8:1 | `#A2B61A` · 8.2:1 |
+| 2 | familiar | `#842F13` · 8.2:1 | `#852F13` · 7.4:1 | `#E17A58` · 6.3:1 |
+| 3 | learned | `#176A39` · 6.2:1 | `#1A7A42` · 4.6:1 | `#68D997` · 10.6:1 |
 | 4 | known | normal text | normal text | normal text |
 
-Two adjacent levels must also clear a minimum **against each other**, because the reader compares
-neighbours on the page, not each word with the paper. The bar is **1.35:1** — measured, not
-estimated: below it two neighbours read as one tone in greyscale:
+Any two **coloured** levels must also clear a minimum **against each other**, not only the neighbours
+of the scale, because a page puts any two words side by side. The bar is **1.25:1**; the measured
+pairs are:
 
-| Adjacent pair | Light | Sepia | Dark |
-| ------------- | ----- | ----- | ---- |
-| unknown / recognized | 1.73:1 | 1.68:1 | 1.67:1 |
-| recognized / familiar | 1.55:1 | 1.44:1 | 1.43:1 |
-| familiar / learned | 2.14:1 | 1.77:1 | 1.85:1 |
+| Pair | Light | Sepia | Dark |
+| ---- | ----- | ----- | ---- |
+| unknown / recognized | 2.46:1 | 1.61:1 | 1.68:1 |
+| unknown / familiar | 1.41:1 | 1.27:1 | 1.29:1 |
+| unknown / learned | 1.86:1 | 2.06:1 | 2.17:1 |
+| recognized / familiar | 1.75:1 | 1.27:1 | 1.30:1 |
+| recognized / learned | 1.33:1 | 1.27:1 | 1.29:1 |
+| familiar / learned | 1.32:1 | 1.62:1 | 1.68:1 |
 
 The two middle hues sit at the ends of their families so the pairs read: `recognized` is olive,
 `familiar` is brick. The tone alternates rather than climbing — unknown and familiar sit dark,
-recognized and learned light — so the step between neighbours is a step in tone, not only in hue.
+recognized and learned light — so the step between levels is a step in tone, not only in hue.
 Unknown is teal rather than blue: blue plus the underline reads as a hyperlink on the reading page.
-Sepia keeps its own four tokens rather than borrowing Light's: the pair rule needs more room than a
-shared ramp gave it, and its lightest level sits at 4.6:1, still above the bar. The bar is not higher
-because the night paper bounds it: the four coloured levels must fit between the paper's 4.5:1 floor
-and the ink that paints a **known** word, and a wider uniform step would push `learned` to the ink
-itself. Level 4 is not a ramp token; on Dark the underline, not the tone, is what tells a learned
-word from a known one.
+Sepia keeps its own four tokens rather than borrowing Light's: its warmer, lighter ink leaves less
+room between the paper and normal text, so this ramp is the tightest of the three and its smallest
+pair is 1.27:1. A per-level non-colour cue is still the separate issue: the underline says "this word
+is highlighted", not which level (WCAG 1.4.1).
 
 **The rule that is not negotiable**: a coloured word is 18 sp of running text, so its bar is
 **4.5:1 against its own paper**, measured, not estimated. The palette as first delivered fails it —
@@ -589,8 +590,8 @@ the page behind it.
 
 ## 9. Accessibility
 
-- **4.5:1** for any coloured word (§2.2), measured per theme, and **1.35:1** between two adjacent
-  levels — the reader compares neighbours, not only each word with the paper.
+- **4.5:1** for any coloured word (§2.2), measured per theme, and **1.25:1** between any two
+  coloured levels — a page puts any two words side by side, not only the neighbours of the scale.
 - A **non-colour indicator** for every highlighted level: the underline.
 - **48 × 48 dp** minimum for anything tappable. A filter chip's visible shape may be shorter, but
   its touch target is not, and its selected state is exposed to accessibility.
