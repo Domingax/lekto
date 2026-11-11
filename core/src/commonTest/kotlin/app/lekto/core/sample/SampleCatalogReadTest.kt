@@ -87,7 +87,7 @@ class SampleCatalogReadTest :
         test("a minimal catalogue reads, with its absent optional fields empty") {
             val bytes = """
                 {"formatVersion":1,"samples":[{"language":"en","title":"T","paragraphs":["A boat."],
-                "difficulty":{"boat":null},
+                "difficulty":{"boat":null},"forms":{},"glossaries":{},
                 "colourMaps":{"A1":{"boat":"UNKNOWN"},"A2":{"boat":"UNKNOWN"},"B1":{"boat":"UNKNOWN"},
                 "B2":{"boat":"UNKNOWN"},"C1":{"boat":"UNKNOWN"},"C2":{"boat":"UNKNOWN"}}}]}
             """.trimIndent().encodeToByteArray()
@@ -157,6 +157,47 @@ class SampleCatalogReadTest :
         test("two samples for one language are malformed, because the identity is fixed") {
             readSampleCatalog(testSampleCatalog(listOf(testSample(), testSample()))) shouldBe
                 SampleCatalogRead.Malformed
+        }
+
+        test("a sense without translations reads, and a missing required field is malformed") {
+            val noTranslations = """
+                {"formatVersion":1,"samples":[{"language":"en","title":"T","paragraphs":["A boat."],
+                "difficulty":{"boat":null},"forms":{},"glossaries":{"fr":{"entries":{"boat":[
+                {"lemma":"boat","senses":[{"definition":"A boat."}]}]}}},
+                "colourMaps":{"A1":{"boat":"UNKNOWN"},"A2":{"boat":"UNKNOWN"},"B1":{"boat":"UNKNOWN"},
+                "B2":{"boat":"UNKNOWN"},"C1":{"boat":"UNKNOWN"},"C2":{"boat":"UNKNOWN"}}}]}
+            """.trimIndent().encodeToByteArray()
+            val missingMaps = """{"formatVersion":1,"samples":[{"language":"en","title":"T"}]}"""
+                .encodeToByteArray()
+
+            readSampleCatalog(noTranslations) shouldBe SampleCatalogRead.Read(
+                SampleCatalogContent(
+                    listOf(
+                        testSample(
+                            title = "T",
+                            paragraphs = listOf("A boat."),
+                            author = null,
+                            attribution = null,
+                            difficulty = mapOf("boat" to null),
+                            glossaries = mapOf(
+                                "fr" to SampleGlossary(
+                                    mapOf(
+                                        "boat" to listOf(
+                                            SampleGlossaryEntry(
+                                                "boat",
+                                                null,
+                                                null,
+                                                listOf(SampleSense("A boat.", emptyList())),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            )
+            readSampleCatalog(missingMaps) shouldBe SampleCatalogRead.Malformed
         }
 
         test("a catalogue whose format this build does not read is refused") {

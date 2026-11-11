@@ -127,7 +127,7 @@ fun readSampleCatalog(bytes: ByteArray): SampleCatalogRead {
 
 /** The wire shape of the catalogue, owned by the producer (`tools/dictionaries`). */
 @Serializable
-private data class CatalogDocument(val formatVersion: Int, val samples: List<SampleDocument> = emptyList())
+private data class CatalogDocument(val formatVersion: Int, val samples: List<SampleDocument>)
 
 @Serializable
 private data class SampleDocument(
@@ -135,22 +135,22 @@ private data class SampleDocument(
     val title: String,
     val author: String? = null,
     val attribution: String? = null,
-    val paragraphs: List<String> = emptyList(),
-    val difficulty: Map<String, CefrLevel?> = emptyMap(),
-    val forms: Map<String, String> = emptyMap(),
-    val colourMaps: Map<CefrLevel, Map<String, MasteryLevel>> = emptyMap(),
-    val glossaries: Map<String, GlossaryDocument> = emptyMap(),
+    val paragraphs: List<String>,
+    val difficulty: Map<String, CefrLevel?>,
+    val forms: Map<String, String>,
+    val colourMaps: Map<CefrLevel, Map<String, MasteryLevel>>,
+    val glossaries: Map<String, GlossaryDocument>,
 )
 
 @Serializable
-private data class GlossaryDocument(val entries: Map<String, List<EntryDocument>> = emptyMap())
+private data class GlossaryDocument(val entries: Map<String, List<EntryDocument>>)
 
 @Serializable
 private data class EntryDocument(
     val lemma: String,
     val partOfSpeech: String? = null,
     val pronunciation: String? = null,
-    val senses: List<SenseDocument> = emptyList(),
+    val senses: List<SenseDocument>,
 )
 
 @Serializable
