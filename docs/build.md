@@ -572,7 +572,10 @@ catalogue** the app ships:
 ```
 
 The source directory holds one JSON text per reading language
-(`samples/en.json`: title, author, attribution and paragraphs). The tool keys its
+(`samples/en.json`: title, author, attribution and paragraphs). The launch roster
+is eight languages — English, French, Spanish, German, Italian, Portuguese,
+Turkish and Japanese; Korean and Chinese wait until their packs map the surface
+forms a natural sentence produces (ADR-0049). The tool keys its
 words by the reader's word identity — the shared form index's lemma, or the
 normalised surface form — records the table's band for each word, composes the
 **Difficulty table** with the default-mastery rule into six maps, and extracts one

@@ -172,6 +172,13 @@ class SampleBuilderTest {
     }
 
     @Test
+    fun `a language without spaces is segmented by ICU, not by characters`() {
+        val keys = sampleWordKeys("ja", listOf("男が家にいる。"), emptyMap())
+
+        assertEquals(listOf("いる", "が", "に", "家", "男"), keys)
+    }
+
+    @Test
     fun `the same source, table and pack yield the same catalogue`() {
         val first = SampleCatalogueDocument(SampleFormat.VERSION, listOf(builder().build()))
         val second = SampleCatalogueDocument(SampleFormat.VERSION, listOf(builder().build()))

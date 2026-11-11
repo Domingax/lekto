@@ -36,6 +36,9 @@ tasks.test {
 dependencies {
     // Parses one Wiktextract JSON object per line (Apache-2.0).
     implementation(libs.kotlinx.serialization.json)
+    // Segments the sample text with the same ICU word iterator the reader uses,
+    // so a CJK sample's keys match what the page will tap (ADR-0007, issue #297).
+    implementation(libs.icu4j)
     // Builds the pre-built, read-only SQLite pack ADR-0017 opens by path
     // (Apache-2.0).
     implementation(libs.sqlite.jdbc)

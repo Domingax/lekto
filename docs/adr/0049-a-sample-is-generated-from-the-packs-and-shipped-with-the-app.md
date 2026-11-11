@@ -57,6 +57,14 @@ language changes no code and no roster list outside the build. A language the
 manifest offers no table or no dictionary for is refused, and a pair with no
 dictionary has no glossary, which is the state #277 degrades in.
 
+**The launch roster is eight: EN, FR, ES, DE, IT, PT, TR, JA.** The four the
+first-launch boards draw are all there, and four more whose packs can explain a
+natural text. Korean and Chinese wait: their packs hold the lemmas but not the
+surface forms a natural sentence produces — Korean attaches particles (`남자가`,
+`집에`) and ICU merges Chinese words (`在家`, `很大`) — so a highlighted word
+would open an empty sheet. Shipping them needs the pipeline to map those forms,
+not a hand-written glossary.
+
 **It is not the pack.** The glossary is a few hundred words, not the dictionary
 data: a 23-word excerpt from one sense per highlighted word, attributed in the
 catalogue, shipped so the first launch works offline. The full packs remain in

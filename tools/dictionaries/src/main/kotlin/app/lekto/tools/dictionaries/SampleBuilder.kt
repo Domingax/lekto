@@ -1,5 +1,8 @@
 package app.lekto.tools.dictionaries
 
+import com.ibm.icu.text.BreakIterator
+import java.util.Locale
+
 /**
  * Builds one **Sample** from its authored text, the language's **Difficulty
  * table** and the **Dictionary pack**s already built for that language (issue
@@ -26,7 +29,7 @@ internal class SampleBuilder(
         require(paragraphs.isNotEmpty() && paragraphs.none(String::isBlank)) {
             "sample ${source.language} has no paragraph to read"
         }
-        val keys = sampleWordKeys(paragraphs, formIndex)
+        val keys = sampleWordKeys(source.language, paragraphs, formIndex)
         val difficulty = keys.associateWith { key -> difficultyByKey[key] }.toSortedMap()
         val maps = CEFR_BANDS.associateWith { readerBand ->
             keys.associateWith { key -> sampleMastery(difficultyByKey[key], readerBand) }.toSortedMap()
@@ -42,7 +45,7 @@ internal class SampleBuilder(
             attribution = source.attribution,
             paragraphs = paragraphs,
             difficulty = difficulty,
-            forms = sampleWordForms(paragraphs, formIndex),
+            forms = sampleWordForms(source.language, paragraphs, formIndex),
             colourMaps = maps,
             glossaries = glossaries,
         )
@@ -89,8 +92,8 @@ internal class SampleBuilder(
 }
 
 /** The word key of every word token in [paragraphs], deduplicated and sorted. */
-internal fun sampleWordKeys(paragraphs: List<String>, formIndex: Map<String, String>): List<String> =
-    sampleSurfaces(paragraphs)
+internal fun sampleWordKeys(language: String, paragraphs: List<String>, formIndex: Map<String, String>): List<String> =
+    sampleSurfaces(language, paragraphs)
         .map { surface -> formIndex[surface] ?: surface }
         .distinct()
         .sorted()
@@ -101,17 +104,42 @@ internal fun sampleWordKeys(paragraphs: List<String>, formIndex: Map<String, Str
  * surface, so the guide's page can key a tap exactly as the reader will once the
  * pack arrives. `core`'s keyed-by-surface fallback already covers the rest.
  */
-internal fun sampleWordForms(paragraphs: List<String>, formIndex: Map<String, String>): Map<String, String> =
-    sampleSurfaces(paragraphs)
-        .mapNotNull { surface ->
-            val key = formIndex[surface] ?: return@mapNotNull null
-            if (key == surface) null else surface to key
-        }
-        .toMap()
-        .toSortedMap()
+internal fun sampleWordForms(
+    language: String,
+    paragraphs: List<String>,
+    formIndex: Map<String, String>,
+): Map<String, String> = sampleSurfaces(language, paragraphs)
+    .mapNotNull { surface ->
+        val key = formIndex[surface] ?: return@mapNotNull null
+        if (key == surface) null else surface to key
+    }
+    .toMap()
+    .toSortedMap()
 
 /** Every word token's normalised surface, in reading order, with duplicates kept. */
-private fun sampleSurfaces(paragraphs: List<String>): List<String> = WORD.findAcross(paragraphs).map(::normaliseSurface)
+private fun sampleSurfaces(language: String, paragraphs: List<String>): List<String> =
+    paragraphs.flatMap { paragraph -> words(paragraph, language) }.map(::normaliseSurface)
+
+/**
+ * The words of [text] in [language], segmented exactly as the reader's
+ * `IcuTextSegmenter` does: ICU's dictionary-based word iterator, dropping the
+ * spans it tags as separators. The tool depends on no Lekto module, so the rule is
+ * restated here (ADR-0013); a CJK sample's keys must match the page's taps.
+ */
+private fun words(text: String, language: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    val iterator = BreakIterator.getWordInstance(Locale.forLanguageTag(language))
+    iterator.setText(text)
+    val words = mutableListOf<String>()
+    var start = iterator.first()
+    var end = iterator.next()
+    while (end != BreakIterator.DONE) {
+        if (iterator.ruleStatus != BreakIterator.WORD_NONE) words += text.substring(start, end)
+        start = end
+        end = iterator.next()
+    }
+    return words
+}
 
 /**
  * The default-mastery rule (ADR-0030) over the sample's bands, kept in step with
@@ -148,9 +176,3 @@ private const val MAX_SAMPLE_ENTRIES: Int = 2
 
 /** At most three translations per sense; the sample demonstrates, the pack answers. */
 private const val MAX_SAMPLE_TRANSLATIONS: Int = 3
-
-private val WORD = Regex("""[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*""")
-
-/** Every word token across [paragraphs], in reading order. */
-private fun Regex.findAcross(paragraphs: List<String>): List<String> =
-    paragraphs.flatMap { paragraph -> findAll(paragraph).map { match -> match.value }.toList() }

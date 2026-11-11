@@ -1158,10 +1158,10 @@ lemma, and a glossary built from a fixture dictionary covers every highlighted
 word — or fails the build by name when it does not. `SampleGoldenTest` pins that
 fixture's canonical catalogue in `golden/sample-en.json` and hashes its bytes on
 two runs, the level the dictionary-pack transform gets. `SampleStageTest` runs the
-whole stage from real SQLite artefacts and a published manifest: one authored text,
-one built table and two built packs produce one sample whose six maps, forms and
-two glossaries are pinned, the same inputs yield the same bytes, and a language the
-manifest offers no dictionary for is refused. The catalogue reader is
+whole stage from real SQLite artefacts and a published manifest: one authored text
+per language, one built table and its built packs produce the samples whose six
+maps, forms and glossaries are pinned, the same inputs yield the same bytes, and a
+language the manifest offers no dictionary for is refused. The catalogue reader is
 `SampleCatalogReadTest` in `core/commonTest`: it accepts a valid one-language
 catalogue, refuses a catalogue from an unknown format rather than misreading it,
 tolerates an unknown key at the same version, and calls an entry malformed when it
