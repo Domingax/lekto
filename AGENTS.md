@@ -182,4 +182,5 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 Source is **AGPL-3.0** (ADR-0011). Every dependency, including test-scope, must be
 AGPL-compatible. The dictionary pack is a separate CC BY-SA 4.0 artifact and is
-never committed here.
+never committed here; the shipped **Sample catalogue** carries only a small
+attributed excerpt of it, not the pack (ADR-0049).

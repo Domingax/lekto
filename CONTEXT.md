@@ -41,6 +41,22 @@ versioned so a reader can refuse one it does not understand. It is what the
 default-mastery rule reads; never authored by the user and never synced.
 _Avoid_: Frequency list, word list, difficulty pack
 
+**Sample**:
+The short text the first-launch guide demonstrates the reader on, before any book
+is imported: one per offered **Reading language**, with a fixed identity
+`sample:<language>`, the colours it takes at each CEFR band, the word forms that
+key its tappable words, and its meanings in every published **Translation
+language**. A **Derived asset**: device-local, never a **Vault** record, never
+exported and never synced.
+_Avoid_: Demo book, tutorial text, onboarding book
+
+**Sample catalogue**:
+The build's set of **Samples**, one per reading language, shipped with the app so
+the first launch needs no network. It is a **Derived asset**, produced from the
+**Difficulty table** and the **Dictionary packs**; the roster of samples bounds the
+roster of languages the guide offers.
+_Avoid_: Demo list, sample registry, tutorial catalogue
+
 **Language manifest**:
 The catalogue of what Lekto offers for reading: each **Reading language** and the
 artefacts published for it — a **Difficulty table** per reading language, and a

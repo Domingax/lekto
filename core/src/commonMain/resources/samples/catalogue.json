@@ -1,0 +1,5243 @@
+{
+  "formatVersion": 1,
+  "samples": [
+    {
+      "language": "en",
+      "title": "The Fisherman and the Fish",
+      "author": "Lekto",
+      "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
+      "paragraphs": [
+        "The old fisherman rowed his small boat across the calm water. He had left the harbour before dawn, when the sky was still dark and the air was cold. A gentle wind pushed the boat forward, and the far lights of the village slowly vanished behind him.",
+        "He cast his net near a line of rocks and waited. The sea was quiet, and the only sound was the slow breath of the waves against the wood. After a while, the net grew heavy. He lifted it in with careful hands, afraid that the rope might break.",
+        "Inside the net was a single silver fish, bright as a coin. The fisherman looked at it for a long moment. Then he opened his hands and let it fall back into the deep water. Some things are worth more than a full basket, he thought, and rowed home."
+      ],
+      "difficulty": {
+        "a": "A1",
+        "across": "A1",
+        "afraid": "A2",
+        "after": "A1",
+        "against": "A1",
+        "air": "A1",
+        "and": "A1",
+        "are": "A1",
+        "as": "A1",
+        "at": "A1",
+        "back": "A1",
+        "basket": "C2",
+        "be": "A1",
+        "before": "A1",
+        "behind": "A1",
+        "boat": "A2",
+        "break": "A1",
+        "breath": "B1",
+        "bright": "A2",
+        "calm": "A2",
+        "careful": "A2",
+        "cast": "A2",
+        "coin": "B1",
+        "cold": "A1",
+        "dark": "A1",
+        "dawn": "C1",
+        "deep": "A1",
+        "fall": "A1",
+        "far": "A1",
+        "fish": "A1",
+        "fisherman": null,
+        "for": "A1",
+        "forward": "A1",
+        "full": "A1",
+        "gentle": "C2",
+        "grow": "A1",
+        "hand": "A1",
+        "harbor": "B2",
+        "have": "A1",
+        "he": "A1",
+        "heavy": "A1",
+        "him": "A1",
+        "his": "A1",
+        "home": "A1",
+        "in": "A1",
+        "inside": "A1",
+        "into": "A1",
+        "it": "A1",
+        "left": "A1",
+        "let": "A1",
+        "lift": "A2",
+        "light": "A1",
+        "line": "A1",
+        "long": "A1",
+        "look": "A1",
+        "might": "A1",
+        "moment": "A1",
+        "more": "A1",
+        "near": "A1",
+        "net": "A2",
+        "of": "A1",
+        "old": "A1",
+        "only": "A1",
+        "open": "A1",
+        "push": "A1",
+        "quiet": "A2",
+        "rock": "A1",
+        "rope": "C2",
+        "row": "A2",
+        "sea": "A1",
+        "silver": "A2",
+        "single": "A1",
+        "sky": "A2",
+        "slow": "A1",
+        "slowly": "A2",
+        "small": "A1",
+        "some": "A1",
+        "sound": "A1",
+        "still": "A1",
+        "than": "A1",
+        "that": "A1",
+        "the": "A1",
+        "then": "A1",
+        "thing": "A1",
+        "thought": "A1",
+        "vanish": null,
+        "village": "A1",
+        "wait": "A1",
+        "water": "A1",
+        "wave": "A2",
+        "when": "A1",
+        "while": "A1",
+        "wind": "A1",
+        "with": "A1",
+        "wood": "A1",
+        "worth": "A1"
+      },
+      "forms": {
+        "grew": "grow",
+        "had": "have",
+        "hands": "hand",
+        "harbour": "harbor",
+        "lifted": "lift",
+        "lights": "light",
+        "looked": "look",
+        "opened": "open",
+        "pushed": "push",
+        "rocks": "rock",
+        "rowed": "row",
+        "things": "thing",
+        "vanished": "vanish",
+        "waited": "wait",
+        "was": "be",
+        "waves": "wave"
+      },
+      "colourMaps": {
+        "A1": {
+          "a": "KNOWN",
+          "across": "KNOWN",
+          "afraid": "LEARNED",
+          "after": "KNOWN",
+          "against": "KNOWN",
+          "air": "KNOWN",
+          "and": "KNOWN",
+          "are": "KNOWN",
+          "as": "KNOWN",
+          "at": "KNOWN",
+          "back": "KNOWN",
+          "basket": "UNKNOWN",
+          "be": "KNOWN",
+          "before": "KNOWN",
+          "behind": "KNOWN",
+          "boat": "LEARNED",
+          "break": "KNOWN",
+          "breath": "FAMILIAR",
+          "bright": "LEARNED",
+          "calm": "LEARNED",
+          "careful": "LEARNED",
+          "cast": "LEARNED",
+          "coin": "FAMILIAR",
+          "cold": "KNOWN",
+          "dark": "KNOWN",
+          "dawn": "UNKNOWN",
+          "deep": "KNOWN",
+          "fall": "KNOWN",
+          "far": "KNOWN",
+          "fish": "KNOWN",
+          "fisherman": "UNKNOWN",
+          "for": "KNOWN",
+          "forward": "KNOWN",
+          "full": "KNOWN",
+          "gentle": "UNKNOWN",
+          "grow": "KNOWN",
+          "hand": "KNOWN",
+          "harbor": "RECOGNIZED",
+          "have": "KNOWN",
+          "he": "KNOWN",
+          "heavy": "KNOWN",
+          "him": "KNOWN",
+          "his": "KNOWN",
+          "home": "KNOWN",
+          "in": "KNOWN",
+          "inside": "KNOWN",
+          "into": "KNOWN",
+          "it": "KNOWN",
+          "left": "KNOWN",
+          "let": "KNOWN",
+          "lift": "LEARNED",
+          "light": "KNOWN",
+          "line": "KNOWN",
+          "long": "KNOWN",
+          "look": "KNOWN",
+          "might": "KNOWN",
+          "moment": "KNOWN",
+          "more": "KNOWN",
+          "near": "KNOWN",
+          "net": "LEARNED",
+          "of": "KNOWN",
+          "old": "KNOWN",
+          "only": "KNOWN",
+          "open": "KNOWN",
+          "push": "KNOWN",
+          "quiet": "LEARNED",
+          "rock": "KNOWN",
+          "rope": "UNKNOWN",
+          "row": "LEARNED",
+          "sea": "KNOWN",
+          "silver": "LEARNED",
+          "single": "KNOWN",
+          "sky": "LEARNED",
+          "slow": "KNOWN",
+          "slowly": "LEARNED",
+          "small": "KNOWN",
+          "some": "KNOWN",
+          "sound": "KNOWN",
+          "still": "KNOWN",
+          "than": "KNOWN",
+          "that": "KNOWN",
+          "the": "KNOWN",
+          "then": "KNOWN",
+          "thing": "KNOWN",
+          "thought": "KNOWN",
+          "vanish": "UNKNOWN",
+          "village": "KNOWN",
+          "wait": "KNOWN",
+          "water": "KNOWN",
+          "wave": "LEARNED",
+          "when": "KNOWN",
+          "while": "KNOWN",
+          "wind": "KNOWN",
+          "with": "KNOWN",
+          "wood": "KNOWN",
+          "worth": "KNOWN"
+        },
+        "A2": {
+          "a": "KNOWN",
+          "across": "KNOWN",
+          "afraid": "KNOWN",
+          "after": "KNOWN",
+          "against": "KNOWN",
+          "air": "KNOWN",
+          "and": "KNOWN",
+          "are": "KNOWN",
+          "as": "KNOWN",
+          "at": "KNOWN",
+          "back": "KNOWN",
+          "basket": "UNKNOWN",
+          "be": "KNOWN",
+          "before": "KNOWN",
+          "behind": "KNOWN",
+          "boat": "KNOWN",
+          "break": "KNOWN",
+          "breath": "LEARNED",
+          "bright": "KNOWN",
+          "calm": "KNOWN",
+          "careful": "KNOWN",
+          "cast": "KNOWN",
+          "coin": "LEARNED",
+          "cold": "KNOWN",
+          "dark": "KNOWN",
+          "dawn": "RECOGNIZED",
+          "deep": "KNOWN",
+          "fall": "KNOWN",
+          "far": "KNOWN",
+          "fish": "KNOWN",
+          "fisherman": "UNKNOWN",
+          "for": "KNOWN",
+          "forward": "KNOWN",
+          "full": "KNOWN",
+          "gentle": "UNKNOWN",
+          "grow": "KNOWN",
+          "hand": "KNOWN",
+          "harbor": "FAMILIAR",
+          "have": "KNOWN",
+          "he": "KNOWN",
+          "heavy": "KNOWN",
+          "him": "KNOWN",
+          "his": "KNOWN",
+          "home": "KNOWN",
+          "in": "KNOWN",
+          "inside": "KNOWN",
+          "into": "KNOWN",
+          "it": "KNOWN",
+          "left": "KNOWN",
+          "let": "KNOWN",
+          "lift": "KNOWN",
+          "light": "KNOWN",
+          "line": "KNOWN",
+          "long": "KNOWN",
+          "look": "KNOWN",
+          "might": "KNOWN",
+          "moment": "KNOWN",
+          "more": "KNOWN",
+          "near": "KNOWN",
+          "net": "KNOWN",
+          "of": "KNOWN",
+          "old": "KNOWN",
+          "only": "KNOWN",
+          "open": "KNOWN",
+          "push": "KNOWN",
+          "quiet": "KNOWN",
+          "rock": "KNOWN",
+          "rope": "UNKNOWN",
+          "row": "KNOWN",
+          "sea": "KNOWN",
+          "silver": "KNOWN",
+          "single": "KNOWN",
+          "sky": "KNOWN",
+          "slow": "KNOWN",
+          "slowly": "KNOWN",
+          "small": "KNOWN",
+          "some": "KNOWN",
+          "sound": "KNOWN",
+          "still": "KNOWN",
+          "than": "KNOWN",
+          "that": "KNOWN",
+          "the": "KNOWN",
+          "then": "KNOWN",
+          "thing": "KNOWN",
+          "thought": "KNOWN",
+          "vanish": "UNKNOWN",
+          "village": "KNOWN",
+          "wait": "KNOWN",
+          "water": "KNOWN",
+          "wave": "KNOWN",
+          "when": "KNOWN",
+          "while": "KNOWN",
+          "wind": "KNOWN",
+          "with": "KNOWN",
+          "wood": "KNOWN",
+          "worth": "KNOWN"
+        },
+        "B1": {
+          "a": "KNOWN",
+          "across": "KNOWN",
+          "afraid": "KNOWN",
+          "after": "KNOWN",
+          "against": "KNOWN",
+          "air": "KNOWN",
+          "and": "KNOWN",
+          "are": "KNOWN",
+          "as": "KNOWN",
+          "at": "KNOWN",
+          "back": "KNOWN",
+          "basket": "RECOGNIZED",
+          "be": "KNOWN",
+          "before": "KNOWN",
+          "behind": "KNOWN",
+          "boat": "KNOWN",
+          "break": "KNOWN",
+          "breath": "KNOWN",
+          "bright": "KNOWN",
+          "calm": "KNOWN",
+          "careful": "KNOWN",
+          "cast": "KNOWN",
+          "coin": "KNOWN",
+          "cold": "KNOWN",
+          "dark": "KNOWN",
+          "dawn": "FAMILIAR",
+          "deep": "KNOWN",
+          "fall": "KNOWN",
+          "far": "KNOWN",
+          "fish": "KNOWN",
+          "fisherman": "UNKNOWN",
+          "for": "KNOWN",
+          "forward": "KNOWN",
+          "full": "KNOWN",
+          "gentle": "RECOGNIZED",
+          "grow": "KNOWN",
+          "hand": "KNOWN",
+          "harbor": "LEARNED",
+          "have": "KNOWN",
+          "he": "KNOWN",
+          "heavy": "KNOWN",
+          "him": "KNOWN",
+          "his": "KNOWN",
+          "home": "KNOWN",
+          "in": "KNOWN",
+          "inside": "KNOWN",
+          "into": "KNOWN",
+          "it": "KNOWN",
+          "left": "KNOWN",
+          "let": "KNOWN",
+          "lift": "KNOWN",
+          "light": "KNOWN",
+          "line": "KNOWN",
+          "long": "KNOWN",
+          "look": "KNOWN",
+          "might": "KNOWN",
+          "moment": "KNOWN",
+          "more": "KNOWN",
+          "near": "KNOWN",
+          "net": "KNOWN",
+          "of": "KNOWN",
+          "old": "KNOWN",
+          "only": "KNOWN",
+          "open": "KNOWN",
+          "push": "KNOWN",
+          "quiet": "KNOWN",
+          "rock": "KNOWN",
+          "rope": "RECOGNIZED",
+          "row": "KNOWN",
+          "sea": "KNOWN",
+          "silver": "KNOWN",
+          "single": "KNOWN",
+          "sky": "KNOWN",
+          "slow": "KNOWN",
+          "slowly": "KNOWN",
+          "small": "KNOWN",
+          "some": "KNOWN",
+          "sound": "KNOWN",
+          "still": "KNOWN",
+          "than": "KNOWN",
+          "that": "KNOWN",
+          "the": "KNOWN",
+          "then": "KNOWN",
+          "thing": "KNOWN",
+          "thought": "KNOWN",
+          "vanish": "UNKNOWN",
+          "village": "KNOWN",
+          "wait": "KNOWN",
+          "water": "KNOWN",
+          "wave": "KNOWN",
+          "when": "KNOWN",
+          "while": "KNOWN",
+          "wind": "KNOWN",
+          "with": "KNOWN",
+          "wood": "KNOWN",
+          "worth": "KNOWN"
+        },
+        "B2": {
+          "a": "KNOWN",
+          "across": "KNOWN",
+          "afraid": "KNOWN",
+          "after": "KNOWN",
+          "against": "KNOWN",
+          "air": "KNOWN",
+          "and": "KNOWN",
+          "are": "KNOWN",
+          "as": "KNOWN",
+          "at": "KNOWN",
+          "back": "KNOWN",
+          "basket": "FAMILIAR",
+          "be": "KNOWN",
+          "before": "KNOWN",
+          "behind": "KNOWN",
+          "boat": "KNOWN",
+          "break": "KNOWN",
+          "breath": "KNOWN",
+          "bright": "KNOWN",
+          "calm": "KNOWN",
+          "careful": "KNOWN",
+          "cast": "KNOWN",
+          "coin": "KNOWN",
+          "cold": "KNOWN",
+          "dark": "KNOWN",
+          "dawn": "LEARNED",
+          "deep": "KNOWN",
+          "fall": "KNOWN",
+          "far": "KNOWN",
+          "fish": "KNOWN",
+          "fisherman": "UNKNOWN",
+          "for": "KNOWN",
+          "forward": "KNOWN",
+          "full": "KNOWN",
+          "gentle": "FAMILIAR",
+          "grow": "KNOWN",
+          "hand": "KNOWN",
+          "harbor": "KNOWN",
+          "have": "KNOWN",
+          "he": "KNOWN",
+          "heavy": "KNOWN",
+          "him": "KNOWN",
+          "his": "KNOWN",
+          "home": "KNOWN",
+          "in": "KNOWN",
+          "inside": "KNOWN",
+          "into": "KNOWN",
+          "it": "KNOWN",
+          "left": "KNOWN",
+          "let": "KNOWN",
+          "lift": "KNOWN",
+          "light": "KNOWN",
+          "line": "KNOWN",
+          "long": "KNOWN",
+          "look": "KNOWN",
+          "might": "KNOWN",
+          "moment": "KNOWN",
+          "more": "KNOWN",
+          "near": "KNOWN",
+          "net": "KNOWN",
+          "of": "KNOWN",
+          "old": "KNOWN",
+          "only": "KNOWN",
+          "open": "KNOWN",
+          "push": "KNOWN",
+          "quiet": "KNOWN",
+          "rock": "KNOWN",
+          "rope": "FAMILIAR",
+          "row": "KNOWN",
+          "sea": "KNOWN",
+          "silver": "KNOWN",
+          "single": "KNOWN",
+          "sky": "KNOWN",
+          "slow": "KNOWN",
+          "slowly": "KNOWN",
+          "small": "KNOWN",
+          "some": "KNOWN",
+          "sound": "KNOWN",
+          "still": "KNOWN",
+          "than": "KNOWN",
+          "that": "KNOWN",
+          "the": "KNOWN",
+          "then": "KNOWN",
+          "thing": "KNOWN",
+          "thought": "KNOWN",
+          "vanish": "UNKNOWN",
+          "village": "KNOWN",
+          "wait": "KNOWN",
+          "water": "KNOWN",
+          "wave": "KNOWN",
+          "when": "KNOWN",
+          "while": "KNOWN",
+          "wind": "KNOWN",
+          "with": "KNOWN",
+          "wood": "KNOWN",
+          "worth": "KNOWN"
+        },
+        "C1": {
+          "a": "KNOWN",
+          "across": "KNOWN",
+          "afraid": "KNOWN",
+          "after": "KNOWN",
+          "against": "KNOWN",
+          "air": "KNOWN",
+          "and": "KNOWN",
+          "are": "KNOWN",
+          "as": "KNOWN",
+          "at": "KNOWN",
+          "back": "KNOWN",
+          "basket": "LEARNED",
+          "be": "KNOWN",
+          "before": "KNOWN",
+          "behind": "KNOWN",
+          "boat": "KNOWN",
+          "break": "KNOWN",
+          "breath": "KNOWN",
+          "bright": "KNOWN",
+          "calm": "KNOWN",
+          "careful": "KNOWN",
+          "cast": "KNOWN",
+          "coin": "KNOWN",
+          "cold": "KNOWN",
+          "dark": "KNOWN",
+          "dawn": "KNOWN",
+          "deep": "KNOWN",
+          "fall": "KNOWN",
+          "far": "KNOWN",
+          "fish": "KNOWN",
+          "fisherman": "UNKNOWN",
+          "for": "KNOWN",
+          "forward": "KNOWN",
+          "full": "KNOWN",
+          "gentle": "LEARNED",
+          "grow": "KNOWN",
+          "hand": "KNOWN",
+          "harbor": "KNOWN",
+          "have": "KNOWN",
+          "he": "KNOWN",
+          "heavy": "KNOWN",
+          "him": "KNOWN",
+          "his": "KNOWN",
+          "home": "KNOWN",
+          "in": "KNOWN",
+          "inside": "KNOWN",
+          "into": "KNOWN",
+          "it": "KNOWN",
+          "left": "KNOWN",
+          "let": "KNOWN",
+          "lift": "KNOWN",
+          "light": "KNOWN",
+          "line": "KNOWN",
+          "long": "KNOWN",
+          "look": "KNOWN",
+          "might": "KNOWN",
+          "moment": "KNOWN",
+          "more": "KNOWN",
+          "near": "KNOWN",
+          "net": "KNOWN",
+          "of": "KNOWN",
+          "old": "KNOWN",
+          "only": "KNOWN",
+          "open": "KNOWN",
+          "push": "KNOWN",
+          "quiet": "KNOWN",
+          "rock": "KNOWN",
+          "rope": "LEARNED",
+          "row": "KNOWN",
+          "sea": "KNOWN",
+          "silver": "KNOWN",
+          "single": "KNOWN",
+          "sky": "KNOWN",
+          "slow": "KNOWN",
+          "slowly": "KNOWN",
+          "small": "KNOWN",
+          "some": "KNOWN",
+          "sound": "KNOWN",
+          "still": "KNOWN",
+          "than": "KNOWN",
+          "that": "KNOWN",
+          "the": "KNOWN",
+          "then": "KNOWN",
+          "thing": "KNOWN",
+          "thought": "KNOWN",
+          "vanish": "UNKNOWN",
+          "village": "KNOWN",
+          "wait": "KNOWN",
+          "water": "KNOWN",
+          "wave": "KNOWN",
+          "when": "KNOWN",
+          "while": "KNOWN",
+          "wind": "KNOWN",
+          "with": "KNOWN",
+          "wood": "KNOWN",
+          "worth": "KNOWN"
+        },
+        "C2": {
+          "a": "KNOWN",
+          "across": "KNOWN",
+          "afraid": "KNOWN",
+          "after": "KNOWN",
+          "against": "KNOWN",
+          "air": "KNOWN",
+          "and": "KNOWN",
+          "are": "KNOWN",
+          "as": "KNOWN",
+          "at": "KNOWN",
+          "back": "KNOWN",
+          "basket": "KNOWN",
+          "be": "KNOWN",
+          "before": "KNOWN",
+          "behind": "KNOWN",
+          "boat": "KNOWN",
+          "break": "KNOWN",
+          "breath": "KNOWN",
+          "bright": "KNOWN",
+          "calm": "KNOWN",
+          "careful": "KNOWN",
+          "cast": "KNOWN",
+          "coin": "KNOWN",
+          "cold": "KNOWN",
+          "dark": "KNOWN",
+          "dawn": "KNOWN",
+          "deep": "KNOWN",
+          "fall": "KNOWN",
+          "far": "KNOWN",
+          "fish": "KNOWN",
+          "fisherman": "UNKNOWN",
+          "for": "KNOWN",
+          "forward": "KNOWN",
+          "full": "KNOWN",
+          "gentle": "KNOWN",
+          "grow": "KNOWN",
+          "hand": "KNOWN",
+          "harbor": "KNOWN",
+          "have": "KNOWN",
+          "he": "KNOWN",
+          "heavy": "KNOWN",
+          "him": "KNOWN",
+          "his": "KNOWN",
+          "home": "KNOWN",
+          "in": "KNOWN",
+          "inside": "KNOWN",
+          "into": "KNOWN",
+          "it": "KNOWN",
+          "left": "KNOWN",
+          "let": "KNOWN",
+          "lift": "KNOWN",
+          "light": "KNOWN",
+          "line": "KNOWN",
+          "long": "KNOWN",
+          "look": "KNOWN",
+          "might": "KNOWN",
+          "moment": "KNOWN",
+          "more": "KNOWN",
+          "near": "KNOWN",
+          "net": "KNOWN",
+          "of": "KNOWN",
+          "old": "KNOWN",
+          "only": "KNOWN",
+          "open": "KNOWN",
+          "push": "KNOWN",
+          "quiet": "KNOWN",
+          "rock": "KNOWN",
+          "rope": "KNOWN",
+          "row": "KNOWN",
+          "sea": "KNOWN",
+          "silver": "KNOWN",
+          "single": "KNOWN",
+          "sky": "KNOWN",
+          "slow": "KNOWN",
+          "slowly": "KNOWN",
+          "small": "KNOWN",
+          "some": "KNOWN",
+          "sound": "KNOWN",
+          "still": "KNOWN",
+          "than": "KNOWN",
+          "that": "KNOWN",
+          "the": "KNOWN",
+          "then": "KNOWN",
+          "thing": "KNOWN",
+          "thought": "KNOWN",
+          "vanish": "UNKNOWN",
+          "village": "KNOWN",
+          "wait": "KNOWN",
+          "water": "KNOWN",
+          "wave": "KNOWN",
+          "when": "KNOWN",
+          "while": "KNOWN",
+          "wind": "KNOWN",
+          "with": "KNOWN",
+          "wood": "KNOWN",
+          "worth": "KNOWN"
+        }
+      },
+      "glossaries": {
+        "de": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "ängstlich"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "Korb"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "Boot",
+                      "Schiff"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "Atmen",
+                      "Atmung",
+                      "Atemzug"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "glänzend",
+                      "hell",
+                      "strahlend"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "ruhig"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "Ruhe",
+                      "Windstille"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "vorsichtig",
+                      "behutsam"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "Cast",
+                      "Besetzung",
+                      "Ensemble"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "werfen",
+                      "wegwerfen",
+                      "hinwerfen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "Münze",
+                      "Geldstück"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "coin",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "To make of a definite fineness, and convert into coins, as a mass of metal.",
+                    "translations": [
+                      "prägen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "Morgendämmerung",
+                      "Dämmerung",
+                      "Morgengrauen"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "dämmern",
+                      "grauen",
+                      "tagen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "Fischer",
+                      "Fischerin",
+                      "Angler"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "liebenswürdig"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "Hafen"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "To provide a harbor or safe place for.",
+                    "translations": [
+                      "hegen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising.",
+                    "translations": [
+                      "Auftrieb",
+                      "Hebefigur"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "heben",
+                      "anheben"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "adv",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "After expenses or deductions.",
+                    "translations": [
+                      "netto"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "still",
+                      "ruhig",
+                      "leise"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "To cause (someone or something) to become quiet.",
+                    "translations": [
+                      "ruhen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "Seil",
+                      "Tau",
+                      "Schnur"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "Reihe"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ɹaʊ/",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "rudern"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "silbern",
+                      "silberfarbig",
+                      "silberfarben"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "Silber",
+                      "Silbergeschirr",
+                      "Silberware"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "Himmel"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "langsam"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "verschwinden",
+                      "vergehen",
+                      "(sich) verflüchtigen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "Welle",
+                      "Woge",
+                      "Wirbel"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "wedeln",
+                      "schwenken",
+                      "flattern"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "es": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "con miedo",
+                      "con temor",
+                      "con susto"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "cesta",
+                      "cesto",
+                      "taxcal"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "barca",
+                      "bote",
+                      "barco"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "boat",
+                "partOfSpeech": "verb",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "To travel by boat.",
+                    "translations": [
+                      "barquear"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "respiración",
+                      "respiro",
+                      "vaharada"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "brillante",
+                      "claro",
+                      "lucio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "calmado",
+                      "surto",
+                      "calmo"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "sosiego",
+                      "calma"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "cauto",
+                      "cuidadoso",
+                      "tener cuidado"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "reparto",
+                      "elenco",
+                      "escayola"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "lanzar",
+                      "hechizar",
+                      "conjurar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "moneda",
+                      "numerario",
+                      "moneda contante y sonante"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "coin",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "To make of a definite fineness, and convert into coins, as a mass of metal.",
+                    "translations": [
+                      "acuñar",
+                      "troquelar",
+                      "cuñar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "alba",
+                      "amanecer",
+                      "madrugada"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "amanecer",
+                      "alborear",
+                      "aclarar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "pescador",
+                      "pescadora",
+                      "pishiñero"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "gentil",
+                      "apacible"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "puerto",
+                      "refugio"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "To provide a harbor or safe place for.",
+                    "translations": [
+                      "cobijar",
+                      "albergar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising.",
+                    "translations": [
+                      "sustentación aérea",
+                      "sustentamiento aerodinámico"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "levantar",
+                      "subir",
+                      "soliviar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "red",
+                      "almadraba",
+                      "jábega"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "quieto",
+                      "silencioso",
+                      "tranquilo"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "The absence of sound; quietness.",
+                    "translations": [
+                      "silencio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "soga",
+                      "maroma",
+                      "toa"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "fila",
+                      "línea",
+                      "hilera"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ɹaʊ/",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "remar",
+                      "bogar",
+                      "proejar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "de plata",
+                      "argénteo",
+                      "argentado"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "plata",
+                      "argento",
+                      "luna"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "cielo",
+                      "cielos"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "lentamente",
+                      "despacio",
+                      "con despacio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "desvanecerse",
+                      "esfumarse",
+                      "evanescerse"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "onda",
+                      "ola",
+                      "vaga"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "ondular",
+                      "olear",
+                      "ondear"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "fr": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "effrayé"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "panier"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "bateau",
+                      "barque",
+                      "nacelle"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "respiration",
+                      "souffle"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "brillant",
+                      "clair",
+                      "luisant"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "calme"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "calme plat",
+                      "calme"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "prudent"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "jet",
+                      "distribution",
+                      "plâtre"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "jeter",
+                      "diriger",
+                      "lancer"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "pièce de monnaie",
+                      "jeton"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "coin",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "To make of a definite fineness, and convert into coins, as a mass of metal.",
+                    "translations": [
+                      "frapper une monnaie",
+                      "inventer",
+                      "forger"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "aube",
+                      "aurore"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "se lever",
+                      "naître"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "pêcheur",
+                      "pêcheuse"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "gentil"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "havre",
+                      "rade",
+                      "refuge"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "To provide a harbor or safe place for.",
+                    "translations": [
+                      "abriter",
+                      "protéger",
+                      "accoster"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising.",
+                    "translations": [
+                      "levée",
+                      "portance"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "lever"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "filet",
+                      "développement",
+                      "réseau"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "calme",
+                      "silencieux"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "The absence of sound; quietness.",
+                    "translations": [
+                      "silence"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "corde",
+                      "cordage"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "ligne",
+                      "rang",
+                      "rangée"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "ramer",
+                      "voguer"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "en argent",
+                      "argenté"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "argent",
+                      "argenterie"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "ciel"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "lentement"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "disparaître",
+                      "s'évanouir",
+                      "s'annuler"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "vague",
+                      "flot",
+                      "onde"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "flotter",
+                      "saluer"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "it": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "con paura"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "cestino",
+                      "cesto",
+                      "canestro"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "barca",
+                      "nave",
+                      "battello"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "respiro",
+                      "lena"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "brillante",
+                      "luminoso",
+                      "lucente"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "calmo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "prudente",
+                      "cauto",
+                      "fare attenzione"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "cast",
+                      "gesso",
+                      "ingessatura"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "gettare",
+                      "posare",
+                      "lanciare"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "moneta"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "coin",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "To make of a definite fineness, and convert into coins, as a mass of metal.",
+                    "translations": [
+                      "coniare",
+                      "monetare",
+                      "battere moneta"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "alba",
+                      "albori",
+                      "schiudersi"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "spuntare",
+                      "albeggiare"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "pescatore",
+                      "pescatrice"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "gentile"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "porto"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "To provide a harbor or safe place for.",
+                    "translations": [
+                      "rifugiare"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising.",
+                    "translations": [
+                      "sollevamento",
+                      "portanza"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "alzare",
+                      "levare"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "rete",
+                      "retino",
+                      "sviluppo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "quieto",
+                      "silenzioso"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "The absence of sound; quietness.",
+                    "translations": [
+                      "silenzio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "corda",
+                      "cavo",
+                      "fune"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "fila",
+                      "serie",
+                      "sequenza"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ɹaʊ/",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "remare",
+                      "vogare"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "argenteo",
+                      "argentino"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "argento",
+                      "argenteria",
+                      "argenteo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "cielo",
+                      "firmamento",
+                      "paradiso"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "lentamente",
+                      "adagio",
+                      "a rilento"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "sparire",
+                      "svanire"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "onda",
+                      "ondata",
+                      "gesto"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "ondeggiare",
+                      "salutare"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "ja": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "怖い"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "篭",
+                      "籠",
+                      "バスケット"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "舟",
+                      "ボート"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "呼吸",
+                      "息"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "明るい",
+                      "鮮明",
+                      "賢い"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "穏やかな",
+                      "静かな",
+                      "平穏な"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "平穏",
+                      "平静",
+                      "平安"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "思慮深い"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "演奏",
+                      "キャスト",
+                      "ギブス"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "投じる",
+                      "投げる",
+                      "鋳る"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "硬貨",
+                      "玉",
+                      "コイン"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "夜明け",
+                      "暁",
+                      "明け方"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "あかつき",
+                      "夜明け",
+                      "曙"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "漁師",
+                      "漁夫"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "優しい"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "港",
+                      "ハーバー"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising."
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "網",
+                      "展開図",
+                      "ネットワーク"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "静かな"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "The absence of sound; quietness.",
+                    "translations": [
+                      "沈黙",
+                      "静寂"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "ロープ",
+                      "綱",
+                      "縄"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "列"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "漕ぐ"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "銀色の"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "銀",
+                      "白銀",
+                      "銀器"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "空",
+                      "大空",
+                      "天空"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "ゆっくり",
+                      "そろそろ"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "消える"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "波",
+                      "周波"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "揺れる",
+                      "振り動かす",
+                      "揺する"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "ko": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "무서워하다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "바구니",
+                      "고리짝",
+                      "고리"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "배",
+                      "보트"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "숨",
+                      "호흡"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "밝다",
+                      "환하다",
+                      "똑똑하다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "고요하다",
+                      "잠잠하다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "조심하다",
+                      "신중하다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "깁스"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "동전",
+                      "코인"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "새벽"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "밝다",
+                      "밝혀지다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "낚시꾼",
+                      "어부"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition."
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "항구"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising."
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "그물",
+                      "망",
+                      "전개도"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "조용하다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "밧줄",
+                      "로프"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "줄",
+                      "열",
+                      "렬"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "젓다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "은빛의"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "은",
+                      "백은",
+                      "은색"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "하늘",
+                      "날씨",
+                      "하늘나라"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "천천히",
+                      "느리게"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "사라지다"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "물결",
+                      "파도"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "흔들리다",
+                      "흔들다"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "pt": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "com medo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "cesto",
+                      "cesta",
+                      "carrinho"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "barco",
+                      "bote"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "respiração",
+                      "alento",
+                      "fôlego"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "brilhante",
+                      "claro",
+                      "luminoso"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "tranquilo",
+                      "calmo",
+                      "sossegado"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "calma",
+                      "tranquilidade",
+                      "sossego"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "cauteloso",
+                      "cuidadoso",
+                      "prudente"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "elenco",
+                      "gesso"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "arremessar",
+                      "tacar",
+                      "lançar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "moeda",
+                      "prata"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "coin",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "To make of a definite fineness, and convert into coins, as a mass of metal.",
+                    "translations": [
+                      "cunhar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "alvorecer",
+                      "alvorada",
+                      "amanhecer"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "amanhecer",
+                      "aparecer",
+                      "nascer"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "pescador",
+                      "pescadora"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "gentil"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "albergue",
+                      "porto",
+                      "cais"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "To provide a harbor or safe place for.",
+                    "translations": [
+                      "abrigar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising.",
+                    "translations": [
+                      "sustentação"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "elevar",
+                      "erguer",
+                      "alçar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "malha",
+                      "rede",
+                      "planificação"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "quieto",
+                      "silencioso"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "The absence of sound; quietness.",
+                    "translations": [
+                      "calada",
+                      "silêncio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "corda"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "fileira",
+                      "eito"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ɹaʊ/",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "remar",
+                      "vogar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "de prata",
+                      "prata",
+                      "prateado"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "prata",
+                      "prataria",
+                      "prateado"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "céu"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "devagar",
+                      "lentamente",
+                      "vagarosamente"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "desaparecer",
+                      "esvair",
+                      "sumir"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "onda",
+                      "vaga",
+                      "ondulação"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "ondular",
+                      "acenar",
+                      "ondear"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "tr": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "korkak"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "sepet",
+                      "sele",
+                      "basket"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "kayık",
+                      "sandal",
+                      "gemi"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "nefes",
+                      "soluk"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "aydınlık",
+                      "parlak"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "sakin",
+                      "durgun",
+                      "dingin"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "sükûnet",
+                      "dinginlik"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "dikkatli"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "voli"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "alçıya almak"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "madenî para",
+                      "demir para",
+                      "sikke"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "seher",
+                      "şafak",
+                      "tan"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "tan"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "balıkçı"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "şefkatli"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "liman"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising."
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "yükseltmek",
+                      "kaldırmak"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "ağ",
+                      "şebeke",
+                      "file"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "verb",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "To catch by means of a net.",
+                    "translations": [
+                      "torlamak"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "sessiz"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "The absence of sound; quietness.",
+                    "translations": [
+                      "sessizlik",
+                      "sükût"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "halat"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "sıra"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "kürek çekmek"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "gümüş"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "gümüş",
+                      "gümüş rengi"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "gökyüzü",
+                      "gök",
+                      "cennet"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "yavaş",
+                      "yavaşça",
+                      "yavaş yavaş"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "yok olmak"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "dalga"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "zh": {
+          "entries": {
+            "afraid": [
+              {
+                "lemma": "afraid",
+                "partOfSpeech": "adj",
+                "pronunciation": "/əˈfɹeɪd/",
+                "senses": [
+                  {
+                    "definition": "Impressed with fear or apprehension; in fear.",
+                    "translations": [
+                      "害怕",
+                      "怕"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basket": [
+              {
+                "lemma": "basket",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈbɑːskɪt/",
+                "senses": [
+                  {
+                    "definition": "A lightweight woven container, generally round, open at the top, and tapering toward the bottom.",
+                    "translations": [
+                      "籃子 /篮子",
+                      "購物籃 /购物篮",
+                      "籃筐 /篮筐"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bəʊ̯t/",
+                "senses": [
+                  {
+                    "definition": "Vessel for travelling by water.",
+                    "translations": [
+                      "чуан",
+                      "船",
+                      "小船"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "breath": [
+              {
+                "lemma": "breath",
+                "partOfSpeech": "noun",
+                "pronunciation": "/bɹɛθ/",
+                "senses": [
+                  {
+                    "definition": "The act or process of breathing.",
+                    "translations": [
+                      "呼吸",
+                      "氣息 /气息"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "bright": [
+              {
+                "lemma": "bright",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈbɹaɪ̯t/",
+                "senses": [
+                  {
+                    "definition": "Emitting much light; visually dazzling; luminous, lucent, radiant.",
+                    "translations": [
+                      "亮",
+                      "明",
+                      "明亮"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "adj",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "Peaceful, quiet, especially free from anger and anxiety.",
+                    "translations": [
+                      "平靜 /平静",
+                      "安靜 /安静"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑm/",
+                "senses": [
+                  {
+                    "definition": "The state of being calm; peacefulness; absence of worry, anger, fear or other strong negative emotion.",
+                    "translations": [
+                      "平靜 /平静"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "careful": [
+              {
+                "lemma": "careful",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkɛɹfəl/",
+                "senses": [
+                  {
+                    "definition": "Taking care; attentive to potential danger, error or harm; cautious.",
+                    "translations": [
+                      "當心 /当心",
+                      "小心"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cast": [
+              {
+                "lemma": "cast",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "An act of throwing.",
+                    "translations": [
+                      "全體演員 /全体演员",
+                      "石膏"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "cast",
+                "partOfSpeech": "verb",
+                "pronunciation": "/kɑːst/",
+                "senses": [
+                  {
+                    "definition": "To move, or be moved, away.",
+                    "translations": [
+                      "拋 /抛",
+                      "投",
+                      "擲 /掷"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "coin": [
+              {
+                "lemma": "coin",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈkoɪ̯n/",
+                "senses": [
+                  {
+                    "definition": "A piece of currency, usually metallic and in the shape of a disc, but sometimes polygonal, or with a hole in the middle.",
+                    "translations": [
+                      "硬幣 /硬币",
+                      "銅錢 /铜钱"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "dawn": [
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "noun",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "The morning twilight period immediately before sunrise.",
+                    "translations": [
+                      "黎明",
+                      "拂曉 /拂晓",
+                      "破曉 /破晓"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "dawn",
+                "partOfSpeech": "verb",
+                "pronunciation": "/dɔːn/",
+                "senses": [
+                  {
+                    "definition": "To begin to brighten with daylight.",
+                    "translations": [
+                      "拂曉 /拂晓",
+                      "黎明",
+                      "破曉 /破晓"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "fisherman": [
+              {
+                "lemma": "fisherman",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈfɪʃ.ə.mən/",
+                "senses": [
+                  {
+                    "definition": "A fisher, a person engaged in fishing:",
+                    "translations": [
+                      "漁夫 /渔夫",
+                      "漁民 /渔民",
+                      "漁人 /渔人"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "gentle": [
+              {
+                "lemma": "gentle",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈd͡ʒɛn.tl̩/",
+                "senses": [
+                  {
+                    "definition": "Tender and amiable; of a considerate or kindly disposition.",
+                    "translations": [
+                      "斯文"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "harbor": [
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "Any place of shelter.",
+                    "translations": [
+                      "海港",
+                      "港",
+                      "港口"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "harbor",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈhɑːbə/",
+                "senses": [
+                  {
+                    "definition": "To provide a harbor or safe place for.",
+                    "translations": [
+                      "懷有 /怀有"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lift": [
+              {
+                "lemma": "lift",
+                "partOfSpeech": "noun",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "An act of lifting or raising."
+                  }
+                ]
+              },
+              {
+                "lemma": "lift",
+                "partOfSpeech": "verb",
+                "pronunciation": "/lɪft/",
+                "senses": [
+                  {
+                    "definition": "To raise or rise.",
+                    "translations": [
+                      "舉 /举",
+                      "抬",
+                      "揚 /扬"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "net": [
+              {
+                "lemma": "net",
+                "partOfSpeech": "adj",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "Free from extraneous substances; pure; unadulterated; neat."
+                  }
+                ]
+              },
+              {
+                "lemma": "net",
+                "partOfSpeech": "noun",
+                "pronunciation": "/nɛt/",
+                "senses": [
+                  {
+                    "definition": "A mesh of string, cord or rope.",
+                    "translations": [
+                      "網 /网",
+                      "展開圖 /展开图",
+                      "網絡 /网络"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "quiet": [
+              {
+                "lemma": "quiet",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈkwaɪ̯.ət/",
+                "senses": [
+                  {
+                    "definition": "With little or no sound; free of disturbing noise.",
+                    "translations": [
+                      "安靜 /安静",
+                      "寧靜 /宁静"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rope": [
+              {
+                "lemma": "rope",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊp/",
+                "senses": [
+                  {
+                    "definition": "Thick strings, yarn, monofilaments, metal wires, or strands of other cordage that are twisted together to form a stronger line.",
+                    "translations": [
+                      "繩子 /绳子",
+                      "繩索 /绳索"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "row": [
+              {
+                "lemma": "row",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ɹəʊ/",
+                "senses": [
+                  {
+                    "definition": "A line of objects, often regularly spaced, such as seats in a theatre, vegetable plants in a garden, etc.",
+                    "translations": [
+                      "排"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "row",
+                "partOfSpeech": "verb",
+                "senses": [
+                  {
+                    "definition": "To propel (a boat or other craft) over water using oars.",
+                    "translations": [
+                      "划",
+                      "划船"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "silver": [
+              {
+                "lemma": "silver",
+                "partOfSpeech": "adj",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "Made from silver.",
+                    "translations": [
+                      "銀的 /银的",
+                      "銀色的 /银色的"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "silver",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ˈsɪl.və/",
+                "senses": [
+                  {
+                    "definition": "A lustrous, white, metallic element, atomic number 47, atomic weight 107.87, symbol Ag.",
+                    "translations": [
+                      "銀 /银",
+                      "銀色 /银色"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "sky": [
+              {
+                "lemma": "sky",
+                "partOfSpeech": "noun",
+                "pronunciation": "/skaɪ/",
+                "senses": [
+                  {
+                    "definition": "The atmosphere above a given point, especially as visible from the surface of the Earth as the place where the sun, moon, stars, and clouds are seen.",
+                    "translations": [
+                      "тян",
+                      "асмон",
+                      "асмар"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "slowly": [
+              {
+                "lemma": "slowly",
+                "partOfSpeech": "adv",
+                "pronunciation": "/ˈsləʊli/",
+                "senses": [
+                  {
+                    "definition": "At a slow pace.",
+                    "translations": [
+                      "慢"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "vanish": [
+              {
+                "lemma": "vanish",
+                "partOfSpeech": "verb",
+                "pronunciation": "/ˈvænɪʃ/",
+                "senses": [
+                  {
+                    "definition": "To become invisible or to move out of view unnoticed.",
+                    "translations": [
+                      "消失"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wave": [
+              {
+                "lemma": "wave",
+                "partOfSpeech": "noun",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "A moving disturbance in the level of a body of liquid; an undulation.",
+                    "translations": [
+                      "波浪",
+                      "波",
+                      "浪"
+                    ]
+                  }
+                ]
+              },
+              {
+                "lemma": "wave",
+                "partOfSpeech": "verb",
+                "pronunciation": "/weɪv/",
+                "senses": [
+                  {
+                    "definition": "To move back and forth repeatedly and somewhat loosely.",
+                    "translations": [
+                      "招手",
+                      "揮手 /挥手"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

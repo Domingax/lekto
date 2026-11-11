@@ -1148,7 +1148,33 @@ from the vault's export) is a `core/commonTest` behaviour over the `testkit` fak
 the artifact is pinned in `tools/dictionaries` by `DifficultyBuilderTest`,
 `SqliteDifficultyWriterTest` and `DifficultyGoldenTest`, and the producer and
 consumer agree on the format version through
-`DifficultyFormatSynchronisationTest` in `architecture` (ADR-0013). The app's
+`DifficultyFormatSynchronisationTest` in `architecture` (ADR-0013).
+
+The **Sample** (issue #297; ADR-0049) is proved at its three levels. The
+transform is `SampleBuilderTest` in `tools/dictionaries`: a fixed word list and a
+fixed **Difficulty table** yield one expected map per CEFR band, a word the table
+does not place is unknown at every band, an inflection takes the form index's
+lemma, and a glossary built from a fixture dictionary covers every highlighted
+word — or fails the build by name when it does not. `SampleGoldenTest` pins that
+fixture's canonical catalogue in `golden/sample-en.json` and hashes its bytes on
+two runs, the level the dictionary-pack transform gets. `SampleStageTest` runs the
+whole stage from real SQLite artefacts and a published manifest: one authored text,
+one built table and two built packs produce one sample whose six maps, forms and
+two glossaries are pinned, the same inputs yield the same bytes, and a language the
+manifest offers no dictionary for is refused. The catalogue reader is
+`SampleCatalogReadTest` in `core/commonTest`: it accepts a valid one-language
+catalogue, refuses a catalogue from an unknown format rather than misreading it,
+tolerates an unknown key at the same version, and calls an entry malformed when it
+has no paragraph, fewer than six maps, a blank word or a meaning without a
+definition. `CommittedSampleCatalogTest` in `core/jvmTest` decodes the bytes the
+build actually committed under
+`core/src/commonMain/resources/samples/catalogue.json`, recomputes every map from
+the bands the catalogue carries with `core`'s own `derivedMastery`, and proves
+every glossary covers every highlighted word — so the frozen copy is asserted
+against the rule, not only against a snapshot. `SampleAssetsAreDerivedTest` in
+`architecture` pins the remaining rule: the sample model names no vault store, the
+catalogue lives under resources and never under a vault path, and neither
+`VaultBundle` nor `VaultManifest` names a sample. The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
 level and the difficulty, with the one revision the reader recolours on — is
 `MasteryControllerTest` in `app/desktopTest`, which pins that setting **and**

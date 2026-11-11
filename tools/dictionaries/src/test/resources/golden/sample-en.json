@@ -1,0 +1,143 @@
+{
+  "formatVersion": 1,
+  "samples": [
+    {
+      "language": "en",
+      "title": "A Test Sample",
+      "paragraphs": [
+        "A calm boat waited near the rocks."
+      ],
+      "difficulty": {
+        "a": "A1",
+        "boat": "B1",
+        "calm": "A2",
+        "near": "A1",
+        "rock": "C1",
+        "the": "A1",
+        "wait": "B2"
+      },
+      "forms": {
+        "rocks": "rock",
+        "waited": "wait"
+      },
+      "colourMaps": {
+        "A1": {
+          "a": "KNOWN",
+          "boat": "FAMILIAR",
+          "calm": "LEARNED",
+          "near": "KNOWN",
+          "rock": "UNKNOWN",
+          "the": "KNOWN",
+          "wait": "RECOGNIZED"
+        },
+        "A2": {
+          "a": "KNOWN",
+          "boat": "LEARNED",
+          "calm": "KNOWN",
+          "near": "KNOWN",
+          "rock": "RECOGNIZED",
+          "the": "KNOWN",
+          "wait": "FAMILIAR"
+        },
+        "B1": {
+          "a": "KNOWN",
+          "boat": "KNOWN",
+          "calm": "KNOWN",
+          "near": "KNOWN",
+          "rock": "FAMILIAR",
+          "the": "KNOWN",
+          "wait": "LEARNED"
+        },
+        "B2": {
+          "a": "KNOWN",
+          "boat": "KNOWN",
+          "calm": "KNOWN",
+          "near": "KNOWN",
+          "rock": "LEARNED",
+          "the": "KNOWN",
+          "wait": "KNOWN"
+        },
+        "C1": {
+          "a": "KNOWN",
+          "boat": "KNOWN",
+          "calm": "KNOWN",
+          "near": "KNOWN",
+          "rock": "KNOWN",
+          "the": "KNOWN",
+          "wait": "KNOWN"
+        },
+        "C2": {
+          "a": "KNOWN",
+          "boat": "KNOWN",
+          "calm": "KNOWN",
+          "near": "KNOWN",
+          "rock": "KNOWN",
+          "the": "KNOWN",
+          "wait": "KNOWN"
+        }
+      },
+      "glossaries": {
+        "fr": {
+          "entries": {
+            "boat": [
+              {
+                "lemma": "boat",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "The boat meaning.",
+                    "translations": [
+                      "fr-boat"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "calm": [
+              {
+                "lemma": "calm",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "The calm meaning.",
+                    "translations": [
+                      "fr-calm"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "rock": [
+              {
+                "lemma": "rock",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "The rock meaning.",
+                    "translations": [
+                      "fr-rock"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "wait": [
+              {
+                "lemma": "wait",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "The wait meaning.",
+                    "translations": [
+                      "fr-wait"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

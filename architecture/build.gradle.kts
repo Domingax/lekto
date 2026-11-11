@@ -51,6 +51,10 @@ tasks.withType<Test>().configureEach {
                 "**/gradle.properties",
                 "gradle/**/*.toml",
                 "**/src/**/*.kt",
+                // The committed sample catalogue is app data, not source, but the
+                // sample-asset rule reads it: without it a regenerated catalogue
+                // leaves the architecture suite UP-TO-DATE.
+                "core/src/commonMain/resources/samples/**",
                 "**/package.json",
                 ".github/**",
                 "tools/dictionaries/workflows/**",
