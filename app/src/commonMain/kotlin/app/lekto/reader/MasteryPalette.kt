@@ -20,28 +20,39 @@ data class MasteryRamp(val unknown: Color, val recognized: Color, val familiar: 
  * active **App theme** to it (`docs/design.md` §2.2; ADR-0036).
  */
 object MasteryPalette {
-    /** The daylight paper's ramp: four dark hues, each at or above 4.6:1. */
+    /**
+     * The daylight paper's ramp: blue unknown, gold recognized, red familiar and
+     * green learned, each at or above 4.5:1 on `#FAF7F2` and at least 1.25:1 from
+     * every other level.
+     */
     val Light = MasteryRamp(
-        unknown = Color(0xFF1D4ED8),
-        recognized = Color(0xFFA16207),
-        familiar = Color(0xFFC2410C),
-        learned = Color(0xFF15803D),
+        unknown = Color(0xFF09347C),
+        recognized = Color(0xFF8A6D00),
+        familiar = Color(0xFF941818),
+        learned = Color(0xFF006B3C),
     )
 
-    /** Warm night: the same meanings, lifted until they read on near-black. */
+    /**
+     * Warm night: the same meanings, lifted until they read on near-black and
+     * spread so no two levels are the same blot.
+     */
     val Dark = MasteryRamp(
-        unknown = Color(0xFF8AB4F8),
-        recognized = Color(0xFFF2C14E),
-        familiar = Color(0xFFEE9A5F),
-        learned = Color(0xFF7BD88F),
+        unknown = Color(0xFF2B7FFF),
+        recognized = Color(0xFFE0AB00),
+        familiar = Color(0xFFFF6D60),
+        learned = Color(0xFF73E19A),
     )
 
-    /** Rag paper: Light's ramp with its three warm hues darkened to 6:1. */
+    /**
+     * Rag paper: the same four meanings, tuned to `#F6ECD8` so each level clears
+     * both the paper bar and the pair bar. Its warmer ink leaves less room than
+     * the daylight paper's, so this ramp is the tightest of the three.
+     */
     val Sepia = MasteryRamp(
-        unknown = Color(0xFF1D4ED8),
-        recognized = Color(0xFF92400E),
-        familiar = Color(0xFF9A3412),
-        learned = Color(0xFF166534),
+        unknown = Color(0xFF092D6B),
+        recognized = Color(0xFF826600),
+        familiar = Color(0xFF871616),
+        learned = Color(0xFF006538),
     )
 
     /** The ramp for [theme]'s paper. */

@@ -69,3 +69,15 @@ declares, not from the stored choice: it can read the device's light-or-dark set
 else. An app set to Sepia on a light device therefore launches on the Light paper, and Sepia never
 appears at launch; the app's own window and every screen follow the choice from the first frame.
 `docs/design.md` §7.7 states the limit and `values-v31` says it where the attributes live.
+
+## Update — adjacent levels are measured too
+
+The first per-theme ramp met the 4.5:1 paper bar but let neighbours collapse: on Light,
+recognized/familiar measured 1.05:1 and familiar/learned 1.03:1, and Sepia was no better. The hues
+keep their meanings — blue unknown, gold recognized, red familiar, green learned — but the two middle
+hues move from amber/orange to gold/red so the pair reads, and the tone alternates rather than
+climbing. **Any two** of every theme's four coloured levels are now measured against each other:
+**1.25:1 minimum**, beside the 4.5:1 paper bar. The single underline stays, and the background wash
+remains the documented fallback rather than the default. `docs/design.md` §2.2 carries the tokens and
+the measured values (issue #300). Colour still carries the level; the per-level non-colour pattern
+WCAG 1.4.1 asks for is its own issue.

@@ -279,8 +279,9 @@ another machine. The theme goldens record each **App theme**'s colour scheme as
 swatches, one sheet per paper; the reader adds one `mastery-palette-<paper>.png`
 per paper (issue #183), its mastery ramp and the reader page's word layer as
 coloured blocks — the same layout a page of text produces, without the glyphs.
-The ramps' 4.5:1 floor is `MasteryPaletteContrastTest`'s, measured against each
-paper, because a golden can pin a colour but not its readability. The Library
+The ramps' 4.5:1 floor against the paper and 1.25:1 floor between any two coloured levels are
+`MasteryPaletteContrastTest`'s, measured against each paper and across every pair, because a golden
+can pin a colour but not its readability. The Library
 adds one `library-<paper>.png` per paper (issue #208): the shelf's frame — the
 search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
 rule and the hairline that parts two rows — on four books across three languages.
@@ -1061,7 +1062,7 @@ carries the saved word — the vocabulary is a vault record, so it is portable
 with no separate export. The selector's chips carry their level's colour (the
 filled current one, the others ringed) so the reader's text colours read
 straight off the panel; the mapping reuses the pinned mastery palette and
-`contentColorOn` is unit-tested in `MasteryPaletteTest`.
+`contentColorOn` is unit-tested in `MasteryPaletteTest` and `ContentColorTest`.
 
 Browsing, searching and deleting the saved words (issue #23) is proved at the
 same levels. The delete is a domain fact — the entry's vault record is removed,

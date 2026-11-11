@@ -3,15 +3,23 @@ package app.lekto.theme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
-/** The relative luminance above which a fill is light enough to need dark ink. */
-private const val LIGHT_FILL_LUMINANCE = 0.4f
+/**
+ * The relative luminance above which a fill is light enough to need dark ink:
+ * the point where [InkOnLightFill] overtakes white, so the chosen foreground is
+ * the one with the higher contrast. Above it a mid-tone fill — the lifted night
+ * hues, the daylight Spanish hue — takes ink; below it the darker daylight hues
+ * take white.
+ */
+private const val LIGHT_FILL_LUMINANCE = 0.2f
 
 /** The ink a lifted fill uses: near-black, WCAG AA on every lifted hue the identity names. */
 val InkOnLightFill: Color = Color(0xFF1A1A1A)
 
 /**
- * The foreground that reads on a filled [background] at WCAG AA: white on the
- * daylight papers' darker hues, [InkOnLightFill] on a dark paper's lifted ones.
+ * The foreground that reads on a filled [background]: white on the daylight
+ * papers' darker hues, [InkOnLightFill] on a dark paper's lifted ones and on a
+ * mid-tone fill. The threshold is the luminance where ink overtakes white, so
+ * the chosen ink is the more legible of the two.
  *
  * It is the one rule for text on a filled control, wherever the fill came from —
  * a **Mastery level**'s chip in the lookup panel, or a row's **Reading language**
