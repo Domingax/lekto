@@ -3,7 +3,12 @@ package app.lekto.language
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.language.LanguageCatalogState
+import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.SampleRoster
+import app.lekto.core.language.orderOfferedLanguages
+import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.testkit.InMemoryLanguageCatalog
+import app.lekto.testkit.testOfferedArtifact
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.text.AppMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,16 +62,64 @@ class LanguageControllerTest {
     }
 
     @Test
-    fun anOfflineFirstLaunchShowsTheHonestEmptyState() = runTest {
+    fun anOfflineFirstLaunchListsTheRosterWithListNotLoaded() = runTest {
         catalog.failure = IOException("offline")
         val controller = controller()
 
         controller.start()
         advanceUntilIdle()
 
-        assertTrue(controller.state.value.languages.isEmpty())
+        assertEquals(
+            orderOfferedLanguages(sampleRosterLanguages(), emptyList()),
+            controller.state.value.languages,
+            "with no manifest the surface lists the roster, not an empty page",
+        )
         assertEquals(false, controller.state.value.available)
         assertEquals(AppMessage.core("offline"), controller.state.value.error)
+    }
+
+    @Test
+    fun aRefusedManifestLeavesTheRosterIntact() = runTest {
+        catalog.onReload = LanguageCatalogState.Unavailable
+        val controller = controller()
+
+        controller.start()
+        advanceUntilIdle()
+
+        assertEquals(
+            SampleRoster.LANGUAGES.toSet(),
+            controller.state.value.languages.map { offered -> offered.language }.toSet(),
+        )
+        assertEquals(false, controller.state.value.available)
+    }
+
+    @Test
+    fun aManifestReadIsIntersectedWithTheRoster() = runTest {
+        catalog.onReload = LanguageCatalogState.Available(
+            listOf(
+                testOfferedLanguage(
+                    "en",
+                    difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz"),
+                ),
+                testOfferedLanguage("xx"),
+            ),
+        )
+        val controller = controller(roster = listOf(testOfferedLanguage("en"), testOfferedLanguage("fr")))
+
+        controller.start()
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(
+                testOfferedLanguage(
+                    "en",
+                    difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz"),
+                ),
+            ),
+            controller.state.value.languages,
+            "a language the manifest removed disappears, one it added waits for a sample",
+        )
+        assertEquals(true, controller.state.value.available)
     }
 
     @Test
@@ -127,11 +180,15 @@ class LanguageControllerTest {
         )
     }
 
-    private fun TestScope.controller(books: () -> List<Book> = { emptyList() }) = LanguageController(
+    private fun TestScope.controller(
+        books: () -> List<Book> = { emptyList() },
+        roster: List<OfferedLanguage> = sampleRosterLanguages(),
+    ) = LanguageController(
         catalog = catalog,
         books = books,
         dispatcher = StandardTestDispatcher(testScheduler),
         scope = this,
+        roster = roster,
     )
 
     private fun book(language: String): Book =

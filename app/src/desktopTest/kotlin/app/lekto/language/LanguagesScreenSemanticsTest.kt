@@ -95,6 +95,20 @@ class LanguagesScreenSemanticsTest {
     }
 
     @Test
+    fun aRosterLanguageWithNoManifestShowsListNotLoaded() = runComposeUiTest {
+        render(
+            LanguagesUiState(languages = listOf(testOfferedLanguage("en"), testOfferedLanguage("fr"))),
+            levels = mapOf("fr" to CefrLevel.B2),
+        )
+
+        onNodeWithTag(languageListNotLoadedTag("en")).assertTextEquals("List not loaded.")
+        onNodeWithTag(languageListNotLoadedTag("fr")).assertTextEquals("List not loaded.")
+        onNodeWithTag(languageDifficultyDownloadTag("en")).assertDoesNotExist()
+        onNodeWithTag(languageLevelPickerTag("fr")).assertIsDisplayed()
+        onNodeWithText("B2").assertIsDisplayed()
+    }
+
+    @Test
     fun reloadingDisablesTheActionAndReportsProgress() = runComposeUiTest {
         render(LanguagesUiState(reloading = true))
 
@@ -143,6 +157,7 @@ class LanguagesScreenSemanticsTest {
                         dictionaries = listOf(PAIR),
                     ),
                 ),
+                available = true,
             ),
             difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
             dictionaries = mapOf(DICTIONARY to DictionaryUiState(status = DictionaryPackState.NotInstalled)),
@@ -171,6 +186,7 @@ class LanguagesScreenSemanticsTest {
                         ),
                     ),
                 ),
+                available = true,
             ),
         )
 
@@ -189,6 +205,7 @@ class LanguagesScreenSemanticsTest {
                         dictionaries = listOf(PAIR),
                     ),
                 ),
+                available = true,
             ),
             difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.NotInstalled)),
             dictionaries = mapOf(
@@ -251,6 +268,7 @@ class LanguagesScreenSemanticsTest {
         render(
             LanguagesUiState(
                 languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+                available = true,
             ),
             difficulty = mapOf("en" to DifficultyUiState(status = DifficultyState.Ready(testDifficultyMetadata()))),
         )
@@ -265,6 +283,7 @@ class LanguagesScreenSemanticsTest {
         render(
             LanguagesUiState(
                 languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+                available = true,
             ),
             onDownloadDifficulty = { language, artifact -> chosen = language to artifact },
         )
@@ -277,7 +296,7 @@ class LanguagesScreenSemanticsTest {
 
     @Test
     fun aLanguageWithNoPublishedTableSaysSoAndOffersNoDownload() = runComposeUiTest {
-        render(LanguagesUiState(languages = listOf(testOfferedLanguage("fr"))))
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("fr")), available = true))
 
         onNodeWithText("doesn't publish word-difficulty data", substring = true).assertIsDisplayed()
         onNodeWithTag(languageDifficultyDownloadTag("fr")).assertDoesNotExist()
@@ -288,6 +307,7 @@ class LanguagesScreenSemanticsTest {
         render(
             LanguagesUiState(
                 languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+                available = true,
             ),
             difficulty = mapOf("en" to DifficultyUiState(installing = true)),
         )
@@ -302,6 +322,7 @@ class LanguagesScreenSemanticsTest {
         render(
             LanguagesUiState(
                 languages = listOf(testOfferedLanguage("en", difficulty = testOfferedArtifact(DIFFICULTY))),
+                available = true,
             ),
             difficulty = mapOf("en" to DifficultyUiState(error = AppMessage.core("The download failed."))),
             onDismissDifficultyError = { language -> dismissed = language },
@@ -315,7 +336,12 @@ class LanguagesScreenSemanticsTest {
 
     @Test
     fun eachPublishedDictionaryIsLabelledByItsPair() = runComposeUiTest {
-        render(LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))))
+        render(
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
+        )
 
         onNodeWithText("English → French", substring = true).assertIsDisplayed()
     }
@@ -323,7 +349,10 @@ class LanguagesScreenSemanticsTest {
     @Test
     fun eachDictionaryShowsItsState() = runComposeUiTest {
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
             dictionaries = mapOf(
                 DICTIONARY to DictionaryUiState(status = DictionaryPackState.Ready(testPackMetadata())),
             ),
@@ -336,7 +365,10 @@ class LanguagesScreenSemanticsTest {
     @Test
     fun anIncompatibleDictionaryTellsTheUserToDownloadAgain() = runComposeUiTest {
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
             dictionaries = mapOf(
                 DICTIONARY to DictionaryUiState(status = DictionaryPackState.Incompatible(found = 9, expected = 1)),
             ),
@@ -349,7 +381,10 @@ class LanguagesScreenSemanticsTest {
     @Test
     fun aCorruptDictionaryTellsTheUserToDownloadAgain() = runComposeUiTest {
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
             dictionaries = mapOf(
                 DICTIONARY to DictionaryUiState(status = DictionaryPackState.Corrupt("file is not a database")),
             ),
@@ -362,7 +397,10 @@ class LanguagesScreenSemanticsTest {
     fun aDownloadIsOfferedWhereTheManifestPublishesAPair() = runComposeUiTest {
         var chosen: Triple<String, String, OfferedArtifact>? = null
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
             onDownloadDictionary = { reading, translation, artifact ->
                 chosen = Triple(reading, translation, artifact)
             },
@@ -376,7 +414,7 @@ class LanguagesScreenSemanticsTest {
 
     @Test
     fun aLanguageWithNoPublishedDictionarySaysSoAndOffersNoDownload() = runComposeUiTest {
-        render(LanguagesUiState(languages = listOf(testOfferedLanguage("fr"))))
+        render(LanguagesUiState(languages = listOf(testOfferedLanguage("fr")), available = true))
 
         onNodeWithText("doesn't publish an offline dictionary", substring = true).assertIsDisplayed()
         onNodeWithTag(languageDictionaryDownloadTag(DICTIONARY)).assertDoesNotExist()
@@ -385,7 +423,10 @@ class LanguagesScreenSemanticsTest {
     @Test
     fun downloadingADictionaryShowsProgressAndDisablesTheAction() = runComposeUiTest {
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
             dictionaries = mapOf(DICTIONARY to DictionaryUiState(installing = true)),
         )
 
@@ -397,7 +438,10 @@ class LanguagesScreenSemanticsTest {
     fun aDictionaryFailureShowsAndDismisses() = runComposeUiTest {
         var dismissed: String? = null
         render(
-            LanguagesUiState(languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR)))),
+            LanguagesUiState(
+                languages = listOf(testOfferedLanguage("en", dictionaries = listOf(PAIR))),
+                available = true,
+            ),
             dictionaries = mapOf(
                 DICTIONARY to DictionaryUiState(error = AppMessage.core("The dictionary download failed.")),
             ),

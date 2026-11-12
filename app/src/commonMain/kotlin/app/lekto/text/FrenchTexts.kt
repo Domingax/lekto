@@ -214,6 +214,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "Lekto n'a pas encore chargé la liste des langues qu'il propose. Rechargez la liste ou vérifiez " +
         "votre connexion.",
     TextKey.LOADING_LANGUAGES to "Chargement de la liste des langues…",
+    TextKey.LANGUAGES_LIST_NOT_LOADED to "Liste non chargée.",
     TextKey.DIFFICULTY_NOT_PUBLISHED to
         "Lekto ne publie pas encore de données de difficulté des mots pour cette langue.",
     TextKey.DOWNLOAD to "Télécharger",

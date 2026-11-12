@@ -59,6 +59,12 @@ internal const val LANGUAGES_TITLE_TAG: String = "languages-title"
 /** The test tag on one **Reading language**'s row, so a UI test can read its state and action together. */
 internal fun languageRowTag(language: String): String = "languages-row-$language"
 
+/**
+ * The test tag on a roster language's `List not loaded` line (issue #298), so
+ * a UI test can tell the manifest-not-yet-read fallback from an artefact state.
+ */
+internal fun languageListNotLoadedTag(language: String): String = "languages-list-not-loaded-$language"
+
 /** The test tag on a language's level picker on the **Languages** surface. */
 internal fun languageLevelPickerTag(language: String): String = "languages-level-$language"
 
@@ -99,12 +105,15 @@ data class LanguagesActions(
 )
 
 /**
- * The **Languages** surface (issues #146, #147, #148, #149, #215; ADR-0034): the
+ * The **Languages** surface (issues #146, #147, #148, #149, #215, #298; ADR-0034): the
  * **Translation language** as a printed-form row, then one row per offered
  * **Reading language** in the reader's priority order. A row carries the
  * language's name, its **Reader level** picker, and each published **Derived
  * asset**'s state in the muted ink with its download as a quiet text action —
- * never a full-width filled button per language (docs/design.md §7.6).
+ * never a full-width filled button per language (docs/design.md §7.6). With no
+ * manifest yet the rows are the embedded roster's languages, each with `List
+ * not loaded` in the muted ink instead of an artefact state, so the surface is
+ * never an empty page on a first launch with no network.
  *
  * **Reload list** stays in the header, so a reader can refetch at any time — after
  * a failed fetch, or when the pipeline has published a language since the cached
@@ -162,6 +171,7 @@ fun LanguagesScreen(
                         LanguageRow(
                             offered = offered,
                             level = levels[baseLanguage(offered.language)],
+                            available = state.available,
                             difficulty = difficulty[baseLanguage(offered.language)],
                             dictionaries = dictionaries,
                             actions = actions,
@@ -232,12 +242,18 @@ private fun ReloadAction(onReload: () -> Unit, reloading: Boolean) {
  * next language by a hairline. The level is user-authored **Vault** data, so the
  * picker writes to the vault; **not set** clears it. The artifacts are **Derived
  * asset**s: their state and download show here, and one not published says so.
+ *
+ * With no manifest yet ([available] is false) the row is a roster language: the
+ * picker stays, because the level needs no manifest, but the artefact lines give
+ * way to one `List not loaded` line, so a first launch with no network lists
+ * the languages instead of an empty page.
  */
 @Suppress("LongParameterList") // The offered language and its three independent controls, plus the surface's actions.
 @Composable
 private fun LanguageRow(
     offered: OfferedLanguage,
     level: CefrLevel?,
+    available: Boolean,
     difficulty: DifficultyUiState?,
     dictionaries: Map<String, DictionaryUiState>,
     actions: LanguagesActions,
@@ -260,13 +276,33 @@ private fun LanguageRow(
                 )
                 LevelPicker(offered.language, level, actions)
             }
-            DifficultyControl(offered, difficulty, actions)
-            DictionaryControls(offered, dictionaries, actions)
+            if (available) {
+                DifficultyControl(offered, difficulty, actions)
+                DictionaryControls(offered, dictionaries, actions)
+            } else {
+                ListNotLoaded(offered.language)
+            }
         }
         if (!last) {
             HorizontalDivider(thickness = HAIRLINE_THICKNESS, color = MaterialTheme.colorScheme.outline)
         }
     }
+}
+
+/**
+ * The roster fallback's one line (issue #298): with no manifest yet the surface
+ * cannot say what a language publishes, so the row says the list — not the
+ * artefacts — is not loaded, in the muted ink. No download is offered, because
+ * there is no published address to fetch.
+ */
+@Composable
+private fun ListNotLoaded(language: String) {
+    Text(
+        text = LocalAppTexts.current[TextKey.LANGUAGES_LIST_NOT_LOADED],
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().testTag(languageListNotLoadedTag(language)),
+    )
 }
 
 /**

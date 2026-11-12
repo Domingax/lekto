@@ -586,7 +586,11 @@ difficulty table or no dictionary for is refused: the guide must not show a colo
 it cannot compute or a tap it cannot answer. The build fails if a glossary misses a
 word the sample highlights. The catalogue is a **Derived asset** shipped in the app
 under `core/src/commonMain/resources/samples/catalogue.json`; regenerate it when
-the table or any published pack changes, in the same commit. ADR-0049 records the
+the table or any published pack changes, in the same commit. Its languages are
+the embedded roster the guide and the **Languages** surface list
+(`SampleRoster.LANGUAGES` in `core`, issue #298); `CommittedSampleCatalogTest`
+fails if the two drift, so a regenerated catalogue updates the roster in the
+same commit. ADR-0049 records the
 decision.
 
 A **release assembly run** (`--assemble-release`, issue #306; ADR-0047) reads a

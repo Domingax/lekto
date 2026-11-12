@@ -4,7 +4,9 @@ import app.lekto.core.book.Book
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.offeredLanguages
 import app.lekto.core.language.orderOfferedLanguages
+import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,15 +38,23 @@ data class LanguagesUiState(
  * **Language manifest** on first entry, refetches on demand off the UI thread,
  * and orders the offered languages by how many `Book`s the reader has in each.
  *
+ * The list is the embedded roster corrected by the manifest (issue #298): with
+ * no manifest yet the surface lists the roster's languages with `List not
+ * loaded`, and with one read it lists the intersection, through the one
+ * predicate the guide's first screen shares. A refused or malformed fetch
+ * leaves the roster's list intact.
+ *
  * The [dispatcher] is injected because a hard-coded one cannot be driven by
  * virtual time, and the [books] accessor is a function because the library's
  * list changes as books are imported (docs/testing.md, "Deterministic seams").
+ * The [roster] defaults to the samples this build ships; a test passes its own.
  */
 class LanguageController(
     private val catalog: LanguageCatalog,
     private val books: () -> List<Book>,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
+    private val roster: List<OfferedLanguage> = sampleRosterLanguages(),
 ) {
 
     private val _state = MutableStateFlow(LanguagesUiState())
@@ -78,6 +88,13 @@ class LanguageController(
                     current.copy(
                         reloading = false,
                         error = AppMessage.failure(failure, TextKey.MESSAGE_LANGUAGES_LOAD_FAILED),
+                        // A failed first fetch still lists the roster (issue #298); a later
+                        // failure keeps the list the last read produced.
+                        languages = if (!current.available && current.languages.isEmpty()) {
+                            orderOfferedLanguages(roster, books())
+                        } else {
+                            current.languages
+                        },
                     )
                 }
             }
@@ -88,12 +105,9 @@ class LanguageController(
         _state.update { current -> current.withStatus(status) }
     }
 
-    /** [status]'s languages, ordered by the reader's books; an unavailable manifest offers none. */
+    /** [status]'s languages in roster order, then ordered by the reader's books. */
     private fun LanguagesUiState.withStatus(status: LanguageCatalogState): LanguagesUiState = copy(
         available = status is LanguageCatalogState.Available,
-        languages = when (status) {
-            is LanguageCatalogState.Available -> orderOfferedLanguages(status.languages, books())
-            LanguageCatalogState.Unavailable -> emptyList()
-        },
+        languages = orderOfferedLanguages(offeredLanguages(roster, status), books()),
     )
 }
