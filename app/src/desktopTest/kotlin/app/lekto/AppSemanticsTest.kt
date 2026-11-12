@@ -88,6 +88,7 @@ import app.lekto.language.languageDifficultyDownloadTag
 import app.lekto.language.languageLevelClearTag
 import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
+import app.lekto.language.languageListNotLoadedTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
@@ -1398,7 +1399,8 @@ class AppSemanticsTest {
     @Suppress("SleepInsteadOfDelay") // The fetch must block its worker: that is the in-flight window under test.
     @Test
     fun reloadingTheLanguageListRefetchesItWhenNoneIsCached() = runComposeUiTest {
-        // The first open finds no cache and the fetch fails: the honest empty state.
+        // The first open finds no cache and the fetch fails: the roster with
+        // `List not loaded`, not an empty page (issue #298).
         // The fetch is held in flight for a moment, the way a loaded machine holds
         // it, because that is where CI lost this test: the surface renders its empty
         // state at once, so a tap on **Reload list** asked for before the first
@@ -1413,16 +1415,18 @@ class AppSemanticsTest {
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             onAllNodesWithText("offline").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("hasn't loaded the list of languages", substring = true).assertIsDisplayed()
+        onNodeWithText("English").assertIsDisplayed()
+        onNodeWithTag(languageListNotLoadedTag("en")).assertTextEquals("List not loaded.")
 
         catalog.failure = null
         catalog.onReload = LanguageCatalogState.Available(listOf(testOfferedLanguage("en")))
         onNodeWithTag(LANGUAGES_RELOAD_TAG).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("List not loaded.", substring = true).fetchSemanticsNodes().isEmpty()
         }
         onNodeWithText("English").assertIsDisplayed()
+        onNodeWithTag(languageListNotLoadedTag("en")).assertDoesNotExist()
     }
 
     @Test

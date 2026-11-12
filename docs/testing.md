@@ -1217,7 +1217,17 @@ failure (issue #149). Since issue #215 the same suite pins that every language r
 exposes its state and its text action together, that a download shows the
 manifest's published size, and that a missing artifact and a corrupt one read
 differently and offer a different action; the row's visual anatomy is
-`LanguagesGoldenTest`'s sheet. And
+`LanguagesGoldenTest`'s sheet. The embedded roster and the one predicate both
+surfaces share (issue #298) are `SampleRosterTest` in `core/commonTest` — the
+roster alone with no manifest read, the intersection in roster order once read,
+the empty intersection, and a refused or malformed manifest leaving the roster
+intact — with `CommittedSampleCatalogTest` in `core/jvmTest` proving the roster
+is the committed catalogue's own languages; `LanguageControllerTest` in
+`app/desktopTest` proves the surface lists the roster with no manifest yet and
+intersects it once read, `LanguagesScreenSemanticsTest` on both lanes proves a
+roster row reads `List not loaded` with no download while keeping its level
+picker, and the whole loop — roster, failed first fetch, reload to the
+intersection — runs through `AppSemanticsTest` on both lanes. And
 the two ways in — the library's header and Settings — the always-visible reload
 after a failed first fetch, setting and clearing a level through the surface,
 downloading a difficulty table, and downloading a dictionary pack and reaching

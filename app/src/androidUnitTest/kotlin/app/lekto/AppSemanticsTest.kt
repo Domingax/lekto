@@ -87,6 +87,7 @@ import app.lekto.language.languageDifficultyDownloadTag
 import app.lekto.language.languageLevelClearTag
 import app.lekto.language.languageLevelOptionTag
 import app.lekto.language.languageLevelPickerTag
+import app.lekto.language.languageListNotLoadedTag
 import app.lekto.language.translationLanguageOptionTag
 import app.lekto.library.LIBRARY_SEARCH_TAG
 import app.lekto.library.LIBRARY_TITLE_TAG
@@ -1325,7 +1326,8 @@ class AppSemanticsTest {
 
     @Test
     fun reloadingTheLanguageListRefetchesItWhenNoneIsCached() {
-        // The first open finds no cache and the fetch fails: the honest empty state.
+        // The first open finds no cache and the fetch fails: the roster with
+        // `List not loaded`, not an empty page (issue #298).
         // The fetch is held in flight for a moment, the way a loaded machine holds
         // it, because that is where CI lost this test: the surface renders its empty
         // state at once, so a tap on **Reload list** asked for before the first
@@ -1340,16 +1342,18 @@ class AppSemanticsTest {
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("offline").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("hasn't loaded the list of languages", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("English").assertIsDisplayed()
+        compose.onNodeWithTag(languageListNotLoadedTag("en")).assertTextEquals("List not loaded.")
 
         catalog.failure = null
         catalog.onReload = LanguageCatalogState.Available(listOf(testOfferedLanguage("en")))
         compose.onNodeWithTag(LANGUAGES_RELOAD_TAG).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
-            compose.onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("List not loaded.", substring = true).fetchSemanticsNodes().isEmpty()
         }
         compose.onNodeWithText("English").assertIsDisplayed()
+        compose.onNodeWithTag(languageListNotLoadedTag("en")).assertDoesNotExist()
     }
 
     @Test

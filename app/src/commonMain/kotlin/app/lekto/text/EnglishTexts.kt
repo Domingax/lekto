@@ -211,6 +211,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.LANGUAGES_EMPTY_UNAVAILABLE to
         "Lekto hasn't loaded the list of languages it offers yet. Reload the list, or check your connection.",
     TextKey.LOADING_LANGUAGES to "Loading the language list…",
+    TextKey.LANGUAGES_LIST_NOT_LOADED to "List not loaded.",
     TextKey.DIFFICULTY_NOT_PUBLISHED to "Lekto doesn't publish word-difficulty data for this language yet.",
     TextKey.DOWNLOAD to "Download",
     TextKey.DOWNLOAD_SIZE to "Download {0}",

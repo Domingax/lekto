@@ -3,6 +3,7 @@ package app.lekto.core.sample
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.derivedMastery
+import app.lekto.core.language.SampleRoster
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -26,6 +27,15 @@ class CommittedSampleCatalogTest {
             assertEquals(6, sample.colourMaps.size, "${sample.language} must carry six maps")
             assertEquals(Sample.identityOf(sample.language), sample.identity)
         }
+    }
+
+    @Test
+    fun `the embedded roster is the committed catalogue's languages`() {
+        assertEquals(
+            committedCatalogue().samples.map(Sample::language),
+            SampleRoster.LANGUAGES,
+            "the roster is generated from the sample catalogue: a sample without a roster entry is never offered",
+        )
     }
 
     @Test
