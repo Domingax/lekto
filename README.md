@@ -40,7 +40,7 @@ screen-reader limitation is documented in [the user guide](guide/desktop.md).
 | `testkit`               | Contract suites and in-memory fakes for the other modules' tests.|
 | `integrations/webdav`   | The first sync driver (JVM + Android).                            |
 | `app`                   | The Compose Multiplatform application (Android + desktop).        |
-| `tools/dictionaries`    | The offline dictionary-pack pipeline.                             |
+| `tools/dictionaries`    | The offline dictionary-pack pipeline and the sample catalogue built from its packs. |
 | `architecture`          | The architecture tests: module boundaries and naming conventions.|
 | `guide`                 | The end-user guide: a VitePress site published on GitHub Pages.  |
 | `docs/adr/`             | Architecture decisions (authoritative).                           |

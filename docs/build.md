@@ -559,6 +559,36 @@ ADR-0046) keys one language's frequency list by the shared index and writes
 It records the edition the index carries. Both assembly modes are deterministic:
 fixed ordering, no wall clock, and byte-identical SQLite across runs on one input.
 
+A **sample run** (`--sample-source-dir`, `--sample-artifacts`, `--sample-manifest`,
+`--sample-output`, issue #297; ADR-0049) reads every authored text in the source
+directory, the published **Language manifest** and the built **Difficulty table**
+and **Dictionary pack**s in the artefacts directory, and writes the one **Sample
+catalogue** the app ships:
+
+```sh
+./gradlew :tools:dictionaries:run --args="--sample-source-dir samples \
+  --sample-artifacts out --sample-manifest out/manifest.json \
+  --sample-output ../core/src/commonMain/resources/samples/catalogue.json"
+```
+
+The source directory holds one JSON text per reading language
+(`samples/en.json`: title, author, attribution and paragraphs). The launch roster
+is eight languages — English, French, Spanish, German, Italian, Portuguese,
+Turkish and Japanese; Korean and Chinese wait until their packs map the surface
+forms a natural sentence produces (ADR-0049). The tool keys its
+words by the reader's word identity — the shared form index's lemma, or the
+normalised surface form — records the table's band for each word, composes the
+**Difficulty table** with the default-mastery rule into six maps, and extracts one
+compact glossary per dictionary the manifest publishes for that language. It also
+records the surface forms whose key differs from the spelling, so the guide's page
+can key a tap before any pack is installed. A language the manifest offers no
+difficulty table or no dictionary for is refused: the guide must not show a colour
+it cannot compute or a tap it cannot answer. The build fails if a glossary misses a
+word the sample highlights. The catalogue is a **Derived asset** shipped in the app
+under `core/src/commonMain/resources/samples/catalogue.json`; regenerate it when
+the table or any published pack changes, in the same commit. ADR-0049 records the
+decision.
+
 A **release assembly run** (`--assemble-release`, issue #306; ADR-0047) reads a
 directory holding the run's per-artefact `manifest-*.json` files and their
 compressed bytes, drops any pack below the 2,000-lemma entry floor, and writes the
@@ -745,7 +775,7 @@ macOS the ICNS.
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
 | `integrations/webdav`   | The first sync driver, isolated from the domain; a JVM (desktop) and an Android target behind one `WebDavTransport` seam (ADR-0026). |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |
-| `tools/dictionaries`    | The offline dictionary-pack pipeline; published by its own CI workflow. |
+| `tools/dictionaries`    | The offline dictionary-pack pipeline and the sample catalogue built from its packs; published by its own CI workflow. |
 | `architecture`          | The architecture tests (ticket #9): the module boundaries and naming conventions as tests. Test-only, never published. |
 
 The module boundaries are a decision, not an accident: the domain never depends

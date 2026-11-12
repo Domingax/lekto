@@ -121,10 +121,20 @@ internal sealed interface CliOptions {
      */
     data class Difficulty(val formIndex: Path, val frequency: Path, val outputDir: Path) : CliOptions
 
+    /**
+     * The sample stage (issue #297): every authored text in [sourceDir] becomes
+     * one **Sample**, coloured by the reading language's built **Difficulty
+     * table** and given one glossary per **Dictionary pack** the published
+     * [manifest] names for that language. The one catalogue written to [output]
+     * is what the app ships.
+     */
+    data class Sample(val sourceDir: Path, val artifactsDir: Path, val manifest: Path, val output: Path) : CliOptions
+
     companion object {
         fun parse(args: Array<String>): CliOptions {
             val values = parseFlags(args)
             return when {
+                values.containsKey("--sample-source-dir") -> sample(values)
                 values.containsKey("--assemble-release") -> assemble(values)
                 values.containsKey("--publish-manifest") -> publish(values)
                 values.containsKey("--measure-input") -> measure(values)
@@ -265,6 +275,13 @@ private fun difficulty(values: Map<String, List<String>>): CliOptions.Difficulty
     outputDir = path(values, "--output-dir"),
 )
 
+private fun sample(values: Map<String, List<String>>): CliOptions.Sample = CliOptions.Sample(
+    sourceDir = path(values, "--sample-source-dir"),
+    artifactsDir = path(values, "--sample-artifacts"),
+    manifest = path(values, "--sample-manifest"),
+    output = path(values, "--sample-output"),
+)
+
 private fun collapseThreshold(values: Map<String, List<String>>): Double {
     val threshold = optionalDouble(values, "--collapse-threshold") ?: SanityGate.DEFAULT_COLLAPSE_THRESHOLD
     require(threshold > 0.0 && threshold <= 1.0) { "--collapse-threshold must be in (0, 1], got $threshold" }
@@ -286,6 +303,10 @@ private val KNOWN_FLAGS = setOf(
     "--language-manifest",
     "--publish-manifest",
     "--assemble-release",
+    "--sample-source-dir",
+    "--sample-artifacts",
+    "--sample-manifest",
+    "--sample-output",
     "--asset-dir",
     "--asset-url-base",
     "--frequency",

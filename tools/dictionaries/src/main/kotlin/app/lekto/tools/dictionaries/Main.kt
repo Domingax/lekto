@@ -48,6 +48,7 @@ private fun run(options: CliOptions) {
         is CliOptions.Extract -> runExtract(options)
         is CliOptions.Pair -> runPair(options)
         is CliOptions.Difficulty -> runDifficulty(options)
+        is CliOptions.Sample -> runSample(options)
     }
 }
 
@@ -226,6 +227,87 @@ internal fun runPublish(options: CliOptions.Publish) {
     Files.writeString(options.manifest, published.canonicalJson())
     println(published.canonicalJson())
 }
+
+/**
+ * Builds the **Sample catalogue** the app ships (issue #297): every authored text
+ * in the source directory becomes one sample, coloured by its reading language's
+ * built **Difficulty table** and given one glossary per **Dictionary pack** the
+ * run's published **Language manifest** names for that language. The roster is
+ * bounded by the sample sources themselves: adding a reading language is a source
+ * and its published packs, never a code branch or a roster edit.
+ *
+ * A language the manifest offers no difficulty table or no dictionary for is
+ * refused, because the guide must not show a colour it cannot compute or a tap it
+ * cannot answer. The catalogue is deterministic and carries no timestamp.
+ */
+internal fun runSample(options: CliOptions.Sample) {
+    val manifest = languageManifestJson.decodeFromString<LanguageManifest>(
+        Files.readString(options.manifest),
+    )
+    val sources = readSampleSources(options.sourceDir)
+    val languages = sources.map { source -> source.language.lowercase() }
+    require(languages.toSet().size == languages.size) {
+        "two sample sources declare the same language: ${languages.joinToString()}"
+    }
+    val artifacts = artifactsByName(options.artifactsDir)
+    val samples = sources.map { source -> sampleFor(source, manifest, artifacts, options.artifactsDir) }
+        .sortedBy(SampleContent::language)
+    val catalogue = SampleCatalogueDocument(SampleFormat.VERSION, samples)
+    val json = catalogue.canonicalJson()
+    options.output.toAbsolutePath().parent?.let(Files::createDirectories)
+    Files.writeString(options.output, json)
+    println(json)
+}
+
+/** Every authored sample text in [directory], in file order. */
+private fun readSampleSources(directory: Path): List<SampleSource> {
+    val sources = Files.list(directory).use { files ->
+        files.filter { file -> file.fileName.toString().endsWith(".json") }
+            .sorted()
+            .map { file -> readSampleSource(Files.readAllBytes(file)) }
+            .toList()
+    }
+    require(sources.isNotEmpty()) { "the sample source directory $directory holds no sample text" }
+    return sources
+}
+
+/** One authored text, built from the artifacts the manifest published for its language. */
+private fun sampleFor(
+    source: SampleSource,
+    manifest: LanguageManifest,
+    artifacts: Map<String, Path>,
+    artifactsDir: Path,
+): SampleContent {
+    val language = source.language.lowercase()
+    val published = manifest.languages.firstOrNull { offered -> offered.language == language }
+        ?: error("the published manifest offers no reading language $language")
+    val difficulty = requireNotNull(published.difficulty) {
+        "the published manifest offers no difficulty table for $language, so a sample has no colours"
+    }
+    require(published.dictionaries.isNotEmpty()) {
+        "the published manifest offers no dictionary for $language, so a sample would have no meanings"
+    }
+    val difficultyName = difficulty.name.removeSuffix(".gz")
+    val difficultyFile = artifacts[difficultyName]
+        ?: error("the manifest publishes $difficultyName but $artifactsDir does not hold it")
+    val packFiles = published.dictionaries.associate { dictionary ->
+        val sqlite = dictionary.name.removeSuffix(".gz")
+        val file = artifacts[sqlite]
+            ?: error("the manifest publishes $sqlite but $artifactsDir does not hold it")
+        dictionary.translationLanguage to file
+    }.toSortedMap()
+    return SampleBuilder(
+        source = source.copy(language = language),
+        difficultyByKey = readDifficultyTable(difficultyFile),
+        formIndex = readFormTable(packFiles.values.first()),
+        packs = packFiles.mapValues { (_, file) -> readPackEntries(file) },
+    ).build()
+}
+
+/** Every `.sqlite` artefact in one built-data directory, by its file name. */
+private fun artifactsByName(directory: Path): Map<String, Path> = Files.list(directory).use { files ->
+    files.filter { file -> file.fileName.toString().endsWith(".sqlite") }.toList()
+}.associate { file -> file.fileName.toString() to file }
 
 private fun extractEdition(
     input: Path,
