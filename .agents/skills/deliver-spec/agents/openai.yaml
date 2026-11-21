@@ -1,0 +1,5 @@
+interface:
+  display_name: "Deliver Spec"
+  short_description: "Spec to a landed milestone: deliver agents per ticket, one PR, milestone report"
+policy:
+  allow_implicit_invocation: false

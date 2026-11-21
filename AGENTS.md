@@ -132,11 +132,6 @@ review holds those. `./gradlew check` installs the hook, as does, by hand:
 git config --local core.hooksPath .githooks
 ```
 
-### Branches
-
-One branch per issue, named `issue-<n>` (for example `issue-3`). Branch from
-`main` and open the pull request against `main`.
-
 ### Pull requests
 
 Keep the change small and single-purpose, link its issue with `Closes #<n>`, and
