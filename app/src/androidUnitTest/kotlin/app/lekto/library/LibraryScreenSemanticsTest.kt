@@ -456,7 +456,7 @@ class LibraryScreenSemanticsTest {
         compose.onNodeWithTag(libraryRowTag(sampleRow.book.id)).performTouchInput { swipeLeft() }
         compose.onNodeWithText("Remove the sample?").assertIsDisplayed()
         compose.onNodeWithText("Your own books and words stay.", substring = true).assertIsDisplayed()
-        assertEquals(0, removed, "the sample must stay until the reader confirms")
+        assertEquals("the sample must stay until the reader confirms", 0, removed)
 
         compose.onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
 
