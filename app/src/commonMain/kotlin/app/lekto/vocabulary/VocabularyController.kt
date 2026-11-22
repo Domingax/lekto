@@ -10,6 +10,8 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.core.vocabulary.VocabularyEntryTime
+import kotlin.time.Instant
 
 /**
  * The reader's live view of the user's saved words (issue #22).
@@ -31,12 +33,15 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
 
     private val saved = mutableStateMapOf<WordKey, VocabularyEntry>()
 
+    /** When each saved word's record last changed: the list's recency (ADR-0050). */
+    private val changedAt = mutableStateMapOf<WordKey, Instant>()
+
     /** Bumped on every save or delete, so a reader memoised on it recolours at once. */
     var revision by mutableStateOf(0)
         private set
 
     init {
-        vocabulary.all().forEach { entry -> saved[entry.key] = entry }
+        adopt(vocabulary.allWithTimes())
     }
 
     /** The level to paint each word, defaulting an unsaved word to [MasteryLevel.UNKNOWN]. */
@@ -46,16 +51,23 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
     fun entryFor(key: WordKey): VocabularyEntry? = saved[key]
 
     /**
-     * Every saved entry, ordered by surface then key, so the vocabulary list is
-     * stable. A snapshot read, so the list recomposes when a word is saved or
-     * deleted.
+     * Every saved entry, most recently modified first, so the list opens on what
+     * the reader last touched. The record's update time orders it, with the word
+     * itself breaking a tie; the screen freezes the order it opens on (issue #280).
      */
     fun all(): List<VocabularyEntry> = saved.values.sortedWith(entryOrder)
 
-    /** Saves [entry] to the vault and folds it into the reader's state. */
-    fun save(entry: VocabularyEntry) {
-        vocabulary.save(entry)
-        saved[entry.key] = entry
+    /**
+     * Saves [entry] to the vault and folds it into the reader's state. [bookId]
+     * is the book the reader saved the word from (issue #280): it is added to the
+     * entry's history once, keeping every book the record already names. A save
+     * that names no book — a level change from the list — leaves the history as it
+     * was.
+     */
+    fun save(entry: VocabularyEntry, bookId: String? = null) {
+        val merged = entry.remembering(bookId)
+        changedAt[merged.key] = vocabulary.save(merged)
+        saved[merged.key] = merged
         revision++
         changes.contentChanged()
     }
@@ -67,9 +79,9 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
      * the vault read is blocking, so the caller runs it off the UI thread.
      */
     fun refresh() {
-        val entries = vocabulary.all()
         saved.clear()
-        entries.forEach { entry -> saved[entry.key] = entry }
+        changedAt.clear()
+        adopt(vocabulary.allWithTimes())
         revision++
     }
 
@@ -81,16 +93,35 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
     fun delete(key: WordKey) {
         vocabulary.delete(key)
         saved.remove(key)
+        changedAt.remove(key)
         revision++
         changes.contentChanged()
     }
 
-    private companion object {
-        /** Alphabetical by surface, then by identity, so two spellings never tie arbitrarily. */
-        val entryOrder = compareBy<VocabularyEntry>(
-            { entry -> entry.surface.lowercase() },
-            { entry -> entry.key.language.orEmpty() },
-            { entry -> entry.key.key },
-        )
+    /** Folds a timed read of the vault into the live state. */
+    private fun adopt(entries: List<VocabularyEntryTime>) {
+        entries.forEach { saved ->
+            this.saved[saved.entry.key] = saved.entry
+            changedAt[saved.entry.key] = saved.updatedAt
+        }
     }
+
+    /**
+     * [entry] with [bookId] added to its history, after every book the stored
+     * entry already names. The same book twice is one id, so saving the word
+     * again while reading the same book changes nothing (ADR-0050).
+     */
+    private fun VocabularyEntry.remembering(bookId: String?): VocabularyEntry {
+        if (bookId == null) return this
+        val history = saved[key]?.bookIds.orEmpty() + bookIds + bookId
+        return copy(bookIds = history.distinct())
+    }
+
+    /** Most recently modified first, then by surface and identity so a tie never lands arbitrarily. */
+    private val entryOrder = compareByDescending<VocabularyEntry> { entry ->
+        changedAt[entry.key] ?: Instant.DISTANT_PAST
+    }
+        .thenBy { entry -> entry.surface.lowercase() }
+        .thenBy { entry -> entry.key.language.orEmpty() }
+        .thenBy { entry -> entry.key.key }
 }

@@ -81,9 +81,13 @@ class MasteryController(
         return if (hasSignal) mastery.levelOf(key) else MasteryLevel.FAMILIAR
     }
 
-    /** Saves [entry] to the vault and folds it into the reader's state. */
-    fun save(entry: VocabularyEntry) {
-        vocabulary.save(entry)
+    /**
+     * Saves [entry] to the vault and folds it into the reader's state. [bookId] is
+     * the book the reader was reading when they saved it, so the entry remembers
+     * where the word came from (issue #280; ADR-0050).
+     */
+    fun save(entry: VocabularyEntry, bookId: String? = null) {
+        vocabulary.save(entry, bookId)
         revision++
     }
 
