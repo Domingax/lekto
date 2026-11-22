@@ -36,6 +36,12 @@ import app.lekto.dictionary.LOOKUP_INSTALL_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
+import app.lekto.reader.MasteryPalette
+import app.lekto.reader.ReaderPage
+import app.lekto.reader.ReaderStyles
+import app.lekto.reader.buildChapterText
+import app.lekto.reader.buildPageTokens
+import app.lekto.reader.ruleUnder
 import app.lekto.library.LibraryUiState
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
@@ -202,7 +208,41 @@ class GuideScreenSemanticsTest {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().assertIsDisplayed()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theSheetHidesTheWayForwardAndClosingBringsItBack() = runComposeUiTest {
+        val lookupOpen = mutableStateOf(true)
+        setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme {
+                    GuideScreen(
+                        state = GuideUiState(
+                            stage = GuideStage.TAP,
+                            sample = sample,
+                            plain = false,
+                            lookupOpen = lookupOpen.value,
+                            tapped = note("calm"),
+                        ),
+                        languages = sampleRosterLanguages(),
+                        document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter),
+                        notes = guideNotes(sample, GUIDE_DEFAULT_BAND, segmenter, "fr"),
+                        translationLanguage = "fr",
+                    )
+                }
+            }
+        }
+
+        // The sheet is the interaction: while it is open the guide offers nothing under it.
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertDoesNotExist()
+
+        lookupOpen.value = false
+        waitForIdle()
+
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -318,6 +358,40 @@ class GuideScreenSemanticsTest {
             waitForIdle()
             onNodeWithTag(GUIDE_PAGE_TAG).assertIsDisplayed()
             onNodeWithTag(app.lekto.reader.READER_PAGE_TAG).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun aHighlightedWordsRuleStartsAtItsWordsMeasuredLeftEdge() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
+
+        val document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter)
+        val text = onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
+        val results = mutableListOf<TextLayoutResult>()
+        text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+        val layout = results.first()
+        val styles = ReaderStyles.of(document.preferences, MasteryPalette.Light)
+        val chapter = buildChapterText(document.text, styles)
+        val tokens = buildPageTokens(
+            chapterText = chapter,
+            page = ReaderPage(0, chapter.length),
+            renderer = document.renderer,
+            chapter = document.text,
+            styles = styles,
+        )
+        val highlighted = tokens.words.filter { word ->
+            document.renderer.mastery.levelOf(word.key).highlighted
+        }
+
+        assertTrue(highlighted.isNotEmpty(), "the demonstrated paragraph colours at least one word")
+        highlighted.forEach { word ->
+            val rule = ruleUnder(layout, word).first()
+            assertEquals(
+                layout.getBoundingBox(word.start).left,
+                rule.left,
+                0.01f,
+                "the rule under ${word.surface} starts at the word's measured left edge",
+            )
         }
     }
 

@@ -90,7 +90,7 @@ import app.lekto.guide.GuideActions
 import app.lekto.guide.GuideController
 import app.lekto.guide.GuideDownloadActions
 import app.lekto.guide.GuideDownloadController
-import app.lekto.guide.GuideDownloadLine
+import app.lekto.guide.GuideArrival
 import app.lekto.guide.GuideDownloadPhase
 import app.lekto.guide.GuideDownloadUiState
 import app.lekto.guide.GuideProgressController
@@ -148,7 +148,6 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
-import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.theme.appThemeScheme
@@ -1072,25 +1071,21 @@ private fun LibraryDestination(
     onOpen: (ReadingSession) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        LibraryScreen(
-            state = state,
-            actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
-            covers = remember(environment.library) { LibraryBookCovers(environment.library) },
-            snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
-            levelLine = levelLine,
-            modifier = Modifier.weight(1f),
-        )
-        if (download.phase != GuideDownloadPhase.IDLE) {
-            GuideDownloadLine(
-                download,
-                GuideDownloadActions(
-                    onStop = onStopDownload,
-                    onRetry = onRetryDownload,
-                    onResume = onResumeDownload,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+        GuideArrival(
+            download = download,
+            downloadActions = GuideDownloadActions(
+                onStop = onStopDownload,
+                onRetry = onRetryDownload,
+                onResume = onResumeDownload,
+            ),
+        ) {
+            LibraryScreen(
+                state = state,
+                actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
+                covers = remember(environment.library) { LibraryBookCovers(environment.library) },
+                snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
+                levelLine = levelLine,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
