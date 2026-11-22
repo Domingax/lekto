@@ -70,8 +70,9 @@ The first launch also downloads the language's word-difficulty data and offline
 dictionary in the background. One line under the shelf says what is arriving and
 its published size while it runs, with a **Stop** action beside it; it then reads
 `Installed`, `Stopped` or why it did not finish. A stopped download offers
-**Resume** and a failed one offers **Retry** in that same line, and the Languages
-surface can download it again too.
+**Resume** and a failed one offers **Retry** in that same line; a format this
+version cannot read, or a language that is not published yet, says so without an
+action it cannot change, and the Languages surface can download it again too.
 
 Until you set a **Reader level** for the sample's language, the shelf carries
 `Your reading level is not set yet. Settings ▸ Languages.` The line goes as soon

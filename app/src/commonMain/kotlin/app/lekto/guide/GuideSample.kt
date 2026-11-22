@@ -23,7 +23,10 @@ import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderText
 import app.lekto.reader.WordTap
 
-/** The band the guide paints the sample at before the reader chooses one, and after **Skip**. */
+/**
+ * The band the guide paints the sample at from entry and writes when the reader
+ * starts reading without choosing another; `Skip` leaves it undeclared.
+ */
 val GUIDE_DEFAULT_BAND: CefrLevel = CefrLevel.A1
 
 /**
