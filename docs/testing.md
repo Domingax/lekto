@@ -298,8 +298,9 @@ and the page clipped rather than repaginated. The lookup sheet adds one
 (issue #210): the sheet raised over a page at the 45 % cap, square at its top
 edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
 meta bars, the two real icons, the numbered senses with their translations, the
-level named beside the five filled chip frames (the current one ringed in ink)
-and the references as one muted, content-aligned line; the offline sheet swaps
+unsaved footer's state line in the muted ink beside the five filled chip frames
+(none ringed, because no level is saved yet) and the references as one muted,
+content-aligned line; the offline sheet swaps
 the senses for the honest message. The phrase sheet adds
 `phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
 (issue #211): the same shell with the phrase in the serif band and the close icon,
@@ -1043,8 +1044,12 @@ load once, an unsaved word is unknown, a save bumps the revision that recolours,
 and a previous session's save is present at startup — is a `VocabularyControllerTest`
 in `app/desktopTest`, and the panel's level chips are its save (issue #210):
 `WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
-no separate Save control exists, that the current level is named beside the
-chips, and that the sheet covers at most 45 % of the screen. `AppSemanticsTest`
+no separate Save control exists, that the sheet covers at most 45 % of the screen,
+and, since issue #279, that the footer states the word's state rather than a
+selection: `Not saved` or `Likely <level>` while it is unsaved with no chip
+marked, `Saved · <level>` and the marked chip once it is, and `Couldn't save` when
+the vault refuses the write. `VocabularyControllerTest` pins that a refused write
+is reported and leaves the word unsaved. `AppSemanticsTest`
 also drives the reader's lift: a word at the bottom of the page is tapped, the
 sheet opens, and the word's bounds are asserted above the sheet's top while the
 page's words stay put — the page rises under the sheet without repaginating.

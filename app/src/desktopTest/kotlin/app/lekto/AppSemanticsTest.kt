@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
@@ -69,6 +70,7 @@ import app.lekto.core.theme.AppTheme
 import app.lekto.core.theme.AppThemeStore
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vault.VersionedRecord
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
@@ -140,6 +142,7 @@ import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
+import app.lekto.testkit.FlakyVaultFileSystem
 import app.lekto.testkit.InMemoryAppThemeStore
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
@@ -843,8 +846,8 @@ class AppSemanticsTest {
         // save defaults to the familiar level (ADR-0030).
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog and no Save control: the reader's colour is the
-        // confirmation, and the footer already names the level.
-        onNodeWithText("Familiar").assertIsDisplayed()
+        // confirmation, and the footer states the fact (issue #279).
+        onNodeWithText("Saved · Familiar").assertIsDisplayed()
     }
 
     @Test
@@ -864,6 +867,8 @@ class AppSemanticsTest {
             vocabulary.all().single().mastery == MasteryLevel.LEARNED
         }
         assertEquals(1, vocabulary.all().size, "changing the level must not add a second entry")
+        // The footer follows the fact: the new level, not the old one (issue #279).
+        onNodeWithText("Saved · Learned").assertIsDisplayed()
     }
 
     @Test
@@ -878,7 +883,7 @@ class AppSemanticsTest {
         tapFirstWord()
 
         // The entry survived the restart: the sheet opens on its level.
-        onNodeWithText("Learned").assertIsDisplayed()
+        onNodeWithText("Saved · Learned").assertIsDisplayed()
         onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsSelected()
     }
 
@@ -902,9 +907,35 @@ class AppSemanticsTest {
         tapFirstWord()
         // The same word (page two starts with "On.", so its key is "on"), so its
         // entry updates in place rather than adding a second one.
-        onNodeWithText("Familiar").assertIsDisplayed()
+        onNodeWithText("Saved · Familiar").assertIsDisplayed()
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
         assertEquals(1, vocabulary.all().size)
+    }
+
+    @Test
+    fun aRefusedSaveSaysSoAndNoChipClaimsTheSave() = runComposeUiTest {
+        // A full disk refuses the write: the footer must say it failed and the word
+        // must stay unsaved, not show a receipt for a record the vault never took
+        // (issue #279).
+        val files = FlakyVaultFileSystem().apply { failOn = { path -> path.startsWith("vocabulary/") } }
+        val vocabulary = VaultVocabulary(
+            JsonVaultStore(files),
+            InMemoryTombstoneStore(),
+            deterministicSeams(),
+            DeviceId("device-a"),
+        )
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        openBook()
+        tapFirstWord()
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithText("Couldn't save").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsNotSelected()
+        assertTrue(vocabulary.all().isEmpty(), "the vault refused the write, so no entry may exist")
     }
 
     @Test

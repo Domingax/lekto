@@ -671,6 +671,10 @@ private fun ReaderDestination(
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
+    // The last save's outcome (issue #279): a refused vault write is stated by the
+    // footer instead of vanishing as an unhandled coroutine failure. Cleared when
+    // another word is tapped and before each new attempt.
+    var saveFailed by remember { mutableStateOf(false) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
     val wordMastery = mastery?.mastery ?: environment.mastery
     val translation = rememberTranslation(environment, scope, languageSettings)
@@ -681,9 +685,14 @@ private fun ReaderDestination(
         pronunciation = pronunciationFor(selection, speech, speak),
         vocabulary = VocabularyPanel(
             entry = selection?.let { selected -> mastery?.entryFor(selected.tap.token.key) },
-            onSave = { level -> selection?.let { chosen -> saveWord(mastery, scope, environment, chosen, level) } },
-            defaultLevel = selection?.let { selected -> mastery?.freshSaveLevel(selected.tap.token.key) }
-                ?: MasteryLevel.RECOGNIZED,
+            onSave = { level ->
+                selection?.let { chosen ->
+                    saveFailed = false
+                    saveWord(mastery, scope, environment, chosen, level) { landed -> saveFailed = !landed }
+                }
+            },
+            suggestedLevel = selection?.let { selected -> mastery?.freshSaveLevel(selected.tap.token.key) },
+            saveFailed = saveFailed,
         ),
         translation = translation.state,
         translationLanguage = chosenLanguage,
@@ -693,6 +702,7 @@ private fun ReaderDestination(
             translation.dismiss()
             selection = WordSelection(tap, result)
             speech = null
+            saveFailed = false
         },
         onPhraseSelected = { chosen ->
             selection = null
@@ -739,7 +749,9 @@ private fun pronunciationFor(
  * Saves the word behind [selection] at [level] (issue #22): the entry carries the
  * token's identity — the lemma when the dictionary knew one — its translation
  * and context sentence, so an inflected form updates its lemma's entry. The vault
- * write is blocking, so it runs on the environment's dispatcher.
+ * write is blocking, so it runs on the environment's dispatcher, and its outcome
+ * reaches [onOutcome] on the composition's thread so the footer can state a
+ * refusal (issue #279).
  */
 @Suppress("LongParameterList") // The save's inputs are the reader's own pieces; a bundle would only hide that.
 private fun saveWord(
@@ -748,6 +760,7 @@ private fun saveWord(
     environment: AppEnvironment,
     selection: WordSelection,
     level: MasteryLevel,
+    onOutcome: (Boolean) -> Unit,
 ) {
     mastery ?: return
     val entry = VocabularyEntry(
@@ -757,7 +770,10 @@ private fun saveWord(
         contextSentence = selection.tap.contextSentence,
         mastery = level,
     )
-    scope.launch { withContext(environment.dispatcher) { mastery.save(entry) } }
+    scope.launch {
+        val landed = withContext(environment.dispatcher) { mastery.save(entry) }
+        onOutcome(landed)
+    }
 }
 
 /**

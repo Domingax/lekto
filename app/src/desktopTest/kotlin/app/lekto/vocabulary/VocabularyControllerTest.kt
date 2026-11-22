@@ -4,8 +4,11 @@ import app.lekto.LocalChanges
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.JsonVaultStore
+import app.lekto.core.vault.VaultStore
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
+import app.lekto.testkit.FlakyVaultFileSystem
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.deterministicSeams
@@ -15,13 +18,15 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
  * The reader's live vocabulary state (issue #22): it loads the vault once, an
  * unsaved word is unknown, a save drives both the mastery the reader paints and
  * the revision that forces it to repaint, and a save from a previous session is
- * present on construction.
+ * present on construction. A write the vault refuses is reported rather than
+ * thrown, so the lookup footer can say it failed (issue #279).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the controller's contract.
@@ -30,12 +35,18 @@ class VocabularyControllerTest {
     private val key = WordKey("en", "lantern")
 
     private fun controller(
-        vault: InMemoryVaultStore = InMemoryVaultStore(),
+        vault: VaultStore = InMemoryVaultStore(),
         changes: LocalChanges = LocalChanges(),
     ): VocabularyController = VocabularyController(
         VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a")),
         changes,
     )
+
+    /** A controller over a vault that refuses every vocabulary write, as a full disk would. */
+    private fun refusingController(): VocabularyController {
+        val files = FlakyVaultFileSystem().apply { failOn = { path -> path.startsWith("vocabulary/") } }
+        return controller(JsonVaultStore(files))
+    }
 
     @Test
     fun anUnsavedWordIsUnknown() {
@@ -60,6 +71,28 @@ class VocabularyControllerTest {
         controller.save(VocabularyEntry(key, "lantern"))
 
         assertEquals(before + 1, controller.revision)
+    }
+
+    @Test
+    fun aLandedSaveSaysSo() {
+        assertTrue(
+            controller().save(VocabularyEntry(key, "lantern")),
+            "a save the vault accepted must report that it landed",
+        )
+    }
+
+    @Test
+    fun aRefusedWriteIsReportedAndLeavesTheWordUnsaved() {
+        // #279: a failed write must not read `Saved`. The controller reports the
+        // outcome so the footer can state it, and changes nothing on the way out.
+        val controller = refusingController()
+        val before = controller.revision
+
+        val landed = controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.LEARNED))
+
+        assertFalse(landed, "the vault refused the write, so the save must report the failure")
+        assertEquals(null, controller.entryFor(key), "a refused write leaves the word unsaved")
+        assertEquals(before, controller.revision, "nothing was saved, so nothing recolours")
     }
 
     @Test

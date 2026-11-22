@@ -81,10 +81,16 @@ class MasteryController(
         return if (hasSignal) mastery.levelOf(key) else MasteryLevel.FAMILIAR
     }
 
-    /** Saves [entry] to the vault and folds it into the reader's state. */
-    fun save(entry: VocabularyEntry) {
-        vocabulary.save(entry)
-        revision++
+    /**
+     * Saves [entry] to the vault and folds it into the reader's state, returning
+     * whether the write landed (issue #279). Bumping [revision] on a landed write
+     * is what recolours the open book; a refused write changes nothing, so the
+     * footer can say so instead of showing a save that did not happen.
+     */
+    fun save(entry: VocabularyEntry): Boolean {
+        val landed = vocabulary.save(entry)
+        if (landed) revision++
+        return landed
     }
 
     /** Deletes [key]'s entry from the vault and the reader's state. */

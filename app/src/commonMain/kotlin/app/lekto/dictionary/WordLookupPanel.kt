@@ -29,6 +29,7 @@ import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasterySelector
+import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
@@ -49,7 +50,7 @@ internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
 /** The test tag on the sheet's close action. */
 internal const val LOOKUP_CLOSE_TAG: String = "lookup-close"
 
-/** The test tag on the current level's name and label, so a layout test can compare it with the chips. */
+/** The test tag on the footer's state line, so a layout test can compare it with the chips. */
 internal const val LOOKUP_LEVEL_TAG: String = "lookup-level"
 
 /** The test tag on the sheet itself, so a layout test can read how much of the screen it takes. */
@@ -69,19 +70,24 @@ private val ReferenceGap = 4.dp
 data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = null)
 
 /**
- * The lookup panel's vocabulary controls (issue #22): the saved [entry] for the
- * tapped word (`null` until it is saved) and the [onSave] that saves it or moves
- * it to another level. [defaultLevel] is the level a fresh save starts at, so
- * the footer names a level before the word is saved; one tap on a level chip
- * saves at that level (issue #210).
+ * The lookup panel's vocabulary controls (issues #22 and #279): the saved [entry]
+ * for the tapped word (`null` until it is saved), the [onSave] that saves it or
+ * moves it to another level, the [suggestedLevel] a fresh save would start at,
+ * and whether the last write [saveFailed]. One tap on a level chip saves at that
+ * level (issue #210).
+ *
+ * The footer states a fact or a suggestion, never an intention: the saved level
+ * is a fact, the suggested one is only likely, and neither is a selection until
+ * the vault holds the entry.
  */
 data class VocabularyPanel(
     val entry: VocabularyEntry?,
     val onSave: (MasteryLevel) -> Unit,
-    val defaultLevel: MasteryLevel = MasteryLevel.RECOGNIZED,
+    val suggestedLevel: MasteryLevel? = null,
+    val saveFailed: Boolean = false,
 ) {
-    /** The level the selector marks: the saved one, or the fresh default. */
-    val level: MasteryLevel get() = entry?.mastery ?: defaultLevel
+    /** The level the word is saved at, or `null` while it is not — the fact the footer states. */
+    val savedLevel: MasteryLevel? get() = entry?.mastery
 }
 
 /**
@@ -104,10 +110,11 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * screen, so the page stays visible and the touched word stays washed above it.
  * Its header is the word in the serif with its part of speech and pronunciation,
  * the speaker and the close as icons; its body lists the senses, each with its
- * translation; its
- * footer names the level and carries the five chips. **There is no Save button**:
- * a level *is* the save, one tap for one intention, and the reader's colour
- * updating is the only confirmation.
+ * translation; its footer **states the word's state** — `Saved · <level>` once it
+ * is stored, `Likely <level>` or `Not saved` before, `Couldn't save` after a
+ * refused write — and carries the five chips (issue #279). **There is no Save
+ * button**: a level *is* the save, one tap for one intention, and the line
+ * updating is the receipt.
  *
  * The sheet swallows taps that land on it, so only a tap truly outside it — which
  * its [app.lekto.ui.DismissScrim] handles — dismisses it; a tap on the reader
@@ -204,15 +211,16 @@ private fun Meta(entries: List<DictionaryEntry>) {
 }
 
 /**
- * The pinned footer: the level that saves, then the external references as one
- * muted line (docs/design.md §7.3). The level's **name** stands beside the chips,
- * so the numbers never need a legend, and one tap on a chip stores the word at
- * that level. In the fixed footer the two stay reachable however long the senses
- * run.
+ * The pinned footer: the word's state, then the level that saves, then the
+ * external references as one muted line (docs/design.md §7.3). The state line
+ * names the saved level as a fact, the suggested one as only likely, and a
+ * refused write as a failure — so one tap on a chip stores the word and the
+ * footer states what happened (issue #279). In the fixed footer the three blocks
+ * stay reachable however long the senses run.
  *
- * In the context column there is no room for the name beside five chips (issue
- * #199), so it stands above them: the same two blocks, stacked, rather than a
- * name broken mid-word.
+ * In the context column there is no room for the line beside five chips (issue
+ * #199), so it stands above them: the same blocks, stacked, rather than a line
+ * broken mid-word.
  */
 @Composable
 private fun Footer(
@@ -223,14 +231,52 @@ private fun Footer(
 ) {
     SheetDivider()
     MasterySelector(
-        level = vocabulary.level,
+        level = vocabulary.savedLevel,
         onSelect = vocabulary.onSave,
         chipTag = ::masteryTag,
         levelTag = LOOKUP_LEVEL_TAG,
         modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
         stacked = inColumn,
+        name = { StateLine(vocabulary) },
     )
     References(shortcuts, onOpenShortcut)
+}
+
+/**
+ * The footer's sentence: `Saved · <level>` in the ink once the vault holds the
+ * word, `Couldn't save` after a refused write, `Likely <level>` for a suggestion,
+ * and `Not saved` when there is none. A suggestion is never marked like a fact,
+ * so the level is muted until it is true.
+ */
+@Composable
+private fun StateLine(vocabulary: VocabularyPanel) {
+    val saved = vocabulary.savedLevel
+    Text(
+        text = stateText(vocabulary, saved),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (saved != null && !vocabulary.saveFailed) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+    )
+}
+
+/** The footer's text for [vocabulary]'s state, in the reader's language. */
+@Composable
+private fun stateText(vocabulary: VocabularyPanel, saved: MasteryLevel?): String {
+    val texts = LocalAppTexts.current
+    return when {
+        vocabulary.saveFailed -> texts[TextKey.LOOKUP_STATE_FAILED]
+
+        saved != null -> texts.message(AppMessage.of(TextKey.LOOKUP_STATE_SAVED, texts.masteryName(saved)))
+
+        vocabulary.suggestedLevel != null -> texts.message(
+            AppMessage.of(TextKey.LOOKUP_STATE_LIKELY, texts.masteryName(vocabulary.suggestedLevel)),
+        )
+
+        else -> texts[TextKey.LOOKUP_STATE_NOT_SAVED]
+    }
 }
 
 /**
