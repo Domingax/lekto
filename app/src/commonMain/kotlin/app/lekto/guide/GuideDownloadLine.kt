@@ -3,6 +3,7 @@ package app.lekto.guide
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -11,8 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import app.lekto.language.artifactSizeText
 import app.lekto.text.AppMessage
+import app.lekto.text.AppTexts
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
+import app.lekto.theme.LektoSpacing
 import app.lekto.ui.TextAction
 
 /** The test tag on the guide's download line, so a UI test can read it apart from the page. */
@@ -40,11 +43,15 @@ data class GuideDownloadActions(
 )
 
 /**
- * The background download in one line (issue #277): what it fetches, its published
- * size while it runs, and the action its phase offers — `Stop`, `Retry` or
- * `Resume`. It appears on the language question and on the shelf after the
- * arrival, so the reader can always tell whether the table and dictionary are on
- * their way, installed, stopped or failed, and can act on the answer.
+ * The background download in one block (issue #277): what it fetches, its
+ * published size while it runs, and the action its phase offers — `Stop` beside
+ * the running line, `Retry` or `Resume` on its own row under the message. It
+ * appears on the language question and on the shelf after the arrival, so the
+ * reader can always tell whether the table and dictionary are on their way,
+ * installed, stopped or failed, and can act on the answer.
+ *
+ * The failure and stopped actions are separate rows, never a word glued to the
+ * end of the sentence: the eye must not read `…votreRéessayer`.
  */
 @Composable
 internal fun GuideDownloadLine(
@@ -54,52 +61,71 @@ internal fun GuideDownloadLine(
 ) {
     if (state.phase == GuideDownloadPhase.IDLE) return
     val texts = LocalAppTexts.current
-    Row(
-        modifier.fillMaxWidth().testTag(GUIDE_DOWNLOAD_TAG),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = title(state, texts.languageName(state.language.orEmpty())),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = status(state),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    Column(modifier.fillMaxWidth().testTag(GUIDE_DOWNLOAD_TAG)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title(state, texts.languageName(state.language.orEmpty())),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = status(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (state.isRunning && actions.onStop != null) {
+                DownloadAction(
+                    text = texts[TextKey.GUIDE_DOWNLOAD_STOP],
+                    tag = GUIDE_DOWNLOAD_STOP_TAG,
+                    onClick = actions.onStop,
+                )
+            }
         }
-        when {
-            state.isRunning && actions.onStop != null -> DownloadAction(
-                text = texts[TextKey.GUIDE_DOWNLOAD_STOP],
-                tag = GUIDE_DOWNLOAD_STOP_TAG,
-                onClick = actions.onStop,
-            )
-
-            state.isFailed() && actions.onRetry != null -> DownloadAction(
-                text = texts[TextKey.GUIDE_DOWNLOAD_RETRY],
-                tag = GUIDE_DOWNLOAD_RETRY_TAG,
-                onClick = actions.onRetry,
-            )
-
-            state.phase == GuideDownloadPhase.STOPPED && actions.onResume != null -> DownloadAction(
-                text = texts[TextKey.GUIDE_DOWNLOAD_RESUME],
-                tag = GUIDE_DOWNLOAD_RESUME_TAG,
-                onClick = actions.onResume,
+        followUpAction(state, actions, texts)?.let { action ->
+            DownloadAction(
+                text = action.text,
+                tag = action.tag,
+                onClick = action.onClick,
+                modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
             )
         }
     }
+}
+
+/** One action on its own row: the retry a failure offers, or the resume a stop offers. */
+private class FollowUpAction(val text: String, val tag: String, val onClick: () -> Unit)
+
+/** The action that stands under the message, when the phase and the surface offer one. */
+private fun followUpAction(
+    state: GuideDownloadUiState,
+    actions: GuideDownloadActions,
+    texts: AppTexts,
+): FollowUpAction? = when {
+    state.isFailed() && actions.onRetry != null -> FollowUpAction(
+        text = texts[TextKey.GUIDE_DOWNLOAD_RETRY],
+        tag = GUIDE_DOWNLOAD_RETRY_TAG,
+        onClick = actions.onRetry,
+    )
+
+    state.phase == GuideDownloadPhase.STOPPED && actions.onResume != null -> FollowUpAction(
+        text = texts[TextKey.GUIDE_DOWNLOAD_RESUME],
+        tag = GUIDE_DOWNLOAD_RESUME_TAG,
+        onClick = actions.onResume,
+    )
+
+    else -> null
 }
 
 /** Whether the line's phase is one the reader can retry: an unreachable manifest or a failed artefact. */
 private fun GuideDownloadUiState.isFailed(): Boolean =
     phase == GuideDownloadPhase.UNAVAILABLE || phase == GuideDownloadPhase.FAILED
 
-/** One action at the line's trailing edge. */
+/** One action at the line's trailing edge, or under its message. */
 @Composable
-private fun DownloadAction(text: String, tag: String, onClick: () -> Unit) {
-    TextAction(onClick = onClick, modifier = Modifier.testTag(tag)) {
+private fun DownloadAction(text: String, tag: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TextAction(onClick = onClick, modifier = modifier.testTag(tag)) {
         Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }

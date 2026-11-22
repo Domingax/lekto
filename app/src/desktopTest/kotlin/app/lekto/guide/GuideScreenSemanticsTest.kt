@@ -458,6 +458,10 @@ class GuideScreenSemanticsTest {
         )
 
         onNodeWithText("The download did not finish. Check your connection.").assertIsDisplayed()
+        val message = onNodeWithText("The download did not finish. Check your connection.")
+            .fetchSemanticsNode().boundsInRoot
+        val retry = onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue(retry.top >= message.bottom, "Retry stands below the message: $message / $retry")
         onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).performClick()
 
         assertEquals(1, retried)
@@ -488,6 +492,9 @@ class GuideScreenSemanticsTest {
         )
 
         onNodeWithText("Stopped").assertIsDisplayed()
+        val message = onNodeWithText("Stopped").fetchSemanticsNode().boundsInRoot
+        val resume = onNodeWithTag(GUIDE_DOWNLOAD_RESUME_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue(resume.top >= message.bottom, "Resume stands below the message: $message / $resume")
         onNodeWithTag(GUIDE_DOWNLOAD_RESUME_TAG).performClick()
 
         assertEquals(1, resumed)
