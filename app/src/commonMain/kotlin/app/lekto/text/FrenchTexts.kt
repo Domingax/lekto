@@ -364,7 +364,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Voici une page de votre livre.",
     TextKey.GUIDE_PAGE_PLAIN_INTRO to "Rien n'est encore coloré. Regardez.",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur.",
-    TextKey.GUIDE_PAGE_COLOURED_INTRO to "Quatre mots de cette page, quatre niveaux.",
     TextKey.GUIDE_TAP_TITLE to "Touchez un mot pour l'enregistrer.",
     TextKey.GUIDE_TAP_INTRO to
         "La fiche répond depuis l'exemple, avant tout dictionnaire installé.",

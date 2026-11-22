@@ -349,7 +349,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Here is a page of your book.",
     TextKey.GUIDE_PAGE_PLAIN_INTRO to "Nothing is coloured yet. Look.",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "The more you know, the less colour.",
-    TextKey.GUIDE_PAGE_COLOURED_INTRO to "Four words on this page, four levels.",
     TextKey.GUIDE_TAP_TITLE to "Tap a word to save it.",
     TextKey.GUIDE_TAP_INTRO to "The sheet answers from the sample, before any dictionary is installed.",
     TextKey.GUIDE_TAP_FOOTNOTE to

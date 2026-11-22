@@ -198,6 +198,14 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun theColouredBeatKeepsItsHeadingAndDropsTheSecondLine() {
+        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
+
+        compose.onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        compose.onNodeWithText("Four words on this page, four levels.").assertDoesNotExist()
+    }
+
+    @Test
     fun theTapScreenArrivesWithoutTheSheetOpen() {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 

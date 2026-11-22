@@ -396,12 +396,12 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
     val state = beat.state
     val texts = LocalAppTexts.current
     val title = if (state.plain) TextKey.GUIDE_PAGE_PLAIN_TITLE else TextKey.GUIDE_PAGE_COLOURED_TITLE
-    val intro = if (state.plain) TextKey.GUIDE_PAGE_PLAIN_INTRO else TextKey.GUIDE_PAGE_COLOURED_INTRO
+    val intro = if (state.plain) texts[TextKey.GUIDE_PAGE_PLAIN_INTRO] else null
     Column(
         Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
-        GuideHeading(texts[title], texts[intro])
+        GuideHeading(texts[title], intro)
         beat.document?.let { page ->
             GuidePageBlock(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT).padding(top = LektoSpacing.BetweenRows))
         }
@@ -664,21 +664,23 @@ private fun NoteRow(note: GuideNote, levelName: String, colour: Color) {
     }
 }
 
-/** A screen's big title and its one supporting line. */
+/** A screen's big title and, when it has one, its one supporting line. */
 @Composable
-private fun GuideHeading(title: String, intro: String) {
+private fun GuideHeading(title: String, intro: String?) {
     Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel)) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.testTag(GUIDE_TITLE_TAG),
         )
-        Text(
-            text = intro,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-        )
+        if (intro != null) {
+            Text(
+                text = intro,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+            )
+        }
     }
 }
 
