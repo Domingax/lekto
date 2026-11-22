@@ -47,6 +47,7 @@ import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.guide.GuideProgress
 import app.lekto.core.guide.GuideProgressStore
+import app.lekto.core.guide.JsonGuideProgressStore
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettings
@@ -56,6 +57,7 @@ import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
+import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.readinglevel.ReaderLevels
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
@@ -85,6 +87,7 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
+import app.lekto.guide.GUIDE_SKIP_TAG
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_BACK_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
@@ -124,6 +127,7 @@ import app.lekto.settings.APP_LANGUAGE_BACK_TAG
 import app.lekto.settings.APP_LANGUAGE_LINK_TAG
 import app.lekto.settings.ATTRIBUTION_BACK_TAG
 import app.lekto.settings.ATTRIBUTION_LINK_TAG
+import app.lekto.settings.GUIDE_LINK_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.LEKTO_SOURCE_URL
 import app.lekto.settings.MODEL_FIELD_TAG
@@ -155,6 +159,7 @@ import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryReaderLevels
 import app.lekto.testkit.InMemoryReadingPreferencesStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
+import app.lekto.testkit.InMemorySampleDismissedStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
 import app.lekto.testkit.InMemorySyncSettingsStore
@@ -165,6 +170,7 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.testkit.guideSample
 import app.lekto.testkit.inMemoryVocabulary
 import app.lekto.testkit.testOfferedArtifact
 import app.lekto.testkit.testOfferedDictionary
@@ -1512,6 +1518,111 @@ class AppSemanticsTest {
         compose.onNodeWithText("is installed", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun aFreshInstallOpensOnTheGuideBeforeTheShell() {
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_SKIP_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(LIBRARY_TITLE_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aReaderWhoSawTheGuideOpensOnTheShell() {
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(GuideProgress.SEEN),
+                ),
+            )
+        }
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun aCorruptGuideDocumentReadsAsNotSeen() {
+        val files = InMemoryVaultFileSystem()
+        files.writeAtomically(JsonGuideProgressStore.PATH, "not json at all".encodeToByteArray())
+
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = JsonGuideProgressStore(files),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+    }
+
+    @Test
+    fun aVaultWithABookDoesNotOpenTheGuide() {
+        val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
+
+        compose.setContent {
+            App(
+                environment(
+                    library,
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                ),
+            )
+        }
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun skipLeavesTheGuideForTheShelf() {
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                ),
+            )
+        }
+
+        compose.onNodeWithTag(GUIDE_SKIP_TAG).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun theSettingsRowReopensTheGuideOverAShelfWithBooks() {
+        val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
+
+        compose.setContent { App(environment(library, samples = guideSamples())) }
+
+        compose.tapSection(ShellSection.SETTINGS)
+        compose.onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
+
+        compose.onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+    }
+
     /** Taps one of the shell's three sections: the bar on a phone, the column on desktop (issue #185). */
     private fun ComposeTestRule.tapSection(section: ShellSection) {
         onNodeWithTag(shellSectionTag(section)).performClick()
@@ -1552,6 +1663,13 @@ class AppSemanticsTest {
 }
 
 /** An **in-memory catalog** offering English, so the Languages surface lists something. */
+/** The one sample every guide test materialises, so the first launch has a language to answer. */
+private fun guideSamples(): SampleLibrary = SampleLibrary(
+    catalogue = SampleCatalogContent(listOf(guideSample())),
+    derived = DerivedAssetStore(InMemoryVaultFileSystem()),
+    dismissed = InMemorySampleDismissedStore(),
+)
+
 private fun languageCatalog(): LanguageCatalog =
     InMemoryLanguageCatalog(LanguageCatalogState.Available(listOf(testOfferedLanguage("en"))))
 
