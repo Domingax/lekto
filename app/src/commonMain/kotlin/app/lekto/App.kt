@@ -929,6 +929,7 @@ private fun raiseLevel(
  * (docs/design.md §7.4). [book] is the book the list was reached from, carried so
  * the screen can name it and widen back; [shown] is already narrowed to it.
  */
+@Suppress("LongParameterList") // The list's filters and count are independent inputs.
 private fun vocabularyState(
     shown: List<VocabularyEntry>,
     query: String,

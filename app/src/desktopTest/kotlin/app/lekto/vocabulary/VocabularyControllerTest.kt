@@ -226,7 +226,7 @@ class VocabularyControllerTest {
         val controller = VocabularyController(vocabulary, LocalChanges())
         controller.save(VocabularyEntry(key, "lantern"), bookId = "b1")
 
-        controller.save(vocabulary.entryFor(key)!!.copy(mastery = MasteryLevel.KNOWN))
+        controller.save(checkNotNull(vocabulary.entryFor(key)).copy(mastery = MasteryLevel.KNOWN))
 
         assertEquals(listOf("b1"), vocabulary.entryFor(key)?.bookIds)
     }
@@ -266,7 +266,7 @@ class VocabularyControllerTest {
         controller.save(VocabularyEntry(WordKey("en", "harbour"), "harbour"))
         clock.advanceBy(1.minutes)
 
-        controller.save(vocabulary.entryFor(key)!!.copy(mastery = MasteryLevel.LEARNED))
+        controller.save(checkNotNull(vocabulary.entryFor(key)).copy(mastery = MasteryLevel.LEARNED))
 
         assertEquals(listOf("lantern", "harbour"), controller.all().map { entry -> entry.surface })
     }

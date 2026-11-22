@@ -122,7 +122,12 @@ private fun BookWordsSummary(words: BookWords, onSeeWords: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-            text = countLine(texts, words.known, TextKey.END_OF_BOOK_WORDS_KNOWN_ONE, TextKey.END_OF_BOOK_WORDS_KNOWN_MANY),
+            text = countLine(
+                texts,
+                words.known,
+                TextKey.END_OF_BOOK_WORDS_KNOWN_ONE,
+                TextKey.END_OF_BOOK_WORDS_KNOWN_MANY,
+            ),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

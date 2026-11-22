@@ -884,7 +884,8 @@ class AppSemanticsTest {
     }
 
     @Test
-    fun theMasteryLevelCanBeChangedAfterSaving() = runComposeUiTest {        val vocabulary = inMemoryVocabulary()
+    fun theMasteryLevelCanBeChangedAfterSaving() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         setContent { App(environment(library, vocabulary = vocabulary)) }
 

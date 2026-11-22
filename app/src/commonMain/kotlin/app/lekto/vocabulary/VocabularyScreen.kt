@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The list, its two empty states, its filters and their chips are one surface.
+
 package app.lekto.vocabulary
 
 import androidx.compose.foundation.horizontalScroll
@@ -262,6 +264,7 @@ private fun ColumnScope.VocabularyList(
  * ends behind a scrollbar (the seven chips take two rows at most).
  */
 @OptIn(ExperimentalLayoutApi::class) // `FlowRow` is the wrapping layout a pointer gets.
+@Suppress("LongParameterList") // The book, the level, their two taps and the modifier are independent.
 @Composable
 private fun MasteryFilter(
     book: VocabularyBook?,

@@ -417,7 +417,7 @@ class VocabularyScreenSemanticsTest {
         // place under the reader's finger (issue #280).
         var entries by mutableStateOf(listOf(lantern, harbour))
         setContent {
-            val order = remember { VocabularyOrder(entries) }
+            val order: VocabularyOrder = remember { VocabularyOrder(entries) }
             Vocabulary(VocabularyUiState.Results(order.apply(entries), ""))
         }
 
@@ -439,7 +439,7 @@ class VocabularyScreenSemanticsTest {
         var entries by mutableStateOf(listOf(lantern, harbour))
         setContent {
             key(openings) {
-                val order = remember { VocabularyOrder(entries) }
+                val order: VocabularyOrder = remember { VocabularyOrder(entries) }
                 Vocabulary(VocabularyUiState.Results(order.apply(entries), ""))
             }
         }

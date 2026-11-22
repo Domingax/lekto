@@ -1,5 +1,6 @@
 package app.lekto.vocabulary
 
+import android.annotation.SuppressLint
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Suppress("TooManyFunctions") // One list, one test per behaviour; splitting hides the screen's surface.
+@SuppressLint("RememberReturnType") // Lint cannot resolve this commonMain class; the remember returns an order.
 @Config(sdk = [36]) // `android-compileSdk`; Robolectric 4.16 supports API 36.
 class VocabularyScreenSemanticsTest {
 
@@ -268,15 +270,16 @@ class VocabularyScreenSemanticsTest {
 
     @Test
     fun aLevelChangeNeverReordersTheListUnderTheReader() {
-        var entries by mutableStateOf(listOf(lantern, testVocabularyEntry(surface = "harbour", key = "harbour")))
+        val harbour = testVocabularyEntry(surface = "harbour", key = "harbour")
+        var entries by mutableStateOf(listOf(lantern, harbour))
         compose.setContent {
             MaterialTheme {
-                val order = remember { VocabularyOrder(entries) }
+                val order: VocabularyOrder = remember { VocabularyOrder(entries) }
                 VocabularyScreen(state = VocabularyUiState.Results(order.apply(entries), ""))
             }
         }
 
-        entries = listOf(testVocabularyEntry(surface = "harbour", key = "harbour", mastery = MasteryLevel.KNOWN), lantern)
+        entries = listOf(harbour.copy(mastery = MasteryLevel.KNOWN), lantern)
         compose.waitForIdle()
 
         assertTrue(
@@ -288,18 +291,19 @@ class VocabularyScreenSemanticsTest {
 
     @Test
     fun leavingAndReturningSortsTheListAgain() {
+        val harbour = testVocabularyEntry(surface = "harbour", key = "harbour")
         var openings by mutableStateOf(0)
-        var entries by mutableStateOf(listOf(lantern, testVocabularyEntry(surface = "harbour", key = "harbour")))
+        var entries by mutableStateOf(listOf(lantern, harbour))
         compose.setContent {
             MaterialTheme {
                 key(openings) {
-                    val order = remember { VocabularyOrder(entries) }
+                    val order: VocabularyOrder = remember { VocabularyOrder(entries) }
                     VocabularyScreen(state = VocabularyUiState.Results(order.apply(entries), ""))
                 }
             }
         }
 
-        entries = listOf(testVocabularyEntry(surface = "harbour", key = "harbour", mastery = MasteryLevel.KNOWN), lantern)
+        entries = listOf(harbour.copy(mastery = MasteryLevel.KNOWN), lantern)
         openings++
         compose.waitForIdle()
 
