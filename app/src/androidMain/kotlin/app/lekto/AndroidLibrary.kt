@@ -52,9 +52,11 @@ fun androidBookLibrary(context: Context): BookLibrary = VaultBookLibrary(
  * build's reader refuses it, so a stripped build simply has no sample.
  */
 fun androidSampleLibrary(context: Context): SampleLibrary? {
-    val bytes = runCatching { context.assets.open(SAMPLE_CATALOGUE_ASSET).use { stream -> stream.readBytes() } }
-        .getOrNull() ?: return null
-    val catalogue = (readSampleCatalog(bytes) as? SampleCatalogRead.Read)?.catalogue ?: return null
+    val catalogue = runCatching {
+        context.assets.open(SAMPLE_CATALOGUE_ASSET).use { stream ->
+            (readSampleCatalog(stream.readBytes()) as? SampleCatalogRead.Read)?.catalogue
+        }
+    }.getOrNull() ?: return null
     return SampleLibrary(
         catalogue = catalogue,
         derived = DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived"))),
