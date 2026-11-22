@@ -43,8 +43,8 @@ internal class RuleGroup(val colour: Color, val path: Path)
 internal class PageRules(val groups: List<RuleGroup>)
 
 /**
- * The dotted rule under [word], in the page's layout coordinates, or `null` when
- * the word is not laid out.
+ * The dotted rule under [word], in the page's layout coordinates: empty when the
+ * word is not laid out.
  *
  * The rule hangs at the bottom of the word's line box, so every word on a line
  * shares one height — a per-glyph bottom would make it zigzag under descenders.

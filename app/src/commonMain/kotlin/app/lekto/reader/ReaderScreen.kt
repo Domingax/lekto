@@ -736,8 +736,8 @@ private fun ColumnScope.ReaderPage(
             PageSwipe.NEXT -> state.next()
         }
     }
-    // The page's own width decides where the capped column sits: the cap widens
-    // the margin instead of letting a line run past 34 em (issue #281).
+    // The page draws the capped column its parent measured and centres it; the
+    // taps below use that same inset so a word is where it looks (issue #281).
     Box(
         modifier = Modifier
             .fillMaxWidth()

@@ -62,9 +62,13 @@ class ReaderMeasureTest {
         val page = onNodeWithTag(READER_PAGE_TAG).getUnclippedBoundsInRoot()
         val text = onNodeWithTag(READER_PAGE_TEXT_TAG).getUnclippedBoundsInRoot()
 
-        assertTrue(
-            text.right - text.left <= maxMeasure + 1.dp,
-            "the text column never passes 34 em: ${text.right - text.left}",
+        // The page renders exactly the column the paginator measured: 34 em, and
+        // no wider, so a line cannot wrap somewhere the paginator did not expect.
+        assertEquals(
+            maxMeasure.value,
+            (text.right - text.left).value,
+            1f,
+            "the text column is 34 em: ${text.right - text.left}",
         )
         assertEquals(
             (text.left - page.left).value,
