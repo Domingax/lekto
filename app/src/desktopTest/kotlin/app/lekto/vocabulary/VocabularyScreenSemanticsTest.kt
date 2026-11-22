@@ -4,8 +4,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -351,6 +356,105 @@ class VocabularyScreenSemanticsTest {
         onNodeWithText("lantern").assertIsDisplayed()
     }
 
+    @Test
+    fun aBookReachedListCarriesTheBooksTitleAsAChip() = runComposeUiTest {
+        // `See the words` lands here: the chip names the book the list is
+        // narrowed to, so the reader knows why the rows are missing (issue #280).
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), "", book = BOOK)) }
+
+        onNodeWithTag(VOCABULARY_BOOK_CHIP_TAG).assertIsDisplayed().assertTextEquals(BOOK.title)
+    }
+
+    @Test
+    fun theBookChipIsAbsentWhenTheListWasOpenedAnotherWay() = runComposeUiTest {
+        // The chip exists only while the list was reached from a book; the bar's
+        // Vocabulary is the whole vocabulary (issue #280).
+        setContent { Vocabulary(VocabularyUiState.Results(listOf(lantern), "")) }
+
+        onNodeWithTag(VOCABULARY_BOOK_CHIP_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theBookChipNarrowsTheListWhileTheCountStaysTheWholeVocabulary() = runComposeUiTest {
+        val fromBook = testVocabularyEntry(bookIds = listOf(BOOK.id))
+        val elsewhere = testVocabularyEntry(surface = "harbour", key = "harbour", bookIds = listOf("b2"))
+
+        setContent {
+            Vocabulary(
+                VocabularyUiState.Results(
+                    entries = filterByBook(listOf(fromBook, elsewhere), BOOK.id),
+                    query = "",
+                    book = BOOK,
+                    total = 2,
+                ),
+            )
+        }
+
+        onNodeWithText("lantern").assertIsDisplayed()
+        onNodeWithText("harbour").assertDoesNotExist()
+        onNodeWithTag(VOCABULARY_COUNT_TAG).assertTextEquals("2 words")
+    }
+
+    @Test
+    fun tappingTheBookChipClearsTheBookFilter() = runComposeUiTest {
+        var cleared = false
+        setContent {
+            Vocabulary(
+                VocabularyUiState.Results(listOf(lantern), "", book = BOOK),
+                onClearBook = { cleared = true },
+            )
+        }
+
+        onNodeWithTag(VOCABULARY_BOOK_CHIP_TAG).performClick()
+
+        assertTrue(cleared, "the chip is the way out of the book's narrowing")
+    }
+
+    @Test
+    fun aLevelChangeNeverReordersTheListUnderTheReader() = runComposeUiTest {
+        // A level change rewrites the record, so the recently-modified order would
+        // lead with that row; the order taken when the screen opened keeps it in
+        // place under the reader's finger (issue #280).
+        var entries by mutableStateOf(listOf(lantern, harbour))
+        setContent {
+            val order = remember { VocabularyOrder(entries) }
+            Vocabulary(VocabularyUiState.Results(order.apply(entries), ""))
+        }
+
+        entries = listOf(harbour.copy(mastery = MasteryLevel.KNOWN), lantern)
+        waitForIdle()
+
+        assertTrue(
+            onNodeWithText("lantern").getUnclippedBoundsInRoot().top <
+                onNodeWithText("harbour").getUnclippedBoundsInRoot().top,
+            "a level change never moves a row under the reader",
+        )
+    }
+
+    @Test
+    fun leavingAndReturningSortsTheListAgain() = runComposeUiTest {
+        // The snapshot lives as long as the screen: a fresh opening takes the
+        // controller's order again.
+        var openings by mutableStateOf(0)
+        var entries by mutableStateOf(listOf(lantern, harbour))
+        setContent {
+            key(openings) {
+                val order = remember { VocabularyOrder(entries) }
+                Vocabulary(VocabularyUiState.Results(order.apply(entries), ""))
+            }
+        }
+
+        entries = listOf(harbour.copy(mastery = MasteryLevel.KNOWN), lantern)
+        openings++
+        waitForIdle()
+
+        assertTrue(
+            onNodeWithText("harbour").getUnclippedBoundsInRoot().top <
+                onNodeWithText("lantern").getUnclippedBoundsInRoot().top,
+            "a fresh opening follows the recently-modified order",
+        )
+    }
+
     @Suppress("LongParameterList") // The screen's actions are independent; a bundle would only hide that.
     @Composable
     private fun Vocabulary(
@@ -358,6 +462,7 @@ class VocabularyScreenSemanticsTest {
         onSearch: (String) -> Unit = {},
         onFilter: (MasteryLevel?) -> Unit = {},
         onClearSearch: () -> Unit = {},
+        onClearBook: () -> Unit = {},
         onDelete: (VocabularyEntry) -> Unit = {},
         onOpen: (VocabularyEntry) -> Unit = {},
     ) {
@@ -368,6 +473,7 @@ class VocabularyScreenSemanticsTest {
                     onSearch = onSearch,
                     onFilter = onFilter,
                     onClearSearch = onClearSearch,
+                    onClearBook = onClearBook,
                     onDelete = onDelete,
                     onOpen = onOpen,
                 ),
@@ -376,6 +482,9 @@ class VocabularyScreenSemanticsTest {
         }
     }
 }
+
+/** The book a `See the words` opening narrows the list to. */
+private val BOOK = VocabularyBook(id = "b1", title = "The Lantern Keeper")
 
 /**
  * A saveable-state registry as strict as Android's: it accepts only types the

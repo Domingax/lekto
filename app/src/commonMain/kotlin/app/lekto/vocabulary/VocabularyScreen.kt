@@ -37,6 +37,7 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.ui.ChoiceChip
 import app.lekto.ui.ConfirmationDialog
 import app.lekto.ui.SearchField
+import app.lekto.ui.ToggleChip
 import app.lekto.ui.handCursor
 import app.lekto.ui.touchClient
 
@@ -55,6 +56,17 @@ internal const val VOCABULARY_CLEAR_SEARCH_TAG: String = "vocabulary-clear-searc
 /** The test tag on a mastery filter chip; `null` is the "All levels" chip. */
 internal fun vocabularyFilterTag(level: MasteryLevel?): String = "vocabulary-filter-${level?.name ?: "ALL"}"
 
+/** The test tag on the book chip, present only while the list is reached from a book (issue #280). */
+internal const val VOCABULARY_BOOK_CHIP_TAG: String = "vocabulary-book-chip"
+
+/**
+ * The book a `See the words` opening narrows the Vocabulary to (issue #280):
+ * its identity for the filter and the title the chip carries. View state only —
+ * it is never written to the **Vault**, and the list's count stays the whole
+ * vocabulary.
+ */
+data class VocabularyBook(val id: String, val title: String)
+
 /**
  * The vocabulary list's state (issue #23), one value per thing the screen can
  * show, so "nothing saved yet" cannot be confused with "nothing matched".
@@ -65,10 +77,10 @@ sealed interface VocabularyUiState {
     data object Empty : VocabularyUiState
 
     /**
-     * The vocabulary holds entries: those matching [query] and [masteryLevel] —
-     * every entry when the query is blank and [masteryLevel] is `null` — and the
-     * two filters themselves. An empty [entries] here means the filters matched
-     * nothing.
+     * The vocabulary holds entries: those matching [query], [masteryLevel] and —
+     * when the list was reached from a book — [book] — every entry when the
+     * filters are empty — and the filters themselves. An empty [entries] here
+     * means the filters matched nothing.
      *
      * [total] is how many words the vocabulary holds, which is not
      * [entries]`size` while a filter narrows the list: the count beside the
@@ -79,19 +91,22 @@ sealed interface VocabularyUiState {
         val query: String,
         val masteryLevel: MasteryLevel? = null,
         val total: Int = entries.size,
+        val book: VocabularyBook? = null,
     ) : VocabularyUiState
 }
 
 /**
  * The vocabulary list's actions (issue #23, filter #66, clear-search #212): change
  * the search query, change the mastery level filter (`null` is every level), empty
- * the query, delete an entry, and open an entry's level sheet (issue #178). It is
- * a section of the shell now, so the bar replaces its back action (issue #185).
+ * the query, widen the list back from a book (issue #280), delete an entry, and open
+ * an entry's level sheet (issue #178). It is a section of the shell now, so the bar
+ * replaces its back action (issue #185).
  */
 data class VocabularyActions(
     val onSearch: (String) -> Unit = {},
     val onFilter: (MasteryLevel?) -> Unit = {},
     val onClearSearch: () -> Unit = {},
+    val onClearBook: () -> Unit = {},
     val onDelete: (VocabularyEntry) -> Unit = {},
     val onOpen: (VocabularyEntry) -> Unit = {},
 )
@@ -206,7 +221,13 @@ private fun ColumnScope.Results(
             .padding(top = LektoSpacing.InsidePanel)
             .testTag(VOCABULARY_SEARCH_TAG),
     )
-    MasteryFilter(state.masteryLevel, actions.onFilter, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
+    MasteryFilter(
+        book = state.book,
+        selected = state.masteryLevel,
+        onFilter = actions.onFilter,
+        onClearBook = actions.onClearBook,
+        modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+    )
     if (state.entries.isEmpty()) {
         NoWords(state, onClearSearch = actions.onClearSearch)
     } else {
@@ -229,25 +250,32 @@ private fun ColumnScope.VocabularyList(
 }
 
 /**
- * The mastery filter (issue #66; the **Aa** panel's chip, #212): `All levels` and
- * one chip per level, drawn as the reader's own value chips so the filter and the
- * panel cannot drift into two looks.
+ * The filter row (issue #66; the **Aa** panel's chip, #212; the book chip, #280):
+ * the book the list was reached from, then `All levels` and one chip per level,
+ * drawn as the reader's own value chips so the filter and the panel cannot drift
+ * into two looks.
  *
  * A touch screen gets one line that scrolls, and a partly cut chip is what says
  * it moves: that is the thumb's idiom, and a phone has no height to spare. A
  * pointer gets the chips wrapped instead — a mouse cannot swipe a row of buttons,
  * and Material's own guidance is to wrap a small chip set rather than hide its
- * ends behind a scrollbar (the six chips take two rows at most).
+ * ends behind a scrollbar (the seven chips take two rows at most).
  */
 @OptIn(ExperimentalLayoutApi::class) // `FlowRow` is the wrapping layout a pointer gets.
 @Composable
-private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit, modifier: Modifier = Modifier) {
+private fun MasteryFilter(
+    book: VocabularyBook?,
+    selected: MasteryLevel?,
+    onFilter: (MasteryLevel?) -> Unit,
+    onClearBook: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     if (touchClient) {
         Row(
             modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
         ) {
-            FilterChips(selected, onFilter)
+            FilterChips(book, selected, onFilter, onClearBook)
         }
     } else {
         FlowRow(
@@ -255,15 +283,21 @@ private fun MasteryFilter(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> 
             horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
             verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         ) {
-            FilterChips(selected, onFilter)
+            FilterChips(book, selected, onFilter, onClearBook)
         }
     }
 }
 
-/** The six chips themselves, emitted into whichever layout the platform asked for. */
+/** The book chip and the six level chips themselves, emitted into whichever layout the platform asked for. */
 @Composable
-private fun FilterChips(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Unit) {
+private fun FilterChips(
+    book: VocabularyBook?,
+    selected: MasteryLevel?,
+    onFilter: (MasteryLevel?) -> Unit,
+    onClearBook: () -> Unit,
+) {
     val texts = LocalAppTexts.current
+    book?.let { narrowed -> BookChip(narrowed, onClearBook) }
     FilterChip(
         level = null,
         label = texts[TextKey.ALL_LEVELS],
@@ -280,6 +314,22 @@ private fun FilterChips(selected: MasteryLevel?, onFilter: (MasteryLevel?) -> Un
             modifier = Modifier.testTag(vocabularyFilterTag(level)),
         )
     }
+}
+
+/**
+ * The book the list was reached from (issue #280): its title on a selected chip,
+ * the same control as the level filters. Tapping it drops the narrowing and the
+ * chip with it, so the reader can widen the list without leaving the screen; the
+ * filter is view state and never a **Vault** record.
+ */
+@Composable
+private fun BookChip(book: VocabularyBook, onClear: () -> Unit) {
+    ToggleChip(
+        label = book.title,
+        selected = true,
+        onClick = onClear,
+        modifier = Modifier.testTag(VOCABULARY_BOOK_CHIP_TAG),
+    )
 }
 
 /**
@@ -416,3 +466,12 @@ private fun VocabularyEntry.matches(needle: String): Boolean = surface.contains(
  */
 fun filterByMastery(entries: List<VocabularyEntry>, masteryLevel: MasteryLevel?): List<VocabularyEntry> =
     if (masteryLevel == null) entries else entries.filter { entry -> entry.mastery == masteryLevel }
+
+/**
+ * The entries whose book history names [bookId] (issue #280), or every entry when
+ * [bookId] is `null` — the Vocabulary opened any other way. An entry is listed
+ * under each book it was saved from; a word with no history belongs to none, so a
+ * book read before the history existed narrows to an honest empty list.
+ */
+fun filterByBook(entries: List<VocabularyEntry>, bookId: String?): List<VocabularyEntry> =
+    if (bookId == null) entries else entries.filter { entry -> bookId in entry.bookIds }
