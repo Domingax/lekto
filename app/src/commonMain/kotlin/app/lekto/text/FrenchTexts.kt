@@ -358,7 +358,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_CONTINUE to "Continuer",
     TextKey.GUIDE_LANGUAGE_TITLE to "Quelle langue voulez-vous lire en premier ?",
     TextKey.GUIDE_LANGUAGE_INTRO to
-        "Lekto colore les mots selon ce qu'il vous reste à apprendre. Rien ne quitte l'appareil.",
+        "Lekto colore les mots à partir de votre niveau de maîtrise de la langue que vous souhaitez apprendre.",
     TextKey.GUIDE_LANGUAGE_FOOTNOTE to "Vous pourrez en ajouter d'autres plus tard, dans Réglages.",
     TextKey.GUIDE_READING_IN to "Lecture en {0}",
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Voici une page de votre livre.",

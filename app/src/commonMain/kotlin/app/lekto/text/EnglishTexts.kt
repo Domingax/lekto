@@ -343,7 +343,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_CONTINUE to "Continue",
     TextKey.GUIDE_LANGUAGE_TITLE to "Which language would you like to read first?",
     TextKey.GUIDE_LANGUAGE_INTRO to
-        "Lekto colours words by what you have left to learn. Nothing leaves the device.",
+        "Lekto colours words according to how well you know the language you want to read.",
     TextKey.GUIDE_LANGUAGE_FOOTNOTE to "You can add other languages later in Settings.",
     TextKey.GUIDE_READING_IN to "Reading in {0}",
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Here is a page of your book.",

@@ -46,6 +46,18 @@ class AppTextsTest {
     }
 
     @Test
+    fun `the guide's language question states the owner's wording in both languages`() {
+        assertEquals(
+            "Lekto colours words according to how well you know the language you want to read.",
+            appTextsFor("en")[TextKey.GUIDE_LANGUAGE_INTRO],
+        )
+        assertEquals(
+            "Lekto colore les mots à partir de votre niveau de maîtrise de la langue que vous souhaitez apprendre.",
+            appTextsFor("fr")[TextKey.GUIDE_LANGUAGE_INTRO],
+        )
+    }
+
+    @Test
     fun `the two tables differ, so a language is a real choice`() {
         assertNotEquals(appTextsFor("en")[TextKey.LIBRARY], appTextsFor("fr")[TextKey.LIBRARY])
     }
