@@ -32,7 +32,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -42,6 +41,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.reader.MasteryPalette
+import app.lekto.reader.RULE_THICKNESS
+import app.lekto.reader.dottedRuleEffect
 import app.lekto.reader.readerColorOr
 import app.lekto.reader.selectionHighlight
 import app.lekto.theme.Dark
@@ -432,23 +433,21 @@ private fun WordBarColumn(width: Dp, colour: Color, ruled: Boolean) {
     }
 }
 
-/** The 1 dp dotted rule under a highlighted word, drawn where the page draws it (issue #281). */
+/** The 1 dp dotted rule under a highlighted word, drawn with the reader's own stroke (issue #281). */
 @Composable
 private fun DottedRule(colour: Color, width: Dp) {
     val density = LocalDensity.current
     Box(
         Modifier
             .width(width)
-            .height(1.dp)
+            .height(RULE_THICKNESS)
             .drawBehind {
                 drawLine(
                     color = colour,
                     start = Offset(0f, size.height / 2f),
                     end = Offset(size.width, size.height / 2f),
                     strokeWidth = size.height,
-                    pathEffect = PathEffect.dashPathEffect(
-                        floatArrayOf(with(density) { 1.dp.toPx() }, with(density) { 2.dp.toPx() }),
-                    ),
+                    pathEffect = dottedRuleEffect(density),
                 )
             },
     )
