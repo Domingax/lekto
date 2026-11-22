@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.LanguageCatalog
-import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.language.OfferedLanguage
@@ -155,33 +154,19 @@ class GuideDownloadController(
 
     /** The preparation itself: read the manifest, plan the artefacts, start them and watch. */
     private fun prepare(language: String) {
-        val languages = when (val manifest = manifestLanguages()) {
-            is ManifestRead.Languages -> manifest.offered
-            ManifestRead.Refused -> {
-                state = state.copy(phase = GuideDownloadPhase.REFUSED)
-                return
-            }
+        val plan = guideDownloadPlan(catalog, language, translationLanguage, onOffered)
+        when (plan) {
+            is GuideDownloadPlan.Ready -> launch(plan)
+            is GuideDownloadPlan.Failed -> state = state.copy(phase = plan.phase)
+        }
+    }
 
-            ManifestRead.Unreachable -> {
-                state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
-                return
-            }
-        }
-        onOffered(languages)
-        val offered = languages.firstOrNull { offered -> baseLanguage(offered.language) == baseLanguage(language) }
-        if (offered == null) {
-            state = state.copy(phase = GuideDownloadPhase.LANGUAGE_NOT_OFFERED)
-            return
-        }
-        target = offered
-        val artifacts = guidePlanOf(offered, translationLanguage())
-        if (artifacts.isEmpty()) {
-            state = state.copy(phase = GuideDownloadPhase.LANGUAGE_NOT_OFFERED)
-            return
-        }
-        state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, offered.language, artifacts)
-        startInstalls(offered)
-        watch(offered, artifacts)
+    /** Starts a planned pair and follows it. */
+    private fun launch(plan: GuideDownloadPlan.Ready) {
+        target = plan.offered
+        state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, plan.offered.language, plan.artifacts)
+        startInstalls(plan.offered)
+        watch(plan.offered, plan.artifacts)
     }
 
     /** Cancels the preparation and the watch, and stops whatever the installers are running. */
@@ -198,24 +183,6 @@ class GuideDownloadController(
             }
         }
         target = null
-    }
-
-    /**
-     * The manifest's languages, or the honest reason it could not be read: the
-     * cache first, then one fetch. A fetch that throws is [ManifestRead.Unreachable]
-     * (the connection line, retryable); bytes this build refuses are
-     * [ManifestRead.Refused] (update the app, no retry).
-     */
-    private fun manifestLanguages(): ManifestRead = when (val status = catalog?.status()) {
-        is LanguageCatalogState.Available -> ManifestRead.Languages(status.languages)
-        else -> fetchManifest()
-    }
-
-    /** One fetch: a thrown transport failure and a refused handshake are different answers. */
-    private fun fetchManifest(): ManifestRead = when (val reloaded = runCatching { catalog?.reload() }.getOrNull()) {
-        null -> ManifestRead.Unreachable
-        is LanguageCatalogState.Available -> ManifestRead.Languages(reloaded.languages)
-        LanguageCatalogState.Unavailable -> ManifestRead.Refused
     }
 
     private fun sameLanguage(language: String): Boolean =
@@ -250,13 +217,6 @@ class GuideDownloadController(
 /** Both installers' current states, bundled so a verdict stays a small function. */
 private class InstallStates(val tables: Map<String, DifficultyUiState>, val packs: Map<String, DictionaryUiState>)
 
-/** What reading the manifest produced: its languages, or the honest reason it could not be read. */
-private sealed interface ManifestRead {
-    data class Languages(val offered: List<OfferedLanguage>) : ManifestRead
-    data object Refused : ManifestRead
-    data object Unreachable : ManifestRead
-}
-
 /** The phases a retry can improve: the transport failed, an artefact failed, or the reader stopped. */
 private val RETRYABLE_PHASES = setOf(
     GuideDownloadPhase.UNAVAILABLE,
@@ -265,7 +225,7 @@ private val RETRYABLE_PHASES = setOf(
 )
 
 /** The artefacts [offered] publishes: its table, and the pack for the reader's translation language. */
-private fun guidePlanOf(offered: OfferedLanguage, translationLanguage: String?): List<OfferedArtifact> =
+internal fun guidePlanOf(offered: OfferedLanguage, translationLanguage: String?): List<OfferedArtifact> =
     listOfNotNull(offered.difficulty, guideChosenPack(offered, translationLanguage)?.artifact)
 
 /** The reader's own translation language's pack, or the first published one. */

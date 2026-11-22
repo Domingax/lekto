@@ -147,23 +147,19 @@ private fun status(state: GuideDownloadUiState): String {
     val texts = LocalAppTexts.current
     return when (state.phase) {
         GuideDownloadPhase.PREPARING -> texts[TextKey.GUIDE_DOWNLOAD_PREPARING]
-
-        GuideDownloadPhase.DOWNLOADING -> state.sizeBytes?.let { bytes ->
-            texts.message(AppMessage.of(TextKey.GUIDE_DOWNLOAD_BACKGROUND, artifactSizeText(texts, bytes)))
-        } ?: texts[TextKey.GUIDE_DOWNLOAD_PREPARING]
-
+        GuideDownloadPhase.DOWNLOADING -> downloadingStatus(state, texts)
         GuideDownloadPhase.INSTALLED -> texts[TextKey.GUIDE_DOWNLOAD_INSTALLED]
-
         GuideDownloadPhase.STOPPED -> texts[TextKey.GUIDE_DOWNLOAD_STOPPED]
-
         GuideDownloadPhase.FAILED -> texts[TextKey.GUIDE_DOWNLOAD_FAILED]
-
         GuideDownloadPhase.UNAVAILABLE -> texts[TextKey.GUIDE_DOWNLOAD_UNAVAILABLE]
-
         GuideDownloadPhase.REFUSED -> texts[TextKey.GUIDE_DOWNLOAD_REFUSED]
-
         GuideDownloadPhase.LANGUAGE_NOT_OFFERED -> texts[TextKey.GUIDE_DOWNLOAD_LANGUAGE_NOT_OFFERED]
-
         GuideDownloadPhase.IDLE -> ""
     }
 }
+
+/** The running line's size, or the preparation line when the manifest names no size. */
+@Composable
+private fun downloadingStatus(state: GuideDownloadUiState, texts: AppTexts): String = state.sizeBytes?.let { bytes ->
+    texts.message(AppMessage.of(TextKey.GUIDE_DOWNLOAD_BACKGROUND, artifactSizeText(texts, bytes)))
+} ?: texts[TextKey.GUIDE_DOWNLOAD_PREPARING]

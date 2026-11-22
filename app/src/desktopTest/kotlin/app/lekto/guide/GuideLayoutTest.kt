@@ -37,6 +37,9 @@ import app.lekto.theme.LektoTheme
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
+/** Half a pixel of tolerance for the rounding a layout does at the screen's edge. */
+private const val FIT_SLACK = 0.5f
+
 /**
  * The guide at the sizes the ticket names (issue #277): a 320 dp phone, a 360 dp
  * phone and a 700 × 500 desktop window. Each screen keeps its title, its `Skip`
@@ -46,6 +49,7 @@ import kotlin.test.assertTrue
  * the papers.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One scene per size and stage; the file is the guide's layout matrix.
 class GuideLayoutTest {
 
     private val texts = appTextsFor("en")
@@ -79,7 +83,7 @@ class GuideLayoutTest {
     private fun ComposeUiTest.assertWithin(height: Float, tag: String) {
         onNodeWithTag(tag).assertIsDisplayed()
         val bounds = onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
-        assertTrue(bounds.top >= -0.5f && bounds.bottom <= height + 0.5f, "$tag fits the screen: $bounds")
+        assertTrue(bounds.top >= -FIT_SLACK && bounds.bottom <= height + FIT_SLACK, "$tag fits the screen: $bounds")
     }
 
     private fun holdsEveryScreen(width: Float, height: Float) {

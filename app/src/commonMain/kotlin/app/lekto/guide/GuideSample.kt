@@ -59,25 +59,21 @@ fun guideText(sample: Sample, band: CefrLevel, segmenter: TextSegmenter): Reader
  * per level (all four when the sample has them). Ties keep the earlier paragraph.
  * A level no paragraph carries is simply absent from the notes.
  */
-private fun guideParagraph(sample: Sample, band: CefrLevel, segmenter: TextSegmenter): String {
-    val lemmas = guideLemmas(sample)
-    val colours = sample.colourMap(band)
-    return sample.paragraphs.maxByOrNull { paragraph -> coveredLevels(sample, paragraph, colours, segmenter, lemmas) }
-        .orEmpty()
-}
+private fun guideParagraph(sample: Sample, band: CefrLevel, segmenter: TextSegmenter): String =
+    sample.paragraphs.maxByOrNull(BandColours(sample, band, segmenter)::levelsIn).orEmpty()
 
-/** How many distinct highlighted levels [paragraph] shows at the band its [colours] encode. */
-private fun coveredLevels(
-    sample: Sample,
-    paragraph: String,
-    colours: Map<String, MasteryLevel>,
-    segmenter: TextSegmenter,
-    lemmas: LemmaLookup,
-): Int = segmenter.words(paragraph, sample.language)
-    .map { span -> colours[wordKeyOf(span.surface, sample.language, lemmas).key] ?: MasteryLevel.KNOWN }
-    .filter(MasteryLevel::highlighted)
-    .distinct()
-    .size
+/** One sample at one band, ready to say how many highlighted levels a paragraph shows. */
+private class BandColours(private val sample: Sample, band: CefrLevel, private val segmenter: TextSegmenter) {
+    private val lemmas: LemmaLookup = guideLemmas(sample)
+    private val colours: Map<String, MasteryLevel> = sample.colourMap(band)
+
+    /** The distinct highlighted levels [paragraph] shows at this band. */
+    fun levelsIn(paragraph: String): Int = segmenter.words(paragraph, sample.language)
+        .map { span -> colours[wordKeyOf(span.surface, sample.language, lemmas).key] ?: MasteryLevel.KNOWN }
+        .filter(MasteryLevel::highlighted)
+        .distinct()
+        .size
+}
 
 /**
  * The sample's own colors as the reader's mastery seam (issue #277): [plain]

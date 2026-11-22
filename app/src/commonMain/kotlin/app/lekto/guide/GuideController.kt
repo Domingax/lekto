@@ -70,7 +70,7 @@ data class GuideUiState(
  * maps and glossary are the demonstration's source, so every screen works before,
  * during and after the download.
  */
-@Suppress("LongParameterList") // The flow's independent inputs.
+@Suppress("LongParameterList", "TooManyFunctions") // The flow's independent inputs; one method per reader action.
 class GuideController(
     languages: List<OfferedLanguage>,
     private val sampleOf: (String) -> Sample?,
