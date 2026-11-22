@@ -76,6 +76,18 @@ If you marked a book by mistake, **Mark as unfinished** removes only the
 declaration. Your Reading position, your last-read time and your vocabulary stay
 as they were.
 
+## What a book gave you
+
+The end-of-book state also reports the words the book gave you: `18 words from
+this book`, then `5 now known`. `See the words` opens the [Vocabulary](/vocabulary)
+narrowed to that book, with a chip carrying its title; tap the chip to widen the
+list again. The numbers are read from your vocabulary, so deleting the book leaves
+them — and the words — untouched.
+
+A word remembers every book it was saved from, so one saved in two books counts
+for both. A book you read before Lekto kept this history shows no words line at
+all rather than `0 words`.
+
 A book you declared finished stays finished when you reopen it or read it again;
 only an explicit **Mark as unfinished** changes that. The state closes on
 **Back to Library**, or with the system back gesture on Android, which returns

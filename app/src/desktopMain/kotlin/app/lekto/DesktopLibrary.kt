@@ -3,8 +3,11 @@ package app.lekto
 import app.lekto.core.Seams
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.JsonSampleDismissedStore
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.book.VaultBookLibrary
 import app.lekto.core.epub.EpubParser
+import app.lekto.core.sample.shippedSampleCatalogue
 import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.TxtParser
@@ -40,6 +43,22 @@ fun desktopBookLibrary(root: File = desktopVaultRoot()): BookLibrary = VaultBook
     seams = Seams.system(),
     deviceId = DeviceIdFile(File(root.parentFile, "device-id")).get(),
 )
+
+/**
+ * The desktop **Sample book** (issue #278), over the same derived and settings
+ * roots as the rest of the client: the catalogue read from the committed
+ * resource beside `core`'s classes, the materialised sample in `derived/`, and the
+ * reader's dismissal in `settings/`. `null` when this build ships no readable
+ * catalogue, so a stripped build simply has no sample.
+ */
+fun desktopSampleLibrary(root: File = desktopVaultRoot()): SampleLibrary? {
+    val catalogue = shippedSampleCatalogue() ?: return null
+    return SampleLibrary(
+        catalogue = catalogue,
+        derived = DerivedAssetStore(JvmVaultFileSystem(File(root.parentFile, "derived"))),
+        dismissed = JsonSampleDismissedStore(JvmVaultFileSystem(File(root.parentFile, "settings"))),
+    )
+}
 
 /**
  * The desktop vocabulary (issue #22) over [root], defaulting to

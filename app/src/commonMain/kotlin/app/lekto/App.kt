@@ -29,6 +29,7 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
@@ -56,6 +57,7 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.text.baseLanguage
 import app.lekto.core.theme.AppTheme
 import app.lekto.core.theme.AppThemeStore
+import app.lekto.core.vocabulary.BookWords
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryController
@@ -125,11 +127,14 @@ import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
+import app.lekto.vocabulary.VocabularyBook
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyLevelColumn
 import app.lekto.vocabulary.VocabularyLevelSheet
+import app.lekto.vocabulary.VocabularyOrder
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
+import app.lekto.vocabulary.filterByBook
 import app.lekto.vocabulary.filterByMastery
 import app.lekto.vocabulary.packTranslations
 import app.lekto.vocabulary.searchVocabulary
@@ -165,6 +170,13 @@ data class AppEnvironment(
     val lemmas: LemmaLookup = LemmaLookup.None,
     val vocabulary: Vocabulary? = null,
     val readerLevels: ReaderLevels? = null,
+    /**
+     * The build's **Sample book** seam (issue #278): the catalogue it ships and
+     * the derived store the first launch materialises one entry into. `null` when
+     * the platform wires none or ships no catalogue, so the shelf simply has no
+     * sample and the app stays usable.
+     */
+    val samples: SampleLibrary? = null,
     /**
      * The app-private language settings store (ADR-0034): the device-local
      * **app language** and **Translation language**, neither a **Vault** record.
@@ -280,14 +292,17 @@ fun App(
     // The one signal the local writers raise and sync subscribes to (issue #121):
     // a book imported, a word saved or deleted, a reading position moved.
     val changes = remember { LocalChanges() }
-    val controller = remember(environment.library, environment.dispatcher, changes) {
-        LibraryController(environment.library, changes, environment.dispatcher)
+    val controller = remember(environment.library, environment.dispatcher, changes, environment.samples) {
+        LibraryController(environment.library, changes, environment.dispatcher, samples = environment.samples)
     }
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
-    val progress = remember(environment.library, environment.dispatcher, scope, changes) {
+    // The sample's page turns are kept beside the sample, never in the vault
+    // (issue #278); anything else is the vault's own position as before.
+    val samples = environment.samples
+    val progress = remember(environment.library, environment.dispatcher, scope, changes, samples) {
         ReadingProgressWriter(scope, environment.dispatcher, changes) { position, blocks ->
-            environment.library.savePosition(position, blocks)
+            if (samples?.savePosition(position) != true) environment.library.savePosition(position, blocks)
         }
     }
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
@@ -512,10 +527,17 @@ private fun AppScreens(
             onBack = { stack = stack.back() },
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
             onMarkFinished = {
-                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markFinished)
+                setFinished(environment, controller, changes, scope, bookId, finished = true)
             },
             onMarkUnfinished = {
-                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markUnfinished)
+                setFinished(environment, controller, changes, scope, bookId, finished = false)
+            },
+            // The book does not stay behind the list: the reader leaves the book
+            // for its words, and Back lands on the Library (issue #280).
+            onSeeWords = {
+                stack = stack.replace(
+                    Destination.Vocabulary(VocabularyBook(bookId, current.session.book.title)),
+                )
             },
         )
     } else {
@@ -619,7 +641,14 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Vocabulary -> VocabularyDestination(mastery, environment, languageSettings, scope)
+                is Destination.Vocabulary -> VocabularyDestination(
+                    mastery = mastery,
+                    environment = environment,
+                    languageSettings = languageSettings,
+                    scope = scope,
+                    book = current.book,
+                    onClearBook = { stack = stack.replace(Destination.Vocabulary()) },
+                )
 
                 Destination.Library -> LibraryDestination(
                     environment,
@@ -656,6 +685,7 @@ private fun ReaderDestination(
     onOpenSettings: () -> Unit,
     onMarkFinished: () -> Unit,
     onMarkUnfinished: () -> Unit,
+    onSeeWords: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
@@ -677,7 +707,9 @@ private fun ReaderDestination(
             onSave = { level ->
                 selection?.let { chosen ->
                     saveFailed = false
-                    saveWord(mastery, scope, environment, chosen, level) { landed -> saveFailed = !landed }
+                    saveWord(mastery, scope, environment, chosen, level, session.book.id) { landed ->
+                        saveFailed = !landed
+                    }
                 }
             },
             suggestedLevel = selection?.let { selected -> mastery?.freshSaveLevel(selected.tap.token.key) },
@@ -715,9 +747,11 @@ private fun ReaderDestination(
         lemmas = lemmas,
         lookup = lookup,
         readingPreferences = readingPreferences,
+        bookWords = mastery?.let { controller -> BookWords.of(controller.all(), session.book.id) },
         onBack = onBack,
         onMarkFinished = onMarkFinished,
         onMarkUnfinished = onMarkUnfinished,
+        onSeeWords = onSeeWords,
         onPositionChange = { offset ->
             progress.record(ReadingPosition(session.book.id, offset), session.text.blocks)
         },
@@ -737,10 +771,11 @@ private fun pronunciationFor(
 /**
  * Saves the word behind [selection] at [level] (issue #22): the entry carries the
  * token's identity — the lemma when the dictionary knew one — its translation
- * and context sentence, so an inflected form updates its lemma's entry. The vault
- * write is blocking, so it runs on the environment's dispatcher, and its outcome
- * reaches [onOutcome] on the composition's thread so the footer can state a
- * refusal (issue #279).
+ * and context sentence, so an inflected form updates its lemma's entry. [bookId]
+ * is the book being read, which the entry remembers as a book it was saved from
+ * (issue #280; ADR-0050). The vault write is blocking, so it runs on the
+ * environment's dispatcher, and its outcome reaches [onOutcome] on the
+ * composition's thread so the footer can state a refusal (issue #279).
  */
 @Suppress("LongParameterList") // The save's inputs are the reader's own pieces; a bundle would only hide that.
 private fun saveWord(
@@ -749,6 +784,7 @@ private fun saveWord(
     environment: AppEnvironment,
     selection: WordSelection,
     level: MasteryLevel,
+    bookId: String,
     onOutcome: (Boolean) -> Unit,
 ) {
     mastery ?: return
@@ -760,7 +796,7 @@ private fun saveWord(
         mastery = level,
     )
     scope.launch {
-        val landed = withContext(environment.dispatcher) { mastery.save(entry) }
+        val landed = withContext(environment.dispatcher) { mastery.save(entry, bookId) }
         onOutcome(landed)
     }
 }
@@ -822,12 +858,18 @@ private fun LibraryDestination(
 }
 
 /**
- * The vocabulary list destination (issue #23; the level sheet #178): the reader's
- * live vocabulary, the search query the user has typed, the entry whose level
- * sheet is open, and the delete that removes an entry from the vault. The query
- * and the open word are local to the screen; the writes are blocking vault writes,
- * so they run on the environment's dispatcher, and the reader recolours through
- * the controller's bumped revision.
+ * The vocabulary list destination (issue #23; the level sheet #178; the book
+ * filter #280): the reader's live vocabulary, the search query the user has
+ * typed, the entry whose level sheet is open, and the delete that removes an
+ * entry from the vault. The query, the book and the open word are local to the
+ * screen; the writes are blocking vault writes, so they run on the environment's
+ * dispatcher, and the reader recolours through the controller's bumped revision.
+ *
+ * The order is the controller's recently-modified one, frozen when the screen
+ * opens ([VocabularyOrder]): a level change rewrites the word's record but never
+ * reorders the rows under the reader. [book] is the book `See the words` came
+ * from; its narrowing is view state that never reaches the vault, and the count
+ * beside the title stays the whole vocabulary.
  *
  * The translation each row shows is derived from the installed **Dictionary
  * packs** (issue #67; ADR-0032), not the one the entry froze at save time, so the
@@ -845,13 +887,18 @@ private fun VocabularyDestination(
     environment: AppEnvironment,
     languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
+    book: VocabularyBook?,
+    onClearBook: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
     var openKey by remember { mutableStateOf<WordKey?>(null) }
     val all = mastery?.all().orEmpty()
-    val derived = derivedTranslations(all, languageSettings?.translationLanguage, environment)
-    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
+    // Taken once, when the screen opens: leaving and returning takes a new one.
+    val openingOrder = remember { VocabularyOrder(all) }
+    val recent = openingOrder.apply(all)
+    val derived = derivedTranslations(recent, languageSettings?.translationLanguage, environment)
+    val shown = recent.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
     // The open word is resolved from the whole list, not the narrowed one, so a
     // filter that excludes the chosen level cannot close the sheet.
     val open = openKey?.let { key -> shown.firstOrNull { entry -> entry.key == key } }
@@ -860,11 +907,12 @@ private fun VocabularyDestination(
     // than leaving a stale one over the list.
     LaunchedEffect(openKey, vanished) { if (vanished) openKey = null }
 
-    val state = vocabularyState(shown, query, masteryLevel, all.size)
+    val state = vocabularyState(filterByBook(shown, book?.id), query, masteryLevel, all.size, book)
     val actions = VocabularyActions(
         onSearch = { text -> query = text },
         onFilter = { chosen -> masteryLevel = chosen },
         onClearSearch = { query = "" },
+        onClearBook = onClearBook,
         onDelete = { entry ->
             scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
         },
@@ -904,13 +952,16 @@ private fun raiseLevel(
 /**
  * The list's state: the search and the level filter applied to [shown], and the
  * vocabulary's own count beside the title — the count is not the narrowed list's
- * (docs/design.md §7.4).
+ * (docs/design.md §7.4). [book] is the book the list was reached from, carried so
+ * the screen can name it and widen back; [shown] is already narrowed to it.
  */
+@Suppress("LongParameterList") // The list's filters and count are independent inputs.
 private fun vocabularyState(
     shown: List<VocabularyEntry>,
     query: String,
     masteryLevel: MasteryLevel?,
     total: Int,
+    book: VocabularyBook?,
 ): VocabularyUiState = if (total == 0) {
     VocabularyUiState.Empty
 } else {
@@ -919,6 +970,7 @@ private fun vocabularyState(
         query = query,
         masteryLevel = masteryLevel,
         total = total,
+        book = book,
     )
 }
 
@@ -1048,7 +1100,12 @@ internal fun speakHandler(
     }
 }
 
-/** The library's actions: import through the platform picker, open a book, dismiss a failure. */
+/**
+ * The library's actions: import through the platform picker, open a book or the
+ * **Sample book**, dismiss a failure, remove the sample. Opening asks the sample
+ * first (issue #278): its identity is not a vault record, so the vault library
+ * cannot answer for it, and everything else is the vault's as before.
+ */
 private fun libraryActions(
     environment: AppEnvironment,
     controller: LibraryController,
@@ -1065,10 +1122,14 @@ private fun libraryActions(
     },
     onOpen = { book ->
         scope.launch {
-            withContext(environment.dispatcher) { environment.library.open(book.id) }?.let(navigation.onOpen)
+            val session = withContext(environment.dispatcher) {
+                environment.samples?.open(book.id) ?: environment.library.open(book.id)
+            }
+            session?.let(navigation.onOpen)
         }
     },
     onDelete = { book -> controller.delete(book.id) },
+    onDismissSample = controller::dismissSample,
     onDismissError = controller::dismissError,
     onSearch = controller::search,
     onClearSearch = controller::clearSearch,
@@ -1086,6 +1147,9 @@ private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
  * pushes it, and the Library is re-listed so its filter sees the new state on
  * return. A failed write is swallowed like a failed position save: losing one
  * declaration is better than bringing the reader down.
+ *
+ * The **Sample book** keeps its declaration beside itself (issue #278): it is a
+ * derived fact, so no vault record is written and no sync signal is raised.
  */
 @Suppress("LongParameterList") // The caller's wiring and the fact it records; a bundle would only hide them.
 private fun setFinished(
@@ -1094,11 +1158,20 @@ private fun setFinished(
     changes: LocalChanges,
     scope: CoroutineScope,
     bookId: String,
-    write: (BookLibrary, String) -> Unit,
+    finished: Boolean,
 ) {
     scope.launch {
+        val sampleOwned = withContext(environment.dispatcher) {
+            environment.samples?.markFinished(bookId, finished) == true
+        }
+        if (sampleOwned) {
+            controller.refresh()
+            return@launch
+        }
         runCatching {
-            withContext(environment.dispatcher) { write(environment.library, bookId) }
+            withContext(environment.dispatcher) {
+                if (finished) environment.library.markFinished(bookId) else environment.library.markUnfinished(bookId)
+            }
         }.onSuccess {
             changes.contentChanged()
             controller.refresh()
@@ -1117,9 +1190,11 @@ private fun ReaderSession(
     lemmas: LemmaLookup,
     lookup: Lookup,
     readingPreferences: ReadingPreferencesController?,
+    bookWords: BookWords?,
     onBack: () -> Unit,
     onMarkFinished: () -> Unit,
     onMarkUnfinished: () -> Unit,
+    onSeeWords: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
     // The reader shows the whole book and its chapter list; the chrome carries
@@ -1163,9 +1238,11 @@ private fun ReaderSession(
             onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
             onMarkFinished = onMarkFinished,
             onMarkUnfinished = onMarkUnfinished,
+            onSeeWords = onSeeWords,
         ),
         overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
         initiallyFinished = session.finished != null,
+        bookWords = bookWords,
         // The word or phrase panel is the reader's to place (issue #199): the
         // context column on desktop, the bottom sheet on a phone.
         context = ReaderContext(

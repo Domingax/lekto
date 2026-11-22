@@ -57,6 +57,15 @@ the first launch needs no network. It is a **Derived asset**, produced from the
 roster of languages the guide offers.
 _Avoid_: Demo list, sample registry, tutorial catalogue
 
+**Sample book**:
+The one **Sample** a device materialises for the first launch, under the stable
+identity `sample:<language>`: the text the demonstration and the reader both open,
+listed on the **Library** above the vault's books with a `Sample` mark and read as
+a normal reading session. A **Derived asset**, never a **Vault** record, so it
+appears in no count, export or **Sync**; removing it asks once, and the identity
+stays reserved so no later build brings it back.
+_Avoid_: Demo book, tutorial book, sample row
+
 **Language manifest**:
 The catalogue of what Lekto offers for reading: each **Reading language** and the
 artefacts published for it — a **Difficulty table** per reading language, and a
@@ -313,9 +322,12 @@ pack stores lemmas already canonicalised, so the domain uses one as-is.
 _Avoid_: Root, stem, base form
 
 **Vocabulary entry**:
-A word or phrase the user saved, with its translation, a context sentence, and a
-mastery level. Keyed by the word's **Word key**, so inflected forms share one entry;
-stored per record in the **Vault**, so a save survives a restart. The stored
+A word or phrase the user saved, with its translation, a context sentence, a
+mastery level, and the **Books** whose reading sessions saved it — each book named
+once, newest last. Keyed by the word's **Word key**, so inflected forms share one
+entry; stored per record in the **Vault**, so a save survives a restart. Its book
+history is part of the word: deleting a book never removes it, and only deleting
+the word does. The stored
 translation is the offline fallback the word was saved with; the translation the
 list shows is derived from the installed **Dictionary pack** (ADR-0032).
 _Avoid_: Card, item, saved word

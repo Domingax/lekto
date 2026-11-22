@@ -108,6 +108,7 @@ import app.lekto.reader.READER_NEXT_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TAG
 import app.lekto.reader.READER_PAGE_TEXT_TAG
 import app.lekto.reader.READER_POSITION_TAG
+import app.lekto.reader.READER_SEE_WORDS_TAG
 import app.lekto.reader.READING_LARGER_TAG
 import app.lekto.reader.READING_PREFERENCES_CLOSE_TAG
 import app.lekto.reader.READING_PREFERENCES_TAG
@@ -169,6 +170,7 @@ import app.lekto.translation.TRANSLATION_RESULT_TAG
 import app.lekto.translation.TRANSLATION_SETTINGS_TAG
 import app.lekto.translation.TRANSLATION_SHORTCUT_TAG
 import app.lekto.ui.CONFIRM_DIALOG_CONFIRM_TAG
+import app.lekto.vocabulary.VOCABULARY_BOOK_CHIP_TAG
 import app.lekto.vocabulary.VOCABULARY_LEVEL_SHEET_TAG
 import app.lekto.vocabulary.VOCABULARY_SEARCH_TAG
 import app.lekto.vocabulary.VOCABULARY_TITLE_TAG
@@ -853,6 +855,40 @@ class AppSemanticsTest {
         // No toast, no dialog and no Save control: the reader's colour is the
         // confirmation, and the footer states the fact (issue #279).
         compose.onNodeWithText("Saved · Familiar").assertIsDisplayed()
+    }
+
+    @Test
+    fun savingAWordThenFinishingTheBookLeadsToItsWords() {
+        // The whole loop (issue #280), on the Android runtime: a word saved while
+        // reading remembers the book, the end state reports the book's two
+        // numbers, and `See the words` lands on the Vocabulary narrowed to it.
+        val vocabulary = inMemoryVocabulary()
+        val library = InMemoryLibrary().apply {
+            import("lantern.epub", byteArrayOf(1))
+            readAt("b1", offset = Int.MAX_VALUE)
+        }
+        compose.setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        compose.openBook()
+        compose.tapFirstWord()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.all().singleOrNull()?.bookIds == listOf("b1")
+        }
+        compose.onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
+
+        compose.onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+        compose.onNodeWithTag(READER_END_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithText("1 word from this book").assertIsDisplayed()
+        compose.onNodeWithText("0 now known").assertIsDisplayed()
+
+        compose.onNodeWithTag(READER_SEE_WORDS_TAG).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(VOCABULARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(VOCABULARY_BOOK_CHIP_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(vocabularyRowTag(WordKey("en", "on"))).assertIsDisplayed()
     }
 
     @Test

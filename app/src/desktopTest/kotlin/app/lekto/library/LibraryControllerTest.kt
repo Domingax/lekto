@@ -14,8 +14,19 @@ import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.book.ReadingState
+import app.lekto.core.book.SampleDismissed
+import app.lekto.core.book.SampleDismissedStore
+import app.lekto.core.book.SampleLibrary
+import app.lekto.core.sample.Sample
+import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.text.TextBlock
+import app.lekto.core.vault.DerivedAssetStore
+import app.lekto.core.vault.VaultFileSystem
+import app.lekto.testkit.InMemorySampleDismissedStore
+import app.lekto.testkit.InMemoryVaultFileSystem
+import app.lekto.testkit.testSample
 import app.lekto.text.AppMessage
+import app.lekto.text.TextKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -427,6 +438,145 @@ class LibraryControllerTest {
         assertEquals(emptyList(), controller.state.value.visibleBooks)
         assertTrue(controller.state.value.everyBookIsFinished)
     }
+
+    @Test
+    fun theSampleIsProjectedBesideTheVaultsBooksAndNeverInThem() = runTest {
+        val controller = LibraryController(
+            FakeLibrary(),
+            LocalChanges(),
+            StandardTestDispatcher(testScheduler),
+            this,
+            sampleLibrary(InMemoryVaultFileSystem()),
+        )
+
+        controller.materialiseSample("fr")
+        advanceUntilIdle()
+
+        assertEquals(Sample.identityOf("fr"), controller.state.value.sample?.book?.id)
+        // It is beside the vault's books, not one of them: the Languages counts
+        // and the export read `books`, and neither can see the sample (issue #278).
+        assertEquals(emptyList(), controller.state.value.books)
+        assertTrue(controller.state.value.vaultEmpty)
+        assertTrue(controller.state.value.hasRows)
+    }
+
+    @Test
+    fun aSecondReadingLanguageNeverAddsASecondSample() = runTest {
+        val files = InMemoryVaultFileSystem()
+        val controller = LibraryController(
+            FakeLibrary(),
+            LocalChanges(),
+            StandardTestDispatcher(testScheduler),
+            this,
+            sampleLibrary(files),
+        )
+
+        controller.materialiseSample("en")
+        advanceUntilIdle()
+        controller.materialiseSample("fr")
+        advanceUntilIdle()
+
+        assertEquals(listOf(Sample.identityOf("en")), listOfNotNull(controller.state.value.sample?.book?.id))
+        assertEquals(listOf("samples/en.json"), files.listFiles())
+    }
+
+    @Test
+    fun aFailedMaterialisationLeavesTheEmptyShelfAndOneLine() = runTest {
+        val controller = LibraryController(
+            FakeLibrary(),
+            LocalChanges(),
+            StandardTestDispatcher(testScheduler),
+            this,
+            sampleLibrary(FailingVaultFileSystem()),
+        )
+
+        controller.materialiseSample("fr")
+        advanceUntilIdle()
+
+        assertNull(controller.state.value.sample)
+        assertEquals(AppMessage.of(TextKey.LIBRARY_SAMPLE_FAILED), controller.state.value.sampleFailure)
+        assertFalse(controller.state.value.hasRows)
+    }
+
+    @Test
+    fun dismissingTheSampleClearsItsRowAndRecordsTheDismissal() = runTest {
+        val files = InMemoryVaultFileSystem()
+        val dismissed = InMemorySampleDismissedStore()
+        val controller = LibraryController(
+            FakeLibrary(),
+            LocalChanges(),
+            StandardTestDispatcher(testScheduler),
+            this,
+            sampleLibrary(files, dismissed),
+        )
+        controller.materialiseSample("fr")
+        advanceUntilIdle()
+
+        controller.dismissSample()
+        advanceUntilIdle()
+
+        assertNull(controller.state.value.sample)
+        assertEquals(SampleDismissed("fr"), dismissed.load())
+        assertTrue(files.listFiles().isEmpty())
+        // The identity stays reserved: no later materialisation brings it back.
+        controller.materialiseSample("fr")
+        advanceUntilIdle()
+        assertNull(controller.state.value.sample)
+    }
+
+    @Test
+    fun refreshingReprojectsTheSamplesProgress() = runTest {
+        val samples = sampleLibrary(InMemoryVaultFileSystem(), paragraphs = listOf(SAMPLE_TEXT))
+        val controller = LibraryController(
+            FakeLibrary(),
+            LocalChanges(),
+            StandardTestDispatcher(testScheduler),
+            this,
+            samples,
+        )
+        controller.materialiseSample("en")
+        advanceUntilIdle()
+
+        samples.savePosition(ReadingPosition(Sample.identityOf("en"), SAMPLE_OFFSET))
+        controller.refresh()
+        advanceUntilIdle()
+
+        assertEquals(BookProgress.Measured(SAMPLE_PERCENT), controller.state.value.sample?.progress)
+        assertEquals(ReadingState.IN_PROGRESS, controller.state.value.sample?.state)
+    }
+}
+
+/** A ten-character sample and a position in it, so half way is an exact 50 %. */
+private const val SAMPLE_TEXT = "0123456789"
+private const val SAMPLE_OFFSET = 5
+private const val SAMPLE_PERCENT = 50
+
+/** The controller's sample over [files], shipping an English and a French entry (issue #278). */
+private fun sampleLibrary(
+    files: VaultFileSystem,
+    dismissed: SampleDismissedStore = InMemorySampleDismissedStore(),
+    paragraphs: List<String> = listOf("A calm boat waited near the rocks."),
+): SampleLibrary = SampleLibrary(
+    catalogue = SampleCatalogContent(
+        listOf("en", "fr").map { language -> testSample(language = language, paragraphs = paragraphs) },
+    ),
+    derived = DerivedAssetStore(files),
+    dismissed = dismissed,
+)
+
+/** A filesystem whose write throws, standing in for a full or read-only disk. */
+private class FailingVaultFileSystem : VaultFileSystem {
+    override fun read(path: String): ByteArray? = null
+
+    override fun writeAtomically(path: String, bytes: ByteArray) {
+        error("the disk is full")
+    }
+
+    override fun delete(path: String) = Unit
+
+    override fun listFiles(): List<String> = emptyList()
+
+    override fun storedPath(path: String): String = path
 }
 
 /** A book with [id] and [title], so a controller test has something to list and delete. */

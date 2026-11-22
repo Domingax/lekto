@@ -86,9 +86,12 @@ class MasteryController(
      * whether the write landed (issue #279). Bumping [revision] on a landed write
      * is what recolours the open book; a refused write changes nothing, so the
      * footer can say so instead of showing a save that did not happen.
+     *
+     * [bookId] is the book the reader was reading when they saved it, so the entry
+     * remembers where the word came from (issue #280; ADR-0050).
      */
-    fun save(entry: VocabularyEntry): Boolean {
-        val landed = vocabulary.save(entry)
+    fun save(entry: VocabularyEntry, bookId: String? = null): Boolean {
+        val landed = vocabulary.save(entry, bookId)
         if (landed) revision++
         return landed
     }

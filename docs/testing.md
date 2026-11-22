@@ -310,7 +310,8 @@ then either the translation body with its disclosure or the prompt with its
 settings link, above the zero-configuration shortcut. The Vocabulary list adds
 `vocabulary-<paper>.png` per paper and `vocabulary-delete-light.png` (issue #212):
 the title and the count beside it, the shared search surface, the filter row with
-its partly cut chip, the current filter filled in ink and each chip carrying its
+a selected chip carrying the opened book's title before the level chips (issue
+#280), its partly cut chip, the current filter filled in ink and each chip carrying its
 level's dot, then each row's word bar, dot and level name, translation and muted
 sentence with a hairline between rows — the first row hovered, so the trash in the
 slot reserved for it is recorded too. Its level sheet adds
@@ -1119,6 +1120,20 @@ all-levels chip clears it, the current one is announced as selected, and a filte
 that matches nothing says so, and `AppSemanticsTest` filters the list to a level
 and finds only that level's word.
 
+The book history (issue #280; ADR-0050) is proved at every seam. The record's
+shape is `VocabularyRecordPropertyTest`'s: the round-trip carries `bookIds`, the
+schema version is pinned at 2, and a body written without the field reads as an
+empty list. `BookWordsTest` proves the two counts — a word counts once per book it
+names, a word from two books counts for both, only the book's **Known** words
+count as known, and a word with no history belongs to none. The write path is
+`VocabularyControllerTest`'s: the book id reaches the record once, a second book
+keeps both, a save that names no book keeps the history, and the list orders by the
+record's update time. The end state's two numbers, singular and plural, the absent
+line and `See the words` are `ReaderScreenSemanticsTest`; the list's book chip, its
+absence, the narrowing and the frozen order under a level change are
+`VocabularyScreenSemanticsTest`, both on both lanes. `AppSemanticsTest` walks the
+loop on both lanes — save from a book, finish it, read the counts, open the list.
+
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to
 it when no pack answers. `firstGloss` in `core` is the shared rule — the first
@@ -1184,7 +1199,33 @@ every glossary covers every highlighted word — so the frozen copy is asserted
 against the rule, not only against a snapshot. `SampleAssetsAreDerivedTest` in
 `architecture` pins the remaining rule: the sample model names no vault store, the
 catalogue lives under resources and never under a vault path, and neither
-`VaultBundle` nor `VaultManifest` names a sample. The app's
+`VaultBundle` nor `VaultManifest` names a sample.
+
+The **Sample book** (issue #278) is proved at its seam and on the shelf. The
+materialisation is `SampleLibraryTest` in `core/commonTest`: the catalogue entry
+lands as the one derived file whose name encodes `sample:<language>` (`VaultPaths`
+rejects the identity's `:`), a second language writes nothing, a dismissal records
+its own document, deletes the files and keeps the identity reserved, a page turn
+and a **Finished** declaration stay beside the sample rather than in the **Vault**,
+and a corrupt or unwritable sample leaves no row. The reader is
+`ShippedSampleCatalogueTest` in `core/jvmTest`, which loads the committed
+catalogue exactly as the desktop client does, and `AndroidSampleLibraryTest` in
+`app/androidUnitTest`, which proves the same bytes are packaged as an Android asset
+— a library's Kotlin resources are not on an Android app's classloader. The
+dismissal's store seam is `SampleDismissedStoreContract` against the in-memory fake
+and the JSON document in `core/commonTest`, and against a real directory in
+`core/jvmTest`, with `JsonSampleDismissedStoreTest` adding the corrupt document.
+The shelf's projection is `LibraryControllerTest` in `app/desktopTest` — one row at
+most after a second language, absent from `LibraryUiState.books`, and a failed
+materialisation landing one line — and the screen is
+`LibraryScreenSemanticsTest` on both lanes: the row above the vault's books with
+its mark, the one-sentence first-run state, the §7.1 empty state, the removal's
+one confirmation, and the failed-materialisation line. The shelf golden
+(`library-*.png`) gains the sample row. `SampleAssetsAreDerivedTest` extends its
+rule to the materialiser: it may name the derived store, its byte seam and its
+codec, and nothing else under the vault package.
+
+The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
 level and the difficulty, with the one revision the reader recolours on — is
 `MasteryControllerTest` in `app/desktopTest`, which pins that setting **and**
