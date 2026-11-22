@@ -35,6 +35,10 @@ import app.lekto.text.TextKey
 import app.lekto.text.appTextsFor
 import app.lekto.theme.LektoTheme
 import kotlin.test.Test
+import kotlin.test.assertTrue
+
+/** Half a pixel of tolerance for the rounding a layout does at the screen's edge. */
+private const val FIT_SLACK = 0.5f
 
 /**
  * The guide at the sizes the ticket names (issue #277): a 320 dp phone, a 360 dp
@@ -45,6 +49,7 @@ import kotlin.test.Test
  * the papers.
  */
 @OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One scene per size and stage; the file is the guide's layout matrix.
 class GuideLayoutTest {
 
     private val texts = appTextsFor("en")
@@ -58,6 +63,28 @@ class GuideLayoutTest {
 
     @Test
     fun aSmallDesktopWindowHoldsEveryScreen() = holdsEveryScreen(width = 700f, height = 500f)
+
+    @Test
+    fun theLevelScreenFitsAPhoneWithoutScrolling() = theLevelScreenFits(width = 360f, height = 640f)
+
+    @Test
+    fun theLevelScreenFitsANarrowPhoneWithoutScrolling() = theLevelScreenFits(width = 320f, height = 640f)
+
+    /** Every part of the level screen — heading, preview, six bands and the action — is on screen. */
+    private fun theLevelScreenFits(width: Float, height: Float) {
+        screen(width, height, { LevelStage(sample) }) {
+            val tags = listOf(GUIDE_TITLE_TAG, GUIDE_LEVEL_PREVIEW_TAG, GUIDE_START_READING_TAG) +
+                CefrLevel.entries.map(::guideBandTag)
+            tags.forEach { tag -> assertWithin(height, tag) }
+        }
+    }
+
+    /** Asserts [tag] is displayed and its whole bounds lie inside a [height]-tall screen. */
+    private fun ComposeUiTest.assertWithin(height: Float, tag: String) {
+        onNodeWithTag(tag).assertIsDisplayed()
+        val bounds = onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        assertTrue(bounds.top >= -FIT_SLACK && bounds.bottom <= height + FIT_SLACK, "$tag fits the screen: $bounds")
+    }
 
     private fun holdsEveryScreen(width: Float, height: Float) {
         screen(width, height, { LanguageStage() }) {

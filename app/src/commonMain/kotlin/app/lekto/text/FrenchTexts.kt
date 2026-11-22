@@ -364,7 +364,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Voici une page de votre livre.",
     TextKey.GUIDE_PAGE_PLAIN_INTRO to "Rien n'est encore coloré. Regardez.",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur.",
-    TextKey.GUIDE_PAGE_COLOURED_INTRO to "Quatre mots de cette page, quatre niveaux.",
     TextKey.GUIDE_TAP_TITLE to "Touchez un mot pour l'enregistrer.",
     TextKey.GUIDE_TAP_INTRO to
         "La fiche répond depuis l'exemple, avant tout dictionnaire installé.",
@@ -372,7 +371,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "Choisir un niveau enregistre le mot. Le niveau 4 n'a pas de couleur : c'est le texte normal.",
     TextKey.GUIDE_LEVEL_TITLE to "Quel est votre niveau en {0} ?",
     TextKey.GUIDE_LEVEL_INTRO to "Il colore vos livres. Changez-le : la page change.",
-    TextKey.GUIDE_LEVEL_PREVIEW to "Aperçu · la page de l'exemple",
     TextKey.GUIDE_START_READING to "Commencer à lire",
     TextKey.GUIDE_DOWNLOAD_ASSETS to "Table et dictionnaire · {0}",
     TextKey.GUIDE_DOWNLOAD_TITLE to "Table et dictionnaire",
@@ -383,6 +381,9 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_DOWNLOAD_STOPPED to "Arrêté",
     TextKey.GUIDE_DOWNLOAD_FAILED to "Le téléchargement ne s'est pas terminé. Vérifiez votre connexion.",
     TextKey.GUIDE_DOWNLOAD_UNAVAILABLE to "Les données de langue sont inaccessibles. Vérifiez votre connexion.",
+    TextKey.GUIDE_DOWNLOAD_REFUSED to
+        "Cette version ne comprend pas les données de langue publiées. Mettez l'application à jour.",
+    TextKey.GUIDE_DOWNLOAD_LANGUAGE_NOT_OFFERED to "Cette langue n'est pas encore publiée.",
     TextKey.GUIDE_DOWNLOAD_RETRY to "Réessayer",
     TextKey.GUIDE_DOWNLOAD_RESUME to "Reprendre",
     TextKey.GUIDE_LEVEL_NOT_SET to "Votre niveau de lecture n'est pas encore défini. Réglages ▸ Langues.",

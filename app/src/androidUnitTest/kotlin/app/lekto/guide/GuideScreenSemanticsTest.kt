@@ -156,6 +156,18 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun theBackChevronHeadsTheBarAfterTheFirstScreen() {
+        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
+
+        val back = compose.onNodeWithTag(GUIDE_BACK_TAG).fetchSemanticsNode().boundsInRoot
+        val steps = compose.onNodeWithTag(GUIDE_STEPS_TAG).fetchSemanticsNode().boundsInRoot
+        val skip = compose.onNodeWithTag(GUIDE_SKIP_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue("the chevron heads the row: $back / $steps", back.right <= steps.left)
+        assertTrue("Skip keeps the far right: $steps / $skip", skip.left >= steps.right)
+    }
+
+    @Test
     fun theFirstBeatShowsTheParagraphWithNoColourAndNoNotes() {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
 
@@ -183,6 +195,14 @@ class GuideScreenSemanticsTest {
         compose.onNodeWithText("fisherman").assertExists()
         compose.onNodeWithText("pêcheur").assertExists()
         compose.onNodeWithText("calme").assertExists()
+    }
+
+    @Test
+    fun theColouredBeatKeepsItsHeadingAndDropsTheSecondLine() {
+        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
+
+        compose.onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        compose.onNodeWithText("Four words on this page, four levels.").assertDoesNotExist()
     }
 
     @Test
@@ -337,11 +357,22 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theDefaultBandIsASuggestionAndNoBandIsChosen() {
+    fun theLevelPreviewCarriesNoLabel() {
         render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
 
         compose.onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
-        CefrLevel.entries.forEach { level -> compose.onNodeWithTag(guideBandTag(level)).assertIsNotSelected() }
+        compose.onNodeWithText("Preview · the sample page").assertDoesNotExist()
+    }
+
+    @Test
+    fun a1IsTheStandingChoiceFromEntry() {
+        render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
+
+        compose.onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(guideBandTag(CefrLevel.A1)).assertIsSelected()
+        CefrLevel.entries.filter { level -> level != CefrLevel.A1 }.forEach { level ->
+            compose.onNodeWithTag(guideBandTag(level)).assertIsNotSelected()
+        }
     }
 
     @Test
@@ -383,14 +414,21 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun oneLanguageOpensOnThePageNamingIt() {
+    fun oneLanguageOpensOnThePageWithoutTheQuestionOrTheLabel() {
         render(
             GuideUiState(stage = GuideStage.PAGE, sample = sample),
             languages = listOf(testOfferedLanguage("en")),
         )
 
-        compose.onNodeWithText("Reading in English").assertIsDisplayed()
         compose.onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
+        compose.onNodeWithText("Reading in English").assertDoesNotExist()
+    }
+
+    @Test
+    fun theTapScreenStillNamesTheReadingLanguage() {
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
+
+        compose.onNodeWithText("Reading in English").assertIsDisplayed()
     }
 
     @Test
@@ -460,6 +498,10 @@ class GuideScreenSemanticsTest {
         )
 
         compose.onNodeWithText("The download did not finish. Check your connection.").assertIsDisplayed()
+        val message = compose.onNodeWithText("The download did not finish. Check your connection.")
+            .fetchSemanticsNode().boundsInRoot
+        val retry = compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("Retry stands below the message: $message / $retry", retry.top >= message.bottom)
         compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).performClick()
 
         assertEquals(1, retried)
@@ -482,6 +524,31 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun aRefusedManifestSaysTheBuildCannotReadItAndOffersNoRetry() {
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.REFUSED, "en")),
+            actions = GuideActions(onRetryDownload = {}),
+        )
+
+        compose.onNodeWithText("This build does not understand the published language data. Update the app.")
+            .assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aLanguageTheManifestDoesNotPublishSaysSoAndOffersNoRetry() {
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.LANGUAGE_NOT_OFFERED, "en")),
+            actions = GuideActions(onRetryDownload = {}),
+        )
+
+        compose.onNodeWithText("This language is not published yet.").assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun aStoppedDownloadOffersToResume() {
         var resumed = 0
         render(
@@ -491,6 +558,9 @@ class GuideScreenSemanticsTest {
         )
 
         compose.onNodeWithText("Stopped").assertIsDisplayed()
+        val message = compose.onNodeWithText("Stopped").fetchSemanticsNode().boundsInRoot
+        val resume = compose.onNodeWithTag(GUIDE_DOWNLOAD_RESUME_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("Resume stands below the message: $message / $resume", resume.top >= message.bottom)
         compose.onNodeWithTag(GUIDE_DOWNLOAD_RESUME_TAG).performClick()
 
         assertEquals(1, resumed)

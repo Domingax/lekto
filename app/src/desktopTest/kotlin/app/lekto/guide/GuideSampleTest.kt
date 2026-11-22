@@ -68,6 +68,44 @@ class GuideSampleTest {
     }
 
     @Test
+    fun theBeatPicksTheParagraphThatCoversTheMostLevels() {
+        val twoParagraphs = sample.copy(
+            paragraphs = listOf(
+                "The old boat.",
+                "The old fisherman rowed his small boat across the calm water.",
+            ),
+        )
+
+        val notes = guideNotes(twoParagraphs, CefrLevel.A1, segmenter, translationLanguage = "fr")
+        val document = guideDocument(twoParagraphs, CefrLevel.A1, plain = false, segmenter = segmenter)
+
+        assertEquals(
+            listOf("fisherman", "old", "calm", "rowed"),
+            notes.map { note -> note.surface },
+            "the paragraph that shows all four levels is the one demonstrated",
+        )
+        assertEquals(
+            "The old fisherman rowed his small boat across the calm water.",
+            document.text.blocks.single().text,
+            "the page shows the same paragraph its notes explain",
+        )
+    }
+
+    @Test
+    fun anEquallyRichParagraphKeepsTheEarlierOne() {
+        val tie = sample.copy(
+            paragraphs = listOf(
+                "old fisherman rowed calm",
+                "calm old fisherman rowed",
+            ),
+        )
+
+        val document = guideDocument(tie, CefrLevel.A1, plain = false, segmenter = segmenter)
+
+        assertEquals("old fisherman rowed calm", document.text.blocks.single().text)
+    }
+
+    @Test
     fun theSampleOwnColourMapPaintsThePageAtTheBand() {
         val mastery = guideMastery(sample, CefrLevel.B1, plain = false)
 

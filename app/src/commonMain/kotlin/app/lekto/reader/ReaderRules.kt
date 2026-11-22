@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.WordToken
@@ -18,10 +19,17 @@ import app.lekto.core.text.WordToken
 /**
  * The dotted rule under a highlighted word (docs/design.md §2.2): 1 dp thick,
  * a 1 dp dash and a 2 dp gap, so it reads as a rule rather than an underline.
+ * Exposed to the text-free planches so they can draw the same stroke; the guide's
+ * page uses [pageRules] itself rather than a parallel drawing.
  */
-private val RULE_THICKNESS = 1.dp
+internal val RULE_THICKNESS = 1.dp
 private val RULE_DASH = 1.dp
 private val RULE_GAP = 2.dp
+
+/** The dash the page strokes its rules with, at [density]: the one source for the page and its planches. */
+internal fun dottedRuleEffect(density: Density): PathEffect = PathEffect.dashPathEffect(
+    floatArrayOf(with(density) { RULE_DASH.toPx() }, with(density) { RULE_GAP.toPx() }),
+)
 
 /**
  * A word's dotted rule in the page's own text coordinates: from [left] to
@@ -126,9 +134,7 @@ internal fun Modifier.pageRules(rules: PageRules): Modifier = composed {
     val stroke = remember(density) {
         Stroke(
             width = with(density) { RULE_THICKNESS.toPx() },
-            pathEffect = PathEffect.dashPathEffect(
-                floatArrayOf(with(density) { RULE_DASH.toPx() }, with(density) { RULE_GAP.toPx() }),
-            ),
+            pathEffect = dottedRuleEffect(density),
         )
     }
     drawBehind {

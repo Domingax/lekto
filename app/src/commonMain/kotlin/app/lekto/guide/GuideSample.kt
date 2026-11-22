@@ -23,7 +23,10 @@ import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderText
 import app.lekto.reader.WordTap
 
-/** The band the guide paints the sample at before the reader chooses one, and after **Skip**. */
+/**
+ * The band the guide paints the sample at from entry and writes when the reader
+ * starts reading without choosing another; `Skip` leaves it undeclared.
+ */
 val GUIDE_DEFAULT_BAND: CefrLevel = CefrLevel.A1
 
 /**
@@ -42,15 +45,37 @@ data class GuideNote(
     val context: String?,
 )
 
-/** The sample's first paragraph as the reader's one-page document, with no chapter list. */
-fun guideText(sample: Sample): ReaderText {
-    val first = sample.paragraphs.firstOrNull().orEmpty()
+/** The sample's demonstrated paragraph as the reader's one-page document, with no chapter list. */
+fun guideText(sample: Sample, band: CefrLevel, segmenter: TextSegmenter): ReaderText {
+    val paragraph = guideParagraph(sample, band, segmenter)
     return ReaderText(
         title = sample.title,
         language = sample.language,
-        blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(first)))),
+        blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(paragraph)))),
         chapters = emptyList(),
     )
+}
+
+/**
+ * The paragraph the beat demonstrates at [band]: the one whose coloured words cover
+ * the most distinct highlighted **Mastery level**s, so the page can show one word
+ * per level (all four when the sample has them). Ties keep the earlier paragraph.
+ * A level no paragraph carries is simply absent from the notes.
+ */
+private fun guideParagraph(sample: Sample, band: CefrLevel, segmenter: TextSegmenter): String =
+    sample.paragraphs.maxByOrNull(BandColours(sample, band, segmenter)::levelsIn).orEmpty()
+
+/** One sample at one band, ready to say how many highlighted levels a paragraph shows. */
+private class BandColours(private val sample: Sample, band: CefrLevel, private val segmenter: TextSegmenter) {
+    private val lemmas: LemmaLookup = guideLemmas(sample)
+    private val colours: Map<String, MasteryLevel> = sample.colourMap(band)
+
+    /** The distinct highlighted levels [paragraph] shows at this band. */
+    fun levelsIn(paragraph: String): Int = segmenter.words(paragraph, sample.language)
+        .map { span -> colours[wordKeyOf(span.surface, sample.language, lemmas).key] ?: MasteryLevel.KNOWN }
+        .filter(MasteryLevel::highlighted)
+        .distinct()
+        .size
 }
 
 /**
@@ -105,7 +130,7 @@ fun guideDocument(
     selectedRange: IntRange? = null,
     saved: Pair<WordKey, MasteryLevel>? = null,
 ): ReaderDocument = ReaderDocument(
-    text = guideText(sample),
+    text = guideText(sample, band, segmenter),
     renderer = ReaderRenderer(
         segmenter = segmenter,
         mastery = guideMastery(sample, band, plain, saved),
@@ -117,10 +142,11 @@ fun guideDocument(
 
 /**
  * The four notes under the coloured page, one per highlighted **Mastery level** in
- * the order a reader acquires them, each the first word of the paragraph at that
- * level, with the sample's meaning in [translationLanguage] (or another glossary
- * when the chosen one is absent). A band with fewer coloured levels carries fewer
- * notes rather than inventing one.
+ * the order a reader acquires them, each the first word of the demonstrated
+ * paragraph at that level, with the sample's meaning in [translationLanguage] (or
+ * another glossary when the chosen one is absent). The paragraph is the one whose
+ * colours cover the most levels at the band (ties keep the earlier one); a band
+ * with fewer coloured levels carries fewer notes rather than inventing one.
  */
 fun guideNotes(
     sample: Sample,
@@ -128,7 +154,7 @@ fun guideNotes(
     segmenter: TextSegmenter,
     translationLanguage: String?,
 ): List<GuideNote> {
-    val paragraph = sample.paragraphs.firstOrNull().orEmpty()
+    val paragraph = guideParagraph(sample, band, segmenter)
     val lemmas = guideLemmas(sample)
     val colours = sample.colourMap(band)
     val words = segmenter.words(paragraph, sample.language)

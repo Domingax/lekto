@@ -29,7 +29,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -123,10 +122,7 @@ private val ROW_LABEL_BAR = LineBar(height = 9.dp, share = 0.22f)
 private val CHIP_LABEL_BAR = LineBar(height = 9.dp, share = 0.45f)
 private val PAGE_LINE_BAR = LineBar(height = 10.dp, share = 0.94f)
 
-/** The dotted rule's thickness, its dash and gap, and the room it keeps under its line (issue #281). */
-private val RULE_THICKNESS = 1.dp
-private val RULE_DASH = 1.dp
-private val RULE_GAP = 2.dp
+/** The dotted rule's dash and gap, and the room it keeps under its line (issue #281). */
 private val RULE_BELOW_LINE = 2.dp
 
 /** The page's lines, with a shorter one where a paragraph ends. */
@@ -212,7 +208,7 @@ private fun ColumnScope.PageLines(horizontalInset: Dp = LektoSpacing.ScreenEdge)
     }
 }
 
-/** The rule under a highlighted word: 1 dp thick, a 1 dp dash and a 2 dp gap, drawn where the page draws it. */
+/** The rule under a highlighted word: the page's own thickness, dash and gap, drawn where the page draws it. */
 @Composable
 private fun DottedRule(colour: Color, share: Float) {
     val density = LocalDensity.current
@@ -226,9 +222,7 @@ private fun DottedRule(colour: Color, share: Float) {
                     start = Offset(0f, size.height / 2f),
                     end = Offset(size.width, size.height / 2f),
                     strokeWidth = size.height,
-                    pathEffect = PathEffect.dashPathEffect(
-                        floatArrayOf(with(density) { RULE_DASH.toPx() }, with(density) { RULE_GAP.toPx() }),
-                    ),
+                    pathEffect = dottedRuleEffect(density),
                 )
             },
     )

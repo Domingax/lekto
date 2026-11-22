@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.LanguageCatalog
-import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.language.OfferedLanguage
@@ -43,8 +42,14 @@ enum class GuideDownloadPhase {
     /** The reader stopped the download. */
     STOPPED,
 
-    /** The manifest does not publish the chosen language, or no manifest could be read. */
+    /** No manifest could be fetched: the transport or the network failed, so a retry is honest. */
     UNAVAILABLE,
+
+    /** The published manifest was fetched but this build does not understand its format. No retry. */
+    REFUSED,
+
+    /** The manifest is readable but publishes no data for the chosen language. No retry. */
+    LANGUAGE_NOT_OFFERED,
 
     /** An artefact's download failed. */
     FAILED,
@@ -79,8 +84,10 @@ data class GuideDownloadUiState(
  *
  * The demonstration never gates on it: every guide screen reads the sample's own
  * colour maps and glossary, so it works before, during and after the download. A
- * manifest that cannot be read leaves the state [GuideDownloadPhase.UNAVAILABLE]
- * rather than failing the guide.
+ * manifest that cannot be fetched leaves [GuideDownloadPhase.UNAVAILABLE]; one this
+ * build refuses leaves [GuideDownloadPhase.REFUSED]; one that does not publish the
+ * chosen language leaves [GuideDownloadPhase.LANGUAGE_NOT_OFFERED] rather than
+ * failing the guide, and the line names which of the three it is.
  *
  * The pack it chooses is the reader's own **Translation language** when the
  * manifest publishes one, otherwise the first published pack: the guide lists
@@ -123,10 +130,13 @@ class GuideDownloadController(
     /**
      * Re-runs the preparation after a failure or an unreachable manifest: the
      * reader's `Retry`, which reads the manifest again and starts the installs
-     * afresh rather than giving up silently.
+     * afresh rather than giving up silently. A refused handshake or a language the
+     * manifest does not publish has no retry: nothing the reader can do would change
+     * the answer, so the line offers none.
      */
     fun retry() {
         if (state.isRunning) return
+        if (state.phase !in RETRYABLE_PHASES) return
         state.language?.let(::start)
     }
 
@@ -144,20 +154,19 @@ class GuideDownloadController(
 
     /** The preparation itself: read the manifest, plan the artefacts, start them and watch. */
     private fun prepare(language: String) {
-        val offered = offeredLanguage(language)
-        if (offered == null) {
-            state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
-            return
+        val plan = guideDownloadPlan(catalog, language, translationLanguage, onOffered)
+        when (plan) {
+            is GuideDownloadPlan.Ready -> launch(plan)
+            is GuideDownloadPlan.Failed -> state = state.copy(phase = plan.phase)
         }
-        target = offered
-        val artifacts = guidePlanOf(offered, translationLanguage())
-        if (artifacts.isEmpty()) {
-            state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
-            return
-        }
-        state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, offered.language, artifacts)
-        startInstalls(offered)
-        watch(offered, artifacts)
+    }
+
+    /** Starts a planned pair and follows it. */
+    private fun launch(plan: GuideDownloadPlan.Ready) {
+        target = plan.offered
+        state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, plan.offered.language, plan.artifacts)
+        startInstalls(plan.offered)
+        watch(plan.offered, plan.artifacts)
     }
 
     /** Cancels the preparation and the watch, and stops whatever the installers are running. */
@@ -174,19 +183,6 @@ class GuideDownloadController(
             }
         }
         target = null
-    }
-
-    /** The manifest's offered [language], read first from the cache and fetched only when nothing is cached. */
-    private fun offeredLanguage(language: String): OfferedLanguage? {
-        val languages = manifestLanguages() ?: return null
-        onOffered(languages)
-        return languages.firstOrNull { offered -> baseLanguage(offered.language) == baseLanguage(language) }
-    }
-
-    /** The manifest's languages: the cache, or one fetch when nothing is cached. */
-    private fun manifestLanguages(): List<OfferedLanguage>? = when (val status = catalog?.status()) {
-        is LanguageCatalogState.Available -> status.languages
-        else -> (runCatching { catalog?.reload() }.getOrNull() as? LanguageCatalogState.Available)?.languages
     }
 
     private fun sameLanguage(language: String): Boolean =
@@ -221,8 +217,15 @@ class GuideDownloadController(
 /** Both installers' current states, bundled so a verdict stays a small function. */
 private class InstallStates(val tables: Map<String, DifficultyUiState>, val packs: Map<String, DictionaryUiState>)
 
+/** The phases a retry can improve: the transport failed, an artefact failed, or the reader stopped. */
+private val RETRYABLE_PHASES = setOf(
+    GuideDownloadPhase.UNAVAILABLE,
+    GuideDownloadPhase.FAILED,
+    GuideDownloadPhase.STOPPED,
+)
+
 /** The artefacts [offered] publishes: its table, and the pack for the reader's translation language. */
-private fun guidePlanOf(offered: OfferedLanguage, translationLanguage: String?): List<OfferedArtifact> =
+internal fun guidePlanOf(offered: OfferedLanguage, translationLanguage: String?): List<OfferedArtifact> =
     listOfNotNull(offered.difficulty, guideChosenPack(offered, translationLanguage)?.artifact)
 
 /** The reader's own translation language's pack, or the first published one. */

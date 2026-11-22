@@ -844,7 +844,10 @@ private fun GuideDestination(
                 onChooseBand = guide::chooseBand,
                 onBack = guide::back,
                 onSkip = onFinish,
-                onFinish = onFinish,
+                onFinish = {
+                    guide.startReading()
+                    onFinish()
+                },
                 onStopDownload = { download?.stop() },
                 onRetryDownload = { download?.retry() },
                 onResumeDownload = { download?.resume() },

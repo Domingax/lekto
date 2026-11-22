@@ -350,9 +350,8 @@ sheets per paper (issue #277) — `guide-language-<paper>.png`,
 `guide-page-<paper>.png`, `guide-tap-<paper>.png`, `guide-level-<paper>.png` and
 `guide-arrival-<paper>.png` — the step marks and `Skip`, the eight language rows,
 the page's coloured word bars and four notes, the real sheet with its cap and
-handle, the six bands drawn unchosen (the A1 suggestion shows only through the
-preview card's colour, and no band is washed until the reader taps one), and the
-shelf's sample row with its
+handle, the six bands with A1 washed and ruled as the standing choice from entry,
+and the shelf's sample row with its
 download line. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
@@ -1252,15 +1251,18 @@ download is `GuideDownloadControllerTest`, driven by virtual time: one line for 
 artefacts, the manifest read only after the answer, the reader's own pack chosen
 after the translation default is filled from the manifest, a stop that cancels both
 installers and sticks, a failure that reports rather than crashing, and a retry
-after each of UNAVAILABLE, FAILED and STOPPED. `AppSemanticsTest` on both lanes
+after each of UNAVAILABLE, FAILED and STOPPED, and the two causes no retry can
+improve — a refused format handshake and a language the manifest does not publish —
+reported as themselves with no action. `AppSemanticsTest` on both lanes
 drives the same path end to end over the fake fetch seams and checks the
 **Languages** surface reports both artefacts installed afterwards. The screens are
 `GuideScreenSemanticsTest` on both lanes — the roster with no preselection and its
 select-then-Continue, the two beats and their notes, the embedded block's tap
 hit-testing, the sheet on the tapped word with no install door, the save's state
-line, the six bands with none chosen before a tap, the back affordance after screen
-1, `Skip` on every screen, the download card on screen 1 only with its three
-actions, and the arrival's sample row and download line — with the five screens'
+line, the six bands with A1 chosen from entry, the back chevron at the head of the
+bar after screen 1, `Skip` on every screen, the download card on screen 1 only with
+its three actions, and the arrival's sample row and download line — with the five
+screens'
 frames in the `guide-<screen>-<paper>.png` planche goldens. The once-only gate is
 `AppSemanticsTest` too: a fresh install opens on the guide, a device that completed
 it or already holds a book opens on the shell, a corrupt document reads as not
