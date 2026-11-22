@@ -294,6 +294,7 @@ private fun ColumnScope.PageBeat(
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(texts[title], texts[intro])
+        GuideReadingIn(state.sample?.language)
         GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
         document?.let { page -> ReaderScreen(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT)) }
         if (!state.plain) GuideNotes(notes, Modifier.padding(top = LektoSpacing.BetweenRows))
@@ -324,6 +325,7 @@ private fun ColumnScope.TapBeat(
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(texts[TextKey.GUIDE_TAP_TITLE], texts[TextKey.GUIDE_TAP_INTRO])
+        GuideReadingIn(state.sample?.language)
         GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
         marked?.let { page ->
             ReaderScreen(
@@ -406,6 +408,7 @@ private fun ColumnScope.LevelBeat(
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO])
+        GuideReadingIn(language)
         GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
         PreviewCard(document)
         BandList(state.band, actions.onChooseBand)
@@ -559,8 +562,24 @@ private fun GuideHeading(title: String, intro: String) {
     }
 }
 
-/** The page's quiet way forward, aligned to the trailing edge as the mockups draw it. */
+/**
+ * The language the sample is read in, under a page's title (issue #277): a build
+ * that ships one sample never asks the question, so its page has to name the
+ * language it opened in.
+ */
 @Composable
+private fun GuideReadingIn(language: String?) {
+    if (language.isNullOrBlank()) return
+    val texts = LocalAppTexts.current
+    Text(
+        text = texts.message(AppMessage.of(TextKey.GUIDE_READING_IN, texts.languageName(language))),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = LektoSpacing.InsideLabelPair),
+    )
+}
+
+/** The page's quiet way forward, aligned to the trailing edge as the mockups draw it. */@Composable
 private fun GuideContinue(onClick: () -> Unit, modifier: Modifier = Modifier) {
     TextAction(onClick = onClick, modifier = modifier.testTag(GUIDE_CONTINUE_TAG)) {
         Text(LocalAppTexts.current[TextKey.GUIDE_CONTINUE], style = MaterialTheme.typography.bodyLarge)
