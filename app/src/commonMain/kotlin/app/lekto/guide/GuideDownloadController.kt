@@ -213,26 +213,36 @@ class GuideDownloadController(
         tables: Map<String, DifficultyUiState>,
         packs: Map<String, DictionaryUiState>,
     ): Outcome? = when {
-        artifact == offered.difficulty ->
-            tables[baseLanguage(offered.language)]?.let { table -> outcome(table.status, table.error != null) }
+        artifact == offered.difficulty -> tables[baseLanguage(offered.language)]?.let { table ->
+            outcome(
+                failed = table.error != null,
+                ready = table.status is DifficultyState.Ready,
+                broken = table.status.isBroken(),
+            )
+        }
 
-        artifact == chosenPack(offered)?.artifact ->
-            packs[artifact.name]?.let { pack -> outcome(pack.status, pack.error != null) }
+        artifact == chosenPack(offered)?.artifact -> packs[artifact.name]?.let { pack ->
+            outcome(
+                failed = pack.error != null,
+                ready = pack.status is DictionaryPackState.Ready,
+                broken = pack.status.isBroken(),
+            )
+        }
 
         else -> null
     }
 
-    private fun outcome(status: DifficultyState, failed: Boolean): Outcome = when {
-        failed || status is DifficultyState.Corrupt || status is DifficultyState.Incompatible -> Outcome.FAILED
-        status is DifficultyState.Ready -> Outcome.DONE
+    /** The one verdict from an artefact's flags: a failed or unreadable artefact loses, an installed one wins. */
+    private fun outcome(failed: Boolean, ready: Boolean, broken: Boolean): Outcome = when {
+        failed || broken -> Outcome.FAILED
+        ready -> Outcome.DONE
         else -> Outcome.WAITING
     }
 
-    private fun outcome(status: DictionaryPackState, failed: Boolean): Outcome = when {
-        failed || status is DictionaryPackState.Corrupt || status is DictionaryPackState.Incompatible -> Outcome.FAILED
-        status is DictionaryPackState.Ready -> Outcome.DONE
-        else -> Outcome.WAITING
-    }
+    private fun DifficultyState.isBroken(): Boolean = this is DifficultyState.Corrupt || this is DifficultyState.Incompatible
+
+    private fun DictionaryPackState.isBroken(): Boolean =
+        this is DictionaryPackState.Corrupt || this is DictionaryPackState.Incompatible
 
     private enum class Outcome { WAITING, DONE, FAILED }
 
