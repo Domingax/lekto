@@ -7,12 +7,15 @@ import app.lekto.core.vault.DeviceId
 import app.lekto.testkit.InMemoryLemmaLookup
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
+import app.lekto.testkit.TestClock
 import app.lekto.testkit.deterministicSeams
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.serialization.json.JsonObject
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 /**
  * The vocabulary domain behaviour (issue #22): a save is keyed by the word's
@@ -147,5 +150,56 @@ class VaultVocabularyTest :
             vault.put(broken)
 
             vocabulary.all().map { it.surface } shouldContainExactly listOf("lantern")
+        }
+
+        test("a save reports the update time its record was stamped with") {
+            // The list's recency is the record's own `updatedAt`, not a field on
+            // the entry (ADR-0050), so a save says when it landed.
+            val clock = TestClock(Instant.fromEpochMilliseconds(1_000))
+            val vocabulary = VaultVocabulary(
+                InMemoryVaultStore(),
+                InMemoryTombstoneStore(),
+                deterministicSeams(clock = clock),
+                DeviceId("device-a"),
+            )
+
+            val savedAt = vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern"))
+
+            savedAt shouldBe Instant.fromEpochMilliseconds(1_000)
+        }
+
+        test("every saved entry carries the update time of its record") {
+            val clock = TestClock(Instant.fromEpochMilliseconds(1_000))
+            val vocabulary = VaultVocabulary(
+                InMemoryVaultStore(),
+                InMemoryTombstoneStore(),
+                deterministicSeams(clock = clock),
+                DeviceId("device-a"),
+            )
+            val lantern = VocabularyEntry(WordKey("en", "lantern"), "lantern")
+            vocabulary.save(lantern)
+            clock.advanceBy(2.minutes)
+            val harbour = VocabularyEntry(WordKey("en", "harbour"), "harbour")
+            vocabulary.save(harbour)
+
+            vocabulary.allWithTimes().associate { saved -> saved.entry.key to saved.updatedAt } shouldBe mapOf(
+                lantern.key to Instant.fromEpochMilliseconds(1_000),
+                harbour.key to Instant.fromEpochMilliseconds(121_000),
+            )
+        }
+
+        test("an unreadable record is skipped from the timed list too") {
+            val vault = InMemoryVaultStore()
+            val vocabulary = newVocabulary(vault)
+            vocabulary.save(VocabularyEntry(WordKey("en", "lantern"), "lantern"))
+            vault.put(
+                VocabularyRecord.of(
+                    VocabularyEntry(WordKey("en", "broken"), "broken"),
+                    deterministicSeams().clock.now(),
+                    DeviceId("device-a"),
+                ).copy(body = JsonObject(emptyMap())),
+            )
+
+            vocabulary.allWithTimes().map { saved -> saved.entry.surface } shouldContainExactly listOf("lantern")
         }
     })
