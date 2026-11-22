@@ -100,8 +100,15 @@ class GuideController(
     fun advance() {
         state = when {
             state.stage == GuideStage.PAGE && state.plain -> state.copy(plain = false)
-            state.stage == GuideStage.PAGE -> state.copy(stage = GuideStage.TAP, lookupOpen = true)
+
+            state.stage == GuideStage.PAGE -> state.copy(
+                stage = GuideStage.TAP,
+                lookupOpen = true,
+                savedLevel = existingLevel(state.sample),
+            )
+
             state.stage == GuideStage.TAP && !state.lookupOpen -> state.copy(stage = GuideStage.LEVEL)
+
             else -> state
         }
     }
@@ -175,5 +182,13 @@ class GuideController(
     private fun begin(language: String) {
         materialise(language)
         download?.start(language)
+    }
+
+    /** The level the demonstrated word already carries in the vault, so a replay states a fact. */
+    private fun existingLevel(sample: Sample?): MasteryLevel? {
+        val note = sample?.let { chosen ->
+            guideNotes(chosen, state.band, segmenter, translationLanguage()).firstOrNull()
+        }
+        return note?.let { chosen -> mastery?.entryFor(chosen.key)?.mastery }
     }
 }

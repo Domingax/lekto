@@ -97,6 +97,28 @@ class GuideControllerTest {
     }
 
     @Test
+    fun theTapStatesAWordThatWasAlreadySaved() {
+        val key = app.lekto.core.text.WordKey("en", "fisherman")
+        vocabulary.save(
+            app.lekto.core.vocabulary.VocabularyEntry(
+                key = key,
+                surface = "fisherman",
+                translation = "pêcheur",
+                contextSentence = null,
+                mastery = MasteryLevel.LEARNED,
+            ),
+        )
+        mastery.refresh()
+        val guide = controller()
+        guide.chooseLanguage("en")
+
+        guide.advance()
+        guide.advance()
+
+        assertEquals(MasteryLevel.LEARNED, guide.state.savedLevel)
+    }
+
+    @Test
     fun closingTheSheetWithoutChoosingWritesNothing() {
         val guide = controller()
         guide.chooseLanguage("en")
