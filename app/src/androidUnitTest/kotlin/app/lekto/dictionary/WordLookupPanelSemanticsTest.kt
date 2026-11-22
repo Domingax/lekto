@@ -8,6 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -363,8 +367,18 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
-    fun `a saved word's level is stated and marked`() {
-        compose.setContent {
+    fun `the state line is announced by a screen reader`() {
+        // The line changes under the reader's finger, so a polite live region
+        // carries the receipt to a screen reader (issue #279's acceptance).
+        compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
+
+        compose.onNodeWithText("Not saved").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite),
+        )
+    }
+
+    @Test
+    fun `a saved word's level is stated and marked`() {        compose.setContent {
             Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = blorpleEntry(MasteryLevel.FAMILIAR))
         }
 

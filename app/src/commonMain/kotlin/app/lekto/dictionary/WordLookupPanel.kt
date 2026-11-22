@@ -20,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -284,6 +287,9 @@ private fun Footer(vocabulary: VocabularyPanel, inColumn: Boolean) {
  * word, `Couldn't save` after a refused write, `Likely <level>` for a suggestion,
  * and `Not saved` when there is none. A suggestion is never marked like a fact,
  * so the level is muted until it is true.
+ *
+ * The line changes under the reader's finger, so it is a **polite live region**:
+ * a screen reader announces the receipt the sighted reader sees (issue #279).
  */
 @Composable
 private fun StateLine(vocabulary: VocabularyPanel) {
@@ -296,6 +302,7 @@ private fun StateLine(vocabulary: VocabularyPanel) {
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
 }
 

@@ -10,8 +10,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -368,6 +372,17 @@ class WordLookupPanelSemanticsTest {
         assertTrue(
             suggestion.luminance() > fact.luminance(),
             "the suggestion's ink ($suggestion) must be the muted one, the fact's ($fact) the darker ink",
+        )
+    }
+
+    @Test
+    fun theStateLineIsAnnouncedByAScreenReader() = runComposeUiTest {
+        // The line changes under the reader's finger, so a polite live region
+        // carries the receipt to a screen reader (issue #279's acceptance).
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
+
+        onNodeWithText("Not saved").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite),
         )
     }
 
