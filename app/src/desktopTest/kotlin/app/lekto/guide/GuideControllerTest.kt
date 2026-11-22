@@ -254,7 +254,7 @@ class GuideControllerTest {
     }
 
     @Test
-    fun theBandIsASuggestionUntilOneIsTapped() {
+    fun a1IsTheStandingBandAndNothingIsWrittenUntilTheEnd() {
         val guide = controller()
         guide.answer("en")
         guide.advance()
@@ -263,12 +263,42 @@ class GuideControllerTest {
         guide.advance()
 
         assertEquals(GuideStage.LEVEL, guide.state.stage)
-        assertEquals(GUIDE_DEFAULT_BAND, guide.state.band, "the page still colours at the default band")
-        assertNull(guide.state.chosenBand, "nothing is chosen before a band is tapped")
+        assertEquals(GUIDE_DEFAULT_BAND, guide.state.band, "the page colours at the standing band")
+        assertEquals(GUIDE_DEFAULT_BAND, guide.state.chosenBand, "A1 carries the selected treatment from entry")
+        assertNull(levels.levelFor("en"), "the standing choice is written by Start reading, not on arrival")
 
         guide.chooseBand(CefrLevel.C1)
 
         assertEquals(CefrLevel.C1, guide.state.chosenBand)
+    }
+
+    @Test
+    fun startingToReadWritesTheStandingBand() {
+        val guide = controller()
+        guide.answer("en")
+        guide.advance()
+        guide.advance()
+        guide.dismissLookup()
+        guide.advance()
+
+        guide.startReading()
+
+        assertEquals(CefrLevel.A1, levels.levelFor("en"), "Start reading writes the standing A1")
+    }
+
+    @Test
+    fun startingToReadWritesTheTappedBandInstead() {
+        val guide = controller()
+        guide.answer("en")
+        guide.advance()
+        guide.advance()
+        guide.dismissLookup()
+        guide.advance()
+        guide.chooseBand(CefrLevel.B2)
+
+        guide.startReading()
+
+        assertEquals(CefrLevel.B2, levels.levelFor("en"), "a tapped band supersedes the standing A1")
     }
 
     @Test

@@ -551,12 +551,12 @@ private fun PreviewCard(document: ReaderDocument?) {
 }
 
 /**
- * The six bands: code, name, the one thing each reads, and the tapped one washed
- * and ruled. [chosen] is `null` until the reader taps a band, so the default band
- * the page previews at is a suggestion, never a selection.
+ * The six bands: code, name, the one thing each reads, and the chosen one washed
+ * and ruled. A1 starts as the choice because the page previews at A1; another band
+ * tapped by the reader replaces it.
  */
 @Composable
-private fun BandList(chosen: CefrLevel?, onChoose: (CefrLevel) -> Unit) {
+private fun BandList(chosen: CefrLevel, onChoose: (CefrLevel) -> Unit) {
     val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows)) {
         CefrLevel.entries.forEachIndexed { index, level ->

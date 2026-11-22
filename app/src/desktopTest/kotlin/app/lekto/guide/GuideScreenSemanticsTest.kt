@@ -351,11 +351,14 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theDefaultBandIsASuggestionAndNoBandIsChosen() = runComposeUiTest {
+    fun a1IsTheStandingChoiceFromEntry() = runComposeUiTest {
         render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
 
         onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
-        CefrLevel.entries.forEach { level -> onNodeWithTag(guideBandTag(level)).assertIsNotSelected() }
+        onNodeWithTag(guideBandTag(CefrLevel.A1)).assertIsSelected()
+        CefrLevel.entries.filter { level -> level != CefrLevel.A1 }.forEach { level ->
+            onNodeWithTag(guideBandTag(level)).assertIsNotSelected()
+        }
     }
 
     @Test

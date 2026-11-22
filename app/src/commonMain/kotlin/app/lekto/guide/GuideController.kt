@@ -32,22 +32,23 @@ enum class GuideStage(val position: Int) {
 /**
  * What the guide's screens render (issue #277): the stage, the language the
  * reader selected, the sample once `Continue` answers, the band the page paints
- * at, the band the reader actually tapped, the beat of the page, the word whose
- * sheet is open, the level the word was saved at, and an honest failure when the
- * write was refused. The arrival is the shell's own shelf, so it is not a stage.
+ * at, the band the reader has chosen, the beat of the page, the word whose sheet
+ * is open, the level the word was saved at, and an honest failure when the write
+ * was refused. The arrival is the shell's own shelf, so it is not a stage.
  *
- * [band] is the suggestion the page demonstrates before any choice; [chosenBand]
- * is the **Reader level** the reader tapped, so a suggestion is never drawn as a
- * selection (issue #279's rule, applied to the bands). [tapped] is the word the
- * reader touched, so the sheet answers **that** word; [savedKey] and [savedLevel]
- * are the save the page recolours by.
+ * [band] and [chosenBand] both start at A1: the page colours at A1 from entry, so
+ * the selected treatment tells the truth rather than drawing a suggestion as a
+ * choice (the owner's second review reverses the earlier "no band until tapped"
+ * rule). Tapping another band makes it both the painted and the written one;
+ * [tapped] is the word the reader touched, so the sheet answers **that** word;
+ * [savedKey] and [savedLevel] are the save the page recolours by.
  */
 data class GuideUiState(
     val stage: GuideStage = GuideStage.LANGUAGE,
     val selectedLanguage: String? = null,
     val sample: Sample? = null,
     val band: CefrLevel = GUIDE_DEFAULT_BAND,
-    val chosenBand: CefrLevel? = null,
+    val chosenBand: CefrLevel = GUIDE_DEFAULT_BAND,
     val plain: Boolean = true,
     val lookupOpen: Boolean = false,
     val tapped: GuideNote? = null,
@@ -207,6 +208,17 @@ class GuideController(
     fun chooseBand(band: CefrLevel) {
         state = state.copy(band = band, chosenBand = band)
         chosenLanguage?.let { language -> mastery?.setLevel(language, band) }
+    }
+
+    /**
+     * `Start reading`: writes the standing band as the reader's level for the
+     * chosen language. A1 is written when the reader never tapped another band, so
+     * the level the page demonstrated is the level the shelf receives; `Skip` does
+     * not call this and writes nothing.
+     */
+    fun startReading() {
+        if (state.stage != GuideStage.LEVEL) return
+        chosenLanguage?.let { language -> mastery?.setLevel(language, state.chosenBand) }
     }
 
     /**
