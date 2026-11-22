@@ -2,6 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.lekto.core.reading.ReadingFace
@@ -28,6 +29,14 @@ class ReaderStylesTest {
         assertEquals((18f * ReadingPreferences.LEADING_RATIO).sp, styles.body.lineHeight)
         assertEquals(24.sp, styles.heading.fontSize)
         assertEquals(24.dp, styles.horizontalMargin)
+    }
+
+    @Test
+    fun theBodyIsJustifiedAndTheHeadingIsNot() {
+        val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
+
+        assertEquals(TextAlign.Justify, styles.body.textAlign, "a book's text is set justified")
+        assertEquals(TextAlign.Start, styles.heading.textAlign, "a heading keeps its ragged right edge")
     }
 
     @Test
