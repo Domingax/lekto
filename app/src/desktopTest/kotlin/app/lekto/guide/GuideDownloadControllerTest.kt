@@ -8,6 +8,7 @@ import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.defaultTranslationLanguage
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.dictionary.DictionaryController
 import app.lekto.dictionary.DictionaryServices
@@ -67,14 +68,29 @@ class GuideDownloadControllerTest {
         val dictionary: DictionaryController,
     )
 
-    private fun TestScope.rig(catalog: LanguageCatalog, translation: String? = "fr"): Rig {
+    @Suppress("LongParameterList") // The test drives the manifest, its two services and the reader's language.
+    private fun TestScope.rig(
+        catalog: LanguageCatalog,
+        translation: () -> String? = { "fr" },
+        difficulty: DifficultyServices = difficultyServices,
+        dictionary: DictionaryServices = dictionaryServices,
+        onOffered: (List<OfferedLanguage>) -> Unit = {},
+    ): Rig {
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val difficulty = DifficultyController(difficultyServices, dispatcher, this)
-        val dictionary = DictionaryController(dictionaryServices, dispatcher, this)
+        val difficultyController = DifficultyController(difficulty, dispatcher, this)
+        val dictionaryController = DictionaryController(dictionary, dispatcher, this)
         return Rig(
-            GuideDownloadController(catalog, difficulty, dictionary, { translation }, dispatcher, this),
-            difficulty,
-            dictionary,
+            GuideDownloadController(
+                catalog = catalog,
+                difficulty = difficultyController,
+                dictionary = dictionaryController,
+                translationLanguage = translation,
+                onOffered = onOffered,
+                dispatcher = dispatcher,
+                scope = this,
+            ),
+            difficultyController,
+            dictionaryController,
         )
     }
 
@@ -127,7 +143,7 @@ class GuideDownloadControllerTest {
                 testOfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz", sizeBytes = 2_000_000),
             ),
         )
-        val rig = rig(catalog(language), translation = "fr")
+        val rig = rig(catalog(language), translation = { "fr" })
 
         rig.download.start("en")
         advanceUntilIdle()
@@ -162,6 +178,88 @@ class GuideDownloadControllerTest {
         assertTrue(rig.difficulty.states.value.isEmpty(), "nothing was started")
     }
 
+    @Test
+    fun anUnreachableManifestRetriesIntoBothInstalls() = runTest {
+        val catalog = InMemoryLanguageCatalog(LanguageCatalogState.Unavailable)
+        val rig = rig(catalog)
+
+        rig.download.start("en")
+        advanceUntilIdle()
+        assertEquals(GuideDownloadPhase.UNAVAILABLE, rig.download.state.phase)
+
+        catalog.onReload = LanguageCatalogState.Available(listOf(english()))
+        rig.download.retry()
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.INSTALLED, rig.download.state.phase)
+        assertTrue(rig.difficulty.states.value.getValue("en").status is DifficultyState.Ready)
+        assertTrue(
+            rig.dictionary.states.value.getValue("lekto-dictionary-en-fr.sqlite.gz").status is
+                DictionaryPackState.Ready,
+        )
+    }
+
+    @Test
+    fun aFailedArtefactRetriesOnceTheFailureIsGone() = runTest {
+        val tables = FakeDifficultyFiles(derived, "en")
+        tables.failure = IllegalStateException("the network dropped")
+        val services = DifficultyServices { language -> DifficultyInstaller(derived, tables, tables, language) }
+        val rig = rig(catalog(), difficulty = services)
+
+        rig.download.start("en")
+        advanceUntilIdle()
+        assertEquals(GuideDownloadPhase.FAILED, rig.download.state.phase)
+
+        tables.failure = null
+        rig.download.retry()
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.INSTALLED, rig.download.state.phase)
+        assertTrue(rig.difficulty.states.value.getValue("en").status is DifficultyState.Ready)
+    }
+
+    @Test
+    fun aStoppedDownloadResumesThroughTheSamePreparation() = runTest {
+        val rig = rig(catalog())
+
+        rig.download.start("en")
+        rig.download.stop()
+        assertEquals(GuideDownloadPhase.STOPPED, rig.download.state.phase)
+
+        rig.download.resume()
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.INSTALLED, rig.download.state.phase)
+    }
+
+    @Test
+    fun theGuideFillsTheTranslationDefaultFromTheManifestBeforeChoosingThePack() = runTest {
+        val language = testOfferedLanguage(
+            "en",
+            difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz"),
+            dictionaries = listOf(
+                testOfferedDictionary("es", "lekto-dictionary-en-es.sqlite.gz"),
+                testOfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz"),
+            ),
+        )
+        var translation: String? = null
+        val rig = rig(
+            catalog(language),
+            translation = { translation },
+            onOffered = { offered -> translation = defaultTranslationLanguage("fr", offered) },
+        )
+
+        rig.download.start("en")
+        advanceUntilIdle()
+
+        assertEquals("fr", translation, "the guide fills the reader's own language from the manifest")
+        assertEquals(
+            "lekto-dictionary-en-fr.sqlite.gz",
+            rig.download.state.artifacts.last().name,
+            "the pack follows the filled default, not the manifest's order",
+        )
+    }
+
     @Suppress("InjectDispatcher") // The blocking download must run on a real thread, not the test's virtual one.
     @Test
     fun `a stopped download never finishes and the line follows the stop`() = runBlocking {
@@ -183,12 +281,12 @@ class GuideDownloadControllerTest {
         val difficulty = DifficultyController(services, Dispatchers.IO, scope)
         val dictionary = DictionaryController(dictionaryServices, Dispatchers.IO, scope)
         val download = GuideDownloadController(
-            catalog(),
-            difficulty,
-            dictionary,
-            { "fr" },
-            Dispatchers.IO,
-            scope,
+            catalog = catalog(),
+            difficulty = difficulty,
+            dictionary = dictionary,
+            translationLanguage = { "fr" },
+            dispatcher = Dispatchers.IO,
+            scope = scope,
         )
 
         download.start("en")

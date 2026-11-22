@@ -92,6 +92,7 @@ class GuideDownloadController(
     private val difficulty: DifficultyController?,
     private val dictionary: DictionaryController?,
     private val translationLanguage: () -> String?,
+    private val onOffered: (List<OfferedLanguage>) -> Unit = {},
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
 ) {
@@ -107,80 +108,105 @@ class GuideDownloadController(
     /**
      * Starts [language]'s download: the manifest is read (or refetched) off the
      * UI thread, the published table and pack are handed to the real controllers,
-     * and the phase follows them. A download already running, installed or stopped
-     * is left alone, so a revisited screen never starts a second transfer.
+     * and the phase follows them. A download already running for the same language,
+     * or already installed for it, is left alone; choosing another language
+     * retargets the transfer rather than stacking a second one.
      */
     fun start(language: String) {
-        if (state.isRunning || state.phase == GuideDownloadPhase.INSTALLED) return
-        if (state.phase == GuideDownloadPhase.STOPPED) return
+        if (state.isRunning && sameLanguage(language)) return
+        if (state.phase == GuideDownloadPhase.INSTALLED && sameLanguage(language)) return
+        cancelWork()
         state = GuideDownloadUiState(GuideDownloadPhase.PREPARING, language)
-        preparation = scope.launch {
-            val offered = offeredLanguage(language)
-            if (offered == null) {
-                state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
-                return@launch
-            }
-            target = offered
-            val artifacts = planOf(offered)
-            if (artifacts.isEmpty()) {
-                state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
-                return@launch
-            }
-            state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, offered.language, artifacts)
-            startInstalls(offered)
-            watch(offered, artifacts)
-        }
+        preparation = scope.launch { prepare(language) }
+    }
+
+    /**
+     * Re-runs the preparation after a failure or an unreachable manifest: the
+     * reader's `Retry`, which reads the manifest again and starts the installs
+     * afresh rather than giving up silently.
+     */
+    fun retry() {
+        if (state.isRunning) return
+        state.language?.let(::start)
+    }
+
+    /** Resumes a download the reader stopped, through the same preparation. */
+    fun resume() {
+        if (state.phase == GuideDownloadPhase.STOPPED) retry()
     }
 
     /** Stops the download at once, cancelling both installers and the line's watch. */
     fun stop() {
         if (!state.isRunning) return
+        cancelWork()
+        state = state.copy(phase = GuideDownloadPhase.STOPPED)
+    }
+
+    /** The preparation itself: read the manifest, plan the artefacts, start them and watch. */
+    private fun prepare(language: String) {
+        val offered = offeredLanguage(language)
+        if (offered == null) {
+            state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
+            return
+        }
+        target = offered
+        val artifacts = guidePlanOf(offered, translationLanguage())
+        if (artifacts.isEmpty()) {
+            state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
+            return
+        }
+        state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, offered.language, artifacts)
+        startInstalls(offered)
+        watch(offered, artifacts)
+    }
+
+    /** Cancels the preparation and the watch, and stops whatever the installers are running. */
+    private fun cancelWork() {
+        val wasRunning = state.isRunning
         preparation?.cancel()
         watching?.cancel()
         target?.let { offered ->
-            if (offered.difficulty != null) difficulty?.stop(offered.language)
-            chosenPack(offered)?.let { chosen -> dictionary?.stop(chosen.artifact.name) }
+            if (wasRunning && offered.difficulty != null) difficulty?.stop(offered.language)
+            if (wasRunning) {
+                guideChosenPack(offered, translationLanguage())?.let { chosen ->
+                    dictionary?.stop(chosen.artifact.name)
+                }
+            }
         }
-        state = state.copy(phase = GuideDownloadPhase.STOPPED)
+        target = null
     }
 
     /** The manifest's offered [language], read first from the cache and fetched only when nothing is cached. */
     private fun offeredLanguage(language: String): OfferedLanguage? {
-        val status = catalog?.status()
-        val languages = when (status) {
-            is LanguageCatalogState.Available -> status.languages
-            else -> (runCatching { catalog?.reload() }.getOrNull() as? LanguageCatalogState.Available)?.languages
-        }.orEmpty()
+        val languages = manifestLanguages() ?: return null
+        onOffered(languages)
         return languages.firstOrNull { offered -> baseLanguage(offered.language) == baseLanguage(language) }
     }
 
-    /** The artefacts the chosen language publishes: its table, and the pack for the reader's translation language. */
-    private fun planOf(offered: OfferedLanguage): List<OfferedArtifact> = listOfNotNull(
-        offered.difficulty,
-        chosenPack(offered)?.artifact,
-    )
-
-    /** The reader's own translation language's pack, or the first published one. */
-    private fun chosenPack(offered: OfferedLanguage): OfferedDictionary? {
-        val wanted = translationLanguage()?.let(::baseLanguage)
-        return offered.dictionaries.firstOrNull { published -> baseLanguage(published.translationLanguage) == wanted }
-            ?: offered.dictionaries.firstOrNull()
+    /** The manifest's languages: the cache, or one fetch when nothing is cached. */
+    private fun manifestLanguages(): List<OfferedLanguage>? = when (val status = catalog?.status()) {
+        is LanguageCatalogState.Available -> status.languages
+        else -> (runCatching { catalog?.reload() }.getOrNull() as? LanguageCatalogState.Available)?.languages
     }
 
+    private fun sameLanguage(language: String): Boolean =
+        state.language?.let { chosen -> baseLanguage(chosen) == baseLanguage(language) } ?: false
+
+    /** The artefacts the chosen language publishes: its table, and the pack for the reader's translation language. */
     private fun startInstalls(offered: OfferedLanguage) {
         offered.difficulty?.let { artifact -> difficulty?.install(offered.language, artifact) }
-        chosenPack(offered)?.let { published ->
+        guideChosenPack(offered, translationLanguage())?.let { published ->
             dictionary?.install(offered.language, published.translationLanguage, published.artifact)
         }
     }
 
     /** Follows both controllers' states until they are installed or one fails, unless the reader stopped them. */
     private fun watch(offered: OfferedLanguage, artifacts: List<OfferedArtifact>) {
-        val difficultyStates = difficulty?.states ?: MutableStateFlow(emptyMap())
-        val dictionaryStates = dictionary?.states ?: MutableStateFlow(emptyMap())
+        val tables = difficulty?.states ?: MutableStateFlow(emptyMap())
+        val packs = dictionary?.states ?: MutableStateFlow(emptyMap())
         watching = scope.launch {
-            val result = combine(difficultyStates, dictionaryStates) { tables, packs ->
-                verdict(offered, artifacts, tables, packs)
+            val result = combine(tables, packs) { tableStates, packStates ->
+                guideVerdict(offered, artifacts, translationLanguage(), InstallStates(tableStates, packStates))
             }.first { verdict -> verdict != Verdict.WAITING }
             if (state.phase != GuideDownloadPhase.DOWNLOADING) return@launch
             when (result) {
@@ -190,58 +216,75 @@ class GuideDownloadController(
             }
         }
     }
-
-    private fun verdict(
-        offered: OfferedLanguage,
-        artifacts: List<OfferedArtifact>,
-        tables: Map<String, DifficultyUiState>,
-        packs: Map<String, DictionaryUiState>,
-    ): Verdict {
-        val outcomes = artifacts.mapNotNull { artifact -> outcomeOf(offered, artifact, tables, packs) }
-        return when {
-            outcomes.any { outcome -> outcome == Outcome.FAILED } -> Verdict.FAILED
-            outcomes.isEmpty() && artifacts.isEmpty() -> Verdict.READY
-            outcomes.isNotEmpty() && outcomes.all { outcome -> outcome == Outcome.DONE } -> Verdict.READY
-            else -> Verdict.WAITING
-        }
-    }
-
-    /** One planned artefact's state: the table's when it is the table, the pack's when it is the pack. */
-    private fun outcomeOf(
-        offered: OfferedLanguage,
-        artifact: OfferedArtifact,
-        tables: Map<String, DifficultyUiState>,
-        packs: Map<String, DictionaryUiState>,
-    ): Outcome? = when {
-        artifact == offered.difficulty -> tables[baseLanguage(offered.language)]?.let { table ->
-            outcome(
-                failed = table.error != null,
-                ready = table.status is DifficultyState.Ready,
-                broken = table.status is DifficultyState.Corrupt ||
-                    table.status is DifficultyState.Incompatible,
-            )
-        }
-
-        artifact == chosenPack(offered)?.artifact -> packs[artifact.name]?.let { pack ->
-            outcome(
-                failed = pack.error != null,
-                ready = pack.status is DictionaryPackState.Ready,
-                broken = pack.status is DictionaryPackState.Corrupt ||
-                    pack.status is DictionaryPackState.Incompatible,
-            )
-        }
-
-        else -> null
-    }
-
-    /** The one verdict from an artefact's flags: a failed or unreadable artefact loses, an installed one wins. */
-    private fun outcome(failed: Boolean, ready: Boolean, broken: Boolean): Outcome = when {
-        failed || broken -> Outcome.FAILED
-        ready -> Outcome.DONE
-        else -> Outcome.WAITING
-    }
-
-    private enum class Outcome { WAITING, DONE, FAILED }
-
-    private enum class Verdict { WAITING, READY, FAILED }
 }
+
+/** Both installers' current states, bundled so a verdict stays a small function. */
+private class InstallStates(val tables: Map<String, DifficultyUiState>, val packs: Map<String, DictionaryUiState>)
+
+/** The artefacts [offered] publishes: its table, and the pack for the reader's translation language. */
+private fun guidePlanOf(offered: OfferedLanguage, translationLanguage: String?): List<OfferedArtifact> =
+    listOfNotNull(offered.difficulty, guideChosenPack(offered, translationLanguage)?.artifact)
+
+/** The reader's own translation language's pack, or the first published one. */
+private fun guideChosenPack(offered: OfferedLanguage, translationLanguage: String?): OfferedDictionary? {
+    val wanted = translationLanguage?.let(::baseLanguage)
+    return offered.dictionaries.firstOrNull { published -> baseLanguage(published.translationLanguage) == wanted }
+        ?: offered.dictionaries.firstOrNull()
+}
+
+/** Both installers' states as one verdict: every planned artefact installed, or one failed. */
+private fun guideVerdict(
+    offered: OfferedLanguage,
+    artifacts: List<OfferedArtifact>,
+    translationLanguage: String?,
+    states: InstallStates,
+): Verdict {
+    val outcomes = artifacts.mapNotNull { artifact ->
+        guideOutcomeOf(offered, artifact, translationLanguage, states)
+    }
+    return when {
+        outcomes.any { outcome -> outcome == Outcome.FAILED } -> Verdict.FAILED
+        outcomes.isEmpty() && artifacts.isEmpty() -> Verdict.READY
+        outcomes.isNotEmpty() && outcomes.all { outcome -> outcome == Outcome.DONE } -> Verdict.READY
+        else -> Verdict.WAITING
+    }
+}
+
+/** One planned artefact's state: the table's when it is the table, the pack's when it is the pack. */
+private fun guideOutcomeOf(
+    offered: OfferedLanguage,
+    artifact: OfferedArtifact,
+    translationLanguage: String?,
+    states: InstallStates,
+): Outcome? = when {
+    artifact == offered.difficulty -> states.tables[baseLanguage(offered.language)]?.let { table ->
+        guideOutcome(
+            failed = table.error != null,
+            ready = table.status is DifficultyState.Ready,
+            broken = table.status is DifficultyState.Corrupt ||
+                table.status is DifficultyState.Incompatible,
+        )
+    }
+
+    artifact == guideChosenPack(offered, translationLanguage)?.artifact -> states.packs[artifact.name]?.let { pack ->
+        guideOutcome(
+            failed = pack.error != null,
+            ready = pack.status is DictionaryPackState.Ready,
+            broken = pack.status is DictionaryPackState.Corrupt ||
+                pack.status is DictionaryPackState.Incompatible,
+        )
+    }
+
+    else -> null
+}
+
+/** The one verdict from an artefact's flags: a failed or unreadable artefact loses, an installed one wins. */
+private fun guideOutcome(failed: Boolean, ready: Boolean, broken: Boolean): Outcome = when {
+    failed || broken -> Outcome.FAILED
+    ready -> Outcome.DONE
+    else -> Outcome.WAITING
+}
+
+private enum class Outcome { WAITING, DONE, FAILED }
+
+private enum class Verdict { WAITING, READY, FAILED }

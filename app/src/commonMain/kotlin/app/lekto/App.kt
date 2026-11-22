@@ -88,6 +88,7 @@ import app.lekto.difficulty.DifficultyServices
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.guide.GuideActions
 import app.lekto.guide.GuideController
+import app.lekto.guide.GuideDownloadActions
 import app.lekto.guide.GuideDownloadController
 import app.lekto.guide.GuideDownloadLine
 import app.lekto.guide.GuideDownloadPhase
@@ -463,6 +464,9 @@ fun App(
                 difficulty = difficulty,
                 dictionary = dictionary,
                 translationLanguage = { languageSettings?.translationLanguage },
+                onOffered = { offered ->
+                    languageSettings?.applyTranslationLanguageDefault(environment.systemLanguage, offered)
+                },
                 dispatcher = environment.dispatcher,
                 scope = scope,
             )
@@ -481,12 +485,10 @@ fun App(
                 languages = guideLanguages,
                 sampleOf = samples::sample,
                 materialise = controller::materialiseSample,
-                download = guideDownload,
+                startDownload = { language -> guideDownload?.start(language) },
                 mastery = mastery,
                 segmenter = environment.segmenter,
                 translationLanguage = { languageSettings?.translationLanguage },
-                existingSample = { controller.state.value.sample?.book?.language },
-                readingLanguage = { readingLanguagesOf(controller.state.value.books).firstOrNull() },
             )
         }
     }
@@ -770,6 +772,8 @@ private fun AppScreens(
                     levelLine = levelLine(libraryState, mastery),
                     download = guideDownload?.state ?: GuideDownloadUiState(),
                     onStopDownload = { guideDownload?.stop() },
+                    onRetryDownload = { guideDownload?.retry() },
+                    onResumeDownload = { guideDownload?.resume() },
                     onOpen = { session -> stack = stack.push(Destination.Reading(session)) },
                 )
 
@@ -808,8 +812,9 @@ private fun GuideDestination(
     // The guide's speaker is a demonstration: a spoken word needs no receipt, and
     // the guide carries no line for a missing voice.
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { }
-    val document = remember(sample, state.band, state.plain) {
-        sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter) }
+    val document = remember(sample, state.band, state.plain, state.savedKey, state.savedLevel) {
+        val saved = state.savedKey?.let { key -> state.savedLevel?.let { level -> key to level } }
+        sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter, saved = saved) }
     }
     val notes = remember(sample, state.band, translationLanguage) {
         sample?.let { chosen -> guideNotes(chosen, state.band, environment.segmenter, translationLanguage) }.orEmpty()
@@ -831,15 +836,18 @@ private fun GuideDestination(
             download = download?.state ?: GuideDownloadUiState(),
             translationLanguage = translationLanguage,
             actions = GuideActions(
-                onChooseLanguage = guide::chooseLanguage,
+                onSelectLanguage = guide::selectLanguage,
                 onContinue = guide::advance,
                 onTapWord = guide::tapWord,
                 onDismissLookup = guide::dismissLookup,
                 onSaveWord = guide::save,
                 onChooseBand = guide::chooseBand,
+                onBack = guide::back,
                 onSkip = onFinish,
                 onFinish = onFinish,
                 onStopDownload = { download?.stop() },
+                onRetryDownload = { download?.retry() },
+                onResumeDownload = { download?.resume() },
                 onOpenSettings = {},
                 onSpeakWord = { notes.firstOrNull()?.let { note -> speak(note.surface, note.key.language) } },
             ),
@@ -1056,6 +1064,8 @@ private fun LibraryDestination(
     levelLine: AppMessage?,
     download: GuideDownloadUiState,
     onStopDownload: () -> Unit,
+    onRetryDownload: () -> Unit,
+    onResumeDownload: () -> Unit,
     onOpen: (ReadingSession) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -1070,7 +1080,11 @@ private fun LibraryDestination(
         if (download.phase != GuideDownloadPhase.IDLE) {
             GuideDownloadLine(
                 download,
-                onStop = onStopDownload,
+                GuideDownloadActions(
+                    onStop = onStopDownload,
+                    onRetry = onRetryDownload,
+                    onResume = onResumeDownload,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
