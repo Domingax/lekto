@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
@@ -22,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -36,6 +38,7 @@ import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.theme.LektoTheme
+import app.lekto.ui.LOOKUP_HANDLE_TAG
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -199,6 +202,20 @@ class WordLookupPanelSemanticsTest {
         }
 
         onNodeWithText("No speech engine is available on this device.").assertIsDisplayed()
+    }
+
+    @Test
+    fun draggingTheHandleDownDismissesTheSheet() = runComposeUiTest {
+        var dismissed = false
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onDismiss = { dismissed = true }) }
+
+        onNodeWithTag(LOOKUP_HANDLE_TAG).performTouchInput {
+            down(center)
+            moveBy(Offset(0f, 160f))
+            up()
+        }
+
+        assertTrue(dismissed, "dragging the handle down must close the sheet")
     }
 
     @Test

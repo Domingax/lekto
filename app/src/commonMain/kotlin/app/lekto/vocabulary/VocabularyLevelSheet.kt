@@ -91,6 +91,7 @@ fun VocabularyLevelSheet(
             modifier = Modifier.align(Alignment.BottomCenter),
             sheetModifier = Modifier.testTag(VOCABULARY_LEVEL_SHEET_TAG),
             maxHeightFraction = VOCABULARY_LEVEL_SHEET_MAX_HEIGHT_FRACTION,
+            onDismiss = onDismiss,
         ) {
             Panel(entry, onSave, onDismiss, stacked = false)
         }

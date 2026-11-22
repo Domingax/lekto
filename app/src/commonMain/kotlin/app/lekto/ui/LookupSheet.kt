@@ -2,6 +2,7 @@ package app.lekto.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -40,12 +42,18 @@ import app.lekto.ui.icons.X
  */
 internal const val LOOKUP_SHEET_MAX_HEIGHT_FRACTION: Float = 0.60f
 
+/** The test tag on the drag handle, so a UI test can start the dismissal drag where a reader would. */
+internal const val LOOKUP_HANDLE_TAG: String = "lookup-handle"
+
 /** The 1 dp hairline a surface draws around itself (docs/design.md §4: no shadows). */
 private val Hairline = 1.dp
 
 /** The drag handle's bar: its width and its height. */
 private val HandleWidth = 32.dp
 private val HandleHeight = 4.dp
+
+/** How far the reader must drag the handle down before the sheet closes. */
+private val DismissDragDistance = 48.dp
 
 /**
  * The shell both lookup panels share (docs/design.md §7.3; issues #210, #211):
@@ -68,7 +76,9 @@ private val HandleHeight = 4.dp
  * translation — so the word and phrase panels cannot drift apart. The sheet
  * swallows taps that land on it, so only a tap truly outside it — which its
  * [DismissScrim] handles — dismisses it; a tap on the reader behind it then
- * never turns the page or opens another lookup.
+ * never turns the page or opens another lookup. [onDismiss] closes the sheet when
+ * the reader drags its handle down, which is the gesture the handle has always
+ * promised (issue #282).
  */
 @Suppress("LongParameterList") // The frame, its test tag, the shape and the cap: four independent choices.
 @Composable
@@ -77,12 +87,13 @@ internal fun LookupSheet(
     sheetModifier: Modifier = Modifier,
     inColumn: Boolean = false,
     maxHeightFraction: Float = LOOKUP_SHEET_MAX_HEIGHT_FRACTION,
+    onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (inColumn) {
         ColumnSheet(modifier, sheetModifier, content)
     } else {
-        BottomSheet(modifier, sheetModifier, maxHeightFraction, content)
+        BottomSheet(modifier, sheetModifier, maxHeightFraction, onDismiss, content)
     }
 }
 
@@ -106,6 +117,7 @@ private fun BottomSheet(
     modifier: Modifier,
     sheetModifier: Modifier,
     maxHeightFraction: Float,
+    onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -127,7 +139,7 @@ private fun BottomSheet(
                 // while the controls stay above it and take their tap first.
                 Box(Modifier.matchParentSize().swallowTaps())
                 Column(Modifier.fillMaxWidth()) {
-                    DragHandle()
+                    DragHandle(onDismiss)
                     content()
                 }
             }
@@ -170,10 +182,34 @@ internal fun SheetDivider() {
     )
 }
 
-/** The grabber that says the sheet was raised from the bottom edge. It is a hint, not a control. */
+/**
+ * The grabber that says the sheet was raised from the bottom edge, and the gesture
+ * that makes it true (issue #282): a downward drag that starts here closes the
+ * sheet. The drag is bound to the handle's own band rather than the whole surface,
+ * so it never competes with the body's scroll.
+ */
 @Composable
-private fun DragHandle() {
-    Box(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines), contentAlignment = Alignment.Center) {
+private fun DragHandle(onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.BetweenRelatedLines)
+            .testTag(LOOKUP_HANDLE_TAG)
+            .pointerInput(onDismiss) {
+                val threshold = DismissDragDistance.toPx()
+                var travelled = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { travelled = 0f },
+                    onDragCancel = { travelled = 0f },
+                    onDragEnd = {
+                        if (travelled >= threshold) onDismiss()
+                        travelled = 0f
+                    },
+                    onVerticalDrag = { _, distance -> travelled += distance },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
         Box(Modifier.width(HandleWidth).height(HandleHeight).background(MaterialTheme.colorScheme.outline, CircleShape))
     }
 }

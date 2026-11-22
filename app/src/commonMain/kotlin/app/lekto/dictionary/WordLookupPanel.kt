@@ -141,6 +141,7 @@ fun WordLookupPanel(
         modifier = modifier,
         sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
         inColumn = inColumn,
+        onDismiss = actions.onDismiss,
     ) {
         SheetContent(term, result, pronunciation, shortcuts, actions.onOpenShortcut, actions.onDismiss, onOpenSettings)
         Footer(vocabulary, inColumn)

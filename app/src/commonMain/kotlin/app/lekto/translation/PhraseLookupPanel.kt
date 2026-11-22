@@ -89,6 +89,7 @@ fun PhraseLookupPanel(
         modifier = modifier,
         sheetModifier = Modifier.testTag(PHRASE_PANEL_TAG),
         inColumn = inColumn,
+        onDismiss = actions.onDismiss,
     ) {
         // The phrase and the answer share one scroll and sit under the sheet's
         // cap; the shortcut stays pinned below it, so the one answer that needs
