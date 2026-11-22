@@ -5,9 +5,11 @@ import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.text.baseLanguage
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +39,9 @@ class DifficultyController(
 ) {
 
     private val _states = MutableStateFlow<Map<String, DifficultyUiState>>(emptyMap())
+
+    /** The download each language currently has in flight, so a stop can cancel it. */
+    private val downloads = mutableMapOf<String, Job>()
 
     /** Each offered language's table state, keyed by its base tag. */
     val states: StateFlow<Map<String, DifficultyUiState>> = _states.asStateFlow()
@@ -72,11 +77,13 @@ class DifficultyController(
         // ever written from the surface's own thread (docs/testing.md, "Deterministic seams").
         val installer = services.installer(base)
         update(base) { current -> current.copy(installing = true, error = null) }
-        scope.launch {
+        downloads[base] = scope.launch {
             try {
                 val status = withContext(dispatcher) { installer.install(artifact.url, artifact.sha256) }
                 update(base) { current -> current.copy(status = status, installing = false) }
                 if (status is DifficultyState.Ready) onInstalled()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (failure: Exception) {
                 update(base) { current ->
                     current.copy(
@@ -86,6 +93,20 @@ class DifficultyController(
                 }
             }
         }
+    }
+
+    /**
+     * Stops [language]'s download in flight, if any, and clears its installing
+     * flag at once (issue #277's `Stop`). A download already past the point of no
+     * return may still finish writing its bytes, but the cancelled coroutine never
+     * lands its result, so the surface neither reports a table the reader stopped
+     * nor claims one is still coming. A stop with nothing running is a no-op
+     * beyond clearing a stale error.
+     */
+    fun stop(language: String) {
+        val base = baseLanguage(language)
+        downloads.remove(base)?.cancel()
+        update(base) { current -> current.copy(installing = false, error = null) }
     }
 
     /** Dismisses [language]'s current error, so the app stays usable after a failure. */

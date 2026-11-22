@@ -2,6 +2,7 @@ package app.lekto.dictionary
 
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.dictionary.DictionaryPackState
+import app.lekto.core.dictionary.PackDownloader
 import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedDictionary
@@ -12,14 +13,21 @@ import app.lekto.testkit.MISMATCHED_SHA256
 import app.lekto.testkit.testOfferedArtifact
 import app.lekto.testkit.testOfferedLanguage
 import app.lekto.text.AppMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -158,6 +166,52 @@ class DictionaryControllerTest {
         advanceUntilIdle()
 
         assertEquals(1, files.getValue("en" to "fr").downloads)
+    }
+
+    @Test
+    fun `stopping a download cancels it and clears the installing flag`() = runBlocking {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val databases = FakeDictionaryPackFiles(derived, "en", "fr")
+        val services = DictionaryServices { reading, translation ->
+            DictionaryPackInstaller(
+                derived = derived,
+                downloader = PackDownloader { _, _, _ ->
+                    started.countDown()
+                    release.await()
+                },
+                databases = databases,
+                readingLanguage = reading,
+                translationLanguage = translation,
+            )
+        }
+        val controller = DictionaryController(services, Dispatchers.IO, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+
+        controller.install("en", "fr", artifact("en", "fr"))
+        assertTrue(started.await(5, TimeUnit.SECONDS), "the download did not start")
+        controller.stop(artifact("en", "fr").name)
+        release.countDown()
+
+        assertFalse(
+            controller.states.value.getValue(artifact("en", "fr").name).installing,
+            "a stopped download is not still running",
+        )
+    }
+
+    @Test
+    fun `a stopped download never reaches the reader`() = runTest {
+        val controller = controller()
+
+        controller.install("en", "fr", artifact("en", "fr"))
+        controller.stop(artifact("en", "fr").name)
+        advanceUntilIdle()
+
+        assertEquals(
+            0,
+            files.getValue("en" to "fr").downloads,
+            "the cancelled work must not download after the stop",
+        )
+        assertFalse(controller.states.value.getValue(artifact("en", "fr").name).installing)
     }
 
     @Test
