@@ -804,6 +804,8 @@ private fun GuideDestination(
 ) {
     val state = guide.state
     val sample = state.sample
+    val scope = rememberCoroutineScope()
+    val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { /* the guide speaks, it does not report */ }
     val document = remember(sample, state.band, state.plain) {
         sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter) }
     }
@@ -837,7 +839,7 @@ private fun GuideDestination(
                 onFinish = onFinish,
                 onStopDownload = { download?.stop() },
                 onOpenSettings = {},
-                onSpeakWord = {},
+                onSpeakWord = { notes.firstOrNull()?.let { note -> speak(note.surface, note.key.language) } },
             ),
         )
     }

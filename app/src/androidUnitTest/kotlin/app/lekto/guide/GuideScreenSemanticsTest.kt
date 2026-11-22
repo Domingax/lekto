@@ -29,6 +29,7 @@ import app.lekto.core.language.SampleRoster
 import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.sample.Sample
 import app.lekto.dictionary.LOOKUP_CLOSE_TAG
+import app.lekto.dictionary.LOOKUP_INSTALL_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
@@ -137,6 +138,16 @@ class GuideScreenSemanticsTest {
         compose.onAllNodesWithText("The old fisherman rowed his small boat across the calm water.")
             .assertCountEquals(2)
         compose.onNodeWithText("Not saved").assertExists()
+    }
+
+    @Test
+    fun theTapSheetOffersNoInstallAction() {
+        // The guide answers from the sample's glossary, never from the offline
+        // pack, so the offline door has nothing to open here (issue #282's seam).
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true))
+
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(LOOKUP_INSTALL_TAG).assertDoesNotExist()
     }
 
     @Test

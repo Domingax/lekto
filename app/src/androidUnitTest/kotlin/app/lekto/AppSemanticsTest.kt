@@ -89,8 +89,10 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
+import app.lekto.guide.GUIDE_CONTINUE_TAG
 import app.lekto.guide.GUIDE_LANGUAGE_LIST_TAG
 import app.lekto.guide.GUIDE_SKIP_TAG
+import app.lekto.guide.guideLanguageRowTag
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_BACK_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
@@ -1555,6 +1557,31 @@ class AppSemanticsTest {
         compose.onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
         compose.onNodeWithTag(GUIDE_SKIP_TAG).assertIsDisplayed()
         compose.onNodeWithTag(LIBRARY_TITLE_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theGuidesSpeakerPronouncesTheDemonstratedWord() {
+        val pronouncer = FakePronouncer()
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                    pronouncer = pronouncer,
+                ),
+            )
+        }
+
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
+        val (text, language) = pronouncer.utterances.single()
+        assertEquals("fisherman", text)
+        assertEquals("en", language)
     }
 
     @Test
