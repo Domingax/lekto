@@ -156,19 +156,16 @@ fun ReaderScreen(
     // recomposes the text and repaginates at once, the way a Reader level change
     // recolours it.
     val theme = MaterialTheme.colorScheme
-    val ink = theme.onBackground
     val styles = remember(document.preferences, theme) {
-        ReaderStyles.of(document.preferences, MasteryPalette.of(theme), ink)
+        ReaderStyles.of(document.preferences, MasteryPalette.of(theme), theme.onBackground)
     }
     val entries = remember(document.text) { document.text.chapterEntries() }
     val chapterStarts = remember(document.text) { document.text.chapterStartOffsets() }
     BoxWithConstraints(modifier.fillMaxSize()) {
         val contextColumn = maxWidth >= WIDE_WINDOW_BREAKPOINT
-        // The page paginates against the width it is actually given: at the
-        // breakpoint the column takes its own share of the window.
+        // The page paginates against the width it gets: the column takes its share at the breakpoint.
         val pageWidth = if (contextColumn) maxWidth - WIDE_COLUMN_WIDTH else maxWidth
-        // The measure caps the page's column and centres it; the page, its taps
-        // and its pictures all read the same inset (docs/design.md §3, issue #281).
+        // The cap centres the column the page, its taps and its pictures all read (issue #281).
         val pageInset = styles.pageInset(pageWidth, LocalDensity.current)
         val state = remember(document.text) {
             ReaderState(actions.onPositionChange, document.initialOffset, initiallyFinished)
