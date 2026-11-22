@@ -124,6 +124,24 @@ class GuideControllerTest {
     }
 
     @Test
+    fun theLeftArrowWalksBackToTheQuestion() {
+        val guide = controller()
+        guide.chooseLanguage("en")
+        guide.advance()
+        guide.advance()
+
+        guide.back()
+        assertEquals(GuideStage.PAGE, guide.state.stage)
+        assertFalse(guide.state.plain)
+
+        guide.back()
+        assertTrue(guide.state.plain)
+
+        guide.back()
+        assertEquals(GuideStage.LANGUAGE, guide.state.stage)
+    }
+
+    @Test
     fun oneLanguageSkipsTheQuestionAndNamesItsPage() {
         val guide = controller(listOf(testOfferedLanguage("fr")))
 

@@ -42,9 +42,12 @@ import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.book.ReadingState
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.book.paragraphAt
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
+import app.lekto.core.guide.GuideProgress
+import app.lekto.core.guide.GuideProgressStore
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettings
@@ -147,6 +150,7 @@ import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.FlakyVaultFileSystem
+import app.lekto.testkit.InMemoryGuideProgressStore
 import app.lekto.testkit.InMemoryAppThemeStore
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
@@ -1687,6 +1691,8 @@ private fun difficultyServices(): DifficultyServices {
 @Suppress("LongParameterList") // The environment's inputs are independent; a bundle would only hide that.
 internal fun environment(
     library: BookLibrary,
+    samples: SampleLibrary? = null,
+    guide: GuideProgressStore = InMemoryGuideProgressStore(GuideProgress.SEEN),
     pickFile: (suspend () -> PickedFile?)? = null,
     dictionary: DictionaryServices? = null,
     languages: LanguageCatalog? = null,
@@ -1707,6 +1713,8 @@ internal fun environment(
 ) = AppEnvironment(
     segmenter = WhitespaceTextSegmenter(),
     library = library,
+    samples = samples,
+    guide = guide,
     mastery = MasteryLookup.AllKnown,
     lemmas = lemmas,
     vocabulary = vocabulary,

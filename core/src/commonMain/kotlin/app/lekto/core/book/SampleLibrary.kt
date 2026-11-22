@@ -76,6 +76,14 @@ class SampleLibrary(
         return cache.storedLanguage()?.let(::rowOf)
     }
 
+    /**
+     * The catalogue's [language] entry, whether or not this device has materialised
+     * it (issue #277's guide): the demonstration reads the sample's own colours and
+     * glossary before the shelf holds a row, so the page and the sheet work on the
+     * first frame. `null` when this build ships no such sample.
+     */
+    fun sample(language: String): Sample? = catalogue.sampleOf(language)
+
     /** The reading session for the sample with [id], or `null` when this device holds no such sample. */
     fun open(id: String): ReadingSession? {
         val document = documentFor(id) ?: return null

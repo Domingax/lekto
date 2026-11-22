@@ -117,6 +117,7 @@ private fun LektoApp(
             segmenter = segmenter,
             library = library,
             samples = samples,
+            guide = androidGuideProgress(context),
             vocabulary = vocabulary,
             readerLevels = readerLevels,
             languageSettings = languageSettings,

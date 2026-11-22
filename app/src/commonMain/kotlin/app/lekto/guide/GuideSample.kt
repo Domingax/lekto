@@ -34,6 +34,8 @@ val GUIDE_DEFAULT_BAND: CefrLevel = CefrLevel.B1
 data class GuideNote(
     val key: WordKey,
     val surface: String,
+    val start: Int,
+    val end: Int,
     val level: MasteryLevel,
     val meaning: String,
     val context: String?,
@@ -121,6 +123,8 @@ fun guideNotes(
         GuideNote(
             key = key,
             surface = span.surface,
+            start = span.start,
+            end = span.end,
             level = colours[key.key] ?: MasteryLevel.KNOWN,
             meaning = meaningOf(sample, translationLanguage, key),
             context = contextSentence(paragraph, span.start, span.end),

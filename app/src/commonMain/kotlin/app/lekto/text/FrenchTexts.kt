@@ -374,6 +374,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_LEVEL_PREVIEW to "Aperçu · la page de l'exemple",
     TextKey.GUIDE_START_READING to "Commencer à lire",
     TextKey.GUIDE_DOWNLOAD_ASSETS to "Table et dictionnaire · {0}",
+    TextKey.GUIDE_DOWNLOAD_TITLE to "Table et dictionnaire",
     TextKey.GUIDE_DOWNLOAD_BACKGROUND to "{0} en arrière-plan",
     TextKey.GUIDE_DOWNLOAD_PREPARING to "Préparation du téléchargement",
     TextKey.GUIDE_DOWNLOAD_STOP to "Arrêter",

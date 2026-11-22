@@ -112,6 +112,17 @@ class GuideController(
         if (state.stage == GuideStage.TAP) state = state.copy(lookupOpen = true)
     }
 
+    /** The desktop's left arrow: back one screen, never before the question or the single page. */
+    fun back() {
+        state = when {
+            state.stage == GuideStage.LEVEL -> state.copy(stage = GuideStage.TAP, lookupOpen = false)
+            state.stage == GuideStage.TAP -> state.copy(stage = GuideStage.PAGE, plain = false)
+            state.stage == GuideStage.PAGE && !state.plain -> state.copy(plain = true)
+            state.stage == GuideStage.PAGE && singleLanguage == null -> state.copy(stage = GuideStage.LANGUAGE)
+            else -> state
+        }
+    }
+
     /** Closes the sheet without writing anything. */
     fun dismissLookup() {
         state = state.copy(lookupOpen = false)

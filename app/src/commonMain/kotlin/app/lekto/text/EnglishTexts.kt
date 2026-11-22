@@ -358,6 +358,7 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_LEVEL_PREVIEW to "Preview · the sample page",
     TextKey.GUIDE_START_READING to "Start reading",
     TextKey.GUIDE_DOWNLOAD_ASSETS to "Table and dictionary · {0}",
+    TextKey.GUIDE_DOWNLOAD_TITLE to "Table and dictionary",
     TextKey.GUIDE_DOWNLOAD_BACKGROUND to "{0} in the background",
     TextKey.GUIDE_DOWNLOAD_PREPARING to "Preparing the download",
     TextKey.GUIDE_DOWNLOAD_STOP to "Stop",

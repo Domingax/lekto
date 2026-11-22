@@ -54,6 +54,9 @@ internal const val ATTRIBUTION_LINK_TAG: String = "settings-attribution"
 /** The test tag on the way to the **About** screen, so a UI test can click exactly it. */
 internal const val ABOUT_LINK_TAG: String = "settings-about"
 
+/** The test tag on the way back into the first-launch guide (issue #277). */
+internal const val GUIDE_LINK_TAG: String = "settings-guide"
+
 /** The test tag on the screen's title, so a test can tell the screen from the shell's bar (issue #185). */
 internal const val SETTINGS_TITLE_TAG: String = "settings-title"
 
@@ -150,6 +153,12 @@ private fun ApplicationGroup(actions: SettingsActions) {
     SettingsGroup(
         label = texts[TextKey.SETTINGS_GROUP_APPLICATION],
         rows = listOf(
+            IndexEntry(
+                tag = GUIDE_LINK_TAG,
+                title = texts[TextKey.GUIDE],
+                value = null,
+                onClick = actions.onOpenGuide,
+            ),
             IndexEntry(
                 tag = ATTRIBUTION_LINK_TAG,
                 title = texts[TextKey.ATTRIBUTION],

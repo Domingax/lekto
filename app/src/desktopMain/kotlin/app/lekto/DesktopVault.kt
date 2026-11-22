@@ -1,6 +1,8 @@
 package app.lekto
 
 import app.lekto.core.Seams
+import app.lekto.core.guide.GuideProgressStore
+import app.lekto.core.guide.JsonGuideProgressStore
 import app.lekto.core.language.JsonLanguageSettingsStore
 import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.reading.JsonReadingPreferencesStore
@@ -85,6 +87,18 @@ fun desktopAppTheme(root: File = File(appDataDirectory("lekto"), "settings")): A
  */
 fun desktopReadingPreferences(root: File = File(appDataDirectory("lekto"), "settings")): ReadingPreferencesStore =
     JsonReadingPreferencesStore(JvmVaultFileSystem(root))
+
+/**
+ * The desktop first-launch guide's progress (issue #277) over [root], defaulting to
+ * an app-private folder beside the vault: whether the reader has seen the guide.
+ * It is device-local app configuration (ADR-0023's pattern), not a vault record,
+ * so it never enters an export.
+ *
+ * @param root the settings root, defaulting to the app-data directory; the
+ *   parameter is the test seam, so production never passes one.
+ */
+fun desktopGuideProgress(root: File = File(appDataDirectory("lekto"), "settings")): GuideProgressStore =
+    JsonGuideProgressStore(JvmVaultFileSystem(root))
 
 /**
  * The vault's whole-file transfer (issue #20) over [root], with the platform's
