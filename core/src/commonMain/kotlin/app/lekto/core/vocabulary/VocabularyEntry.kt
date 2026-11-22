@@ -38,6 +38,7 @@ data class VocabularyEntry(
          * book history is the save funnel's to add, so every save builds the same
          * shape and a new field cannot be forgotten at one call site.
          */
+        @Suppress("LongParameterList") // The save's five facts are the entry's own; a bundle would restate them.
         fun saved(
             key: WordKey,
             surface: String,
