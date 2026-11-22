@@ -13,11 +13,30 @@ Entries are keyed by the word's **Word key**: two spellings that share a **Lemma
 share one key, so saving *mangeais* updates the entry for *manger* rather than
 creating a second one.
 
+The entry also remembers the **Book** you were reading when you saved it. Save the
+same word again from the same book and nothing changes; save it from a second book
+and it remembers both.
+
+## A book's words
+
+At the end of a book, Lekto tells you what it gave you: `18 words from this book`
+and `5 now known`. `See the words` opens the Vocabulary narrowed to that book,
+with a chip carrying its title above the rows. The chip only appears when you
+arrive from a book; tap it to widen the list again. The count beside the Vocabulary
+title still counts every word you have saved.
+
+The two numbers are read from your vocabulary, so deleting the book never removes
+a word or its history. A book you finished before Lekto kept this history says
+nothing about its words rather than claiming none.
+
 ## Managing your vocabulary
 
 The Vocabulary list — the second section — shows every saved word with its level,
 translation and context sentence, and the count beside the title says how many
-words you have saved. The translation is read from the **Dictionary pack** installed for the
+words you have saved. The list opens on the words you last touched, and its order
+stays put while you work in it: changing a word's level never makes the rows jump
+under your finger. Leave the list and come back and it sorts again.
+The translation is read from the **Dictionary pack** installed for the
 word's language and your **Translation language**, so installing or updating a pack
 refreshes what you see. When no pack answers — none is installed, or the pack does
 not know the word — the list falls back to the translation saved with the word.

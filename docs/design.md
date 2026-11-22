@@ -399,6 +399,13 @@ never moves the reading position. The state hides the reader's chrome; system ba
 returns to the last page, and `Back to Library` leaves for the Library. Reopening a finished book
 opens at the saved position, not on this state.
 
+The state also reports what the book gave the reader: `18 words from this book`, then `5 now
+known`, then the text action `See the words`, which opens the **Vocabulary** narrowed to that
+book. A book with no saved word draws neither line nor action — never `0 words` — and that is
+also what a book read before words remembered their books says. The two numbers are read from
+the vocabulary, so deleting the book leaves them untouched; `See the words` leaves the book for
+the list, and Back from there lands on the **Library**.
+
 ### 7.3 The lookup panel
 
 Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
@@ -445,6 +452,16 @@ is a sentence inside the panel, never a dialogue over the reader.
 
 The **count** sits beside the title in the muted ink and counts the vocabulary, not the rows a
 search or a level narrowed the list to.
+
+The list opens on the words the reader last touched: its order is recently modified, read from
+each word's record, and it is frozen while the screen is open, so changing a level never reorders
+the rows under the reader. Leaving and returning sorts again.
+
+**A book's words.** `See the words` on a book's end state opens the list with a chip carrying the
+book's title before the level filters, and the rows narrowed to the words whose history names that
+book. The chip exists only while the list was reached from a book, and tapping it widens the list
+again; its narrowing is view state, never a **Vault** record, and the count beside the title stays
+the whole vocabulary.
 
 A row is the **word in the serif** — it is the word as the book printed it — then its colour-dotted
 level and name, its translation, and the sentence it came from in the muted ink; a hairline parts
