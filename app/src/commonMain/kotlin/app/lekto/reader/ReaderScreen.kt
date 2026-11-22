@@ -27,9 +27,12 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -50,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.ReadingProgress
+import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.ImageRef
 import app.lekto.navigation.PlatformBackHandler
@@ -62,6 +66,14 @@ import kotlin.math.roundToInt
 
 /** The breathing room kept between the lifted word and the sheet's top edge. */
 private val GAP_ABOVE_PANEL = 8.dp
+
+/**
+ * The dotted rule under a highlighted word (docs/design.md §2.2): 1 dp thick,
+ * a 1 dp dash and a 2 dp gap, so it reads as a rule rather than an underline.
+ */
+private val RULE_THICKNESS = 1.dp
+private val RULE_DASH = 1.dp
+private val RULE_GAP = 2.dp
 
 /** The test tag on the page, so the UI tests can inject a tap at a zone's coordinates. */
 internal const val READER_PAGE_TAG = "reader-page"
@@ -158,6 +170,9 @@ fun ReaderScreen(
         // The page paginates against the width it is actually given: at the
         // breakpoint the column takes its own share of the window.
         val pageWidth = if (contextColumn) maxWidth - WIDE_COLUMN_WIDTH else maxWidth
+        // The measure caps the page's column and centres it; the page, its taps
+        // and its pictures all read the same inset (docs/design.md §3, issue #281).
+        val pageInset = styles.pageInset(pageWidth, LocalDensity.current)
         val state = remember(document.text) {
             ReaderState(actions.onPositionChange, document.initialOffset, initiallyFinished)
         }
@@ -186,6 +201,7 @@ fun ReaderScreen(
             contextColumn,
             context,
             images,
+            pageInset,
         )
     }
 }
@@ -217,6 +233,7 @@ private fun ReaderContent(
     contextColumn: Boolean,
     context: ReaderContext,
     images: ReaderImages,
+    pageInset: Dp,
 ) {
     val current = state.page?.let { page -> entries.entryAt(page.start) }
     // A book with one chapter has no list (ADR-0037), so the column's empty state
@@ -256,6 +273,7 @@ private fun ReaderContent(
                 actions,
                 context,
                 images,
+                pageInset,
             )
 
             else -> PhoneReader(
@@ -269,6 +287,7 @@ private fun ReaderContent(
                 overlayHeightPx,
                 context,
                 images,
+                pageInset,
             )
         }
     }
@@ -323,6 +342,7 @@ private fun WideReader(
     actions: ReaderActions,
     context: ReaderContext,
     images: ReaderImages,
+    pageInset: Dp,
 ) {
     LaunchedEffect(Unit) { state.dismissChapters() }
     Row(Modifier.fillMaxSize()) {
@@ -338,6 +358,7 @@ private fun WideReader(
                 overlayHeightPx = 0,
                 contextColumn = true,
                 images = images,
+                pageInset = pageInset,
             )
         }
         ReaderContextColumn(
@@ -367,6 +388,7 @@ private fun PhoneReader(
     overlayHeightPx: Int,
     context: ReaderContext,
     images: ReaderImages,
+    pageInset: Dp,
 ) {
     Box(Modifier.fillMaxSize()) {
         ReaderBands(
@@ -380,6 +402,7 @@ private fun PhoneReader(
             overlayHeightPx = overlayHeightPx,
             contextColumn = false,
             images = images,
+            pageInset = pageInset,
         )
         if (state.chaptersVisible) {
             ChapterSheetOverlay(
@@ -407,6 +430,7 @@ private fun ReaderBands(
     overlayHeightPx: Int,
     contextColumn: Boolean,
     images: ReaderImages,
+    pageInset: Dp,
 ) {
     Column(Modifier.fillMaxSize()) {
         ReaderTitle(document.text.title, actions.onBack, state::togglePreferences)
@@ -420,6 +444,7 @@ private fun ReaderBands(
             actions.onWordTap,
             actions.onPhraseSelected,
             images,
+            pageInset,
         )
         if (state.page != null) {
             ReaderPageBar(
@@ -683,6 +708,7 @@ private fun ColumnScope.ReaderPage(
     onWordTap: (WordTap) -> Unit,
     onPhraseSelected: (PhraseSelection) -> Unit,
     images: ReaderImages,
+    pageInset: Dp,
 ) {
     // The range the current long-press drag covers, so the chosen words wash as
     // they are picked; the open panel's range is the fallback once it ends. The
@@ -694,9 +720,12 @@ private fun ColumnScope.ReaderPage(
     val tokens = rememberPageTokens(document, chapterText, styles, state.page, selected)
     val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val rules = rememberPageRules(layout, tokens, document.renderer.mastery, styles, document.masteryRevision)
     var pageHeightPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
-    val marginPx = with(density) { styles.horizontalMargin.roundToPx() }
+    // The taps are hit-tested against the text's own coordinates, so the inset
+    // that centres the capped column is the one their margin must be (issue #281).
+    val marginPx = with(density) { pageInset.roundToPx() }
     val pageBarPx = with(density) { PAGE_BAR_HEIGHT.toPx() }
     val visibleBottomPx = pageHeightPx - (overlayHeightPx - pageBarPx).coerceAtLeast(0f)
     val liftPx = pageLift(
@@ -719,6 +748,8 @@ private fun ColumnScope.ReaderPage(
             PageSwipe.NEXT -> state.next()
         }
     }
+    // The page's own width decides where the capped column sits: the cap widens
+    // the margin instead of letting a line run past 34 em (issue #281).
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -746,12 +777,13 @@ private fun ColumnScope.ReaderPage(
     ) {
         PageText(
             tokens = tokens,
+            rules = rules,
             styles = styles,
             images = images,
             imageRefs = remember(document.text, state.page, images.layout) {
                 state.page?.let { page -> document.text.imagesIn(page) }.orEmpty()
             },
-            horizontalMargin = styles.horizontalMargin,
+            horizontalInset = pageInset,
             liftPx = liftPx,
             onPrevious = state::previous,
             onNext = state::next,
@@ -787,8 +819,10 @@ internal fun pageLift(
 }
 
 /**
- * The page's text, inset by the reading margin; a slice built for this page,
- * styled and selectable. The text also carries the two page turns as
+ * The page's text, inset by the centred column's margin; a slice built for this
+ * page, styled and selectable. The page's dotted rules are stroked behind the
+ * text from the retained layout, so no word carries a link or a composable of
+ * its own (issue #251, issue #281). The text also carries the two page turns as
  * accessibility actions beside the two chevron controls, so a screen-reader or
  * switch user has a way through the book without hunting for the bottom band.
  */
@@ -796,10 +830,11 @@ internal fun pageLift(
 @Composable
 private fun PageText(
     tokens: ReaderTokens?,
+    rules: PageRules,
     styles: ReaderStyles,
     images: ReaderImages,
     imageRefs: List<ImageRef>,
-    horizontalMargin: Dp,
+    horizontalInset: Dp,
     liftPx: Float,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
@@ -807,11 +842,26 @@ private fun PageText(
 ) {
     val texts = LocalAppTexts.current
     val inlineContent = rememberInlineImages(imageRefs, images, styles)
+    val density = LocalDensity.current
+    val ruleStroke = remember(density) {
+        Stroke(
+            width = with(density) { RULE_THICKNESS.toPx() },
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(with(density) { RULE_DASH.toPx() }, with(density) { RULE_GAP.toPx() }),
+            ),
+        )
+    }
     Box(
         Modifier
             .fillMaxSize()
             .offset { IntOffset(0, -liftPx.roundToInt()) }
-            .padding(horizontal = horizontalMargin),
+            .padding(horizontal = horizontalInset)
+            // Inside the margin, so the drawing shares the text's own origin; the
+            // paths were built once per page and style, and the draw only strokes
+            // them, so a frame costs no layout query and no per-word work.
+            .drawBehind {
+                rules.groups.forEach { group -> drawPath(group.path, group.colour, style = ruleStroke) }
+            },
     ) {
         if (tokens != null) {
             SelectionContainer {
@@ -865,6 +915,22 @@ private fun rememberPageTokens(
 }
 
 /**
+ * The page's dotted rules, computed once per page and style and remembered on the
+ * same inputs as [rememberPageTokens] plus the layout the text just reported — so
+ * a frame strokes the paths instead of asking for a box per word (issue #281).
+ */
+@Composable
+private fun rememberPageRules(
+    layout: TextLayoutResult?,
+    tokens: ReaderTokens?,
+    mastery: MasteryLookup,
+    styles: ReaderStyles,
+    masteryRevision: Int,
+): PageRules = remember(layout, tokens, mastery, styles.mastery, masteryRevision) {
+    pageRules(layout, tokens?.words.orEmpty(), levelOf = { word -> mastery.levelOf(word.key) }, styles.mastery)
+}
+
+/**
  * The tap the page handles: a word opens its lookup wherever it lands, and a tap
  * that misses every word does nothing — page turns are the swipe and the two
  * chevrons (issue #243). The word is found by hit-testing the page's tokens
@@ -887,9 +953,10 @@ private fun readerSurfaceTap(page: PageTap, enabled: Boolean, liftPx: Float): (O
 
 /**
  * What the reader needs to draw a picture: the rectangle a placeholder may take
- * from this viewport, the loader the platform wired, and the image blocks the
- * book names. A placeholder is sized in sp, as Compose measures inline content,
- * so the width in dp is converted with the density the page renders at.
+ * from this viewport — never wider than the capped text column — the loader the
+ * platform wired, and the image blocks the book names. A placeholder is sized in
+ * sp, as Compose measures inline content, so the width in dp is converted with
+ * the density the page renders at.
  */
 @Composable
 private fun rememberReaderImages(
@@ -902,7 +969,7 @@ private fun rememberReaderImages(
     val layout = remember(pageWidth, pageHeight, styles, density) {
         with(density) {
             ImageLayout(
-                width = (pageWidth - styles.horizontalMargin * 2).coerceAtLeast(0.dp).toSp(),
+                width = (pageWidth - styles.pageInset(pageWidth, density) * 2).coerceAtLeast(0.dp).toSp(),
                 height = pageHeight.coerceAtLeast(0.dp).toSp(),
             )
         }
@@ -924,7 +991,9 @@ private fun rememberReaderImages(
  *
  * [pageWidth] is the room the page actually gets: at the context column's
  * breakpoint the reserved column takes its share of the window, so measuring the
- * whole width would wrap every line too late (issue #199).
+ * whole width would wrap every line too late (issue #199). The measured column is
+ * capped at [MAX_MEASURE_EM] and centred, so a wide window becomes margin rather
+ * than a longer line (docs/design.md §3, issue #281).
  */
 @Suppress("LongParameterList") // The text, its style, its chapter starts, its focus and the page's width.
 @Composable
@@ -938,9 +1007,7 @@ private fun BoxWithConstraintsScope.rememberReaderPages(
 ): List<ReaderPage> {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val contentWidth = with(density) {
-        (pageWidth - styles.horizontalMargin * 2).roundToPx()
-    }.coerceAtLeast(0)
+    val contentWidth = styles.contentWidthPx(pageWidth, density)
     val contentHeight = with(density) { (maxHeight - CHROME_HEIGHT - PAGE_BAR_HEIGHT).roundToPx() }.coerceAtLeast(0)
     // The window belongs to a chapter: a page turn inside it keeps what is
     // already measured, while crossing a boundary starts the next one's window
