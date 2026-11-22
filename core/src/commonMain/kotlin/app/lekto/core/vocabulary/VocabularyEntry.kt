@@ -28,4 +28,28 @@ data class VocabularyEntry(
     val contextSentence: String? = null,
     val mastery: MasteryLevel = MasteryLevel.UNKNOWN,
     val bookIds: List<String> = emptyList(),
-)
+) {
+
+    companion object {
+
+        /**
+         * The entry a save records (issues #22, #277): the word's identity, the
+         * lookup's translation and context, and the level the reader chose. The
+         * book history is the save funnel's to add, so every save builds the same
+         * shape and a new field cannot be forgotten at one call site.
+         */
+        fun saved(
+            key: WordKey,
+            surface: String,
+            translation: String?,
+            contextSentence: String?,
+            mastery: MasteryLevel,
+        ): VocabularyEntry = VocabularyEntry(
+            key = key,
+            surface = surface,
+            translation = translation,
+            contextSentence = contextSentence,
+            mastery = mastery,
+        )
+    }
+}

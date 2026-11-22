@@ -992,7 +992,7 @@ private fun saveWord(
     onOutcome: (Boolean) -> Unit,
 ) {
     mastery ?: return
-    val entry = VocabularyEntry(
+    val entry = VocabularyEntry.saved(
         key = selection.tap.token.key,
         surface = selection.tap.token.surface,
         translation = selection.result.firstGloss(),

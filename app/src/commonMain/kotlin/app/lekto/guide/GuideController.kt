@@ -163,7 +163,7 @@ class GuideController(
             state = state.copy(saveFailed = true)
             return
         }
-        val entry = VocabularyEntry(
+        val entry = VocabularyEntry.saved(
             key = note.key,
             surface = note.surface,
             translation = note.meaning,

@@ -392,7 +392,7 @@ private fun BoxScope.TapSheet(
 }
 
 /** The entry the footer reads its saved level from; the vault holds the real one. */
-private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = VocabularyEntry(
+private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = VocabularyEntry.saved(
     key = note.key,
     surface = note.surface,
     translation = note.meaning,
