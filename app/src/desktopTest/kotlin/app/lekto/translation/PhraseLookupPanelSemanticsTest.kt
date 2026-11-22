@@ -18,7 +18,6 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.text.AppMessage
-import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -143,7 +142,9 @@ class PhraseLookupPanelSemanticsTest {
 
     @Test
     fun aLongTranslationScrollsRatherThanClipping() = runComposeUiTest {
-        val long = (1..40).joinToString(" ") { "Ligne $it de la traduction." }
+        // One sentence per line, so the body outgrows the cap however the host
+        // measures glyphs.
+        val long = (1..40).joinToString("\n") { "Ligne $it de la traduction." }
         setContent {
             Panel(
                 translation = PhraseTranslationUiState(
@@ -155,10 +156,13 @@ class PhraseLookupPanelSemanticsTest {
         }
 
         val panel = onNodeWithTag(PHRASE_PANEL_TAG).getUnclippedBoundsInRoot()
-        val ceiling = 640f * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
-        assertTrue(
-            panel.bottom.value - panel.top.value <= ceiling + 1f,
-            "the sheet is ${panel.bottom.value - panel.top.value} dp tall, above the $ceiling dp ceiling",
+        val height = panel.bottom.value - panel.top.value
+        val ceiling = 640f * SHEET_MAX_FRACTION
+        assertEquals(
+            ceiling,
+            height,
+            1f,
+            "the long translation must inherit the ${ceiling}dp cap, but the sheet is $height dp tall",
         )
 
         // The shortcut needs nothing configured, so it stays pinned while the long
@@ -184,7 +188,7 @@ class PhraseLookupPanelSemanticsTest {
 
         val panel = onNodeWithTag(PHRASE_PANEL_TAG).getUnclippedBoundsInRoot()
         val height = panel.bottom.value - panel.top.value
-        val ceiling = 640f * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+        val ceiling = 640f * SHEET_MAX_FRACTION
 
         assertTrue(
             height > ceiling + 1f,
@@ -215,5 +219,10 @@ class PhraseLookupPanelSemanticsTest {
                 inColumn = inColumn,
             )
         }
+    }
+
+    private companion object {
+        /** The most of the screen the shared lookup sheet may cover (docs/design.md §7.3). */
+        const val SHEET_MAX_FRACTION = 0.60f
     }
 }

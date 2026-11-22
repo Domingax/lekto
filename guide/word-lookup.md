@@ -4,11 +4,12 @@ Tap a **Word token** while reading to open the lookup panel for that word.
 
 ## What the panel shows
 
-The panel rises from the bottom of the page and never covers more than a little
-under half of it. The page slides up under the panel just enough to keep the word
-you touched in view, and that word stays highlighted. The page does not change:
-it is not split again, and the top of it is hidden for as long as the panel is
-open.
+The panel rises from the bottom of the page and takes only as much room as its
+answer needs, up to three fifths of the screen. A word with a single sense opens
+a short panel; a long answer rises to that limit and scrolls inside it. The page
+slides up under the panel just enough to keep the word you touched in view, and
+that word stays highlighted. The page does not change: it is not split again, and
+the top of it is hidden for as long as the panel is open.
 
 On a desktop with a wide window the panel is not raised over the page at all: it
 takes the reader's right-hand column, and the page keeps its width. The line that
@@ -24,7 +25,8 @@ list. See [Reading](/reading#on-a-desktop).
   installed for your **Translation language**.
 - A speaker icon that plays the word's **Pronunciation**, and a close icon that
   closes the panel.
-- The word's **Mastery level**, and the external references at the bottom.
+- The word's **Mastery level**, and the external references at the end of the
+  panel's body.
 
 ## Setting the level saves the word
 
@@ -46,20 +48,29 @@ See [Vocabulary](/vocabulary) for the list of saved words.
 
 ## Dictionary shortcuts
 
-When you want a fuller answer than the offline pack gives, the panel's footer is a
-single muted line of **Dictionary shortcuts**: the word's page on an external
-**Dictionary source** such as WordReference, Reverso, Linguee or Google Translate.
-The shortcuts follow the pair the reader chose: the book's language into your
-**Translation language**.
+When you want a fuller answer than the offline pack gives, the end of the panel's
+body is a single muted line of **Dictionary shortcuts**: the word's page on an
+external **Dictionary source** such as WordReference, Reverso, Linguee or Google
+Translate. The shortcuts follow the pair the reader chose: the book's language
+into your **Translation language**. They scroll with the answer, so a long line
+never takes room from the definition above it.
 
 A dictionary shortcut is an ordinary outbound link. Lekto never embeds or scrapes
 the source; opening the shortcut hands the page to your device's own browser.
 
+## When the offline dictionary is missing
+
+If no **Dictionary pack** is installed for the pair, the panel says so and still
+lets you set the word's level. It also offers one quiet action, `Install the
+offline dictionary`, which opens Settings ▸ Languages and leaves the book behind
+— the pack is downloaded there, never inside the reader. Back from Settings
+returns you to the Library.
+
 ## Closing the panel
 
-Close the panel with its close icon, or by tapping the page outside it. A tap
-outside the panel only closes it: it does not look up the word under your finger
-or turn the page.
+Close the panel with its close icon, by dragging its handle down, or by tapping
+the page outside it. A tap outside the panel only closes it: it does not look up
+the word under your finger or turn the page.
 
 ## Screenshots
 

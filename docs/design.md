@@ -434,21 +434,24 @@ the list, and Back from there lands on the **Library**.
 
 ### 7.3 The lookup panel
 
-Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
-and the touched word still washed above it. The page **lifts** under the sheet by just enough to
-clear the word: it is not repaginated, so the page and the **Reading progress** do not move, and
-the top of the page is clipped for as long as the sheet is open — a transient state, not a new page.
-A panel, not an outlined card: square where it joins the bottom edge like the **Aa** panel, the
-surface tone and a hairline inset to the content, and a drag handle marks where it was raised
-from. On desktop it is the context column instead, and closing the word returns the column to the
-chapter list. There the footer's state line stands above its chips rather than beside them: five
+Raised from the bottom over the reader, never above ~60 % of the height and only as tall as its
+content needs — a one-sense word opens much shorter, a long answer rises to the cap and scrolls
+inside its body — the page still visible and the touched word still washed above it. The page
+**lifts** under the sheet by just enough to clear the word: it is not repaginated, so the page and
+the **Reading progress** do not move, and the top of the page is clipped for as long as the sheet is
+open — a transient state, not a new page. A panel, not an outlined card: square where it joins the
+bottom edge like the **Aa** panel, the surface tone and a hairline inset to the content, and a drag
+handle marks where it was raised from — dragging it down closes the sheet, the gesture the handle
+promises. On desktop it is the context column instead, and closing the word returns the column to
+the chapter list. There the footer's state line stands above its chips rather than beside them: five
 chips leave no room for it in the column.
 
 A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
 inflection, its parts of speech and pronunciation, the speaker and the close action; then the
-senses with their translation; then the level; then the external references as a muted line. The
-header and the senses share one scroll, so a short screen never pushes the pinned footer past the
-sheet's edge.
+senses with their translation; then the external references as a muted line at the end of that same
+scroll. The level selector is the only thing pinned below it. The header, the senses and the
+references share one scroll, so a short screen never pushes the pinned level past the sheet's edge,
+and a wrapped reference line can never take height from the definition at rest.
 
 **There is no Save button.** The level (`Mastery`) *is* the save: one tap on a level chip stores the word at
 that level, which is one gesture for one intention. Every chip is filled with its level's colour and
@@ -472,7 +475,8 @@ There are **no dictionary tabs**. The app has one offline dictionary and four ex
 that leave the app; presenting them as tabs would promise a symmetry that does not exist.
 
 **States**: a missing dictionary still allows the save, and says so
-(`The offline dictionary isn't installed yet.`); a phrase with no provider
+(`The offline dictionary isn't installed yet.`) while offering `Install the offline dictionary`, which
+leaves the book for Settings ▸ Languages; a phrase with no provider
 explains that a phrase needs an AI while a word does not, and offers the settings link; a failure
 is a sentence inside the panel, never a dialogue over the reader.
 

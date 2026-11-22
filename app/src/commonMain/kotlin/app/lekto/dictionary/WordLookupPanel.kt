@@ -110,7 +110,8 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * screen, so the page stays visible and the touched word stays washed above it.
  * Its header is the word in the serif with its part of speech and pronunciation,
  * the speaker and the close as icons; its body lists the senses, each with its
- * translation; its footer **states the word's state** — `Saved · <level>` once it
+ * translation, then the external references as last line of the same scroll; its
+ * footer **states the word's state** — `Saved · <level>` once it
  * is stored, `Likely <level>` or `Not saved` before, `Couldn't save` after a
  * refused write — and carries the five chips (issue #279). **There is no Save
  * button**: a level *is* the save, one tap for one intention, and the line
@@ -118,7 +119,10 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  *
  * The sheet swallows taps that land on it, so only a tap truly outside it — which
  * its [app.lekto.ui.DismissScrim] handles — dismisses it; a tap on the reader
- * behind it then never turns the page or opens another lookup.
+ * behind it then never turns the page or opens another lookup. A missing pack is
+ * never a dead end: the offline message carries [onOpenSettings] as one quiet
+ * `Install the offline dictionary` action, which leaves the book for Settings
+ * ▸ Languages (issue #282).
  */
 @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
 @Composable
@@ -129,6 +133,7 @@ fun WordLookupPanel(
     actions: WordLookupActions,
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
     inColumn: Boolean = false,
 ) {
@@ -136,30 +141,38 @@ fun WordLookupPanel(
         modifier = modifier,
         sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
         inColumn = inColumn,
+        onDismiss = actions.onDismiss,
     ) {
-        SheetContent(term, result, pronunciation, actions.onDismiss)
-        Footer(shortcuts, actions.onOpenShortcut, vocabulary, inColumn)
+        SheetContent(term, result, pronunciation, shortcuts, actions.onOpenShortcut, actions.onDismiss, onOpenSettings)
+        Footer(vocabulary, inColumn)
     }
 }
 
 /**
- * The header and the answer, in one scroll: on a phone the sheet fits them under
- * the cap, and on a short screen — a landscape phone — the header scrolls with
- * the senses rather than pushing the pinned footer past the edge. The footer
- * stays, so the level and the references are always reachable.
+ * The header, the answer and the references, in one scroll: on a phone the sheet
+ * fits them under the cap, and on a short screen — a landscape phone — the header
+ * scrolls with the senses rather than pushing the pinned footer past the edge. The
+ * references come last, after the answer, so a long reference line can never take
+ * height from the definition at rest (issue #282). The footer stays, so the level
+ * is always reachable.
  */
+@Suppress("LongParameterList") // The answer, its references and the ways out: independent inputs.
 @Composable
 private fun ColumnScope.SheetContent(
     term: String,
     result: WordLookup,
     pronunciation: Pronunciation,
+    shortcuts: List<DictionaryShortcut>,
+    onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
         SheetHeader(term, result, pronunciation, onDismiss)
         SheetDivider()
         SpeechMessage(pronunciation.result)
-        Answer(result)
+        Answer(result, onOpenSettings)
+        References(shortcuts, onOpenShortcut)
     }
 }
 
@@ -211,24 +224,19 @@ private fun Meta(entries: List<DictionaryEntry>) {
 }
 
 /**
- * The pinned footer: the word's state, then the level that saves, then the
- * external references as one muted line (docs/design.md §7.3). The state line
- * names the saved level as a fact, the suggested one as only likely, and a
- * refused write as a failure — so one tap on a chip stores the word and the
- * footer states what happened (issue #279). In the fixed footer the three blocks
- * stay reachable however long the senses run.
+ * The pinned footer: the word's state and the level that saves (docs/design.md
+ * §7.3). The state line names the saved level as a fact, the suggested one as
+ * only likely, and a refused write as a failure — so one tap on a chip stores the
+ * word and the footer states what happened (issue #279). The footer holds only
+ * that selector: the external references scroll with the answer above it, so no
+ * wrapped reference line can take height from the definition (issue #282).
  *
  * In the context column there is no room for the line beside five chips (issue
  * #199), so it stands above them: the same blocks, stacked, rather than a line
  * broken mid-word.
  */
 @Composable
-private fun Footer(
-    shortcuts: List<DictionaryShortcut>,
-    onOpenShortcut: (DictionaryShortcut) -> Unit,
-    vocabulary: VocabularyPanel,
-    inColumn: Boolean,
-) {
+private fun Footer(vocabulary: VocabularyPanel, inColumn: Boolean) {
     SheetDivider()
     MasterySelector(
         level = vocabulary.savedLevel,
@@ -239,7 +247,6 @@ private fun Footer(
         stacked = inColumn,
         name = { StateLine(vocabulary) },
     )
-    References(shortcuts, onOpenShortcut)
 }
 
 /**
@@ -283,7 +290,8 @@ private fun stateText(vocabulary: VocabularyPanel, saved: MasteryLevel?): String
  * The external references as a single muted line, not four buttons (issue #210):
  * each name is still its own control, so a screen reader and a mouse reach each
  * one, but the row reads as the sentence `WordReference · Reverso · …` the design
- * draws. The line wraps rather than clipping when the names outgrow the sheet.
+ * draws. It closes the scrolling body, below the answer, so its wrapping never
+ * competes with the definition for the sheet's height (issue #282).
  */
 @OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps a reference line too wide to share one row.
 @Composable

@@ -392,4 +392,8 @@ enum class TextKey {
     LOOKUP_STATE_LIKELY,
     LOOKUP_STATE_NOT_SAVED,
     LOOKUP_STATE_FAILED,
+
+    // The offline sheet's door out (issue #282): the one quiet action that names
+    // where a missing Dictionary pack is installed.
+    LOOKUP_INSTALL_DICTIONARY,
 }

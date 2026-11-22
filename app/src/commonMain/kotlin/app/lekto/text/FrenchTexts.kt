@@ -350,6 +350,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.LOOKUP_STATE_LIKELY to "Probablement {0}",
     TextKey.LOOKUP_STATE_NOT_SAVED to "Non enregistré",
     TextKey.LOOKUP_STATE_FAILED to "Impossible d'enregistrer",
+    TextKey.LOOKUP_INSTALL_DICTIONARY to "Installer le dictionnaire hors ligne",
 )
 
 private val FrenchLanguageNames: Map<String, String> = mapOf(

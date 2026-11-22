@@ -1279,6 +1279,7 @@ private fun LookupOverlays(
             vocabulary = lookup.vocabulary,
             translationLanguage = lookup.translationLanguage,
             openUrl = openUrl,
+            onOpenSettings = lookup.onOpenSettings,
             onDismiss = lookup.onDismiss,
             onPanelHeight = onWordPanelHeight,
             inColumn = inColumn,
@@ -1309,6 +1310,7 @@ private fun LookupPanel(
     vocabulary: VocabularyPanel,
     translationLanguage: String?,
     openUrl: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
     onPanelHeight: (Int) -> Unit,
     inColumn: Boolean,
@@ -1329,6 +1331,7 @@ private fun LookupPanel(
         ),
         pronunciation = pronunciation,
         vocabulary = vocabulary,
+        onOpenSettings = onOpenSettings,
         modifier = modifier.onSizeChanged { size -> onPanelHeight(size.height) },
         inColumn = inColumn,
     )
