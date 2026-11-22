@@ -333,6 +333,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.CORE_SPEECH_NO_ENGINE to "Aucun moteur vocal n'est disponible sur cet appareil.",
     TextKey.CORE_SPEECH_FAILED to "Le moteur vocal n'a pas pu prononcer ce mot.",
     TextKey.CORE_SPEECH_STARTING to "Le moteur vocal démarre encore. Réessayez dans un instant.",
+    TextKey.LOOKUP_STATE_SAVED to "Enregistré · {0}",
+    TextKey.LOOKUP_STATE_LIKELY to "Probablement {0}",
+    TextKey.LOOKUP_STATE_NOT_SAVED to "Non enregistré",
+    TextKey.LOOKUP_STATE_FAILED to "Impossible d'enregistrer",
 )
 
 private val FrenchLanguageNames: Map<String, String> = mapOf(

@@ -52,12 +52,20 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
      */
     fun all(): List<VocabularyEntry> = saved.values.sortedWith(entryOrder)
 
-    /** Saves [entry] to the vault and folds it into the reader's state. */
-    fun save(entry: VocabularyEntry) {
-        vocabulary.save(entry)
+    /**
+     * Saves [entry] to the vault and folds it into the reader's state, returning
+     * whether the write landed (issue #279): the vault write is blocking and can
+     * fail, and the reader's footer states the failure rather than claiming a save
+     * that never happened. A refused write leaves the state — and the revision —
+     * untouched, so the word stays unsaved and nothing recolours.
+     */
+    fun save(entry: VocabularyEntry): Boolean {
+        val landed = runCatching { vocabulary.save(entry) }.isSuccess
+        if (!landed) return false
         saved[entry.key] = entry
         revision++
         changes.contentChanged()
+        return true
     }
 
     /**

@@ -3,8 +3,12 @@ package app.lekto.dictionary
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -39,9 +43,10 @@ import kotlin.math.abs
  * The word lookup sheet on a **simulated Android runtime** (issue #76): the
  * same-named twin of `app/desktopTest`'s `WordLookupPanelSemanticsTest`, so the
  * parity rule (issue #73) sees the two lanes together. It re-proves the sheet's
- * new grammar after issue #210 — the level is the save, the speaker and close are
- * icons, the references are one muted line — under Robolectric, on the runtime
- * that enforces Android's platform constraints.
+ * grammar after issue #210 — the level is the save, the speaker and close are
+ * icons, the references are one muted line — and the footer's state line after
+ * issue #279, under Robolectric, on the runtime that enforces Android's platform
+ * constraints.
  */
 @RunWith(RobolectricTestRunner::class)
 // `android-compileSdk`; Robolectric 4.16 supports API 36. The qualifiers give the
@@ -244,19 +249,87 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
-    fun `the current level is named beside the chips`() {
+    fun `an unsaved word says it is not saved and marks no chip`() {
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
 
-        compose.onNodeWithText("Recognized").assertIsDisplayed()
-        compose.onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).assertIsSelected()
+        compose.onNodeWithText("Not saved").assertIsDisplayed()
+        MasteryLevel.entries.forEach { level ->
+            compose.onNodeWithTag(masteryTag(level)).assertIsNotSelected()
+        }
     }
 
     @Test
-    fun `a saved word's level is named and marked`() {
-        val entry = VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = MasteryLevel.FAMILIAR)
-        compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = entry) }
+    fun `an unsaved word with a derived level suggests it as likely`() {
+        compose.setContent {
+            Panel(WordLookup.NotInDictionary("zzzz", "en"), suggestedLevel = MasteryLevel.RECOGNIZED)
+        }
 
-        compose.onNodeWithText("Familiar").assertIsDisplayed()
+        compose.onNodeWithText("Likely Recognized").assertIsDisplayed()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).assertIsNotSelected()
+    }
+
+    @Test
+    fun `the first tap saves and the footer states the fact`() {
+        var saved by mutableStateOf<MasteryLevel?>(null)
+        compose.setContent {
+            Panel(
+                WordLookup.NotInDictionary("zzzz", "en"),
+                entry = saved?.let { level -> blorpleEntry(level) },
+                suggestedLevel = MasteryLevel.RECOGNIZED,
+                onSave = { level -> saved = level },
+            )
+        }
+
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
+
+        compose.onNodeWithText("Saved · Learned").assertIsDisplayed()
+        compose.onNodeWithText("Likely Recognized").assertDoesNotExist()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsSelected()
+    }
+
+    @Test
+    fun `a later tap changes the level and the line follows`() {
+        var saved by mutableStateOf<MasteryLevel?>(MasteryLevel.LEARNED)
+        compose.setContent {
+            Panel(
+                WordLookup.NotInDictionary("zzzz", "en"),
+                entry = saved?.let { level -> blorpleEntry(level) },
+                onSave = { level -> saved = level },
+            )
+        }
+
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
+
+        compose.onNodeWithText("Saved · Familiar").assertIsDisplayed()
+        compose.onNodeWithText("Saved · Learned").assertDoesNotExist()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsNotSelected()
+    }
+
+    @Test
+    fun `a failed write says it could not save and no chip claims a save`() {
+        compose.setContent {
+            Panel(
+                WordLookup.NotInDictionary("zzzz", "en"),
+                suggestedLevel = MasteryLevel.RECOGNIZED,
+                saveFailed = true,
+            )
+        }
+
+        compose.onNodeWithText("Couldn't save").assertIsDisplayed()
+        compose.onNodeWithText("Likely Recognized").assertDoesNotExist()
+        MasteryLevel.entries.forEach { level ->
+            compose.onNodeWithTag(masteryTag(level)).assertIsNotSelected()
+        }
+    }
+
+    @Test
+    fun `a saved word's level is stated and marked`() {
+        compose.setContent {
+            Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = blorpleEntry(MasteryLevel.FAMILIAR))
+        }
+
+        compose.onNodeWithText("Saved · Familiar").assertIsDisplayed()
         compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
     }
 
@@ -301,17 +374,17 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
-    fun `the level label is centred with the chips`() {
+    fun `the state line is centred with the chips`() {
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
 
-        val label = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
+        val state = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
         val chip = compose.onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).getUnclippedBoundsInRoot()
-        val labelCentre = (label.top.value + label.bottom.value) / 2f
+        val stateCentre = (state.top.value + state.bottom.value) / 2f
         val chipCentre = (chip.top.value + chip.bottom.value) / 2f
 
         assertTrue(
-            "the label spans ${label.top}..${label.bottom} dp, the chip ${chip.top}..${chip.bottom} dp",
-            abs(labelCentre - chipCentre) < 1f,
+            "the state line spans ${state.top}..${state.bottom} dp, the chip ${chip.top}..${chip.bottom} dp",
+            abs(stateCentre - chipCentre) < 1f,
         )
     }
 
@@ -319,13 +392,13 @@ class WordLookupPanelSemanticsTest {
     fun `the references start at the content edge`() {
         compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
 
-        val label = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
+        val state = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
         val reference =
             compose.onNodeWithTag(sourceShortcutTag(DictionarySource.WORD_REFERENCE)).getUnclippedBoundsInRoot()
 
         assertTrue(
-            "the references start at ${reference.left} dp, the content at ${label.left} dp",
-            abs(label.left.value - reference.left.value) < 1f,
+            "the references start at ${reference.left} dp, the content at ${state.left} dp",
+            abs(state.left.value - reference.left.value) < 1f,
         )
     }
 
@@ -354,6 +427,8 @@ class WordLookupPanelSemanticsTest {
         term: String = "blorple",
         speech: SpeechResult? = null,
         entry: VocabularyEntry? = null,
+        suggestedLevel: MasteryLevel? = null,
+        saveFailed: Boolean = false,
         onOpenShortcut: (DictionaryShortcut) -> Unit = {},
         onSpeak: () -> Unit = {},
         onSave: (MasteryLevel) -> Unit = {},
@@ -366,11 +441,20 @@ class WordLookupPanelSemanticsTest {
                 shortcuts = shortcuts,
                 actions = WordLookupActions(onOpenShortcut = onOpenShortcut, onDismiss = onDismiss),
                 pronunciation = Pronunciation(onSpeak = onSpeak, result = speech),
-                vocabulary = VocabularyPanel(entry = entry, onSave = onSave),
+                vocabulary = VocabularyPanel(
+                    entry = entry,
+                    onSave = onSave,
+                    suggestedLevel = suggestedLevel,
+                    saveFailed = saveFailed,
+                ),
                 modifier = Modifier.size(width = PANEL_WIDTH, height = PANEL_HEIGHT),
             )
         }
     }
+
+    /** The saved entry for the panel's word at [level]. */
+    private fun blorpleEntry(level: MasteryLevel): VocabularyEntry =
+        VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = level)
 
     private companion object {
         val PANEL_WIDTH = 360.dp

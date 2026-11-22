@@ -4,7 +4,6 @@ package app.lekto.dictionary
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,11 +58,12 @@ import kotlin.test.Test
  * the sheet's frame — square where it joins the bottom edge like the **Aa**
  * panel, the surface tone and the inset hairline, the drag handle, the word and
  * its muted meta line, the two real
- * icons, the numbered senses with their translations, the level named beside the
- * five chips, and the references as one muted line — over a page lifted under
- * the sheet by just enough to keep the washed word in view, its first line
- * clipped at the top and its words unchanged. The semantics suite proves
- * the text, the lift and the interactions.
+ * icons, the numbered senses with their translations, the unsaved footer's state
+ * line in the muted ink beside the five filled chip frames, none ringed, and the
+ * references as one muted line — over a page lifted under the sheet by just
+ * enough to keep the washed word in view, its first line clipped at the top and
+ * its words unchanged. The semantics suite proves the text, the lift, the states
+ * and the interactions.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with
  * `./gradlew :app:verifyRoborazziDesktop`.
@@ -115,8 +115,7 @@ private val META_BAR = LineBar(height = 10.dp, share = 0.24f)
 private val SENSE_NUMBER_BAR = LineBar(height = 9.dp, share = 0.03f)
 private val SENSE_BAR = LineBar(height = 10.dp, share = 0.82f)
 private val TRANSLATION_BAR = LineBar(height = 9.dp, share = 0.36f)
-private val LEVEL_LABEL_BAR = LineBar(height = 8.dp, share = 0.1f)
-private val LEVEL_NAME_BAR = LineBar(height = 12.dp, share = 0.18f)
+private val STATE_LINE_BAR = LineBar(height = 12.dp, share = 0.24f)
 private val CHIP_LABEL_BAR = LineBar(height = 9.dp, share = 0.4f)
 private val REFERENCE_BARS = listOf(58.dp, 30.dp, 30.dp, 76.dp)
 
@@ -279,7 +278,7 @@ private fun ColumnScope.OfflineBody() {
     }
 }
 
-/** The level named beside the five chips, then the references as one muted line. */
+/** The state line in the muted ink beside the five chips, then the references as one muted line. */
 @Composable
 private fun SheetFooter() {
     val theme = MaterialTheme.colorScheme
@@ -293,9 +292,7 @@ private fun SheetFooter() {
             modifier = Modifier.height(LektoSpacing.TouchTarget),
             verticalArrangement = Arrangement.Center,
         ) {
-            Line(theme.onSurfaceVariant, LEVEL_LABEL_BAR)
-            Spacer(Modifier.height(4.dp))
-            Line(theme.onBackground, LEVEL_NAME_BAR)
+            Line(theme.onSurfaceVariant, STATE_LINE_BAR)
         }
         MasteryChips()
     }
@@ -303,25 +300,25 @@ private fun SheetFooter() {
     ReferenceLine()
 }
 
-/** The five chip frames, each filled with its level's colour; the selected one keeps an ink ring. */
+/**
+ * The five chip frames, each filled with its level's colour, none ringed: the
+ * preview draws the unsaved footer, where the state line is a suggestion and no
+ * chip claims a level (issue #279).
+ */
 @Composable
 private fun MasteryChips() {
     val theme = MaterialTheme.colorScheme
     val ramp = MasteryPalette.of(theme)
     val levels = listOf(ramp.unknown, ramp.recognized, ramp.familiar, ramp.learned, null)
     Row {
-        levels.forEachIndexed { index, colour ->
-            val selected = index == 1
+        levels.forEach { colour ->
             val fill = colour ?: theme.outline
             Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
                         .width(CHIP_WIDTH)
                         .height(CHIP_HEIGHT)
-                        .background(fill, LektoRadii.Control)
-                        .then(
-                            if (selected) Modifier.border(2.dp, theme.onBackground, LektoRadii.Control) else Modifier,
-                        ),
+                        .background(fill, LektoRadii.Control),
                     contentAlignment = Alignment.Center,
                 ) {
                     Line(contentColorOn(fill), CHIP_LABEL_BAR)
