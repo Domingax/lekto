@@ -138,7 +138,7 @@ class GuideDownloadController(
         preparation?.cancel()
         watching?.cancel()
         target?.let { offered ->
-            offered.difficulty?.let { artifact -> difficulty?.stop(offered.language) }
+            if (offered.difficulty != null) difficulty?.stop(offered.language)
             chosenPack(offered)?.let { chosen -> dictionary?.stop(chosen.artifact.name) }
         }
         state = state.copy(phase = GuideDownloadPhase.STOPPED)
