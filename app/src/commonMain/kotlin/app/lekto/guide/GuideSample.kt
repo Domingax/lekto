@@ -23,7 +23,7 @@ import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderText
 
 /** The band the guide paints the sample at before the reader chooses one, and after **Skip**. */
-val GUIDE_DEFAULT_BAND: CefrLevel = CefrLevel.B1
+val GUIDE_DEFAULT_BAND: CefrLevel = CefrLevel.A1
 
 /**
  * One of the four words the coloured page explains (issue #277): the level's chip

@@ -25,6 +25,11 @@ class GuideSampleTest {
     private val sample = guideSample()
 
     @Test
+    fun theDemonstrationDefaultsToTheLowestBand() {
+        assertEquals(CefrLevel.A1, GUIDE_DEFAULT_BAND, "A1 colours the most words before any band is chosen")
+    }
+
+    @Test
     fun theFirstParagraphIsTheOnePageDocument() {
         val document = guideDocument(sample, CefrLevel.B1, plain = false, segmenter = segmenter)
 
