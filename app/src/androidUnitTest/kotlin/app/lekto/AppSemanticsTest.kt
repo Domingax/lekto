@@ -1591,8 +1591,8 @@ class AppSemanticsTest {
 
         compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
-        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
-        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
         compose.onNodeWithText("Tap a word to save it.").assertIsDisplayed()
         compose.tapAGuideWord()
         compose.onNodeWithTag(PRONOUNCE_TAG).performClick()

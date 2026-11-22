@@ -1658,8 +1658,8 @@ class AppSemanticsTest {
 
         onNodeWithTag(guideLanguageRowTag("en")).performClick()
         onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
         tapGuideWord("fisherman")
         onNodeWithTag(PRONOUNCE_TAG).performClick()
 
