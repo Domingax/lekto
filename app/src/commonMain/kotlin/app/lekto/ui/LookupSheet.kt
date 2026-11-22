@@ -32,8 +32,13 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.icons.X
 
-/** The most of the screen a lookup sheet may cover, so the page and the washed word stay visible. */
-internal const val LOOKUP_SHEET_MAX_HEIGHT_FRACTION: Float = 0.45f
+/**
+ * The most of the screen a lookup sheet may cover, so the page and the washed word
+ * stay visible. The sheet is content-sized under it: a one-sense word opens much
+ * shorter, and a long answer rises to the cap and scrolls inside the body
+ * (docs/design.md §7.3, issue #282).
+ */
+internal const val LOOKUP_SHEET_MAX_HEIGHT_FRACTION: Float = 0.60f
 
 /** The 1 dp hairline a surface draws around itself (docs/design.md §4: no shadows). */
 private val Hairline = 1.dp
@@ -49,7 +54,7 @@ private val HandleHeight = 4.dp
  * not an outlined card: the surface tone and a hairline stand in for the shadows
  * the identity forbids.
  *
- * The cap is a parameter because the reader's 45 % exists to keep the page and
+ * The cap is a parameter because the reader's 60 % exists to keep the page and
  * the washed word visible; a sheet over a list, where nothing behind must stay in
  * view, may take more (the Vocabulary level sheet, issue #178). The sheet still
  * wraps its content, so it is only as tall as it needs.

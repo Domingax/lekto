@@ -21,7 +21,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryEntry
@@ -34,7 +36,6 @@ import app.lekto.core.speech.SpeechResult
 import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.theme.LektoTheme
-import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -345,25 +346,106 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
-    fun theSheetCapsALongWordAtFortyFivePercentOfTheScreen() = runComposeUiTest {
-        // Long enough that the content wants far more than the ceiling: this is
-        // the case the cap exists for, and the case a short panel could pass by
-        // accident.
+    fun aOneSenseWordOpensAShorterSheetThanTheOldFortyFivePercent() = runComposeUiTest {
+        // A word with one sense and no translation: the content-sized sheet still
+        // carries the header, the sense, the references and the pinned level, and
+        // must open shorter than the old 45 % ceiling (issue #282).
+        val entry = DictionaryEntry(
+            lemma = "blorple",
+            language = "en",
+            partOfSpeech = "verb",
+            pronunciation = null,
+            audioUrl = null,
+            senses = listOf(DictionarySense("To move swiftly.", emptyList())),
+        )
+        setContent { Panel(WordLookup.Found("blorple", "en", "blorple", listOf(entry))) }
+
+        val height = sheetHeight()
+
+        assertTrue(
+            height < PANEL_HEIGHT.value * 0.45f,
+            "the sheet is $height dp tall, so it still rations a one-sense word",
+        )
+    }
+
+    @Test
+    fun aThreeEntryWordRisesToTheSixtyPercentCapWithThreeDefinitionsInView() = runComposeUiTest {
+        // Three readings: the first three definitions stand at the top, while the
+        // third reading's further senses push the content past the cap.
+        val parts = listOf("noun", "verb", "adjective")
+        val entries = parts.mapIndexed { index, part ->
+            val senses = listOf(DictionarySense("Definition ${index + 1}.", emptyList()))
+            val overflow = if (index == parts.lastIndex) {
+                (4..9).map { number -> DictionarySense("Definition $number.", listOf("gloss $number")) }
+            } else {
+                emptyList()
+            }
+            DictionaryEntry(
+                lemma = "blorple",
+                language = "en",
+                partOfSpeech = part,
+                pronunciation = null,
+                audioUrl = null,
+                senses = senses + overflow,
+            )
+        }
+        setContent { Panel(WordLookup.Found("blorple", "en", "blorple", entries)) }
+
+        val ceiling = PANEL_HEIGHT.value * SHEET_MAX_FRACTION
+        assertEquals(
+            ceiling,
+            sheetHeight(),
+            1f,
+            "a three-entry word must rise to the ${ceiling}dp cap, not below it",
+        )
+        listOf(1, 2, 3).forEach { number ->
+            onNodeWithText("Definition $number.").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun aLandscapePhoneStillShowsTwoDefinitionLinesAndTheLevelSelector() = runComposeUiTest {
+        // 640 × 360: the short side the old 45 % cap turned into a slit between the
+        // header and the pinned footer.
+        val senses = (1..2).map { index -> DictionarySense("Definition $index.", emptyList()) }
+        val entry = DictionaryEntry("blorple", "en", "verb", null, null, senses)
+        setContent {
+            Panel(
+                WordLookup.Found("blorple", "en", "blorple", listOf(entry)),
+                width = 640.dp,
+                height = 360.dp,
+            )
+        }
+
+        onNodeWithText("Definition 1.").assertIsDisplayed()
+        onNodeWithText("Definition 2.").assertIsDisplayed()
+        onNodeWithTag(masteryTag(MasteryLevel.RECOGNIZED)).assertIsDisplayed()
+    }
+
+    @Test
+    fun theReferencesScrollAtTheEndOfTheBodyAndNeverGrowTheSheet() = runComposeUiTest {
         val senses = (1..24).map { index -> DictionarySense("Sense $index.", listOf("gloss $index")) }
         val entry = DictionaryEntry("blorple", "en", "verb", null, null, senses)
         setContent { Panel(WordLookup.Found("blorple", "en", "blorple", listOf(entry))) }
 
-        val sheet = onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
-        val height = sheet.bottom.value - sheet.top.value
-        val ceiling = PANEL_HEIGHT.value * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+        val ceiling = PANEL_HEIGHT.value * SHEET_MAX_FRACTION
+        val atRest = sheetHeight()
+        assertEquals(ceiling, atRest, 1f, "the long answer must sit at the cap before scrolling")
 
-        assertTrue(
-            height <= ceiling + 1f,
-            "the sheet is $height dp tall, above the $ceiling dp ceiling",
+        val reference = onNodeWithTag(sourceShortcutTag(DictionarySource.GOOGLE_TRANSLATE))
+        reference.performScrollTo().assertIsDisplayed()
+
+        assertEquals(
+            atRest,
+            sheetHeight(),
+            1f,
+            "scrolling the references must not change the sheet's height",
         )
+        val level = onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
+        val scrolled = reference.getUnclippedBoundsInRoot()
         assertTrue(
-            height >= ceiling - 1f,
-            "the sheet is only $height dp tall, so the cap was not exercised against $ceiling dp",
+            scrolled.bottom.value <= level.top.value + 1f,
+            "the references end at ${scrolled.bottom} dp, past the footer's ${level.top} dp",
         )
     }
 
@@ -457,6 +539,8 @@ class WordLookupPanelSemanticsTest {
         onSpeak: () -> Unit = {},
         onSave: (MasteryLevel) -> Unit = {},
         onDismiss: () -> Unit = {},
+        width: Dp = PANEL_WIDTH,
+        height: Dp = PANEL_HEIGHT,
         inColumn: Boolean = false,
     ) {
         LektoTheme {
@@ -472,10 +556,16 @@ class WordLookupPanelSemanticsTest {
                     suggestedLevel = suggestedLevel,
                     saveFailed = saveFailed,
                 ),
-                modifier = Modifier.size(width = PANEL_WIDTH, height = PANEL_HEIGHT),
+                modifier = Modifier.size(width = width, height = height),
                 inColumn = inColumn,
             )
         }
+    }
+
+    /** The sheet's measured height in dp, from its bounds in the test root. */
+    private fun ComposeUiTest.sheetHeight(): Float {
+        val sheet = onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
+        return sheet.bottom.value - sheet.top.value
     }
 
     /** The saved entry for the panel's word at [level]. */
@@ -502,5 +592,8 @@ class WordLookupPanelSemanticsTest {
     private companion object {
         val PANEL_WIDTH = 360.dp
         val PANEL_HEIGHT = 640.dp
+
+        /** The most of the screen the lookup sheet may cover (docs/design.md §7.3). */
+        const val SHEET_MAX_FRACTION = 0.60f
     }
 }

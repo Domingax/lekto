@@ -18,7 +18,6 @@ import app.lekto.core.dictionary.DictionarySource
 import app.lekto.core.dictionary.TranslationShortcut
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.text.AppMessage
-import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -38,7 +37,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 // `android-compileSdk`; Robolectric 4.16 supports API 36. The qualifiers give the
-// sheet a phone-sized window (360 × 800 dp), so its 45 % cap leaves room for the
+// sheet a phone-sized window (360 × 800 dp), so its 60 % cap leaves room for the
 // prompt and the shortcut, and the test reads them where a reader would.
 @Config(sdk = [36], qualifiers = "w360dp-h800dp")
 class PhraseLookupPanelSemanticsTest {
@@ -156,7 +155,9 @@ class PhraseLookupPanelSemanticsTest {
 
     @Test
     fun `a long translation scrolls rather than clipping`() {
-        val long = (1..40).joinToString(" ") { "Ligne $it de la traduction." }
+        // One sentence per line, so the body outgrows the cap however the host
+        // measures glyphs.
+        val long = (1..40).joinToString("\n") { "Ligne $it de la traduction." }
         compose.setContent {
             Panel(
                 translation = PhraseTranslationUiState(
@@ -168,10 +169,13 @@ class PhraseLookupPanelSemanticsTest {
         }
 
         val panel = compose.onNodeWithTag(PHRASE_PANEL_TAG).getUnclippedBoundsInRoot()
-        val ceiling = 640f * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
-        assertTrue(
-            "the sheet is ${panel.bottom.value - panel.top.value} dp tall, above the $ceiling dp ceiling",
-            panel.bottom.value - panel.top.value <= ceiling + 1f,
+        val height = panel.bottom.value - panel.top.value
+        val ceiling = 640f * SHEET_MAX_FRACTION
+        assertEquals(
+            "the long translation must inherit the ${ceiling}dp cap, but the sheet is $height dp tall",
+            ceiling,
+            height,
+            1f,
         )
 
         // The shortcut needs nothing configured, so it stays pinned while the long
@@ -208,5 +212,10 @@ class PhraseLookupPanelSemanticsTest {
                 modifier = modifier,
             )
         }
+    }
+
+    private companion object {
+        /** The most of the screen the shared lookup sheet may cover (docs/design.md §7.3). */
+        const val SHEET_MAX_FRACTION = 0.60f
     }
 }
