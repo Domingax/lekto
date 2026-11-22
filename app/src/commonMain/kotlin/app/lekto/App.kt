@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -90,11 +88,11 @@ import app.lekto.guide.GuideActions
 import app.lekto.guide.GuideController
 import app.lekto.guide.GuideDownloadActions
 import app.lekto.guide.GuideDownloadController
-import app.lekto.guide.GuideDownloadLine
 import app.lekto.guide.GuideDownloadPhase
 import app.lekto.guide.GuideDownloadUiState
 import app.lekto.guide.GuideProgressController
 import app.lekto.guide.GuideScreen
+import app.lekto.guide.GuideShelfFooter
 import app.lekto.guide.guideDocument
 import app.lekto.guide.guideNotes
 import app.lekto.language.LanguageController
@@ -148,7 +146,6 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
-import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.theme.appThemeScheme
@@ -1078,21 +1075,24 @@ private fun LibraryDestination(
             covers = remember(environment.library) { LibraryBookCovers(environment.library) },
             snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
             levelLine = levelLine,
-            modifier = Modifier.weight(1f),
+            footer = if (download.phase == GuideDownloadPhase.IDLE) {
+                null
+            } else {
+                {
+                    // The shelf's own item, so the download line reads as part of the
+                    // first-run shelf rather than a strip pinned under it (issue #277).
+                    GuideShelfFooter(
+                        download,
+                        GuideDownloadActions(
+                            onStop = onStopDownload,
+                            onRetry = onRetryDownload,
+                            onResume = onResumeDownload,
+                        ),
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
         )
-        if (download.phase != GuideDownloadPhase.IDLE) {
-            GuideDownloadLine(
-                download,
-                GuideDownloadActions(
-                    onStop = onStopDownload,
-                    onRetry = onRetryDownload,
-                    onResume = onResumeDownload,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
-            )
-        }
     }
 }
 

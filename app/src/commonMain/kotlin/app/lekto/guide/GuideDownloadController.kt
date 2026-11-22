@@ -124,7 +124,11 @@ class GuideDownloadController(
         if (state.phase == GuideDownloadPhase.INSTALLED && sameLanguage(language)) return
         cancelWork()
         state = GuideDownloadUiState(GuideDownloadPhase.PREPARING, language)
-        preparation = scope.launch { prepare(language) }
+        // The preparation blocks on the manifest fetch, so it must land on the
+        // injected dispatcher, never the composition's (UI) thread: Android forbids
+        // network there (the desktop JVM only tolerates it). The scope keeps the
+        // launch tied to the guide's lifetime, so dispose still cancels it.
+        preparation = scope.launch(dispatcher) { prepare(language) }
     }
 
     /**

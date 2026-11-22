@@ -163,3 +163,22 @@ private fun status(state: GuideDownloadUiState): String {
 private fun downloadingStatus(state: GuideDownloadUiState, texts: AppTexts): String = state.sizeBytes?.let { bytes ->
     texts.message(AppMessage.of(TextKey.GUIDE_DOWNLOAD_BACKGROUND, artifactSizeText(texts, bytes)))
 } ?: texts[TextKey.GUIDE_DOWNLOAD_PREPARING]
+
+/**
+ * The guide's download line as the shelf's own footer item (issue #277's third
+ * review): one row unit above it and a panel unit under it, so it reads as the
+ * first-run shelf's last line rather than a strip pinned to the foot of the
+ * screen. The **Library** owns the item; this only fixes its spacing.
+ */
+@Composable
+fun GuideShelfFooter(
+    download: GuideDownloadUiState,
+    actions: GuideDownloadActions = GuideDownloadActions(),
+    modifier: Modifier = Modifier,
+) {
+    GuideDownloadLine(
+        state = download,
+        actions = actions,
+        modifier = modifier.padding(top = LektoSpacing.BetweenRows, bottom = LektoSpacing.InsidePanel),
+    )
+}

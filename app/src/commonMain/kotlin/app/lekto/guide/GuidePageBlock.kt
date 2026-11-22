@@ -1,9 +1,7 @@
 package app.lekto.guide
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.reader.MasteryPalette
+import app.lekto.reader.PageRulesSurface
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderPage
 import app.lekto.reader.ReaderStyles
@@ -26,7 +25,6 @@ import app.lekto.reader.WordTap
 import app.lekto.reader.buildChapterText
 import app.lekto.reader.buildPageTokens
 import app.lekto.reader.pageInset
-import app.lekto.reader.pageRules
 import app.lekto.reader.readerTapInput
 import app.lekto.reader.rememberPageRules
 import app.lekto.reader.wordAt
@@ -71,13 +69,12 @@ internal fun GuidePageBlock(
                 onWordTap(wordTapOf(word, pageStart = 0, chapterText = chapterText.text))
             }
         }
-        Box(
-            Modifier
-                .fillMaxSize()
-                .testTag(GUIDE_PAGE_TAG)
-                .readerTapInput(tap)
-                .padding(horizontal = inset)
-                .pageRules(rules),
+        // The guide's page draws the text and its rules through the reader's own
+        // surface, so the two share one coordinate space (issue #277).
+        PageRulesSurface(
+            rules = rules,
+            horizontalInset = inset,
+            modifier = Modifier.testTag(GUIDE_PAGE_TAG).readerTapInput(tap),
         ) {
             Text(
                 text = tokens.text,

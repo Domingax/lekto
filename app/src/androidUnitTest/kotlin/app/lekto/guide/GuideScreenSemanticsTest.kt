@@ -1,11 +1,8 @@
 package app.lekto.guide
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -36,6 +33,12 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
+import app.lekto.reader.MasteryPalette
+import app.lekto.reader.ReaderPage
+import app.lekto.reader.ReaderStyles
+import app.lekto.reader.buildChapterText
+import app.lekto.reader.buildPageTokens
+import app.lekto.reader.ruleUnder
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
 import app.lekto.testkit.testOfferedArtifact
@@ -210,7 +213,41 @@ class GuideScreenSemanticsTest {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
-        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theSheetHidesTheWayForwardAndClosingBringsItBack() {
+        val lookupOpen = mutableStateOf(true)
+        compose.setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme {
+                    GuideScreen(
+                        state = GuideUiState(
+                            stage = GuideStage.TAP,
+                            sample = sample,
+                            plain = false,
+                            lookupOpen = lookupOpen.value,
+                            tapped = note("calm"),
+                        ),
+                        languages = sampleRosterLanguages(),
+                        document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter),
+                        notes = guideNotes(sample, GUIDE_DEFAULT_BAND, segmenter, "fr"),
+                        translationLanguage = "fr",
+                    )
+                }
+            }
+        }
+
+        // The sheet is the interaction: while it is open the guide offers nothing under it.
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertDoesNotExist()
+
+        lookupOpen.value = false
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -336,6 +373,40 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun aHighlightedWordsRuleStartsAtItsWordsMeasuredLeftEdge() {
+        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
+
+        val document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter)
+        val text = compose.onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
+        val results = mutableListOf<TextLayoutResult>()
+        text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+        val layout = results.first()
+        val styles = ReaderStyles.of(document.preferences, MasteryPalette.Light)
+        val chapter = buildChapterText(document.text, styles)
+        val tokens = buildPageTokens(
+            chapterText = chapter,
+            page = ReaderPage(0, chapter.length),
+            renderer = document.renderer,
+            chapter = document.text,
+            styles = styles,
+        )
+        val highlighted = tokens.words.filter { word ->
+            document.renderer.mastery.levelOf(word.key).highlighted
+        }
+
+        assertTrue("the demonstrated paragraph colours at least one word", highlighted.isNotEmpty())
+        highlighted.forEach { word ->
+            val rule = ruleUnder(layout, word).first()
+            assertEquals(
+                "the rule under ${word.surface} starts at the word's measured left edge",
+                layout.getBoundingBox(word.start).left,
+                rule.left,
+                0.01f,
+            )
+        }
+    }
+
+    @Test
     fun theLevelScreenCarriesSixBandsAndTheirOneLine() {
         var chosen: CefrLevel? = null
         render(
@@ -425,10 +496,13 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theTapScreenStillNamesTheReadingLanguage() {
+    fun theTapScreenNamesNoReadingLanguage() {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
-        compose.onNodeWithText("Reading in English").assertIsDisplayed()
+        // The mirror of the desktop lane: the last screen that named the reading
+        // language no longer does.
+        compose.onNodeWithText("Reading in English").assertDoesNotExist()
+        compose.onNodeWithText("Lecture en anglais").assertDoesNotExist()
     }
 
     @Test
@@ -571,17 +645,16 @@ class GuideScreenSemanticsTest {
         compose.setContent {
             CompositionLocalProvider(LocalAppTexts provides texts) {
                 LektoTheme {
-                    Column(Modifier.fillMaxSize()) {
-                        LibraryScreen(
-                            state = LibraryUiState(sample = sampleBookRow()),
-                            levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
-                            modifier = Modifier.weight(1f),
-                        )
-                        GuideDownloadLine(
-                            GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
-                            GuideDownloadActions(onStop = {}),
-                        )
-                    }
+                    LibraryScreen(
+                        state = LibraryUiState(sample = sampleBookRow()),
+                        levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
+                        footer = {
+                            GuideShelfFooter(
+                                GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
+                                GuideDownloadActions(onStop = {}),
+                            )
+                        },
+                    )
                 }
             }
         }

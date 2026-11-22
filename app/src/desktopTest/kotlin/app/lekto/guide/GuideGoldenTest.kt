@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -163,14 +164,11 @@ private val LEVEL_PROGRESS = GuideProgress(GuideStage.LEVEL.position, back = tru
 private val ARRIVAL_PROGRESS = GuideProgress(GUIDE_STEPS, back = false)
 
 /**
- * The page block's height in the planche. The screen gives it 320 dp and lets the
- * beat scroll; the frame folds that scroll so the notes and `Continue` below it
- * are recorded too.
+ * The level preview's block height: the compact card's page, three lines, above
+ * the six bands. It mirrors the level screen's compacted card, so the planche
+ * records the screen that fits a 640 dp phone rather than a taller one.
  */
-private val PAGE_BLOCK_HEIGHT = 240.dp
-
-/** The level preview's block height: the compact card's page, three lines, above the six bands. */
-private val PREVIEW_BLOCK_HEIGHT = 88.dp
+private val PREVIEW_BLOCK_HEIGHT = 56.dp
 
 /** The block's own inset: the reader's capped measure inside the guide's frame. */
 private val PAGE_INSET = 24.dp
@@ -206,7 +204,9 @@ private fun ScreenFrame(progress: GuideProgress, screen: @Composable ColumnScope
 @Composable
 private fun GuideBarPreview(progress: GuideProgress) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair),
+        Modifier.fillMaxWidth()
+            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair)
+            .heightIn(min = LektoSpacing.TouchTarget),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (progress.back) {
@@ -267,6 +267,7 @@ private fun LanguageRowPreview(selected: Boolean) {
     Row(
         Modifier
             .fillMaxWidth()
+            .heightIn(min = LektoSpacing.TouchTarget)
             .background(if (selected) theme.surfaceVariant else Color.Transparent)
             .padding(vertical = LektoSpacing.BetweenRows),
         verticalAlignment = Alignment.CenterVertically,
@@ -325,23 +326,12 @@ private fun ContinueButton() {
 private fun ColumnScope.PagePreview() {
     Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
         Heading(188.dp, 148.dp, 118.dp)
-        PageBlock(
-            Modifier.fillMaxWidth().height(PAGE_BLOCK_HEIGHT).padding(top = LektoSpacing.BetweenRows),
-            lines = 9,
-        )
+        PageBlock(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.InsidePanel), lines = 9)
         NoteRows(Modifier.padding(top = LektoSpacing.BetweenRows))
         Row(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel)) {
             Spacer(Modifier.weight(1f))
             Bar(MaterialTheme.colorScheme.onBackground, 54.dp, 11.dp)
         }
-    }
-}
-
-/** The language the sample is read in, under the page titles. */
-@Composable
-private fun ReadingIn() {
-    Column(Modifier.padding(top = LektoSpacing.InsideLabelPair)) {
-        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 92.dp, 9.dp)
     }
 }
 
@@ -493,9 +483,8 @@ private fun ColumnScope.TapPreview() {
     Box(Modifier.fillMaxWidth().weight(1f)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge)) {
             Heading(148.dp, 208.dp, 160.dp)
-            ReadingIn()
             PageBlock(
-                Modifier.fillMaxWidth().height(PAGE_BLOCK_HEIGHT).padding(top = LektoSpacing.BetweenRows),
+                Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.InsidePanel),
                 lines = 9,
                 washed = 0 to 1,
             )
@@ -666,7 +655,7 @@ private fun ColumnScope.LevelPreview() {
 private fun PreviewCard() {
     val theme = MaterialTheme.colorScheme
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines),
+        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows),
         shape = LektoRadii.Surface,
         color = theme.background,
         border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
@@ -688,7 +677,7 @@ private fun PreviewCard() {
  */
 @Composable
 private fun BandList() {
-    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines)) {
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows)) {
         repeat(6) { index ->
             BandRowPreview(selected = index == 0)
             if (index != 5) Hairline()
@@ -703,6 +692,7 @@ private fun BandRowPreview(selected: Boolean) {
     Row(
         Modifier
             .fillMaxWidth()
+            .heightIn(min = LektoSpacing.TouchTarget)
             .background(if (selected) theme.surfaceVariant else Color.Transparent)
             .padding(vertical = LektoSpacing.BetweenRelatedLines),
         verticalAlignment = Alignment.CenterVertically,
@@ -730,7 +720,7 @@ private fun StartReadingButton() {
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(top = LektoSpacing.InsidePanel)
+            .padding(top = LektoSpacing.InsidePanel, bottom = LektoSpacing.BetweenRelatedLines)
             .height(40.dp)
             .background(theme.primary, LektoRadii.Control),
         contentAlignment = Alignment.Center,
@@ -771,9 +761,7 @@ private fun ColumnScope.ArrivalPreview() {
         }
         Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
         Bar(theme.onSurfaceVariant, 212.dp, 9.dp)
-        Spacer(Modifier.weight(1f))
-        Hairline()
-        InstalledLine(Modifier.padding(vertical = LektoSpacing.InsidePanel))
+        InstalledLine(Modifier.padding(top = LektoSpacing.BetweenRows, bottom = LektoSpacing.InsidePanel))
     }
 }
 

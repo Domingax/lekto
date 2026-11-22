@@ -41,3 +41,22 @@ internal fun SampleDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         onDismiss = onDismiss,
     )
 }
+
+/** The one confirmation the shelf is asking about, or nothing when it asks about none. */
+@Composable
+internal fun DeleteConfirmation(pending: PendingDelete?, onConfirm: (PendingDelete) -> Unit, onDismiss: () -> Unit) {
+    when (pending) {
+        is PendingDelete.VaultBook -> BookDeleteDialog(
+            target = pending.book,
+            onConfirm = { onConfirm(pending) },
+            onDismiss = onDismiss,
+        )
+
+        PendingDelete.Sample -> SampleDeleteDialog(
+            onConfirm = { onConfirm(pending) },
+            onDismiss = onDismiss,
+        )
+
+        null -> Unit
+    }
+}

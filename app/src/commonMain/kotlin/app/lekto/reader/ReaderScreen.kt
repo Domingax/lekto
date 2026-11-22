@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -839,13 +838,10 @@ private fun PageText(
 ) {
     val texts = LocalAppTexts.current
     val inlineContent = rememberInlineImages(imageRefs, images, styles)
-    Box(
-        Modifier
-            .fillMaxSize()
-            .offset { IntOffset(0, -liftPx.roundToInt()) }
-            .padding(horizontal = horizontalInset)
-            // Inside the margin, so the drawing shares the text's own origin.
-            .pageRules(rules),
+    PageRulesSurface(
+        rules = rules,
+        horizontalInset = horizontalInset,
+        modifier = Modifier.offset { IntOffset(0, -liftPx.roundToInt()) },
     ) {
         if (tokens != null) {
             SelectionContainer {

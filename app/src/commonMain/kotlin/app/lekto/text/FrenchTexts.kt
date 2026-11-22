@@ -360,7 +360,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_LANGUAGE_INTRO to
         "Lekto colore les mots à partir de votre niveau de maîtrise de la langue que vous souhaitez apprendre.",
     TextKey.GUIDE_LANGUAGE_FOOTNOTE to "Vous pourrez en ajouter d'autres plus tard, dans Réglages.",
-    TextKey.GUIDE_READING_IN to "Lecture en {0}",
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Voici une page de votre livre.",
     TextKey.GUIDE_PAGE_PLAIN_INTRO to "Rien n'est encore coloré. Regardez.",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur.",
