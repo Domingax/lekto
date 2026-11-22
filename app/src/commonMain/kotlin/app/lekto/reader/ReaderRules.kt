@@ -1,10 +1,27 @@
 package app.lekto.reader
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.WordToken
+
+/**
+ * The dotted rule under a highlighted word (docs/design.md §2.2): 1 dp thick,
+ * a 1 dp dash and a 2 dp gap, so it reads as a rule rather than an underline.
+ */
+private val RULE_THICKNESS = 1.dp
+private val RULE_DASH = 1.dp
+private val RULE_GAP = 2.dp
 
 /**
  * A word's dotted rule in the page's own text coordinates: from [left] to
@@ -76,4 +93,45 @@ internal fun pageRules(
         }
     }
     return PageRules(paths.map { (colour, path) -> RuleGroup(colour, path) })
+}
+
+/**
+ * The page's dotted rules, computed once per page and style and remembered on the
+ * page's word layer plus the layout the text just reported — so a frame strokes
+ * the paths instead of asking for a box per word (issue #281).
+ */
+@Composable
+internal fun rememberPageRules(
+    layout: TextLayoutResult?,
+    tokens: ReaderTokens?,
+    document: ReaderDocument,
+    styles: ReaderStyles,
+): PageRules = remember(layout, tokens, document.renderer.mastery, styles.mastery, document.masteryRevision) {
+    pageRules(
+        layout = layout,
+        words = tokens?.words.orEmpty(),
+        levelOf = { word -> document.renderer.mastery.levelOf(word.key) },
+        ramp = styles.mastery,
+    )
+}
+
+/**
+ * Strokes [rules] behind the page's text, in the text's own coordinates: call it
+ * inside the text's horizontal inset. The stroke is remembered for the density it
+ * draws at, and every rule of a colour is one path, so a frame costs one draw per
+ * level and no layout query at all (issue #281).
+ */
+internal fun Modifier.pageRules(rules: PageRules): Modifier = composed {
+    val density = LocalDensity.current
+    val stroke = remember(density) {
+        Stroke(
+            width = with(density) { RULE_THICKNESS.toPx() },
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(with(density) { RULE_DASH.toPx() }, with(density) { RULE_GAP.toPx() }),
+            ),
+        )
+    }
+    drawBehind {
+        rules.groups.forEach { group -> drawPath(group.path, group.colour, style = stroke) }
+    }
 }

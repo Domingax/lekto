@@ -95,7 +95,12 @@ class ReaderRulesTest {
         waitForIdle()
 
         val levels = mapOf("lantern" to MasteryLevel.UNKNOWN, "glows" to MasteryLevel.FAMILIAR)
-        val rules = pageRules(layout, words, levelOf = { word -> levels[word.surface] ?: MasteryLevel.KNOWN }, styles.mastery)
+        val rules = pageRules(
+            layout = layout,
+            words = words,
+            levelOf = { word -> levels[word.surface] ?: MasteryLevel.KNOWN },
+            ramp = styles.mastery,
+        )
 
         assertEquals(
             setOf(MasteryPalette.Light.unknown, MasteryPalette.Light.familiar),

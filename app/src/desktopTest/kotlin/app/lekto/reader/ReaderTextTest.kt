@@ -182,10 +182,13 @@ class ReaderTextTest {
         val tokens = buildReaderTokens(heading, renderer, styles)
 
         assertEquals(listOf("waits"), tokens.words.map { word -> word.surface })
-        val headingStyle = tokens.text.spanStyles.single { span -> span.start == 0 && span.end == 11 }.item
+        val headingEnd = "The lantern".length
+        val headingStyle = tokens.text.spanStyles.single { span -> span.start == 0 && span.end == headingEnd }.item
         assertEquals(styles.heading.fontSize, headingStyle.fontSize)
         assertTrue(
-            tokens.text.spanStyles.none { span -> span.start < 11 && span.item.color == styles.mastery.unknown },
+            tokens.text.spanStyles.none { span ->
+                span.start < headingEnd && span.item.color == styles.mastery.unknown
+            },
             "no mastery span may cover a heading: ${tokens.text.spanStyles}",
         )
     }
@@ -206,8 +209,11 @@ class ReaderTextTest {
         val tokens = buildPageTokens(chapterText, page, renderer, heading, styles)
 
         assertEquals(listOf("waits"), tokens.words.map { word -> word.surface })
+        val headingEnd = "The lantern".length
         assertTrue(
-            tokens.text.spanStyles.none { span -> span.start < 11 && span.item.color == styles.mastery.unknown },
+            tokens.text.spanStyles.none { span ->
+                span.start < headingEnd && span.item.color == styles.mastery.unknown
+            },
             "a page's heading must stay ink only: ${tokens.text.spanStyles}",
         )
     }

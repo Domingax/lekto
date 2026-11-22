@@ -27,12 +27,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -53,7 +50,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.ReadingProgress
-import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.ImageRef
 import app.lekto.navigation.PlatformBackHandler
@@ -66,14 +62,6 @@ import kotlin.math.roundToInt
 
 /** The breathing room kept between the lifted word and the sheet's top edge. */
 private val GAP_ABOVE_PANEL = 8.dp
-
-/**
- * The dotted rule under a highlighted word (docs/design.md §2.2): 1 dp thick,
- * a 1 dp dash and a 2 dp gap, so it reads as a rule rather than an underline.
- */
-private val RULE_THICKNESS = 1.dp
-private val RULE_DASH = 1.dp
-private val RULE_GAP = 2.dp
 
 /** The test tag on the page, so the UI tests can inject a tap at a zone's coordinates. */
 internal const val READER_PAGE_TAG = "reader-page"
@@ -720,7 +708,7 @@ private fun ColumnScope.ReaderPage(
     val tokens = rememberPageTokens(document, chapterText, styles, state.page, selected)
     val latestTokens = rememberUpdatedState(tokens)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val rules = rememberPageRules(layout, tokens, document.renderer.mastery, styles, document.masteryRevision)
+    val rules = rememberPageRules(layout, tokens, document, styles)
     var pageHeightPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     // The taps are hit-tested against the text's own coordinates, so the inset
@@ -842,26 +830,13 @@ private fun PageText(
 ) {
     val texts = LocalAppTexts.current
     val inlineContent = rememberInlineImages(imageRefs, images, styles)
-    val density = LocalDensity.current
-    val ruleStroke = remember(density) {
-        Stroke(
-            width = with(density) { RULE_THICKNESS.toPx() },
-            pathEffect = PathEffect.dashPathEffect(
-                floatArrayOf(with(density) { RULE_DASH.toPx() }, with(density) { RULE_GAP.toPx() }),
-            ),
-        )
-    }
     Box(
         Modifier
             .fillMaxSize()
             .offset { IntOffset(0, -liftPx.roundToInt()) }
             .padding(horizontal = horizontalInset)
-            // Inside the margin, so the drawing shares the text's own origin; the
-            // paths were built once per page and style, and the draw only strokes
-            // them, so a frame costs no layout query and no per-word work.
-            .drawBehind {
-                rules.groups.forEach { group -> drawPath(group.path, group.colour, style = ruleStroke) }
-            },
+            // Inside the margin, so the drawing shares the text's own origin.
+            .pageRules(rules),
     ) {
         if (tokens != null) {
             SelectionContainer {
@@ -912,22 +887,6 @@ private fun rememberPageTokens(
     page?.let { slice ->
         buildPageTokens(chapterText, slice, document.renderer, document.text, styles, selected)
     }
-}
-
-/**
- * The page's dotted rules, computed once per page and style and remembered on the
- * same inputs as [rememberPageTokens] plus the layout the text just reported — so
- * a frame strokes the paths instead of asking for a box per word (issue #281).
- */
-@Composable
-private fun rememberPageRules(
-    layout: TextLayoutResult?,
-    tokens: ReaderTokens?,
-    mastery: MasteryLookup,
-    styles: ReaderStyles,
-    masteryRevision: Int,
-): PageRules = remember(layout, tokens, mastery, styles.mastery, masteryRevision) {
-    pageRules(layout, tokens?.words.orEmpty(), levelOf = { word -> mastery.levelOf(word.key) }, styles.mastery)
 }
 
 /**

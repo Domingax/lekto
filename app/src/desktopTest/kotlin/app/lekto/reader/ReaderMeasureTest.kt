@@ -12,8 +12,10 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
@@ -47,7 +49,7 @@ class ReaderMeasureTest {
     fun theColumnIsStillCappedAndCentredAtFourteenForty() = cappedColumn(width = 1440.dp)
 
     /** The page in a [width]-wide window: 34 em at the default 18 sp is 612 dp of text. */
-    private fun cappedColumn(width: Dp) = runSkikoComposeUiTest(size = Size(width.value, WINDOW_HEIGHT.value)) {
+    private fun cappedColumn(width: Dp) = runSkikoComposeUiTest(size = Size(width.value, windowHeight.value)) {
         setContent {
             MaterialTheme {
                 ReaderScreen(
@@ -60,7 +62,10 @@ class ReaderMeasureTest {
         val page = onNodeWithTag(READER_PAGE_TAG).getUnclippedBoundsInRoot()
         val text = onNodeWithTag(READER_PAGE_TEXT_TAG).getUnclippedBoundsInRoot()
 
-        assertTrue(text.right - text.left <= MAX_MEASURE + 1.dp, "the text column never passes 34 em: ${text.right - text.left}")
+        assertTrue(
+            text.right - text.left <= maxMeasure + 1.dp,
+            "the text column never passes 34 em: ${text.right - text.left}",
+        )
         assertEquals(
             (text.left - page.left).value,
             (page.right - text.right).value,
@@ -77,47 +82,56 @@ class ReaderMeasureTest {
      */
     @Test
     fun aWideWindowKeepsTheLineInsideSixtyEightCharacters() = runComposeUiTest {
-        val widths = listOf(1100.dp, 1440.dp)
-        val columns = mutableMapOf<Dp, Int>()
-        val capBinds = mutableMapOf<Dp, Boolean>()
-        val longestLines = mutableMapOf<Dp, Int>()
-        val pagesByWidth = mutableMapOf<Dp, List<ReaderPage>>()
-
+        val measured = mutableMapOf<Dp, MeasuredPage>()
         setContent {
             val measurer = rememberTextMeasurer()
             val density = LocalDensity.current
-            val height = with(density) { WINDOW_HEIGHT.roundToPx() }
+            val height = with(density) { windowHeight.roundToPx() }
             val text = AnnotatedString(passage)
-            widths.forEach { pageWidth ->
-                val column = styles.contentWidthPx(pageWidth, density)
-                val uncapped = with(density) { (pageWidth - styles.horizontalMargin * 2).roundToPx() }
-                val pages = paginateChapter(text, ReaderLayout(measurer, styles.body, column, height)).toList()
-                val first = pages.first()
-                val page = measurer.measure(
-                    text = text.subSequence(first.start, first.end),
-                    style = styles.body,
-                    constraints = Constraints(maxWidth = column),
-                )
-                columns[pageWidth] = column
-                capBinds[pageWidth] = column < uncapped
-                pagesByWidth[pageWidth] = pages
-                longestLines[pageWidth] = (0 until page.lineCount).maxOf { line -> visibleCharacters(page, line) }
+            wideWidths.forEach { pageWidth ->
+                measured[pageWidth] = measuredPage(measurer, density, pageWidth, text, height)
             }
         }
         waitForIdle()
 
-        widths.forEach { pageWidth ->
-            assertTrue(capBinds.getValue(pageWidth), "34 em must cap the page at $pageWidth")
+        wideWidths.forEach { pageWidth ->
+            val page = measured.getValue(pageWidth)
+            assertTrue(page.capped, "34 em must cap the page at $pageWidth")
             assertTrue(
-                longestLines.getValue(pageWidth) in COMFORTABLE_LINE..CHARACTERS_PER_LINE,
-                "$pageWidth holds ${longestLines.getValue(pageWidth)} characters on a line, " +
+                page.longestLine in COMFORTABLE_LINE..CHARACTERS_PER_LINE,
+                "$pageWidth holds ${page.longestLine} characters on a line, " +
                     "outside $COMFORTABLE_LINE..$CHARACTERS_PER_LINE",
             )
         }
         assertEquals(
-            pagesByWidth.getValue(1100.dp),
-            pagesByWidth.getValue(1440.dp),
+            measured.getValue(wideWidths.first()).pages,
+            measured.getValue(wideWidths.last()).pages,
             "one capped column: the window's extra width is margin, so no page break and no percentage moves",
+        )
+    }
+
+    /** One wide window's page: its column, whether the cap bound, its longest line and its breaks. */
+    @Suppress("LongParameterList") // The measurer, its density and the page's inputs travel together.
+    private fun measuredPage(
+        measurer: TextMeasurer,
+        density: Density,
+        width: Dp,
+        text: AnnotatedString,
+        height: Int,
+    ): MeasuredPage {
+        val column = styles.contentWidthPx(width, density)
+        val uncapped = with(density) { (width - styles.horizontalMargin * 2).roundToPx() }
+        val pages = paginateChapter(text, ReaderLayout(measurer, styles.body, column, height)).toList()
+        val first = pages.first()
+        val page = measurer.measure(
+            text = text.subSequence(first.start, first.end),
+            style = styles.body,
+            constraints = Constraints(maxWidth = column),
+        )
+        return MeasuredPage(
+            capped = column < uncapped,
+            longestLine = (0 until page.lineCount).maxOf { line -> visibleCharacters(page, line) },
+            pages = pages,
         )
     }
 
@@ -132,12 +146,18 @@ class ReaderMeasureTest {
     private val styles = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
 
     /** 34 em at the default 18 sp. */
-    private val MAX_MEASURE: Dp = (MAX_MEASURE_EM * 18).dp
+    private val maxMeasure: Dp = (MAX_MEASURE_EM * DEFAULT_READING_SIZE).dp
 
     /** Tall enough for a page and both bands at the wide shape. */
-    private val WINDOW_HEIGHT = 720.dp
+    private val windowHeight = 720.dp
 
     private companion object {
+        /** The two wide windows the ticket names, both past the context column's breakpoint. */
+        val wideWidths = listOf(1100.dp, 1440.dp)
+
+        /** The default reading size the em is measured in. */
+        const val DEFAULT_READING_SIZE = 18f
+
         /** The comfortable band's floor, from the ticket's 45–75. */
         const val COMFORTABLE_LINE = 45
 
@@ -145,3 +165,6 @@ class ReaderMeasureTest {
         const val CHARACTERS_PER_LINE = 68
     }
 }
+
+/** One wide window's page, as the paginator measured it. */
+private class MeasuredPage(val capped: Boolean, val longestLine: Int, val pages: List<ReaderPage>)
