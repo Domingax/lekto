@@ -202,6 +202,22 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun theOfflineSheetOffersTheWayToInstallTheDictionary() = runComposeUiTest {
+        var openedSettings = false
+        setContent {
+            Panel(
+                WordLookup.Unavailable("The offline dictionary isn't installed yet."),
+                onOpenSettings = { openedSettings = true },
+            )
+        }
+
+        onNodeWithText("Install the offline dictionary").assertIsDisplayed()
+        onNodeWithTag(LOOKUP_INSTALL_TAG).performClick()
+
+        assertTrue(openedSettings, "the install action must reach the settings seam")
+    }
+
+    @Test
     fun choosingALevelSavesAtThatLevel() = runComposeUiTest {
         var saved: MasteryLevel? = null
         setContent { Panel(WordLookup.NotInDictionary("zzzz", "en"), onSave = { saved = it }) }
@@ -539,6 +555,7 @@ class WordLookupPanelSemanticsTest {
         onSpeak: () -> Unit = {},
         onSave: (MasteryLevel) -> Unit = {},
         onDismiss: () -> Unit = {},
+        onOpenSettings: () -> Unit = {},
         width: Dp = PANEL_WIDTH,
         height: Dp = PANEL_HEIGHT,
         inColumn: Boolean = false,
@@ -556,6 +573,7 @@ class WordLookupPanelSemanticsTest {
                     suggestedLevel = suggestedLevel,
                     saveFailed = saveFailed,
                 ),
+                onOpenSettings = onOpenSettings,
                 modifier = Modifier.size(width = width, height = height),
                 inColumn = inColumn,
             )

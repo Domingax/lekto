@@ -119,7 +119,10 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  *
  * The sheet swallows taps that land on it, so only a tap truly outside it — which
  * its [app.lekto.ui.DismissScrim] handles — dismisses it; a tap on the reader
- * behind it then never turns the page or opens another lookup.
+ * behind it then never turns the page or opens another lookup. A missing pack is
+ * never a dead end: the offline message carries [onOpenSettings] as one quiet
+ * `Install the offline dictionary` action, which leaves the book for Settings
+ * ▸ Languages (issue #282).
  */
 @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
 @Composable
@@ -130,6 +133,7 @@ fun WordLookupPanel(
     actions: WordLookupActions,
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
     inColumn: Boolean = false,
 ) {
@@ -138,7 +142,7 @@ fun WordLookupPanel(
         sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
         inColumn = inColumn,
     ) {
-        SheetContent(term, result, pronunciation, shortcuts, actions.onOpenShortcut, actions.onDismiss)
+        SheetContent(term, result, pronunciation, shortcuts, actions.onOpenShortcut, actions.onDismiss, onOpenSettings)
         Footer(vocabulary, inColumn)
     }
 }
@@ -151,7 +155,7 @@ fun WordLookupPanel(
  * height from the definition at rest (issue #282). The footer stays, so the level
  * is always reachable.
  */
-@Suppress("LongParameterList") // The answer, its references and the two ways out: independent inputs.
+@Suppress("LongParameterList") // The answer, its references and the ways out: independent inputs.
 @Composable
 private fun ColumnScope.SheetContent(
     term: String,
@@ -160,12 +164,13 @@ private fun ColumnScope.SheetContent(
     shortcuts: List<DictionaryShortcut>,
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
         SheetHeader(term, result, pronunciation, onDismiss)
         SheetDivider()
         SpeechMessage(pronunciation.result)
-        Answer(result)
+        Answer(result, onOpenSettings)
         References(shortcuts, onOpenShortcut)
     }
 }

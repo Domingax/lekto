@@ -77,6 +77,7 @@ import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryServices
 import app.lekto.dictionary.LOOKUP_CLOSE_TAG
+import app.lekto.dictionary.LOOKUP_INSTALL_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
@@ -463,6 +464,23 @@ class AppSemanticsTest {
         // reference shortcuts (issue #19).
         compose.onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Reverso").assertIsDisplayed()
+    }
+
+    @Test
+    fun installingTheDictionaryFromTheOfflineLookupOpensSettings() {
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, languageSettings = frenchTranslations())) }
+
+        compose.openBook()
+        compose.tapFirstWord()
+        compose.onNodeWithText("isn't installed yet", substring = true).assertIsDisplayed()
+
+        compose.onNodeWithTag(LOOKUP_INSTALL_TAG).performClick()
+
+        // The door leaves the book for Settings, where Languages lives; the book
+        // is behind, so Back from Settings lands on the Library.
+        compose.onNodeWithTag(SETTINGS_TITLE_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(LANGUAGES_LINK_TAG).assertIsDisplayed()
     }
 
     @Test

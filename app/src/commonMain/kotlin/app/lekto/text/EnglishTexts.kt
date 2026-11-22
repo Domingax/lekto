@@ -323,4 +323,5 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.LOOKUP_STATE_LIKELY to "Likely {0}",
     TextKey.LOOKUP_STATE_NOT_SAVED to "Not saved",
     TextKey.LOOKUP_STATE_FAILED to "Couldn't save",
+    TextKey.LOOKUP_INSTALL_DICTIONARY to "Install the offline dictionary",
 )
