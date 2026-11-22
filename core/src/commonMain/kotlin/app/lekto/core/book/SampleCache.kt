@@ -3,6 +3,7 @@ package app.lekto.core.book
 import app.lekto.core.sample.Sample
 import app.lekto.core.text.StructuredText
 import app.lekto.core.vault.DerivedAssetStore
+import app.lekto.core.vault.InstantIso8601Serializer
 import app.lekto.core.vault.VaultCodec
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
@@ -29,6 +30,7 @@ internal data class MaterialisedSample(
     /** The reader's **Reading position** in [text], or `null` when they have not turned a page. */
     val position: Int? = null,
     /** When the reader declared the sample **Finished**, or `null` when they have not. */
+    @Serializable(with = InstantIso8601Serializer::class)
     val finishedAt: Instant? = null,
 ) {
 
