@@ -295,7 +295,11 @@ chevrons that turn the page, and the position, and one
 `reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
 hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
-and the page clipped rather than repaginated. The lookup sheet adds one
+and the page clipped rather than repaginated. The rule's geometry is
+`ReaderRulesTest`'s — the dots' spacing under every highlighted word — and the
+page's measure is `ReaderMeasureTest`'s — the 34 em column — both in
+`app/desktopTest`, so the drawn rule and the column are pinned as behaviour, not
+only as pixels. The lookup sheet adds one
 `word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
 (issue #210): the sheet raised over a page at the 60 % cap, square at its top
 edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
@@ -1232,6 +1236,26 @@ one confirmation, and the failed-materialisation line. The shelf golden
 (`library-*.png`) gains the sample row. `SampleAssetsAreDerivedTest` extends its
 rule to the materialiser: it may name the derived store, its byte seam and its
 codec, and nothing else under the vault package.
+
+The **Guide** (issue #277) is proved at its own levels. Its progress store is a
+contract in `testkit`, run against the JSON document in `core/commonTest` and
+against a real directory in `core/jvmTest`, with `JsonGuideProgressStoreTest`
+adding the corrupt and the absent document. The flow is `GuideControllerTest` in
+`app/desktopTest`: the language answer materialises the sample and starts the
+download, the page's two beats, the tap that saves and states its level, the band
+that writes the **Reader level**, and a replay that opens on the sample the shelf
+already holds and asks no second language question. The download is
+`GuideDownloadControllerTest`, driven by virtual time: one line for both artefacts,
+the manifest read only after the answer, a stop that cancels both installers and
+sticks, and a failure that reports rather than crashing. The screens are
+`GuideScreenSemanticsTest` on both lanes — the roster with no preselection, the two
+beats and their notes, the real sheet's answer with no install door, the state
+line, the six bands with none chosen before a tap, `Skip` on every screen, and the
+arrival's sample row and download line — with the five screens' frames in the
+`guide-<screen>-<paper>.png` planche goldens. The once-only gate is
+`AppSemanticsTest` on both lanes: a fresh install opens on the guide, a device that
+saw it or already holds a book opens on the shell, a corrupt document reads as not
+seen, and the Settings row replays it at the language the shelf already holds.
 
 The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
