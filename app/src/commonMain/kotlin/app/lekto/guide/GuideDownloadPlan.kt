@@ -29,7 +29,6 @@ internal sealed interface GuideDownloadPlan {
  * [GuideDownloadPhase.LANGUAGE_NOT_OFFERED] (no retry). [onOffered] receives the
  * manifest's languages so the caller can fill the translation default from them.
  */
-@Suppress("LongParameterList") // The catalogue, the choice, the translation default and the seam's callback.
 internal fun guideDownloadPlan(
     catalog: LanguageCatalog?,
     language: String,
