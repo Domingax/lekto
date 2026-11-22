@@ -5,7 +5,9 @@ package app.lekto.guide
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -31,11 +33,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +69,8 @@ import app.lekto.ui.TextAction
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.plainClickable
+import app.lekto.ui.rowHover
 
 /** The test tag on the guide's current title, so a test can read the screen it is on. */
 internal const val GUIDE_TITLE_TAG: String = "guide-title"
@@ -244,12 +250,16 @@ private fun ColumnScope.LanguageQuestion(languages: List<OfferedLanguage>, onCho
 @Composable
 private fun LanguageRow(offered: OfferedLanguage, onChoose: (String) -> Unit) {
     val texts = LocalAppTexts.current
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = LektoSpacing.TouchTarget)
+            .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
-            .clickable { onChoose(offered.language) }
+            .hoverable(interaction)
+            .plainClickable(role = Role.Button) { onChoose(offered.language) }
             .testTag(guideLanguageRowTag(offered.language))
             .padding(vertical = LektoSpacing.BetweenRows),
         verticalAlignment = Alignment.CenterVertically,
@@ -468,13 +478,17 @@ private fun BandList(band: CefrLevel, onChoose: (CefrLevel) -> Unit) {
 @Suppress("LongParameterList") // The band, its choice, its name, its one line and the tap.
 @Composable
 private fun BandRow(level: CefrLevel, selected: Boolean, name: String, line: String, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = LektoSpacing.TouchTarget)
             .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+            .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
-            .clickable(onClick = onClick)
+            .hoverable(interaction)
+            .plainClickable(role = Role.Button, onClick = onClick)
             .semantics { this.selected = selected }
             .testTag(guideBandTag(level))
             .padding(vertical = LektoSpacing.BetweenRelatedLines),
