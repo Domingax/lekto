@@ -54,6 +54,8 @@ import app.lekto.core.language.AppLanguages
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettingsStore
+import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.offeredLanguages
 import app.lekto.core.language.readingLanguagesOf
 import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.llm.LlmClient
@@ -466,10 +468,17 @@ fun App(
             )
         }
     }
-    val guide = remember(environment.samples, environment.segmenter, guideDownload, mastery) {
+    // The roster, corrected by a cached manifest when one is already on the
+    // device: the guide never fetches for its list, so a first launch shows every
+    // language the build ships, and a later one shows what the manifest kept.
+    val guideLanguages = remember(environment.languages) {
+        val manifest = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
+        offeredLanguages(sampleRosterLanguages(), manifest)
+    }
+    val guide = remember(environment.samples, environment.segmenter, guideDownload, mastery, guideLanguages) {
         environment.samples?.let { samples ->
             GuideController(
-                languages = sampleRosterLanguages(),
+                languages = guideLanguages,
                 sampleOf = samples::sample,
                 materialise = controller::materialiseSample,
                 download = guideDownload,
@@ -483,7 +492,8 @@ fun App(
     // empty. A reader who already has books never gets five screens over their
     // shelf; the Settings row below is their way in.
     var guideReopened by remember { mutableStateOf(false) }
-    val guideOpen = guide != null && (guideReopened || (!(guideProgress?.seen ?: true) && state.vaultEmpty))
+    val guideOpen = guide != null && guideLanguages.isNotEmpty() &&
+        (guideReopened || (!(guideProgress?.seen ?: true) && state.vaultEmpty))
     // Every way out of the guide — the last screen's action and Skip on any
     // screen — leaves the reader on the shelf with the fact recorded.
     val closeGuide = {
@@ -526,6 +536,7 @@ fun App(
                 if (activeGuide != null) {
                     GuideDestination(
                         guide = activeGuide,
+                        languages = guideLanguages,
                         download = guideDownload,
                         environment = environment,
                         translationLanguage = languageSettings?.translationLanguage,
@@ -783,6 +794,7 @@ private fun AppScreens(
 @Composable
 private fun GuideDestination(
     guide: GuideController,
+    languages: List<OfferedLanguage>,
     download: GuideDownloadController?,
     environment: AppEnvironment,
     translationLanguage: String?,
@@ -807,7 +819,7 @@ private fun GuideDestination(
     ) {
         GuideScreen(
             state = state,
-            languages = sampleRosterLanguages(),
+            languages = languages,
             document = document,
             notes = notes,
             download = download?.state ?: GuideDownloadUiState(),

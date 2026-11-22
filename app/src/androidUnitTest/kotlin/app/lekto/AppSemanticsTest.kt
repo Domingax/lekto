@@ -89,6 +89,7 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
+import app.lekto.guide.GUIDE_LANGUAGE_LIST_TAG
 import app.lekto.guide.GUIDE_SKIP_TAG
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_BACK_TAG
@@ -1518,6 +1519,25 @@ class AppSemanticsTest {
             compose.onAllNodesWithText("Download again").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("is installed", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aManifestThatLeavesOneLanguageOpensOnItsPage() {
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                    languages = InMemoryLanguageCatalog(
+                        LanguageCatalogState.Available(listOf(testOfferedLanguage("en"))),
+                    ),
+                ),
+            )
+        }
+
+        compose.onNodeWithText("Reading in English").assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
     }
 
     @Test
