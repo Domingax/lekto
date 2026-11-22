@@ -92,8 +92,10 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
+import app.lekto.guide.GUIDE_CONTINUE_TAG
 import app.lekto.guide.GUIDE_LANGUAGE_LIST_TAG
 import app.lekto.guide.GUIDE_SKIP_TAG
+import app.lekto.guide.guideLanguageRowTag
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_BACK_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
@@ -1637,6 +1639,31 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun theGuidesSpeakerPronouncesTheDemonstratedWord() = runComposeUiTest {
+        val pronouncer = FakePronouncer()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                    pronouncer = pronouncer,
+                ),
+            )
+        }
+
+        onNodeWithTag(guideLanguageRowTag("en")).performClick()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        onNodeWithTag(PRONOUNCE_TAG).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
+        val (text, language) = pronouncer.utterances.single()
+        assertEquals("fisherman", text)
+        assertEquals("en", language)
+    }
+
+    @Test
     fun aReaderWhoSawTheGuideOpensOnTheShell() = runComposeUiTest {
         setContent {
             App(
@@ -1713,7 +1740,7 @@ class AppSemanticsTest {
     }
 
     @Test
-    fun theSettingsRowReopensTheGuideOverAShelfWithBooks() = runComposeUiTest {
+    fun theSettingsRowReopensTheGuideAtTheBooksLanguage() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
 
         setContent { App(environment(library, samples = guideSamples())) }
@@ -1721,7 +1748,9 @@ class AppSemanticsTest {
         tapSection(ShellSection.SETTINGS)
         onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
 
-        onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+        onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        onNodeWithText("Reading in English").assertIsDisplayed()
+        onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
     }
 
     /** Taps one of the shell's three sections: the bar on a phone, the column on desktop (issue #185). */

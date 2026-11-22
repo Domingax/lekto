@@ -23,7 +23,7 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ReadingState
-import app.lekto.core.book.SampleRow
+import app.lekto.core.book.SampleBookRow
 import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.sample.Sample
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
@@ -147,7 +147,7 @@ class GuideLayoutTest {
     private fun ArrivalStage() {
         Column(Modifier.fillMaxSize()) {
             LibraryScreen(
-                state = LibraryUiState(sample = sampleRow()),
+                state = LibraryUiState(sample = sampleBookRow()),
                 levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
                 modifier = Modifier.weight(1f),
             )
@@ -155,7 +155,7 @@ class GuideLayoutTest {
         }
     }
 
-    private fun sampleRow(): SampleRow = SampleRow(
+    private fun sampleBookRow(): SampleBookRow = SampleBookRow(
         book = Book(
             id = Sample.identityOf("en"),
             title = "A Guide Sample",

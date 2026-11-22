@@ -18,7 +18,7 @@ import kotlin.time.Clock
  * vault's books rather than one of them: the shelf's book list and the
  * **Languages** counts read the vault, and the shelf shows this above it.
  */
-data class SampleRow(val book: Book, val progress: BookProgress, val state: ReadingState)
+data class SampleBookRow(val book: Book, val progress: BookProgress, val state: ReadingState)
 
 /**
  * The materialised **Sample book** (issue #278): the catalogue entry chosen at
@@ -59,7 +59,7 @@ class SampleLibrary(
      * catalogue. The second call is therefore always a no-op — a reader who adds
      * a language in Settings never gets a second row.
      */
-    fun materialise(language: String): SampleRow? = when {
+    fun materialise(language: String): SampleBookRow? = when {
         dismissed.load().isDismissed -> null
 
         cache.storedLanguage() != null -> row()
@@ -71,7 +71,7 @@ class SampleLibrary(
     }
 
     /** The shelf's projection of the stored sample, or `null` when there is none or it was dismissed. */
-    fun row(): SampleRow? {
+    fun row(): SampleBookRow? {
         if (dismissed.load().isDismissed) return null
         return cache.storedLanguage()?.let(::rowOf)
     }
@@ -137,11 +137,11 @@ class SampleLibrary(
         ?.takeIf { stored -> stored.sample.identity == id }
 
     /** The row the shelf shows for [language]'s stored sample, or `null` when it cannot be read. */
-    private fun rowOf(language: String): SampleRow? {
+    private fun rowOf(language: String): SampleBookRow? {
         val document = cache.document(language) ?: return null
         val length = document.text.renderedLength()
         val position = document.position
-        return SampleRow(
+        return SampleBookRow(
             book = bookOf(document.sample),
             progress = position
                 ?.let { offset -> BookProgress.Measured(ReadingProgress(offset, length).percent) }

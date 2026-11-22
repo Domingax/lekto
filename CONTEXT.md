@@ -66,6 +66,15 @@ appears in no count, export or **Sync**; removing it asks once, and the identity
 stays reserved so no later build brings it back.
 _Avoid_: Demo book, tutorial book, sample row
 
+**Guide**:
+The first-launch sequence that explains Lekto on the **Sample book**: five screens
+— the language question, the page in two beats, the tapped word, the reading level
+and the arrival on the **Library** — opened once on a device that has no **Book**
+and no seen progress document. Its progress is a device-local `guide.json`, never
+a **Vault** record, and Settings ▸ Application reopens it; a replay asks no second
+language question and never materialises a second **Sample book**.
+_Avoid_: Tutorial, onboarding, walkthrough, tour
+
 **Language manifest**:
 The catalogue of what Lekto offers for reading: each **Reading language** and the
 artefacts published for it — a **Difficulty table** per reading language, and a
@@ -320,6 +329,13 @@ The dictionary form of a word — "manger" for "mangeais". Used as the canonical
 mastery when known; otherwise the normalised surface form is used. The dictionary
 pack stores lemmas already canonicalised, so the domain uses one as-is.
 _Avoid_: Root, stem, base form
+
+**Vocabulary**:
+The reader's list of **Vocabulary entries**: the saved words, searchable, filtered
+by **Mastery level** and by the **Book** they were saved from, and ordered by when
+they were last modified. It is a view of the **Vault**, parallel to the
+**Library**: the entries live in the Vault, the list does not.
+_Avoid_: Word list, dictionary, glossary
 
 **Vocabulary entry**:
 A word or phrase the user saved, with its translation, a context sentence, a

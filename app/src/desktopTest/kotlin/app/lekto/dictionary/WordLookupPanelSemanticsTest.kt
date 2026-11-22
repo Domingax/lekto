@@ -10,8 +10,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -19,6 +23,8 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -372,6 +378,17 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun theStateLineIsAnnouncedByAScreenReader() = runComposeUiTest {
+        // The line changes under the reader's finger, so a polite live region
+        // carries the receipt to a screen reader (issue #279's acceptance).
+        setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
+
+        onNodeWithText("Not saved").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite),
+        )
+    }
+
+    @Test
     fun aSavedWordsLevelIsStatedAndMarked() = runComposeUiTest {
         setContent {
             Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = blorpleEntry(MasteryLevel.FAMILIAR))
@@ -486,6 +503,43 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun theAnswerRoomIsUnchangedByTheReferencesLength() = runComposeUiTest {
+        // #282's acceptance is the answer's visible room: a longer reference line
+        // may add scroll below it, never take height from the definition at rest.
+        val entry = DictionaryEntry(
+            lemma = "blorple",
+            language = "en",
+            partOfSpeech = "verb",
+            pronunciation = null,
+            audioUrl = null,
+            senses = listOf(DictionarySense("To move swiftly.", listOf("blorper"))),
+        )
+        val short = dictionaryShortcuts("blorple", "en", "fr")
+        val long = List(3) { short }.flatten()
+        var references by mutableStateOf(short)
+        setContent {
+            Panel(
+                WordLookup.Found("blorple", "en", "blorple", listOf(entry)),
+                referenceShortcuts = references,
+            )
+        }
+
+        val alone = answerRoom()
+        references = long
+        waitForIdle()
+
+        val first = onAllNodesWithTag(sourceShortcutTag(DictionarySource.WORD_REFERENCE)).onFirst()
+            .getUnclippedBoundsInRoot()
+        val last = onAllNodesWithTag(sourceShortcutTag(DictionarySource.WORD_REFERENCE)).onLast()
+            .getUnclippedBoundsInRoot()
+        assertTrue(
+            last.top.value > first.top.value + HEIGHT_TOLERANCE,
+            "the long reference line must wrap onto more than one row",
+        )
+        assertEquals(alone, answerRoom(), HEIGHT_TOLERANCE, "the references took the answer's room")
+    }
+
+    @Test
     fun aTwoDigitSenseNumberStaysOnOneLine() = runComposeUiTest {
         val senses = (1..12).map { index -> DictionarySense("Sense $index.", emptyList()) }
         val entry = DictionaryEntry("blorple", "en", "verb", null, null, senses)
@@ -571,6 +625,7 @@ class WordLookupPanelSemanticsTest {
         entry: VocabularyEntry? = null,
         suggestedLevel: MasteryLevel? = null,
         saveFailed: Boolean = false,
+        referenceShortcuts: List<DictionaryShortcut> = shortcuts,
         onOpenShortcut: (DictionaryShortcut) -> Unit = {},
         onSpeak: () -> Unit = {},
         onSave: (MasteryLevel) -> Unit = {},
@@ -584,7 +639,7 @@ class WordLookupPanelSemanticsTest {
             WordLookupPanel(
                 result = result,
                 term = term,
-                shortcuts = shortcuts,
+                shortcuts = referenceShortcuts,
                 actions = WordLookupActions(onOpenShortcut = onOpenShortcut, onDismiss = onDismiss),
                 pronunciation = Pronunciation(onSpeak = onSpeak, result = speech),
                 vocabulary = VocabularyPanel(
@@ -598,6 +653,12 @@ class WordLookupPanelSemanticsTest {
                 inColumn = inColumn,
             )
         }
+    }
+
+    /** The answer region's measured height in dp, whatever the references below it say. */
+    private fun ComposeUiTest.answerRoom(): Float {
+        val answer = onNodeWithTag(LOOKUP_ANSWER_TAG).getUnclippedBoundsInRoot()
+        return answer.bottom.value - answer.top.value
     }
 
     /** The sheet's measured height in dp, from its bounds in the test root. */

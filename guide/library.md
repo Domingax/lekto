@@ -58,6 +58,29 @@ your Reading position and the book's text; the text itself is measured on this
 device and is never part of the Vault. For where that data lives and how to move
 it, see [Vault and sync](/vault-and-sync).
 
+## The sample book
+
+On a device that has no book yet, the Library leads with the **Sample book**: one
+row above your own books, marked `Sample` beside its title, with the sentence
+`Start with the sample below, or import a book of your own.` above the shelf. It
+is a real reading session — open it like any book, and it keeps its place and its
+**Finished** declaration the same way.
+
+The first launch also downloads the language's word-difficulty data and offline
+dictionary in the background. One line under the shelf says what is arriving and
+its published size while it runs, with a **Stop** action beside it; it then reads
+`Installed`, `Stopped` or why it did not finish. A stopped or failed download is
+picked up again from **Settings → Languages**.
+
+Until you set a **Reader level** for the sample's language, the shelf carries
+`Your reading level is not set yet. Settings ▸ Languages.` The line goes as soon
+as the level exists, whether you set it here, in the guide or in the Languages
+surface.
+
+The sample is not in your **Vault**. It appears in no count and in no export, it
+never syncs, and removing it asks once — *Remove the sample?* — and then it never
+returns. Your own books and words are untouched.
+
 ## Filtering by reading state
 
 Every book is in one of three **Reading states**: **Unread** (you have not turned

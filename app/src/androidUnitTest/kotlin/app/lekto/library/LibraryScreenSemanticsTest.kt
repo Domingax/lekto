@@ -27,7 +27,7 @@ import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingState
-import app.lekto.core.book.SampleRow
+import app.lekto.core.book.SampleBookRow
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
@@ -412,14 +412,14 @@ class LibraryScreenSemanticsTest {
             Library(
                 LibraryUiState(
                     listing = LibraryListing(others = listOf(book)),
-                    sample = sampleRow,
+                    sample = sampleBookRow,
                 ),
             )
         }
 
-        val sample = compose.onNodeWithTag(libraryRowTag(sampleRow.book.id)).assertIsDisplayed().getBoundsInRoot()
+        val sample = compose.onNodeWithTag(libraryRowTag(sampleBookRow.book.id)).assertIsDisplayed().getBoundsInRoot()
         val vault = compose.onNodeWithTag(libraryRowTag(book.id)).assertIsDisplayed().getBoundsInRoot()
-        compose.onNodeWithTag(librarySampleMarkTag(sampleRow.book.id), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithTag(librarySampleMarkTag(sampleBookRow.book.id), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("A Test Sample").assertIsDisplayed()
         assertTrue("the sample leads the vault's books: $sample then $vault", sample.top < vault.top)
     }
@@ -428,10 +428,10 @@ class LibraryScreenSemanticsTest {
     fun aVaultWithNoBookAndASampleReadsAsOneSentenceAndOneRow() {
         // One sentence and the sample as the first row, not the empty state's two
         // more sets of words (issue #278; docs/design.md §7.1).
-        compose.setContent { Library(LibraryUiState(sample = sampleRow)) }
+        compose.setContent { Library(LibraryUiState(sample = sampleBookRow)) }
 
         compose.onNodeWithTag(LIBRARY_FIRST_RUN_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(libraryRowTag(sampleRow.book.id)).assertIsDisplayed()
+        compose.onNodeWithTag(libraryRowTag(sampleBookRow.book.id)).assertIsDisplayed()
         compose.onNodeWithText("No books yet").assertDoesNotExist()
         compose.onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertDoesNotExist()
         compose.onNodeWithText("Import").assertIsDisplayed()
@@ -449,11 +449,11 @@ class LibraryScreenSemanticsTest {
     @Test
     fun removingTheSampleAsksOnceAndRemovesOnlyOnConfirm() {
         var removed = 0
-        compose.setContent { Library(LibraryUiState(sample = sampleRow), onDismissSample = { removed++ }) }
+        compose.setContent { Library(LibraryUiState(sample = sampleBookRow), onDismissSample = { removed++ }) }
 
-        compose.onNodeWithTag(libraryDeleteTag(sampleRow.book.id)).assertDoesNotExist()
+        compose.onNodeWithTag(libraryDeleteTag(sampleBookRow.book.id)).assertDoesNotExist()
         // The thumb swipes a touch lane: the row uncovers Delete, which asks.
-        compose.onNodeWithTag(libraryRowTag(sampleRow.book.id)).performTouchInput { swipeLeft() }
+        compose.onNodeWithTag(libraryRowTag(sampleBookRow.book.id)).performTouchInput { swipeLeft() }
         compose.onNodeWithText("Remove the sample?").assertIsDisplayed()
         compose.onNodeWithText("Your own books and words stay.", substring = true).assertIsDisplayed()
         assertEquals("the sample must stay until the reader confirms", 0, removed)
@@ -477,7 +477,7 @@ class LibraryScreenSemanticsTest {
     }
 
     /** The shelf's one **Sample book** row, for the cases above (issue #278). */
-    private val sampleRow = SampleRow(
+    private val sampleBookRow = SampleBookRow(
         book = Book(
             id = "sample:en",
             title = "A Test Sample",

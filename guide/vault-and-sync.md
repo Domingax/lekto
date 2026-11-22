@@ -10,8 +10,12 @@ and import.
 Everything in the Vault lives on your own device. There is no Lekto account and no
 Lekto server, so nothing is uploaded anywhere unless you choose to move it.
 
-Derived assets — parsed book text, the dictionary pack — are not part of the
-Vault. Lekto can regenerate or re-download them, and they are never synced.
+Derived assets — parsed book text, the dictionary pack and the sample book — are
+not part of the Vault. Lekto can regenerate or re-download them, and they are never
+synced.
+
+The guide's progress is device-local too: it is not part of the Vault, so a new
+device has not seen the guide and shows it again.
 
 ## Syncing your Vault
 

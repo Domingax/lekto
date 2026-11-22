@@ -400,7 +400,7 @@ private fun ColumnScope.LibraryList(
             item(key = FIRST_RUN_KEY) { FirstRunShelf() }
         }
         state.sample?.let { row ->
-            item(key = SAMPLE_ROW_KEY) { SampleBookRow(row, onOpen = onOpen, onDelete = onSampleDelete) }
+            item(key = SAMPLE_ROW_KEY) { SampleShelfRow(row, onOpen = onOpen, onDelete = onSampleDelete) }
         }
         // The sample is on the shelf but no Reader level colours it yet (issue
         // #277): the line says where that level is set, and goes when it exists.

@@ -610,7 +610,7 @@ The first frame is **the guide** when the device has not seen it and the **Vault
 
 ### 7.8 First launch
 
-The guide is a **first session**, not front matter: four screens the reader walks, then the arrival on the shelf. It is built from the surfaces the product already has — the reader's own page and the reader's own lookup sheet — not from drawings of them, so the demonstration cannot drift the first time either changes. The sample is the build's one **Sample book** (ADR-0023, ADR-0049): a **Derived asset**, never a **Vault** record.
+The guide is a **first session**, not front matter: four screens the reader walks, then the arrival on the shelf. It is built from the surfaces the product already has — the reader's own page and the reader's own lookup sheet — not from drawings of them, so the demonstration cannot drift the first time either changes. The sample is the build's one **Sample book** (ADR-0005, ADR-0049): a **Derived asset**, never a **Vault** record.
 
 1. **The language.** `Which language would you like to read first?` over one row per language of the embedded roster — its code in the muted ink, its name in the body size, a `chevron-right` — with **no preselection** and no spinner. The list is the roster itself, never a network read, so it is complete on the first frame with no connection; it scrolls at 320 dp, and a line underneath says other languages can be added later in Settings. The row *is* the answer: there is no `Continue` acting on a choice that was never made. The choice materialises that language's sample through the **Sample book** seam and starts the background download, announced with its published size and a `Stop`.
 2. **The page, in two beats.** The sample's first paragraph in the reader's own page, with **no colour at all** first — `Nothing is coloured yet. Look.` — then the same paragraph painted from the sample's own band map: `The more you know, the less colour.` Four notes follow, one per highlighted **Mastery level**: the level's chip and number, the word, the level's name and the sample's meaning in the reader's **Translation language**. This screen promises no gesture; the notes carry the chips as labels, so nothing invites a tap it cannot answer. The page and the notes name the language under the title.
@@ -693,6 +693,11 @@ the page behind it.
   `library/LibraryRow.kt` (issue #208) and the Vocabulary list's in `vocabulary/VocabularyRow.kt`
   (issue #212), whose level sheet and desktop column are `vocabulary/VocabularyLevelSheet.kt`
   (issue #178). A new screen follows §7's shape and §4's spacing.
+- The first-launch guide — `app/src/commonMain/kotlin/app/lekto/guide/`: `GuideScreen` draws
+  the screens from the reader's own page and lookup sheet, `GuideController` owns the flow,
+  `GuideSample` builds that page, its notes and the sheet's answer from the sample's own maps
+  and glossary, `GuideDownloadController` the background download, and `GuideProgressController`
+  the device-local `guide.json` (§7.8; issue #277).
 
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that

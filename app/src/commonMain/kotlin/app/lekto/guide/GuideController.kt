@@ -29,14 +29,20 @@ enum class GuideStage(val position: Int) {
 
 /**
  * What the guide's screens render (issue #277): the stage, the sample once a
- * language is answered, the beat of the page, whether the real sheet is open, the
- * level the word was saved at, and an honest failure when the write was refused.
- * The arrival is the shell's own shelf, so it is not a stage here.
+ * language is answered, the band the page paints at, the band the reader actually
+ * tapped, the beat of the page, whether the real sheet is open, the level the
+ * word was saved at, and an honest failure when the write was refused. The
+ * arrival is the shell's own shelf, so it is not a stage here.
+ *
+ * [band] is the suggestion the page demonstrates before any choice; [chosenBand]
+ * is the **Reader level** the reader tapped, so a suggestion is never drawn as a
+ * selection (issue #279's rule, applied to the bands).
  */
 data class GuideUiState(
     val stage: GuideStage = GuideStage.LANGUAGE,
     val sample: Sample? = null,
     val band: CefrLevel = GUIDE_DEFAULT_BAND,
+    val chosenBand: CefrLevel? = null,
     val plain: Boolean = true,
     val lookupOpen: Boolean = false,
     val savedLevel: MasteryLevel? = null,
@@ -65,31 +71,39 @@ class GuideController(
     private val mastery: MasteryController? = null,
     private val segmenter: TextSegmenter,
     private val translationLanguage: () -> String? = { null },
+    private val existingSample: () -> String? = { null },
+    private val readingLanguage: () -> String? = { null },
 ) {
 
     private val singleLanguage: String? = languages.singleOrNull()?.language
 
-    /** The screens' state; the one language of a single-sample build is already answered. */
-    var state by mutableStateOf(
-        GuideUiState(
-            stage = if (singleLanguage != null) GuideStage.PAGE else GuideStage.LANGUAGE,
-            sample = singleLanguage?.let(sampleOf),
-        ),
-    )
+    /**
+     * The screens' state. It opens on the page when the shelf already implies a
+     * language — a materialised sample, or the reader's first **Reading language**
+     * — and on the question only on a true first launch (issue #277's review).
+     */
+    var state by mutableStateOf(GuideUiState())
         private set
 
-    private var chosenLanguage: String? = singleLanguage
+    private var chosenLanguage: String? = null
+
+    /** Whether this run asked the language question, so `Back` may return to it. */
+    private var asksLanguage: Boolean = false
 
     init {
-        singleLanguage?.let(::begin)
+        // A build that ships one sample has nothing to ask; the first launch
+        // materialises it at once. A replay never does (see restart).
+        val firstLaunchSingle = existingSample() == null && readingLanguage() == null
+        open()
+        if (firstLaunchSingle) singleLanguage?.let(::begin)
     }
 
     /** The language answer: materialise its sample and start the download, then show the page. */
     fun chooseLanguage(language: String) {
         if (state.stage != GuideStage.LANGUAGE) return
-        chosenLanguage = language
         begin(language)
-        state = state.copy(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
+        chosenLanguage = language
+        state = GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
     }
 
     /**
@@ -124,7 +138,7 @@ class GuideController(
             state.stage == GuideStage.LEVEL -> state.copy(stage = GuideStage.TAP, lookupOpen = false)
             state.stage == GuideStage.TAP -> state.copy(stage = GuideStage.PAGE, plain = false)
             state.stage == GuideStage.PAGE && !state.plain -> state.copy(plain = true)
-            state.stage == GuideStage.PAGE && singleLanguage == null -> state.copy(stage = GuideStage.LANGUAGE)
+            state.stage == GuideStage.PAGE && asksLanguage -> state.copy(stage = GuideStage.LANGUAGE)
             else -> state
         }
     }
@@ -147,7 +161,7 @@ class GuideController(
             state = state.copy(saveFailed = true)
             return
         }
-        val entry = VocabularyEntry(
+        val entry = VocabularyEntry.saved(
             key = note.key,
             surface = note.surface,
             translation = note.meaning,
@@ -160,22 +174,36 @@ class GuideController(
 
     /** Writes [band] as the reader's level for the chosen language and repaints the page. */
     fun chooseBand(band: CefrLevel) {
-        state = state.copy(band = band)
+        state = state.copy(band = band, chosenBand = band)
         chosenLanguage?.let { language -> mastery?.setLevel(language, band) }
     }
 
     /**
-     * Puts the flow back at its first screen, so the Settings ▸ Application row
-     * can replay it over an existing shelf. The download is not restarted: an
-     * installed table stays installed and a stopped one stays stopped.
+     * Puts the flow back at its opening screen, so the Settings ▸ Application row
+     * can replay it over an existing shelf. It demonstrates the sample the device
+     * already holds, or the first language of the reader's books, and never
+     * materialises a second sample or replaces the first. The download is not
+     * restarted: an installed table stays installed and a stopped one stays
+     * stopped.
      */
     fun restart() {
-        chosenLanguage = singleLanguage
-        state = GuideUiState(
-            stage = if (singleLanguage != null) GuideStage.PAGE else GuideStage.LANGUAGE,
-            sample = singleLanguage?.let(sampleOf),
-        )
-        singleLanguage?.let(::begin)
+        open()
+    }
+
+    /**
+     * Opens on the page when the shelf already implies a language — the sample it
+     * holds, or the first **Reading language** of the reader's books — and on the
+     * question only on a true first launch.
+     */
+    private fun open() {
+        val language = existingSample() ?: readingLanguage() ?: singleLanguage
+        chosenLanguage = language
+        asksLanguage = language == null
+        state = if (language == null) {
+            GuideUiState(stage = GuideStage.LANGUAGE)
+        } else {
+            GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
+        }
     }
 
     /** Materialises [language]'s sample and asks for its download, once per answer. */

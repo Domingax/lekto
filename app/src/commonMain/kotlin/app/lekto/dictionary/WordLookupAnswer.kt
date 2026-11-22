@@ -29,6 +29,9 @@ private val NumberWidth = 24.dp
 /** The test tag on a sense's number, so a layout test can read it apart from the level chips. */
 internal fun senseNumberTag(number: Int): String = "lookup-sense-$number"
 
+/** The test tag on the answer itself, so a layout test can prove its room is the definition's. */
+internal const val LOOKUP_ANSWER_TAG: String = "lookup-answer"
+
 /** The test tag on the offline message's way into Settings ▸ Languages. */
 internal const val LOOKUP_INSTALL_TAG: String = "lookup-install-dictionary"
 
@@ -65,6 +68,7 @@ internal fun Answer(result: WordLookup, onOpenSettings: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(LOOKUP_ANSWER_TAG)
             .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {

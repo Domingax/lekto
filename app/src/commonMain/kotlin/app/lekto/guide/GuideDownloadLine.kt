@@ -62,9 +62,11 @@ internal fun GuideDownloadLine(state: GuideDownloadUiState, onStop: (() -> Unit)
 @Composable
 private fun title(state: GuideDownloadUiState, languageName: String): String {
     val texts = LocalAppTexts.current
-    return state.language?.let { _ ->
+    return if (state.language != null) {
         texts.message(AppMessage.of(TextKey.GUIDE_DOWNLOAD_ASSETS, languageName))
-    } ?: texts[TextKey.GUIDE_DOWNLOAD_TITLE]
+    } else {
+        texts[TextKey.GUIDE_DOWNLOAD_TITLE]
+    }
 }
 
 /** The line's second half: where the download stands, in the reader's language. */

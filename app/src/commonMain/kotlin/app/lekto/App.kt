@@ -485,6 +485,8 @@ fun App(
                 mastery = mastery,
                 segmenter = environment.segmenter,
                 translationLanguage = { languageSettings?.translationLanguage },
+                existingSample = { controller.state.value.sample?.book?.language },
+                readingLanguage = { readingLanguagesOf(controller.state.value.books).firstOrNull() },
             )
         }
     }
@@ -802,6 +804,10 @@ private fun GuideDestination(
 ) {
     val state = guide.state
     val sample = state.sample
+    val scope = rememberCoroutineScope()
+    // The guide's speaker is a demonstration: a spoken word needs no receipt, and
+    // the guide carries no line for a missing voice.
+    val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { }
     val document = remember(sample, state.band, state.plain) {
         sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter) }
     }
@@ -835,7 +841,7 @@ private fun GuideDestination(
                 onFinish = onFinish,
                 onStopDownload = { download?.stop() },
                 onOpenSettings = {},
-                onSpeakWord = {},
+                onSpeakWord = { notes.firstOrNull()?.let { note -> speak(note.surface, note.key.language) } },
             ),
         )
     }
@@ -988,7 +994,7 @@ private fun saveWord(
     onOutcome: (Boolean) -> Unit,
 ) {
     mastery ?: return
-    val entry = VocabularyEntry(
+    val entry = VocabularyEntry.saved(
         key = selection.tap.token.key,
         surface = selection.tap.token.surface,
         translation = selection.result.firstGloss(),

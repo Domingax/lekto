@@ -8,6 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -363,6 +367,17 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun `the state line is announced by a screen reader`() {
+        // The line changes under the reader's finger, so a polite live region
+        // carries the receipt to a screen reader (issue #279's acceptance).
+        compose.setContent { Panel(WordLookup.NotInDictionary("zzzz", "en")) }
+
+        compose.onNodeWithText("Not saved").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite),
+        )
+    }
+
+    @Test
     fun `a saved word's level is stated and marked`() {
         compose.setContent {
             Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = blorpleEntry(MasteryLevel.FAMILIAR))
@@ -477,6 +492,40 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun `the answer room is unchanged by the references length`() {
+        // #282's acceptance is the answer's visible room: a longer reference line
+        // may add scroll below it, never take height from the definition at rest.
+        val entry = DictionaryEntry(
+            lemma = "blorple",
+            language = "en",
+            partOfSpeech = "verb",
+            pronunciation = null,
+            audioUrl = null,
+            senses = listOf(DictionarySense("To move swiftly.", listOf("blorper"))),
+        )
+        val short = dictionaryShortcuts("blorple", "en", "fr")
+        val long = List(3) { short }.flatten()
+        var references by mutableStateOf(short)
+        compose.setContent {
+            Panel(
+                WordLookup.Found("blorple", "en", "blorple", listOf(entry)),
+                referenceShortcuts = references,
+            )
+        }
+
+        val alone = answerRoom()
+        references = long
+        compose.waitForIdle()
+
+        // Robolectric draws text with no font metrics, so a reference row does not
+        // wrap on that lane; what both lanes share is the answer's room. The
+        // longer list is still composed, which the three WordReference nodes prove.
+        val wordReferences = compose.onAllNodesWithTag(sourceShortcutTag(DictionarySource.WORD_REFERENCE))
+        assertEquals("the longer list must be composed", 3, wordReferences.fetchSemanticsNodes().size)
+        assertEquals("the references took the answer's room", alone, answerRoom(), HEIGHT_TOLERANCE)
+    }
+
+    @Test
     fun `a two digit sense number stays on one line`() {
         val senses = (1..12).map { index -> DictionarySense("Sense $index.", emptyList()) }
         val entry = DictionaryEntry("blorple", "en", "verb", null, null, senses)
@@ -549,6 +598,7 @@ class WordLookupPanelSemanticsTest {
         entry: VocabularyEntry? = null,
         suggestedLevel: MasteryLevel? = null,
         saveFailed: Boolean = false,
+        referenceShortcuts: List<DictionaryShortcut> = shortcuts,
         onOpenShortcut: (DictionaryShortcut) -> Unit = {},
         onSpeak: () -> Unit = {},
         onSave: (MasteryLevel) -> Unit = {},
@@ -561,7 +611,7 @@ class WordLookupPanelSemanticsTest {
             WordLookupPanel(
                 result = result,
                 term = term,
-                shortcuts = shortcuts,
+                shortcuts = referenceShortcuts,
                 actions = WordLookupActions(onOpenShortcut = onOpenShortcut, onDismiss = onDismiss),
                 pronunciation = Pronunciation(onSpeak = onSpeak, result = speech),
                 vocabulary = VocabularyPanel(
@@ -580,6 +630,12 @@ class WordLookupPanelSemanticsTest {
     private fun sheetHeight(): Float {
         val sheet = compose.onNodeWithTag(LOOKUP_PANEL_TAG).getUnclippedBoundsInRoot()
         return sheet.bottom.value - sheet.top.value
+    }
+
+    /** The answer region's measured height in dp, whatever the references below it say. */
+    private fun answerRoom(): Float {
+        val answer = compose.onNodeWithTag(LOOKUP_ANSWER_TAG).getUnclippedBoundsInRoot()
+        return answer.bottom.value - answer.top.value
     }
 
     /** The saved entry for the panel's word at [level]. */

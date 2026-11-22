@@ -136,6 +136,19 @@ data class GuideActions(
 )
 
 /**
+ * One guide screen's scene (issue #277): the flow's state, the page and notes it
+ * produced, the download's line and the actions the screen raises. Bundled so the
+ * same five values do not travel as five parameters through every beat.
+ */
+private class GuideBeat(
+    val state: GuideUiState,
+    val document: ReaderDocument?,
+    val notes: List<GuideNote>,
+    val download: GuideDownloadUiState,
+    val actions: GuideActions,
+)
+
+/**
  * The first-launch guide's screens (issue #277), after the five satellite tickets
  * landed: the language question, the sample's page in two beats with its four
  * notes, the tap on the real lookup sheet, and the six CEFR bands under the same
@@ -165,17 +178,18 @@ fun GuideScreen(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.fillMaxSize()) {
+        val beat = GuideBeat(state, document, notes, download, actions)
         Column(Modifier.fillMaxSize()) {
             GuideBar(state.stage, actions.onSkip)
             when (state.stage) {
                 GuideStage.LANGUAGE -> LanguageQuestion(languages, actions.onChooseLanguage)
-                GuideStage.PAGE -> PageBeat(state, document, notes, download, actions)
-                GuideStage.TAP -> TapBeat(state, document, notes, download, actions)
-                GuideStage.LEVEL -> LevelBeat(state, document, download, actions)
+                GuideStage.PAGE -> PageBeat(beat)
+                GuideStage.TAP -> TapBeat(beat)
+                GuideStage.LEVEL -> LevelBeat(beat)
             }
         }
         if (state.stage == GuideStage.TAP && state.lookupOpen) {
-            TapSheet(state, notes.firstOrNull(), translationLanguage, actions)
+            TapSheet(beat, notes.firstOrNull(), translationLanguage)
         }
     }
 }
@@ -290,15 +304,9 @@ private fun LanguageRow(offered: OfferedLanguage, onChoose: (String) -> Unit) {
  * all and promises no gesture; the second paints the same paragraph from the
  * sample's own map and explains four of its words, one per level, under it.
  */
-@Suppress("LongParameterList") // The state, the page, the notes, the download and the actions.
 @Composable
-private fun ColumnScope.PageBeat(
-    state: GuideUiState,
-    document: ReaderDocument?,
-    notes: List<GuideNote>,
-    download: GuideDownloadUiState,
-    actions: GuideActions,
-) {
+private fun ColumnScope.PageBeat(beat: GuideBeat) {
+    val state = beat.state
     val texts = LocalAppTexts.current
     val title = if (state.plain) TextKey.GUIDE_PAGE_PLAIN_TITLE else TextKey.GUIDE_PAGE_COLOURED_TITLE
     val intro = if (state.plain) TextKey.GUIDE_PAGE_PLAIN_INTRO else TextKey.GUIDE_PAGE_COLOURED_INTRO
@@ -308,10 +316,17 @@ private fun ColumnScope.PageBeat(
     ) {
         GuideHeading(texts[title], texts[intro])
         GuideReadingIn(state.sample?.language)
-        GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
-        document?.let { page -> ReaderScreen(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT)) }
-        if (!state.plain) GuideNotes(notes, Modifier.padding(top = LektoSpacing.BetweenRows))
-        GuideContinue(actions.onContinue, Modifier.padding(top = LektoSpacing.InsidePanel).align(Alignment.End))
+        GuideDownloadLine(
+            beat.download,
+            beat.actions.onStopDownload,
+            Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+        )
+        beat.document?.let { page -> ReaderScreen(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT)) }
+        if (!state.plain) GuideNotes(beat.notes, Modifier.padding(top = LektoSpacing.BetweenRows))
+        GuideContinue(
+            beat.actions.onContinue,
+            Modifier.padding(top = LektoSpacing.InsidePanel).align(Alignment.End),
+        )
     }
 }
 
@@ -321,18 +336,12 @@ private fun ColumnScope.PageBeat(
  * real **Vocabulary**; closing the sheet writes nothing and leaves the page with
  * the word still marked.
  */
-@Suppress("LongParameterList") // The state, the page, the notes, the download and the actions.
 @Composable
-private fun ColumnScope.TapBeat(
-    state: GuideUiState,
-    document: ReaderDocument?,
-    notes: List<GuideNote>,
-    download: GuideDownloadUiState,
-    actions: GuideActions,
-) {
+private fun ColumnScope.TapBeat(beat: GuideBeat) {
+    val state = beat.state
     val texts = LocalAppTexts.current
-    val marked = document?.let { page ->
-        notes.firstOrNull()?.let { note -> page.copy(selectedRange = note.start until note.end) } ?: page
+    val marked = beat.document?.let { page ->
+        beat.notes.firstOrNull()?.let { note -> page.copy(selectedRange = note.start until note.end) } ?: page
     }
     Column(
         Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
@@ -340,12 +349,16 @@ private fun ColumnScope.TapBeat(
     ) {
         GuideHeading(texts[TextKey.GUIDE_TAP_TITLE], texts[TextKey.GUIDE_TAP_INTRO])
         GuideReadingIn(state.sample?.language)
-        GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
+        GuideDownloadLine(
+            beat.download,
+            beat.actions.onStopDownload,
+            Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+        )
         marked?.let { page ->
             ReaderScreen(
                 page,
                 modifier = Modifier.fillMaxWidth().height(PAGE_HEIGHT),
-                actions = ReaderActions(onWordTap = { actions.onTapWord() }),
+                actions = ReaderActions(onWordTap = { beat.actions.onTapWord() }),
             )
         }
         Text(
@@ -355,20 +368,18 @@ private fun ColumnScope.TapBeat(
             modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
         )
         if (!state.lookupOpen) {
-            GuideContinue(actions.onContinue, Modifier.padding(top = LektoSpacing.InsidePanel).align(Alignment.End))
+            GuideContinue(
+                beat.actions.onContinue,
+                Modifier.padding(top = LektoSpacing.InsidePanel).align(Alignment.End),
+            )
         }
     }
 }
 
 /** The real sheet over the tap screen, fed from the sample's glossary and saving into the real list. */
 @Composable
-private fun BoxScope.TapSheet(
-    state: GuideUiState,
-    note: GuideNote?,
-    translationLanguage: String?,
-    actions: GuideActions,
-) {
-    val sample = state.sample ?: return
+private fun BoxScope.TapSheet(beat: GuideBeat, note: GuideNote?, translationLanguage: String?) {
+    val sample = beat.state.sample ?: return
     if (note == null) return
     val lookup = remember(sample, note, translationLanguage) { guideLookup(sample, note, translationLanguage) }
     val shortcuts = remember(note, translationLanguage) {
@@ -378,21 +389,21 @@ private fun BoxScope.TapSheet(
         result = lookup,
         term = note.surface,
         shortcuts = shortcuts,
-        actions = WordLookupActions(onOpenShortcut = {}, onDismiss = actions.onDismissLookup),
-        pronunciation = Pronunciation(onSpeak = actions.onSpeakWord),
+        actions = WordLookupActions(onOpenShortcut = {}, onDismiss = beat.actions.onDismissLookup),
+        pronunciation = Pronunciation(onSpeak = beat.actions.onSpeakWord),
         vocabulary = VocabularyPanel(
-            entry = state.savedLevel?.let { level -> savedEntry(note, level) },
-            onSave = actions.onSaveWord,
-            saveFailed = state.saveFailed,
+            entry = beat.state.savedLevel?.let { level -> savedEntry(note, level) },
+            onSave = beat.actions.onSaveWord,
+            saveFailed = beat.state.saveFailed,
         ),
         context = note.context,
-        onOpenSettings = actions.onOpenSettings,
+        onOpenSettings = beat.actions.onOpenSettings,
         modifier = Modifier.align(Alignment.BottomCenter),
     )
 }
 
 /** The entry the footer reads its saved level from; the vault holds the real one. */
-private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = VocabularyEntry(
+private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = VocabularyEntry.saved(
     key = note.key,
     surface = note.surface,
     translation = note.meaning,
@@ -406,12 +417,8 @@ private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = 
  * repaints the page; the filled action finishes the guide onto the shelf.
  */
 @Composable
-private fun ColumnScope.LevelBeat(
-    state: GuideUiState,
-    document: ReaderDocument?,
-    download: GuideDownloadUiState,
-    actions: GuideActions,
-) {
+private fun ColumnScope.LevelBeat(beat: GuideBeat) {
+    val state = beat.state
     val texts = LocalAppTexts.current
     val language = state.sample?.language
     val title = texts.message(
@@ -423,11 +430,15 @@ private fun ColumnScope.LevelBeat(
     ) {
         GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO])
         GuideReadingIn(language)
-        GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
-        PreviewCard(document)
-        BandList(state.band, actions.onChooseBand)
+        GuideDownloadLine(
+            beat.download,
+            beat.actions.onStopDownload,
+            Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+        )
+        PreviewCard(beat.document)
+        BandList(state.chosenBand, beat.actions.onChooseBand)
         Button(
-            onClick = actions.onFinish,
+            onClick = beat.actions.onFinish,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = LektoSpacing.BetweenBlocks)
@@ -460,13 +471,17 @@ private fun PreviewCard(document: ReaderDocument?) {
     }
 }
 
-/** The six bands: code, name, the one thing each reads, and the chosen one washed and ruled. */
+/**
+ * The six bands: code, name, the one thing each reads, and the tapped one washed
+ * and ruled. [chosen] is `null` until the reader taps a band, so the default band
+ * the page previews at is a suggestion, never a selection.
+ */
 @Composable
-private fun BandList(band: CefrLevel, onChoose: (CefrLevel) -> Unit) {
+private fun BandList(chosen: CefrLevel?, onChoose: (CefrLevel) -> Unit) {
     val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows)) {
         CefrLevel.entries.forEachIndexed { index, level ->
-            BandRow(level, selected = level == band, name = texts.bandName(level), line = texts.bandLine(level)) {
+            BandRow(level, selected = level == chosen, name = texts.bandName(level), line = texts.bandLine(level)) {
                 onChoose(level)
             }
             if (index != CefrLevel.entries.lastIndex) Hairline()

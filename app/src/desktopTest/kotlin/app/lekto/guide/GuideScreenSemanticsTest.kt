@@ -11,6 +11,8 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -23,11 +25,12 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ReadingState
-import app.lekto.core.book.SampleRow
+import app.lekto.core.book.SampleBookRow
 import app.lekto.core.language.SampleRoster
 import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.sample.Sample
 import app.lekto.dictionary.LOOKUP_CLOSE_TAG
+import app.lekto.dictionary.LOOKUP_INSTALL_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
@@ -130,6 +133,16 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun theTapSheetOffersNoInstallAction() = runComposeUiTest {
+        // The guide answers from the sample's glossary, never from the offline
+        // pack, so the offline door has nothing to open here (issue #282's seam).
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true))
+
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        onNodeWithTag(LOOKUP_INSTALL_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun tappingALevelSavesTheWordAndStatesIt() = runComposeUiTest {
         val saved = mutableStateOf<MasteryLevel?>(null)
         render(
@@ -180,6 +193,26 @@ class GuideScreenSemanticsTest {
         onNodeWithTag(guideBandTag(CefrLevel.C1)).performScrollTo().performClick()
 
         assertEquals(CefrLevel.C1, chosen)
+    }
+
+    @Test
+    fun theDefaultBandIsASuggestionAndNoBandIsChosen() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
+
+        onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
+        CefrLevel.entries.forEach { level -> onNodeWithTag(guideBandTag(level)).assertIsNotSelected() }
+    }
+
+    @Test
+    fun aTappedBandIsTheOnlyOneChosen() = runComposeUiTest {
+        render(
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false, chosenBand = CefrLevel.C1),
+        )
+
+        onNodeWithTag(guideBandTag(CefrLevel.C1)).assertIsSelected()
+        CefrLevel.entries.filter { level -> level != CefrLevel.C1 }.forEach { level ->
+            onNodeWithTag(guideBandTag(level)).assertIsNotSelected()
+        }
     }
 
     @Test
@@ -250,7 +283,7 @@ class GuideScreenSemanticsTest {
                 LektoTheme {
                     Column(Modifier.fillMaxSize()) {
                         LibraryScreen(
-                            state = LibraryUiState(sample = sampleRow()),
+                            state = LibraryUiState(sample = sampleBookRow()),
                             levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
                             modifier = Modifier.weight(1f),
                         )
@@ -299,7 +332,7 @@ class GuideScreenSemanticsTest {
 
     private fun stageActions(onSkip: () -> Unit): GuideActions = GuideActions(onSkip = onSkip, onFinish = onSkip)
 
-    private fun sampleRow(): SampleRow = SampleRow(
+    private fun sampleBookRow(): SampleBookRow = SampleBookRow(
         book = Book(
             id = Sample.identityOf("en"),
             title = "A Guide Sample",
