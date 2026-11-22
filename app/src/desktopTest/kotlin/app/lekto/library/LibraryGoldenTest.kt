@@ -106,9 +106,9 @@ private val PREVIEW_BOOKS = listOf(
     PreviewBook(language = "en", percent = 61, recentlyRead = false),
 )
 
-/** The preview's window; taller than a phone so the block and both groups fit. */
+/** The preview's window; taller than a phone so the sample, block and both groups fit. */
 private val SHELF_WIDTH = 360.dp
-private val SHELF_HEIGHT = 820.dp
+private val SHELF_HEIGHT = 900.dp
 
 /** The bars that stand in for a row's title, its second line and the chrome's words. */
 private val TITLE_BAR = LineBar(height = 16.dp, share = 0.6f)
@@ -153,6 +153,7 @@ private fun ShelfPreview() {
         }
         SearchSurface()
         FilterChips()
+        SampleRowPreview()
         ResumeBlockPreview(PREVIEW_BOOKS.first { book -> book.recentlyRead })
         SectionHeading(top = LektoSpacing.BetweenRelatedLines)
         PREVIEW_BOOKS.filter { book -> book.recentlyRead }.drop(1).forEach { book -> PreviewRow(book) }
@@ -160,6 +161,53 @@ private fun ShelfPreview() {
         PREVIEW_BOOKS.filterNot { book -> book.recentlyRead }.forEach { book -> PreviewRow(book) }
     }
 }
+
+/**
+ * The **Sample book**'s row (issue #278): the same plate, title and second line as
+ * any row, with the outlined `Sample` mark beside the title and no rule — the
+ * sample row leads the shelf above the vault's books. Like the rest of the
+ * preview, the words are bars.
+ */
+@Composable
+private fun SampleRowPreview() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LanguageVignette("en")
+        Spacer(Modifier.width(LektoSpacing.BetweenRows))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Block(theme.onBackground, SAMPLE_TITLE_BAR)
+                Spacer(Modifier.width(LektoSpacing.BetweenRelatedLines))
+                SampleMarkPreview()
+            }
+            Line(theme.onSurfaceVariant, LINE_BAR)
+        }
+    }
+}
+
+/** The mark's frame: the outlined pair the screen draws, with a bar where its word sits. */
+@Composable
+private fun SampleMarkPreview() {
+    val theme = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .width(SAMPLE_MARK_WIDTH)
+            .height(SAMPLE_MARK_HEIGHT)
+            .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Control),
+        contentAlignment = Alignment.Center,
+    ) {
+        Block(theme.primary, SAMPLE_MARK_BAR)
+    }
+}
+
+/** The sample preview's title bar, its mark's frame, and the word inside it. */
+private val SAMPLE_TITLE_BAR = 120.dp to 16.dp
+private val SAMPLE_MARK_WIDTH = 64.dp
+private val SAMPLE_MARK_HEIGHT = 20.dp
+private val SAMPLE_MARK_BAR = 40.dp to 8.dp
 
 /**
  * The **Resume block**'s frame (issue #288): one card on the surface tone holding

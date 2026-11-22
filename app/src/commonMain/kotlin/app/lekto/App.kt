@@ -29,6 +29,7 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
@@ -166,6 +167,13 @@ data class AppEnvironment(
     val vocabulary: Vocabulary? = null,
     val readerLevels: ReaderLevels? = null,
     /**
+     * The build's **Sample book** seam (issue #278): the catalogue it ships and
+     * the derived store the first launch materialises one entry into. `null` when
+     * the platform wires none or ships no catalogue, so the shelf simply has no
+     * sample and the app stays usable.
+     */
+    val samples: SampleLibrary? = null,
+    /**
      * The app-private language settings store (ADR-0034): the device-local
      * **app language** and **Translation language**, neither a **Vault** record.
      * `null` when the platform wires none, so the app behaves as "no pack" and
@@ -280,14 +288,17 @@ fun App(
     // The one signal the local writers raise and sync subscribes to (issue #121):
     // a book imported, a word saved or deleted, a reading position moved.
     val changes = remember { LocalChanges() }
-    val controller = remember(environment.library, environment.dispatcher, changes) {
-        LibraryController(environment.library, changes, environment.dispatcher)
+    val controller = remember(environment.library, environment.dispatcher, changes, environment.samples) {
+        LibraryController(environment.library, changes, environment.dispatcher, samples = environment.samples)
     }
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
-    val progress = remember(environment.library, environment.dispatcher, scope, changes) {
+    // The sample's page turns are kept beside the sample, never in the vault
+    // (issue #278); anything else is the vault's own position as before.
+    val samples = environment.samples
+    val progress = remember(environment.library, environment.dispatcher, scope, changes, samples) {
         ReadingProgressWriter(scope, environment.dispatcher, changes) { position, blocks ->
-            environment.library.savePosition(position, blocks)
+            if (samples?.savePosition(position) != true) environment.library.savePosition(position, blocks)
         }
     }
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
@@ -512,10 +523,10 @@ private fun AppScreens(
             onBack = { stack = stack.back() },
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
             onMarkFinished = {
-                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markFinished)
+                setFinished(environment, controller, changes, scope, bookId, finished = true)
             },
             onMarkUnfinished = {
-                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markUnfinished)
+                setFinished(environment, controller, changes, scope, bookId, finished = false)
             },
         )
     } else {
@@ -1032,7 +1043,12 @@ internal fun speakHandler(
     }
 }
 
-/** The library's actions: import through the platform picker, open a book, dismiss a failure. */
+/**
+ * The library's actions: import through the platform picker, open a book or the
+ * **Sample book**, dismiss a failure, remove the sample. Opening asks the sample
+ * first (issue #278): its identity is not a vault record, so the vault library
+ * cannot answer for it, and everything else is the vault's as before.
+ */
 private fun libraryActions(
     environment: AppEnvironment,
     controller: LibraryController,
@@ -1049,10 +1065,14 @@ private fun libraryActions(
     },
     onOpen = { book ->
         scope.launch {
-            withContext(environment.dispatcher) { environment.library.open(book.id) }?.let(navigation.onOpen)
+            val session = withContext(environment.dispatcher) {
+                environment.samples?.open(book.id) ?: environment.library.open(book.id)
+            }
+            session?.let(navigation.onOpen)
         }
     },
     onDelete = { book -> controller.delete(book.id) },
+    onDismissSample = controller::dismissSample,
     onDismissError = controller::dismissError,
     onSearch = controller::search,
     onClearSearch = controller::clearSearch,
@@ -1070,6 +1090,9 @@ private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
  * pushes it, and the Library is re-listed so its filter sees the new state on
  * return. A failed write is swallowed like a failed position save: losing one
  * declaration is better than bringing the reader down.
+ *
+ * The **Sample book** keeps its declaration beside itself (issue #278): it is a
+ * derived fact, so no vault record is written and no sync signal is raised.
  */
 @Suppress("LongParameterList") // The caller's wiring and the fact it records; a bundle would only hide them.
 private fun setFinished(
@@ -1078,11 +1101,20 @@ private fun setFinished(
     changes: LocalChanges,
     scope: CoroutineScope,
     bookId: String,
-    write: (BookLibrary, String) -> Unit,
+    finished: Boolean,
 ) {
     scope.launch {
+        val sampleOwned = withContext(environment.dispatcher) {
+            environment.samples?.markFinished(bookId, finished) == true
+        }
+        if (sampleOwned) {
+            controller.refresh()
+            return@launch
+        }
         runCatching {
-            withContext(environment.dispatcher) { write(environment.library, bookId) }
+            withContext(environment.dispatcher) {
+                if (finished) environment.library.markFinished(bookId) else environment.library.markUnfinished(bookId)
+            }
         }.onSuccess {
             changes.contentChanged()
             controller.refresh()

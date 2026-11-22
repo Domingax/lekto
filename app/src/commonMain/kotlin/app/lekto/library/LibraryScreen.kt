@@ -45,7 +45,6 @@ import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
-import app.lekto.ui.ConfirmationDialog
 import app.lekto.ui.HAIRLINE_THICKNESS
 import app.lekto.ui.SearchField
 import app.lekto.ui.ToggleChip
@@ -79,11 +78,33 @@ internal const val LIBRARY_OTHER_BOOKS_HEADING_TAG: String = "library-heading-ot
 /** The test tag on the shelf's scrolling list, so a test can scroll to a group below the fold. */
 internal const val LIBRARY_LIST_TAG: String = "library-list"
 
+/** The lazy item key of the **Sample book**'s row, which always leads the shelf while it exists (issue #278). */
+private const val SAMPLE_ROW_KEY: String = "sample-row"
+
+/** The lazy item key of the first-run sentence above the sample (issue #278). */
+private const val FIRST_RUN_KEY: String = "first-run"
+
 /** The lazy item key of the "Other books" heading, which is not a book either. */
 private const val OTHER_BOOKS_KEY: String = "other-books"
 
+/** The lazy item key of the explanation that stands in for an empty filtered list under the sample. */
+private const val NO_MATCHES_KEY: String = "no-matches"
+
 /** The test tag on the Library's title, so a layout test can find it apart from the shell's bar. */
 internal const val LIBRARY_TITLE_TAG: String = "library-title"
+
+/**
+ * A delete the shelf is asking about: a vault book's removal, or the **Sample
+ * book**'s (issue #278). One value, so a confirmation cannot be open twice.
+ */
+private sealed interface PendingDelete {
+
+    /** A vault book the reader asked to delete, with the book the dialog names. */
+    data class VaultBook(val book: Book) : PendingDelete
+
+    /** The **Sample book**'s removal, which names no vault book. */
+    data object Sample : PendingDelete
+}
 
 /**
  * The library screen: the books in the vault, a title search, an Import action, a
@@ -123,67 +144,70 @@ fun LibraryScreen(
     covers: BookCoverLoader = BookCoverLoader.None,
     snippets: BookSnippetLoader = BookSnippetLoader.None,
 ) {
-    var pendingDelete by remember { mutableStateOf<Book?>(null) }
+    var pending by remember { mutableStateOf<PendingDelete?>(null) }
     val texts = LocalAppTexts.current
 
     CompositionLocalProvider(LocalBookCovers provides covers, LocalBookSnippets provides snippets) {
         Column(
             modifier.fillMaxSize().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         ) {
-            LibraryHeader(vaultEmpty = state.vaultEmpty, importing = state.importing, onImport = actions.onImport)
-
-            // A field over an empty vault would search nothing; the empty state keeps
-            // its one sentence and its action (issue #173).
-            if (!state.vaultEmpty) {
-                SearchField(
-                    query = state.query,
-                    onSearch = actions.onSearch,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = LektoSpacing.InsidePanel)
-                        .testTag(LIBRARY_SEARCH_TAG),
-                )
-                StateFilters(
-                    selected = state.selectedStates,
-                    onToggle = actions.onToggleState,
-                    modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-                )
-            }
-
+            LibraryHeader(hasRows = state.hasRows, importing = state.importing, onImport = actions.onImport)
+            LibraryNarrowing(state, actions)
             state.error?.let { message -> LibraryError(texts.message(message), actions.onDismissError) }
             if (state.importing) Importing(state.progress)
-
-            LibraryBody(state, actions, onDelete = { target -> pendingDelete = target })
+            state.sampleFailure?.let { message -> SampleFailure(texts.message(message)) }
+            LibraryBody(
+                state,
+                actions,
+                onDelete = { target -> pending = PendingDelete.VaultBook(target) },
+                onSampleDelete = { pending = PendingDelete.Sample },
+            )
         }
 
-        pendingDelete?.let { target ->
-            BookDeleteDialog(
-                target = target,
+        when (val target = pending) {
+            is PendingDelete.VaultBook -> BookDeleteDialog(
+                target = target.book,
                 onConfirm = {
-                    pendingDelete = null
-                    actions.onDelete(target)
+                    pending = null
+                    actions.onDelete(target.book)
                 },
-                onDismiss = { pendingDelete = null },
+                onDismiss = { pending = null },
             )
+
+            PendingDelete.Sample -> SampleDeleteDialog(
+                onConfirm = {
+                    pending = null
+                    actions.onDismissSample()
+                },
+                onDismiss = { pending = null },
+            )
+
+            null -> Unit
         }
     }
 }
 
 /**
- * The delete confirmation, in the reader's app language (docs/design.md §8;
- * issue #131). The file name identifies the imported file, which is not on the
- * row any more (§7.1); it is the one place besides an import error where the
- * file is named.
+ * The Library's two narrowings under the title (issues #173, #200): the title
+ * search and the **Reading state** chips, hidden while the vault holds no book,
+ * because a field over nothing would search nothing and the empty state keeps its
+ * one sentence and its action.
  */
 @Composable
-private fun BookDeleteDialog(target: Book, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val texts = LocalAppTexts.current
-    ConfirmationDialog(
-        title = texts.message(AppMessage.of(TextKey.DELETE_BOOK_TITLE, target.title)),
-        message = texts.message(AppMessage.of(TextKey.DELETE_BOOK_MESSAGE, target.fileName)),
-        confirmLabel = texts[TextKey.DELETE],
-        onConfirm = onConfirm,
-        onDismiss = onDismiss,
+private fun LibraryNarrowing(state: LibraryUiState, actions: LibraryActions) {
+    if (state.vaultEmpty) return
+    SearchField(
+        query = state.query,
+        onSearch = actions.onSearch,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = LektoSpacing.InsidePanel)
+            .testTag(LIBRARY_SEARCH_TAG),
+    )
+    StateFilters(
+        selected = state.selectedStates,
+        onToggle = actions.onToggleState,
+        modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
     )
 }
 
@@ -192,9 +216,20 @@ private fun BookDeleteDialog(target: Book, onConfirm: () -> Unit, onDismiss: () 
  * the skeleton rows of a shelf being read, the empty state, the no-match state,
  * or the list. Keeping them apart means the empty message can never stand in for
  * a list that is on its way (issue #208).
+ *
+ * The **Sample book** splits two of those cases (issue #278): a vault with no
+ * book but a sample is a shelf with a row, so it reads its first-run sentence
+ * instead of the empty state; and a vault whose filter hides every book still
+ * shows the sample above the explanation. The §7.1 empty state is reserved for a
+ * shelf with no row at all.
  */
 @Composable
-private fun ColumnScope.LibraryBody(state: LibraryUiState, actions: LibraryActions, onDelete: (Book) -> Unit) {
+private fun ColumnScope.LibraryBody(
+    state: LibraryUiState,
+    actions: LibraryActions,
+    onDelete: (Book) -> Unit,
+    onSampleDelete: () -> Unit,
+) {
     when {
         // A shelf being read is not an empty one: skeleton rows say what is
         // coming, and the empty message would claim there is nothing to wait for.
@@ -205,11 +240,17 @@ private fun ColumnScope.LibraryBody(state: LibraryUiState, actions: LibraryActio
         // that would start a second transfer belongs under it.
         state.vaultEmpty && state.importing -> Unit
 
-        state.vaultEmpty -> LibraryEmpty(onImport = actions.onImport)
+        !state.hasRows -> LibraryEmpty(onImport = actions.onImport)
 
-        state.visibleBooks.isEmpty() -> LibraryNoMatches(state, actions)
+        state.visibleBooks.isEmpty() && state.sample == null -> LibraryNoMatches(state, actions)
 
-        else -> LibraryList(state, onOpen = actions.onOpen, onDelete = onDelete)
+        else -> LibraryList(
+            state,
+            actions,
+            onOpen = actions.onOpen,
+            onDelete = onDelete,
+            onSampleDelete = onSampleDelete,
+        )
     }
 }
 
@@ -323,7 +364,14 @@ private val ReadingState.textKey: TextKey
  * issue #208's review. The block is the hierarchy that note asked for.
  */
 @Composable
-private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Unit, onDelete: (Book) -> Unit) {
+@Suppress("LongParameterList") // The state, its actions, and the shelf's three gestures are independent.
+private fun ColumnScope.LibraryList(
+    state: LibraryUiState,
+    actions: LibraryActions,
+    onOpen: (Book) -> Unit,
+    onDelete: (Book) -> Unit,
+    onSampleDelete: () -> Unit,
+) {
     val texts = LocalAppTexts.current
     LazyColumn(
         Modifier
@@ -332,7 +380,18 @@ private fun ColumnScope.LibraryList(state: LibraryUiState, onOpen: (Book) -> Uni
             .padding(top = LektoSpacing.BetweenRelatedLines)
             .testTag(LIBRARY_LIST_TAG),
     ) {
-        if (state.searching) {
+        // The shelf's first-run sentence is the only thing above the sample when
+        // the vault holds no book: one sentence, and the sample as the first row,
+        // rather than the empty state's second set of words (issue #278).
+        if (state.vaultEmpty) {
+            item(key = FIRST_RUN_KEY) { FirstRunShelf() }
+        }
+        state.sample?.let { row ->
+            item(key = SAMPLE_ROW_KEY) { SampleBookRow(row, onOpen = onOpen, onDelete = onSampleDelete) }
+        }
+        if (!state.vaultEmpty && state.visibleBooks.isEmpty()) {
+            item(key = NO_MATCHES_KEY) { LibraryNoMatches(state, actions) }
+        } else if (state.searching) {
             bookItems(state.visibleBooks, state, onOpen, onDelete)
         } else {
             shelfGroups(state, texts, onOpen, onDelete)
@@ -427,10 +486,15 @@ private fun SectionHeading(text: String, top: Dp, tag: String) {
  * shelf to add to (docs/design.md §6, §7.1). A **FlowRow**, not a **Row**: the
  * French title ("Bibliothèque") is wider than the English one, so on a phone the
  * action wraps to its own line rather than being squeezed.
+ *
+ * [hasRows] rather than "the vault is not empty" (issue #278): a shelf holding
+ * only the **Sample book** is a shelf to add to, so the word is there; it
+ * disappears only when there is no row at all and the empty state's filled button
+ * is the one action.
  */
 @OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps an action below a title too wide to share the line.
 @Composable
-private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () -> Unit) {
+private fun LibraryHeader(hasRows: Boolean, importing: Boolean, onImport: () -> Unit) {
     val texts = LocalAppTexts.current
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -446,7 +510,7 @@ private fun LibraryHeader(vaultEmpty: Boolean, importing: Boolean, onImport: () 
         // An empty shelf's action is the filled button in the empty state, so the
         // header does not repeat it; while a transfer runs, the word is disabled
         // rather than making a second one.
-        if (!vaultEmpty) {
+        if (hasRows) {
             Box(
                 modifier = Modifier
                     .heightIn(min = LektoSpacing.TouchTarget)

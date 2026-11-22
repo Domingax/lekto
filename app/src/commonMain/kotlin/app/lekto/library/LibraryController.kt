@@ -7,6 +7,8 @@ import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingState
+import app.lekto.core.book.SampleLibrary
+import app.lekto.core.book.SampleRow
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,6 +36,12 @@ import kotlinx.coroutines.sync.withLock
  * [selectedStates] is the **Reading state** filter (issue #200): a multi-select
  * view state that opens on Unread and In progress, survives leaving the Library
  * and returning, resets on app restart, and never reaches the vault.
+ *
+ * [sample] is the **Sample book** projected beside the vault's books (issue
+ * #278): one row above them, never one of them, so it is absent from
+ * [books] and from the **Languages** counts. [sampleFailure] is the one line a
+ * failed materialisation leaves, so the shelf stays in its empty state rather
+ * than showing a row that points at files it could not write.
  */
 data class LibraryUiState(
     val listing: LibraryListing = LibraryListing(),
@@ -43,6 +51,8 @@ data class LibraryUiState(
     val importing: Boolean = false,
     val progress: Float = 0f,
     val error: AppMessage? = null,
+    val sample: SampleRow? = null,
+    val sampleFailure: AppMessage? = null,
 ) {
     /**
      * Every book the vault lists, in the order it hands them over. Stays the whole
@@ -99,6 +109,13 @@ data class LibraryUiState(
      */
     val vaultEmpty: Boolean get() = listing.lastRead.isEmpty() && listing.others.isEmpty()
 
+    /**
+     * Whether the shelf holds a row at all — a vault book or the **Sample book**
+     * (issue #278). It is the value the empty state and the header's `Import`
+     * word read: a vault with no book but a sample is a shelf, not an empty one.
+     */
+    val hasRows: Boolean get() = books.isNotEmpty() || sample != null
+
     companion object {
 
         /**
@@ -125,15 +142,23 @@ data class LibraryUiState(
  * (issue #196). A derived write is not a sync trigger, so no [LocalChanges]
  * signal is raised.
  */
+@Suppress("TooManyFunctions") // One function per Library action; they share the one state and splitting scatters it.
 class LibraryController(
     private val library: BookLibrary,
     /** Notified after an import lands, so sync pushes the new book (issue #121). */
     private val changes: LocalChanges,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
+    /**
+     * The **Sample book** this build can materialise, or `null` when the platform
+     * wires none (issue #278). It is observed here, never prepended to the
+     * vault's listing: the shelf shows one row above the books, and nothing the
+     * vault counts or syncs can see it.
+     */
+    private val samples: SampleLibrary? = null,
 ) {
 
-    private val _state = MutableStateFlow(LibraryUiState(listing = library.listing()))
+    private val _state = MutableStateFlow(LibraryUiState(listing = library.listing(), sample = samples?.row()))
     private val refreshMutex = Mutex()
 
     /**
@@ -158,7 +183,13 @@ class LibraryController(
                 changes.contentChanged()
                 val listing = loadListing()
                 _state.update { current ->
-                    current.copy(listing = listing, importing = false, progress = 1f, error = null)
+                    current.copy(
+                        listing = listing,
+                        sample = samples?.row(),
+                        importing = false,
+                        progress = 1f,
+                        error = null,
+                    )
                 }
             } catch (failure: Exception) { // Any import failure must surface as a message, not a crash.
                 _state.update { current ->
@@ -171,6 +202,52 @@ class LibraryController(
     /** Dismisses the current error, so the app stays usable after a failure. */
     fun dismissError() {
         _state.update { current -> current.copy(error = null) }
+    }
+
+    /**
+     * Materialises [language]'s **Sample book** off the main thread (issue #278):
+     * the first launch's language answer calls it, and the shelf then shows one
+     * row above the vault's books. A second call — the reader adding a language
+     * in Settings — writes nothing, because the device already holds its one
+     * sample. A write that fails lands one line in [LibraryUiState.sampleFailure]
+     * and leaves the shelf in its empty state, never a row pointing at files that
+     * could not be written.
+     */
+    @Suppress("TooGenericExceptionCaught") // Any write failure becomes one line; the shelf stays usable.
+    fun materialiseSample(language: String) {
+        val source = samples ?: return
+        scope.launch {
+            try {
+                source.materialise(language)
+                _state.update { current -> current.copy(sample = source.row(), sampleFailure = null) }
+            } catch (_: Exception) { // The failure is the fact, not its reason: the reader gets one honest line.
+                _state.update { current ->
+                    current.copy(sample = null, sampleFailure = AppMessage.of(TextKey.LIBRARY_SAMPLE_FAILED))
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes the **Sample book** from the shelf (issue #278): one confirmation is
+     * asked by the screen, and this writes the dismissal, deletes its files and
+     * clears the row. A failure leaves the row and says so, because the sample is
+     * still there. Nothing the reader authored is touched.
+     */
+    @Suppress("TooGenericExceptionCaught") // Any delete failure becomes one line; the shelf stays usable.
+    fun dismissSample() {
+        val source = samples ?: return
+        val row = _state.value.sample ?: return
+        scope.launch {
+            try {
+                source.dismiss(row.book.id)
+                _state.update { current -> current.copy(sample = source.row()) }
+            } catch (_: Exception) { // The row is still there, so the line says the removal did not happen.
+                _state.update { current ->
+                    current.copy(sampleFailure = AppMessage.of(TextKey.LIBRARY_SAMPLE_REMOVE_FAILED))
+                }
+            }
+        }
     }
 
     /**
@@ -229,7 +306,7 @@ class LibraryController(
                 library.delete(bookId)
                 changes.contentChanged()
                 val listing = loadListing()
-                _state.update { current -> current.copy(listing = listing, error = null) }
+                _state.update { current -> current.copy(listing = listing, sample = samples?.row(), error = null) }
             } catch (failure: Exception) { // Any delete failure must surface as a message, not a crash.
                 _state.update { current ->
                     current.copy(error = AppMessage.failure(failure, TextKey.MESSAGE_BOOK_DELETE_FAILED))
@@ -258,7 +335,7 @@ class LibraryController(
                 _state.update { current -> current.copy(loading = true) }
                 try {
                     val listing = loadListing()
-                    _state.update { current -> current.copy(listing = listing) }
+                    _state.update { current -> current.copy(listing = listing, sample = samples?.row()) }
                 } finally {
                     _state.update { current -> current.copy(loading = false) }
                 }

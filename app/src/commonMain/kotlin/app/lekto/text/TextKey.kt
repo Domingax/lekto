@@ -48,6 +48,26 @@ enum class TextKey {
     /** The filled action in the empty state; the header's [IMPORT] is a word, this one carries the action. */
     IMPORT_BOOK,
 
+    /**
+     * The shelf's sentence over the first **Sample book**: what to do when the
+     * vault holds no book and the sample is there (issue #278, docs/design.md §7.1).
+     */
+    LIBRARY_FIRST_RUN,
+
+    /** The mark a **Sample book**'s row carries, so the reader knows what it is (issue #278). */
+    SAMPLE_MARK,
+
+    /** The confirmation that removes the **Sample book** (issue #278): its title, its message and its action. */
+    SAMPLE_DELETE_TITLE,
+    SAMPLE_DELETE_MESSAGE,
+    REMOVE,
+
+    /** The one line a failed materialisation leaves on the shelf (issue #278). */
+    LIBRARY_SAMPLE_FAILED,
+
+    /** The one line a failed removal of the **Sample book** leaves (issue #278). */
+    LIBRARY_SAMPLE_REMOVE_FAILED,
+
     /** What the skeleton rows say to a screen reader while the shelf is being read. */
     LIBRARY_LOADING,
 
