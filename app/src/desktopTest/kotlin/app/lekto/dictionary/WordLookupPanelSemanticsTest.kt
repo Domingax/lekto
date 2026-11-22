@@ -6,10 +6,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -305,6 +310,31 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
+    fun theSuggestionIsInTheMutedInkAndTheFactInTheInk() = runComposeUiTest {
+        // The receipt's ink is part of the ticket (issue #279): a suggestion never
+        // looks like a fact. Semantics carries the words, not their colour, so the
+        // difference is read from the pixels of the same line in the two states.
+        var saved by mutableStateOf<MasteryLevel?>(null)
+        setContent {
+            Panel(
+                WordLookup.NotInDictionary("zzzz", "en"),
+                entry = saved?.let { level -> blorpleEntry(level) },
+                suggestedLevel = MasteryLevel.RECOGNIZED,
+            )
+        }
+
+        val suggestion = stateLineInk()
+        saved = MasteryLevel.LEARNED
+        waitForIdle()
+        val fact = stateLineInk()
+
+        assertTrue(
+            suggestion.luminance() > fact.luminance(),
+            "the suggestion's ink ($suggestion) must be the muted one, the fact's ($fact) the darker ink",
+        )
+    }
+
+    @Test
     fun aSavedWordsLevelIsStatedAndMarked() = runComposeUiTest {
         setContent {
             Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = blorpleEntry(MasteryLevel.FAMILIAR))
@@ -451,6 +481,23 @@ class WordLookupPanelSemanticsTest {
     /** The saved entry for the panel's word at [level]. */
     private fun blorpleEntry(level: MasteryLevel): VocabularyEntry =
         VocabularyEntry(WordKey("en", "blorple"), "blorple", mastery = level)
+
+    /**
+     * The darkest pixel the state line draws, which is its ink: an antialiased edge
+     * only lightens a glyph, so the strongest pixel carries the colour the panel
+     * chose.
+     */
+    private fun ComposeUiTest.stateLineInk(): Color {
+        val pixels = onNodeWithTag(LOOKUP_LEVEL_TAG).captureToImage().toPixelMap()
+        var darkest = Color.White
+        for (y in 0 until pixels.height) {
+            for (x in 0 until pixels.width) {
+                val pixel = pixels[x, y]
+                if (pixel.luminance() < darkest.luminance()) darkest = pixel
+            }
+        }
+        return darkest
+    }
 
     private companion object {
         val PANEL_WIDTH = 360.dp
