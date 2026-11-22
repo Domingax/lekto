@@ -57,7 +57,10 @@ import kotlin.math.abs
 // sheet a phone-sized window (360 × 800 dp), so its 60 % cap leaves room for the
 // senses and the test reads them where a reader would.
 @Config(sdk = [36], qualifiers = "w360dp-h800dp")
-@Suppress("TooManyFunctions") // One sheet, one test per outcome and control; splitting hides the panel's surface.
+@Suppress(
+    "TooManyFunctions", // One sheet, one test per outcome and control; splitting hides the panel's surface.
+    "LargeClass", // The sheet's whole surface in one place: states, layout, references and drag.
+)
 class WordLookupPanelSemanticsTest {
 
     @get:Rule
@@ -227,7 +230,7 @@ class WordLookupPanelSemanticsTest {
 
         compose.onNodeWithTag(LOOKUP_HANDLE_TAG).performTouchInput {
             down(center)
-            moveBy(Offset(0f, 160f))
+            moveBy(Offset(0f, DRAG_DISTANCE))
             up()
         }
 
@@ -388,7 +391,7 @@ class WordLookupPanelSemanticsTest {
 
         assertTrue(
             "the sheet is $height dp tall, so it still rations a one-sense word",
-            height < PANEL_HEIGHT.value * 0.45f,
+            height < PANEL_HEIGHT.value * LEGACY_SHEET_MAX_FRACTION,
         )
     }
 
@@ -420,9 +423,9 @@ class WordLookupPanelSemanticsTest {
             "a three-entry word must rise to the ${ceiling}dp cap, not below it",
             ceiling,
             sheetHeight(),
-            1f,
+            HEIGHT_TOLERANCE,
         )
-        listOf(1, 2, 3).forEach { number ->
+        for (number in 1..DEFINITIONS_IN_VIEW) {
             compose.onNodeWithText("Definition $number.").assertIsDisplayed()
         }
     }
@@ -454,7 +457,7 @@ class WordLookupPanelSemanticsTest {
 
         val ceiling = PANEL_HEIGHT.value * SHEET_MAX_FRACTION
         val atRest = sheetHeight()
-        assertEquals("the long answer must sit at the cap before scrolling", ceiling, atRest, 1f)
+        assertEquals("the long answer must sit at the cap before scrolling", ceiling, atRest, HEIGHT_TOLERANCE)
 
         val reference = compose.onNodeWithTag(sourceShortcutTag(DictionarySource.GOOGLE_TRANSLATE))
         reference.performScrollTo().assertIsDisplayed()
@@ -463,13 +466,13 @@ class WordLookupPanelSemanticsTest {
             "scrolling the references must not change the sheet's height",
             atRest,
             sheetHeight(),
-            1f,
+            HEIGHT_TOLERANCE,
         )
         val level = compose.onNodeWithTag(LOOKUP_LEVEL_TAG).getUnclippedBoundsInRoot()
         val scrolled = reference.getUnclippedBoundsInRoot()
         assertTrue(
             "the references end at ${scrolled.bottom} dp, past the footer's ${level.top} dp",
-            scrolled.bottom.value <= level.top.value + 1f,
+            scrolled.bottom.value <= level.top.value + HEIGHT_TOLERANCE,
         )
     }
 
@@ -589,5 +592,17 @@ class WordLookupPanelSemanticsTest {
 
         /** The most of the screen the lookup sheet may cover (docs/design.md §7.3). */
         const val SHEET_MAX_FRACTION = 0.60f
+
+        /** The ceiling this change replaced; a one-sense word must now open well below it. */
+        const val LEGACY_SHEET_MAX_FRACTION = 0.45f
+
+        /** Bounds are read as floats, so a dp of slack separates "at the cap" from "missing it". */
+        const val HEIGHT_TOLERANCE = 1f
+
+        /** The drag the dismissal test injects: comfortably past the handle's threshold. */
+        const val DRAG_DISTANCE = 160f
+
+        /** The definitions the three-entry case must show before any scrolling. */
+        const val DEFINITIONS_IN_VIEW = 3
     }
 }

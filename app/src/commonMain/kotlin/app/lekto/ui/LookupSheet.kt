@@ -112,6 +112,7 @@ private fun ColumnSheet(modifier: Modifier, sheetModifier: Modifier, content: @C
 }
 
 /** The phone shape: a sheet raised from the bottom edge, capped so the page stays visible. */
+@Suppress("LongParameterList") // The frame, its test tag, the shape, the cap and the way out.
 @Composable
 private fun BottomSheet(
     modifier: Modifier,
