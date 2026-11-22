@@ -11,6 +11,7 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.testkit.FlakyVaultFileSystem
 import app.lekto.testkit.InMemoryTombstoneStore
 import app.lekto.testkit.InMemoryVaultStore
+import app.lekto.testkit.TestClock
 import app.lekto.testkit.deterministicSeams
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -20,6 +21,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 /**
  * The reader's live vocabulary state (issue #22): it loads the vault once, an
@@ -208,5 +211,96 @@ class VocabularyControllerTest {
         controller.refresh()
 
         assertEquals(before + 1, controller.revision)
+    }
+
+    @Test
+    fun savingFromABookRecordsThatBookOnTheEntry() {
+        // The book id reaches the record: saving a word while reading a book
+        // remembers the book it was saved from (issue #280; ADR-0050).
+        val vault = InMemoryVaultStore()
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+        val controller = VocabularyController(vocabulary, LocalChanges())
+
+        controller.save(VocabularyEntry(key, "lantern"), bookId = "b1")
+
+        assertEquals(listOf("b1"), vocabulary.entryFor(key)?.bookIds)
+    }
+
+    @Test
+    fun savingAgainFromTheSameBookKeepsOneBook() {
+        val vault = InMemoryVaultStore()
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+        val controller = VocabularyController(vocabulary, LocalChanges())
+
+        controller.save(VocabularyEntry(key, "lantern"), bookId = "b1")
+        controller.save(VocabularyEntry(key, "lantern", mastery = MasteryLevel.LEARNED), bookId = "b1")
+
+        assertEquals(listOf("b1"), vocabulary.entryFor(key)?.bookIds)
+    }
+
+    @Test
+    fun savingFromASecondBookKeepsBothBooks() {
+        val vault = InMemoryVaultStore()
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+        val controller = VocabularyController(vocabulary, LocalChanges())
+
+        controller.save(VocabularyEntry(key, "lantern"), bookId = "b1")
+        controller.save(VocabularyEntry(key, "lantern"), bookId = "b2")
+
+        assertEquals(listOf("b1", "b2"), vocabulary.entryFor(key)?.bookIds)
+    }
+
+    @Test
+    fun aSaveWithoutABookKeepsTheHistoryItAlreadyHas() {
+        // The level sheet's save starts from the stored entry and names no book;
+        // it must not erase the books a reading session recorded.
+        val vault = InMemoryVaultStore()
+        val vocabulary = VaultVocabulary(vault, InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
+        val controller = VocabularyController(vocabulary, LocalChanges())
+        controller.save(VocabularyEntry(key, "lantern"), bookId = "b1")
+
+        controller.save(checkNotNull(vocabulary.entryFor(key)).copy(mastery = MasteryLevel.KNOWN))
+
+        assertEquals(listOf("b1"), vocabulary.entryFor(key)?.bookIds)
+    }
+
+    @Test
+    fun allListsTheMostRecentlyModifiedWordFirst() {
+        // Recency is the record's `updatedAt`, not an alphabetical sort (ADR-0050).
+        val clock = TestClock(Instant.fromEpochMilliseconds(0))
+        val vocabulary = VaultVocabulary(
+            InMemoryVaultStore(),
+            InMemoryTombstoneStore(),
+            deterministicSeams(clock = clock),
+            DeviceId("device-a"),
+        )
+        val controller = VocabularyController(vocabulary, LocalChanges())
+        controller.save(VocabularyEntry(key, "lantern"))
+        clock.advanceBy(1.minutes)
+        controller.save(VocabularyEntry(WordKey("en", "harbour"), "harbour"))
+
+        assertEquals(listOf("harbour", "lantern"), controller.all().map { entry -> entry.surface })
+    }
+
+    @Test
+    fun aLevelChangeMovesTheWordFirstInTheRecencyOrder() {
+        // The record is rewritten, so its update time moves; the list's order would
+        // follow it unless the screen froze the order it opened on (issue #280).
+        val clock = TestClock(Instant.fromEpochMilliseconds(0))
+        val vocabulary = VaultVocabulary(
+            InMemoryVaultStore(),
+            InMemoryTombstoneStore(),
+            deterministicSeams(clock = clock),
+            DeviceId("device-a"),
+        )
+        val controller = VocabularyController(vocabulary, LocalChanges())
+        controller.save(VocabularyEntry(key, "lantern"))
+        clock.advanceBy(1.minutes)
+        controller.save(VocabularyEntry(WordKey("en", "harbour"), "harbour"))
+        clock.advanceBy(1.minutes)
+
+        controller.save(checkNotNull(vocabulary.entryFor(key)).copy(mastery = MasteryLevel.LEARNED))
+
+        assertEquals(listOf("lantern", "harbour"), controller.all().map { entry -> entry.surface })
     }
 }

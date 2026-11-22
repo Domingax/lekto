@@ -2,6 +2,7 @@ package app.lekto.navigation
 
 import app.lekto.core.book.ReadingSession
 import app.lekto.text.TextKey
+import app.lekto.vocabulary.VocabularyBook
 
 /**
  * The shell's three sections — and no fourth (docs/design.md §6): **Library**,
@@ -23,7 +24,7 @@ enum class ShellSection(val label: TextKey) {
     val root: Destination
         get() = when (this) {
             LIBRARY -> Destination.Library
-            VOCABULARY -> Destination.Vocabulary
+            VOCABULARY -> Destination.Vocabulary()
             SETTINGS -> Destination.Settings
         }
 }
@@ -45,8 +46,13 @@ sealed interface Destination {
         override val section: ShellSection = ShellSection.LIBRARY
     }
 
-    /** The Vocabulary list: the words the reader saved. */
-    data object Vocabulary : Destination {
+    /**
+     * The Vocabulary list: the words the reader saved, and — when it was reached
+     * from a book's end state — [book], the book it is narrowed to (issue #280).
+     * The filter is the value's own, so leaving for the Library and opening the
+     * section from the bar lands on the whole vocabulary.
+     */
+    data class Vocabulary(val book: VocabularyBook? = null) : Destination {
         override val section: ShellSection = ShellSection.VOCABULARY
     }
 

@@ -308,7 +308,8 @@ then either the translation body with its disclosure or the prompt with its
 settings link, above the zero-configuration shortcut. The Vocabulary list adds
 `vocabulary-<paper>.png` per paper and `vocabulary-delete-light.png` (issue #212):
 the title and the count beside it, the shared search surface, the filter row with
-its partly cut chip, the current filter filled in ink and each chip carrying its
+a selected chip carrying the opened book's title before the level chips (issue
+#280), its partly cut chip, the current filter filled in ink and each chip carrying its
 level's dot, then each row's word bar, dot and level name, translation and muted
 sentence with a hairline between rows — the first row hovered, so the trash in the
 slot reserved for it is recorded too. Its level sheet adds
@@ -1113,6 +1114,20 @@ control. `VocabularyScreenSemanticsTest` proves a chip raises its level, the
 all-levels chip clears it, the current one is announced as selected, and a filter
 that matches nothing says so, and `AppSemanticsTest` filters the list to a level
 and finds only that level's word.
+
+The book history (issue #280; ADR-0050) is proved at every seam. The record's
+shape is `VocabularyRecordPropertyTest`'s: the round-trip carries `bookIds`, the
+schema version is pinned at 2, and a body written without the field reads as an
+empty list. `BookWordsTest` proves the two counts — a word counts once per book it
+names, a word from two books counts for both, only the book's **Known** words
+count as known, and a word with no history belongs to none. The write path is
+`VocabularyControllerTest`'s: the book id reaches the record once, a second book
+keeps both, a save that names no book keeps the history, and the list orders by the
+record's update time. The end state's two numbers, singular and plural, the absent
+line and `See the words` are `ReaderScreenSemanticsTest`; the list's book chip, its
+absence, the narrowing and the frozen order under a level change are
+`VocabularyScreenSemanticsTest`, both on both lanes. `AppSemanticsTest` walks the
+loop on both lanes — save from a book, finish it, read the counts, open the list.
 
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to

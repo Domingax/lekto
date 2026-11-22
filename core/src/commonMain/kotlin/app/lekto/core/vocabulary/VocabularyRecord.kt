@@ -27,7 +27,7 @@ object VocabularyRecord {
     const val KIND: String = "vocabulary"
 
     /** The schema version of the body this build writes. */
-    const val SCHEMA_VERSION: Int = 1
+    const val SCHEMA_VERSION: Int = 2
 
     /** The deterministic record id for [key]. */
     fun idOf(key: WordKey): String = "word-${fnv1a64(key.language.orEmpty() + '\u0000' + key.key)}"

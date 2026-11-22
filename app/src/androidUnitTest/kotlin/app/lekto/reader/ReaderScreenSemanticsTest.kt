@@ -29,6 +29,7 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
+import app.lekto.core.vocabulary.BookWords
 import app.lekto.testkit.WhitespaceTextSegmenter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -328,6 +329,59 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
+    fun theEndStateReportsTheWordsTheBookGaveAndHowManyAreKnown() {
+        compose.setContent {
+            Reader(renderer, initialOffset = Int.MAX_VALUE, bookWords = BookWords(total = 18, known = 5))
+        }
+        compose.openEndState()
+
+        compose.onNodeWithText("18 words from this book").assertIsDisplayed()
+        compose.onNodeWithText("5 now known").assertIsDisplayed()
+        compose.onNodeWithTag(READER_SEE_WORDS_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theEndStateCountsOneWordInTheSingular() {
+        compose.setContent {
+            Reader(renderer, initialOffset = Int.MAX_VALUE, bookWords = BookWords(total = 1, known = 1))
+        }
+        compose.openEndState()
+
+        compose.onNodeWithText("1 word from this book").assertIsDisplayed()
+        compose.onNodeWithText("1 now known").assertIsDisplayed()
+    }
+
+    @Test
+    fun aBookWithNoSavedWordDrawsNoWordsLine() {
+        compose.setContent {
+            Reader(renderer, initialOffset = Int.MAX_VALUE, bookWords = BookWords(total = 0, known = 0))
+        }
+        compose.openEndState()
+
+        compose.onNodeWithText("words from this book", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("now known", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag(READER_SEE_WORDS_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun seeTheWordsAsksToOpenTheVocabulary() {
+        var opened = false
+        compose.setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                bookWords = BookWords(total = 2, known = 1),
+                onSeeWords = { opened = true },
+            )
+        }
+        compose.openEndState()
+
+        compose.onNodeWithTag(READER_SEE_WORDS_TAG).performClick()
+
+        assertTrue("the text action opens the book's words", opened)
+    }
+
+    @Test
     fun aPageTurnReportsItsPosition() {
         var reported = -1
         compose.setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
@@ -345,12 +399,14 @@ class ReaderScreenSemanticsTest {
         chapter: ReaderText = LONG_CHAPTER,
         initialOffset: Int = 0,
         initiallyFinished: Boolean = false,
+        bookWords: BookWords? = null,
         onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
         onWordTap: (WordTap) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
         onMarkFinished: () -> Unit = {},
         onMarkUnfinished: () -> Unit = {},
+        onSeeWords: () -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
@@ -363,8 +419,10 @@ class ReaderScreenSemanticsTest {
                     onPositionChange = onPositionChange,
                     onMarkFinished = onMarkFinished,
                     onMarkUnfinished = onMarkUnfinished,
+                    onSeeWords = onSeeWords,
                 ),
                 initiallyFinished = initiallyFinished,
+                bookWords = bookWords,
             )
         }
     }
