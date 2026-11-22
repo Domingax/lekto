@@ -22,6 +22,7 @@ import kotlin.test.assertTrue
  * and a level saves the word; the band writes the **Reader level** through the
  * Languages surface's own action. A sheet closed without choosing writes nothing.
  */
+@Suppress("TooManyFunctions") // One behaviour per flow step; splitting the flow would hide it.
 class GuideControllerTest {
 
     private val vocabulary = inMemoryVocabulary()

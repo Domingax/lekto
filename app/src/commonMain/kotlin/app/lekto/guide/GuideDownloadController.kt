@@ -217,7 +217,8 @@ class GuideDownloadController(
             outcome(
                 failed = table.error != null,
                 ready = table.status is DifficultyState.Ready,
-                broken = table.status.isBroken(),
+                broken = table.status is DifficultyState.Corrupt ||
+                    table.status is DifficultyState.Incompatible,
             )
         }
 
@@ -225,7 +226,8 @@ class GuideDownloadController(
             outcome(
                 failed = pack.error != null,
                 ready = pack.status is DictionaryPackState.Ready,
-                broken = pack.status.isBroken(),
+                broken = pack.status is DictionaryPackState.Corrupt ||
+                    pack.status is DictionaryPackState.Incompatible,
             )
         }
 
@@ -238,12 +240,6 @@ class GuideDownloadController(
         ready -> Outcome.DONE
         else -> Outcome.WAITING
     }
-
-    private fun DifficultyState.isBroken(): Boolean =
-        this is DifficultyState.Corrupt || this is DifficultyState.Incompatible
-
-    private fun DictionaryPackState.isBroken(): Boolean =
-        this is DictionaryPackState.Corrupt || this is DictionaryPackState.Incompatible
 
     private enum class Outcome { WAITING, DONE, FAILED }
 

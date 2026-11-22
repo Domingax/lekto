@@ -91,21 +91,19 @@ class GuideController(
     private var asksLanguage: Boolean = false
 
     init {
-        val opening = openingLanguage()
-        asksLanguage = opening == null
-        show(opening)
         // A build that ships one sample has nothing to ask; the first launch
         // materialises it at once. A replay never does (see restart).
-        if (opening != null && opening == singleLanguage && existingSample() == null && readingLanguage() == null) {
-            begin(opening)
-        }
+        val firstLaunchSingle = existingSample() == null && readingLanguage() == null
+        open()
+        if (firstLaunchSingle) singleLanguage?.let(::begin)
     }
 
     /** The language answer: materialise its sample and start the download, then show the page. */
     fun chooseLanguage(language: String) {
         if (state.stage != GuideStage.LANGUAGE) return
         begin(language)
-        show(language)
+        chosenLanguage = language
+        state = GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
     }
 
     /**
@@ -189,17 +187,18 @@ class GuideController(
      * stopped.
      */
     fun restart() {
-        val opening = openingLanguage()
-        asksLanguage = opening == null
-        show(opening)
+        open()
     }
 
-    /** The language a replay demonstrates: the stored sample, then the books, then the single shipped sample. */
-    private fun openingLanguage(): String? = existingSample() ?: readingLanguage() ?: singleLanguage
-
-    /** Shows the page in [language], or the question when there is no language to demonstrate. */
-    private fun show(language: String?) {
+    /**
+     * Opens on the page when the shelf already implies a language — the sample it
+     * holds, or the first **Reading language** of the reader's books — and on the
+     * question only on a true first launch.
+     */
+    private fun open() {
+        val language = existingSample() ?: readingLanguage() ?: singleLanguage
         chosenLanguage = language
+        asksLanguage = language == null
         state = if (language == null) {
             GuideUiState(stage = GuideStage.LANGUAGE)
         } else {
