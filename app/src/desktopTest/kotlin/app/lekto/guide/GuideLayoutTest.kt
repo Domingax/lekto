@@ -6,12 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -68,7 +66,9 @@ class GuideLayoutTest {
             onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG)
                 .performScrollToNode(hasTestTag(guideLanguageRowTag("tr")))
             onNodeWithTag(guideLanguageRowTag("tr")).assertIsDisplayed()
-            onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)).assertCountEquals(0)
+            sampleRosterLanguages().forEach { offered ->
+                onNodeWithTag(guideLanguageRowTag(offered.language)).assertIsNotSelected()
+            }
         }
         screen(width, height, { PageStage(sample) }) {
             onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
@@ -124,7 +124,13 @@ class GuideLayoutTest {
     @Composable
     private fun TapStage(sample: Sample) {
         GuideScreen(
-            state = GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true),
+            state = GuideUiState(
+                stage = GuideStage.TAP,
+                sample = sample,
+                plain = false,
+                lookupOpen = true,
+                tapped = guideNotes(sample, GUIDE_DEFAULT_BAND, WhitespaceTextSegmenter(), "fr").first(),
+            ),
             languages = sampleRosterLanguages(),
             document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, WhitespaceTextSegmenter()),
             notes = guideNotes(sample, GUIDE_DEFAULT_BAND, WhitespaceTextSegmenter(), "fr"),
@@ -151,7 +157,10 @@ class GuideLayoutTest {
                 levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
                 modifier = Modifier.weight(1f),
             )
-            GuideDownloadLine(GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"), onStop = {})
+            GuideDownloadLine(
+                GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
+                GuideDownloadActions(onStop = {}),
+            )
         }
     }
 

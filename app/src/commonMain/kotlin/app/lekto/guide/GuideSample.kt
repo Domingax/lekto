@@ -21,6 +21,7 @@ import app.lekto.core.text.wordKeyOf
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderText
+import app.lekto.reader.WordTap
 
 /** The band the guide paints the sample at before the reader chooses one, and after **Skip**. */
 val GUIDE_DEFAULT_BAND: CefrLevel = CefrLevel.A1
@@ -55,17 +56,28 @@ fun guideText(sample: Sample): ReaderText {
 /**
  * The sample's own colors as the reader's mastery seam (issue #277): [plain]
  * paints nothing at all, and otherwise each word takes the level the sample's
- * map for [band] carries. The sample is a **Derived asset**, so this reads no
- * vault and needs no **Dictionary pack**.
+ * map for [band] carries. A word the reader saved during the demonstration takes
+ * the level they saved, so the demonstration shows the save's consequence.
+ *
+ * The sample is a **Derived asset**, so this reads no vault and needs no
+ * **Dictionary pack**.
  */
-fun guideMastery(sample: Sample, band: CefrLevel, plain: Boolean): MasteryLookup {
+fun guideMastery(
+    sample: Sample,
+    band: CefrLevel,
+    plain: Boolean,
+    saved: Pair<WordKey, MasteryLevel>? = null,
+): MasteryLookup {
     if (plain) return MasteryLookup.AllKnown
     val colours = sample.colourMap(band)
     return MasteryLookup { key ->
-        if (key.language?.let(::baseLanguage) == baseLanguage(sample.language)) {
-            colours[key.key] ?: MasteryLevel.KNOWN
-        } else {
-            MasteryLevel.KNOWN
+        when {
+            saved != null && key == saved.first -> saved.second
+
+            key.language?.let(::baseLanguage) == baseLanguage(sample.language) ->
+                colours[key.key] ?: MasteryLevel.KNOWN
+
+            else -> MasteryLevel.KNOWN
         }
     }
 }
@@ -83,23 +95,24 @@ fun guideLemmas(sample: Sample): LemmaLookup = LemmaLookup { surface, language -
     }
 }
 
-/** The one-page document the guide's page screens host in the real reader. */
-@Suppress("LongParameterList") // The sample, the band, the beat, the segmenter and the selection.
+/** The one-page document the guide's page screens host in the embedded block. */
+@Suppress("LongParameterList") // The sample, the band, the beat, the segmenter, the selection and the save.
 fun guideDocument(
     sample: Sample,
     band: CefrLevel,
     plain: Boolean,
     segmenter: TextSegmenter,
     selectedRange: IntRange? = null,
+    saved: Pair<WordKey, MasteryLevel>? = null,
 ): ReaderDocument = ReaderDocument(
     text = guideText(sample),
     renderer = ReaderRenderer(
         segmenter = segmenter,
-        mastery = guideMastery(sample, band, plain),
+        mastery = guideMastery(sample, band, plain, saved),
         lemmas = guideLemmas(sample),
     ),
     selectedRange = selectedRange,
-    masteryRevision = if (plain) 0 else band.band + 1,
+    masteryRevision = if (plain) 0 else band.band + 1 + (saved?.second?.level ?: 0),
 )
 
 /**
@@ -134,6 +147,26 @@ fun guideNotes(
     return MasteryLevel.entries
         .filter(MasteryLevel::highlighted)
         .mapNotNull { level -> tokens.firstOrNull { token -> token.level == level } }
+}
+
+/**
+ * [tap]'s word as a note, when the sample's glossary answers it (issue #277's
+ * feedback): the sheet opens for **that** word, its meaning read from the same
+ * glossary, and a word the glossary does not carry answers nothing.
+ */
+fun guideNoteFor(sample: Sample, tap: WordTap, band: CefrLevel, translationLanguage: String?): GuideNote? {
+    val meanings = glossaryFor(sample, translationLanguage)?.entriesOf(tap.token.key.key).orEmpty()
+    if (meanings.isEmpty()) return null
+    val meaning = meanings.first().senses.firstOrNull()
+    return GuideNote(
+        key = tap.token.key,
+        surface = tap.token.surface,
+        start = tap.token.start,
+        end = tap.token.end,
+        level = sample.colourMap(band)[tap.token.key.key] ?: MasteryLevel.KNOWN,
+        meaning = meaning?.translations?.firstOrNull() ?: meaning?.definition.orEmpty(),
+        context = tap.contextSentence,
+    )
 }
 
 /**
