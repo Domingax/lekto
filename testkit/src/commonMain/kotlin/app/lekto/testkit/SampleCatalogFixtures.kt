@@ -52,6 +52,56 @@ fun testSampleGlossary(): SampleGlossary = SampleGlossary(
 )
 
 /**
+ * A **Sample** shaped for the first-launch guide (issue #277): one paragraph in
+ * which four words carry the four highlighted **Mastery level**s at every band,
+ * each with a meaning in French, so a test can drive the coloured page's four
+ * notes and the tap's real sheet from one fixture.
+ */
+fun guideSample(language: String = "en"): Sample {
+    val levels = mapOf(
+        "old" to MasteryLevel.RECOGNIZED,
+        "fisherman" to MasteryLevel.UNKNOWN,
+        "row" to MasteryLevel.LEARNED,
+        "small" to MasteryLevel.KNOWN,
+        "boat" to MasteryLevel.KNOWN,
+        "across" to MasteryLevel.KNOWN,
+        "calm" to MasteryLevel.FAMILIAR,
+        "water" to MasteryLevel.KNOWN,
+    )
+    return testSample(
+        language = language,
+        title = "A Guide Sample",
+        paragraphs = listOf("The old fisherman rowed his small boat across the calm water."),
+        difficulty = mapOf(
+            "old" to CefrLevel.A1,
+            "fisherman" to CefrLevel.B2,
+            "row" to CefrLevel.A2,
+            "small" to CefrLevel.A1,
+            "boat" to CefrLevel.A2,
+            "across" to CefrLevel.A1,
+            "calm" to CefrLevel.B1,
+            "water" to CefrLevel.A1,
+        ),
+        forms = mapOf("rowed" to "row"),
+        colourMaps = CefrLevel.entries.associateWith { levels },
+        glossaries = mapOf("fr" to guideGlossary()),
+    )
+}
+
+/** The French meanings the guide's fixture sample carries. */
+fun guideGlossary(): SampleGlossary = SampleGlossary(
+    mapOf(
+        "old" to listOf(meaning("old", "adj", "/əʊld/", "Having lived for a long time.", "vieux")),
+        "fisherman" to listOf(meaning("fisherman", "noun", "/ˈfɪʃəmən/", "A person who catches fish.", "pêcheur")),
+        "row" to listOf(meaning("row", "verb", "/rəʊ/", "To propel a boat with oars.", "ramer")),
+        "calm" to listOf(meaning("calm", "adj", "/kɑːm/", "Free from disturbance.", "calme")),
+    ),
+)
+
+private fun meaning(lemma: String, part: String, pronunciation: String, definition: String, translation: String) =
+    SampleGlossaryEntry(lemma, part, pronunciation, listOf(SampleSense(definition, listOf(translation))))
+
+/**
  * The producer-shaped bytes of a **Sample catalogue** carrying [samples].
  * [formatVersion] defaults to the handshake this build reads; a test passes a
  * different one to prove a catalogue this build cannot read is refused.
