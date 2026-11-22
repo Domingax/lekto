@@ -362,6 +362,10 @@ private val ReadingState.textKey: TextKey
  * Two named groups, not one heading over everything: a single heading left the
  * reader unable to see where "read recently" ended, which was the first note on
  * issue #208's review. The block is the hierarchy that note asked for.
+ *
+ * The **Sample book** leads the list, above every group, and its first-run
+ * sentence stands over it while the vault holds no book (issue #278). A search or
+ * a filter narrows the vault's books under it and never hides the sample.
  */
 @Composable
 @Suppress("LongParameterList") // The state, its actions, and the shelf's three gestures are independent.

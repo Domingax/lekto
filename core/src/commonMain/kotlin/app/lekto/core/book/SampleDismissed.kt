@@ -55,9 +55,10 @@ interface SampleDismissedStore {
  *
  * A document this version cannot read — corrupt, or written by a future one
  * whose shape it does not know — reads as not dismissed, exactly as the reading
- * preferences and the theme degrade (ADR-0023). A sample the reader did not
- * remove stays, which is the recoverable direction: a disappeared demo is
- * worse than a repeated one only if removal were clearable, and it never is.
+ * preferences and the theme degrade (ADR-0023). That is the recoverable
+ * direction: a sample the reader removed once and still sees can be removed
+ * again, whereas a corrupt file must never invent a removal the reader did not
+ * make.
  */
 class JsonSampleDismissedStore(private val files: VaultFileSystem, private val json: Json = Json) :
     SampleDismissedStore {
