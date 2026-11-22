@@ -223,8 +223,9 @@ private fun syncValue(state: SyncUiState, now: Instant): String {
 }
 
 /**
- * One row of the index (docs/design.md §7.5): the area's name, its current value
- * in the muted ink, and the chevron that says a screen opens.
+ * One row of the index (docs/design.md §7.5): the area's name in the row-title
+ * role every other row uses, its current value in the muted ink, and the chevron
+ * that says a screen opens (issue #281).
  *
  * The row merges its children's semantics, so a screen reader announces the name
  * and the value as one button, and a test can assert both on the row's own tag.
@@ -251,7 +252,7 @@ private fun IndexRow(row: IndexEntry) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         ) {
-            Text(row.title, style = MaterialTheme.typography.bodyLarge)
+            Text(row.title, style = MaterialTheme.typography.titleSmall)
             if (row.value != null) {
                 Text(
                     row.value,

@@ -2,6 +2,7 @@ package app.lekto
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -439,7 +441,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, languageSettings = frenchTranslations())) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // No pack is wired, so the panel degrades to the honest message and the
@@ -463,7 +465,7 @@ class AppSemanticsTest {
         }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithText("Reverso").performClick()
 
         assertTrue(
@@ -481,7 +483,7 @@ class AppSemanticsTest {
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         val atPageTwo = awaitPastTheFirstPage()
 
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The reader stays put behind the panel, at the same page.
         assertEquals(atPageTwo, readerProgress(), "the panel must not turn the page")
@@ -501,7 +503,7 @@ class AppSemanticsTest {
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
         val atPageTwo = awaitPastTheFirstPage()
 
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
 
         // A tap on the page, above the panel, is outside it: it closes the panel
@@ -631,7 +633,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, pronouncer = pronouncer)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
@@ -647,7 +649,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, pronouncer = pronouncer)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
@@ -661,7 +663,7 @@ class AppSemanticsTest {
         setContent { App(environment(library)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         onNodeWithText("No speech engine is available", substring = true).assertIsDisplayed()
@@ -833,7 +835,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         // The level is the save: one tap on the fresh level's chip stores the word.
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
 
@@ -865,7 +867,9 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
         openBook()
-        tapFirstWord()
+        // A word the last page shows, found in the text: the page it opens on is a
+        // position, and the capped column moved it (issue #281).
+        tapWord("the")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             vocabulary.all().singleOrNull()?.bookIds == listOf("b1")
@@ -883,7 +887,7 @@ class AppSemanticsTest {
             onAllNodesWithTag(VOCABULARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag(VOCABULARY_BOOK_CHIP_TAG).assertIsDisplayed()
-        onNodeWithTag(vocabularyRowTag(WordKey("en", "on"))).assertIsDisplayed()
+        onNodeWithTag(vocabularyRowTag(WordKey("en", "the"))).assertIsDisplayed()
     }
 
     @Test
@@ -893,7 +897,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
@@ -916,7 +920,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
 
         // The entry survived the restart: the sheet opens on its level.
         onNodeWithText("Saved · Learned").assertIsDisplayed()
@@ -933,16 +937,18 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary, lemmas = lemmas)) }
 
         openBook()
-        tapFirstWord()
+        // The word is found in the text, not at a page position: the page's column
+        // is capped, so which word opens a page moves with the measure (issue #281).
+        tapWord("On")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
 
         // The word panel is open over the page bar; close it before turning the page.
         onNodeWithTag(LOOKUP_CLOSE_TAG).performClick()
         onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
-        tapFirstWord()
-        // The same word (page two starts with "On.", so its key is "on"), so its
-        // entry updates in place rather than adding a second one.
+        // The book repeats its paragraph, so the same spelling is on page two too:
+        // its entry updates in place rather than adding a second one.
+        tapWord("On")
         onNodeWithText("Saved · Familiar").assertIsDisplayed()
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
         assertEquals(1, vocabulary.all().size)
@@ -964,7 +970,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
 
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
@@ -1271,7 +1277,7 @@ class AppSemanticsTest {
 
         // Save the first word at a level, then find it in the list.
         openBook()
-        tapFirstWord()
+        tapWord("On")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
         val saved = vocabulary.all().single()
@@ -1294,7 +1300,7 @@ class AppSemanticsTest {
         // dropped with the entry, so list and text agree.
         tapSection(ShellSection.LIBRARY)
         openBook()
-        tapFirstWord()
+        tapWord("On")
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         assertTrue(
@@ -1767,23 +1773,34 @@ private fun ComposeUiTest.typeSearch(query: String) {
 }
 
 /**
- * Taps the first word on the page. Words carry no link of their own (ADR-0007),
- * so the page hit-tests the tap: a few points inside the text's first line lands
- * on its first word.
+ * Clicks [surface] where the page draws it, read from the text's own layout: a
+ * page break or a measure change moves a word, so its position is not a fixture
+ * (issue #281). The first occurrence on the page is the one clicked.
  */
 @OptIn(ExperimentalTestApi::class)
-private fun ComposeUiTest.tapFirstWord() {
-    // The page arrives a frame after the reader opens (it is paginated and
-    // tokenised asynchronously), so wait for its text before tapping.
+@Suppress("MagicNumber") // A few points into the word, so the click lands on its glyphs.
+private fun ComposeUiTest.tapWord(surface: String) {
     waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
         onAllNodesWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
     }
-    // A mouse click rather than a touch: a text field left with a cursor (the
-    // Library's search, a dialog) makes Compose's touch injector refuse the tap.
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
-    val point = Offset(text.left - page.left + 8f, text.top - page.top + 8f)
-    onNodeWithTag(READER_PAGE_TAG).performMouseInput { click(point) }
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { line -> line.text }
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val at = shown.indexOf(surface).takeIf { index -> index >= 0 }
+        ?: error("the page does not show $surface: $shown")
+    val box = layout.getBoundingBox(at)
+    val origin = text.boundsInRoot.topLeft
+    onNodeWithTag(READER_PAGE_TAG).performMouseInput {
+        click(
+            Offset(
+                origin.x - page.left + box.left + box.width / 2f,
+                origin.y - page.top + box.top + box.height / 2f,
+            ),
+        )
+    }
 }
 
 /** Long-presses the first word link and drags across the line, selecting a phrase. */

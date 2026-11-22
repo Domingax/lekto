@@ -1,7 +1,6 @@
 package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.Dark
 import app.lekto.theme.InkOnLightFill
@@ -53,14 +52,6 @@ class MasteryPaletteTest {
         papers.forEach { theme ->
             val ramp = MasteryPalette.of(theme)
             assertEquals(Color.Unspecified, MasteryLevel.KNOWN.readerColor(ramp))
-        }
-        assertEquals(TextDecoration.None, MasteryLevel.KNOWN.readerDecoration())
-    }
-
-    @Test
-    fun highlightedLevelsAreUnderlined() {
-        MasteryLevel.entries.filter { it.highlighted }.forEach { level ->
-            assertEquals(TextDecoration.Underline, level.readerDecoration())
         }
     }
 

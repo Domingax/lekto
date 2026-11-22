@@ -3,8 +3,10 @@ package app.lekto.reader
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
@@ -21,9 +23,13 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
+import app.lekto.core.reading.ReadingMargin
+import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
@@ -80,7 +86,7 @@ class ReaderScreenSemanticsTest {
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(firstWordTapPoint()) }
 
         val word = assertNotNull(tapped, "a tap on a word must ask for its lookup")
-        assertEquals("The", word.token.surface)
+        assertEquals("On", word.token.surface)
         assertNotNull(word.contextSentence, "the tap carries the sentence it was found in")
     }
 
@@ -359,6 +365,36 @@ class ReaderScreenSemanticsTest {
         assertTrue(chapter.contains(phrase.text), "the phrase must come from the chapter: ${phrase.text}")
     }
 
+    /**
+     * The largest reading size at a doubled system font scale (issue #281): the
+     * two bands still hold their controls — the back arrow, the title and the
+     * **Aa** control above; the chevrons and the position below — and the page
+     * still paginates, so the fix for the page's measure did not assume a
+     * book-sized window.
+     */
+    @Test
+    fun theLargestPreferenceAtTwoHundredPercentFontScaleKeepsBothBandsAndPaginates() = runComposeUiTest {
+        setContent {
+            Reader(
+                renderer,
+                preferences = ReadingPreferences(size = ReadingPreferences.MAX_SIZE, margin = ReadingMargin.WIDE),
+                fontScale = 2f,
+            )
+        }
+
+        onNodeWithTag(READER_BACK_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_TITLE_TAG).assertIsDisplayed()
+        onNodeWithTag(READING_PREFERENCES_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_POSITION_TAG).assertIsDisplayed()
+        onNodeWithTag(READER_PREVIOUS_PAGE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        onNodeWithTag(READER_NEXT_PAGE_TAG).assertIsDisplayed().assertIsEnabled()
+
+        assertEquals(0, progressPercent())
+        onNodeWithTag(READER_NEXT_PAGE_TAG).performClick()
+
+        assertTrue(progressPercent() > 0, "the page still paginates at the largest size and a doubled font scale")
+    }
+
     @Composable
     @Suppress("LongParameterList") // The reader's inputs are the test's knobs; a bundle would only hide them.
     private fun Reader(
@@ -374,23 +410,28 @@ class ReaderScreenSemanticsTest {
         onMarkFinished: () -> Unit = {},
         onMarkUnfinished: () -> Unit = {},
         onSeeWords: () -> Unit = {},
+        preferences: ReadingPreferences = ReadingPreferences.DEFAULT,
+        fontScale: Float = 1f,
     ) {
         MaterialTheme {
-            ReaderScreen(
-                document = ReaderDocument(chapter, renderer, initialOffset),
-                modifier = Modifier.size(width = 360.dp, height = 640.dp),
-                actions = ReaderActions(
-                    onWordTap = onWordTap,
-                    onPhraseSelected = onPhraseSelected,
-                    onBack = onBack,
-                    onPositionChange = onPositionChange,
-                    onMarkFinished = onMarkFinished,
-                    onMarkUnfinished = onMarkUnfinished,
-                    onSeeWords = onSeeWords,
-                ),
-                initiallyFinished = initiallyFinished,
-                bookWords = bookWords,
-            )
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                ReaderScreen(
+                    document = ReaderDocument(chapter, renderer, initialOffset, preferences = preferences),
+                    modifier = Modifier.size(width = 360.dp, height = 640.dp),
+                    actions = ReaderActions(
+                        onWordTap = onWordTap,
+                        onPhraseSelected = onPhraseSelected,
+                        onBack = onBack,
+                        onPositionChange = onPositionChange,
+                        onMarkFinished = onMarkFinished,
+                        onMarkUnfinished = onMarkUnfinished,
+                        onSeeWords = onSeeWords,
+                    ),
+                    initiallyFinished = initiallyFinished,
+                    bookWords = bookWords,
+                )
+            }
         }
     }
 
@@ -411,12 +452,26 @@ private fun ComposeUiTest.progressPercent(): Int {
         ?: error("no percentage in the position: $text")
 }
 
-/** The first word link's centre, in the reader page's coordinates. */
+/**
+ * The first body word's centre, in the reader page's coordinates. The sample
+ * opens on a chapter heading, and a heading carries no word layer (issue #281),
+ * so the tap lands on the first word of the paragraph under it.
+ */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("MagicNumber") // A few points into the text's first line.
+@Suppress("MagicNumber") // A few points into the word, so the tap lands on its glyphs.
 private fun ComposeUiTest.firstWordTapPoint(): Offset {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
-    // A few points inside the text's first line, which starts with the first word.
-    return Offset(text.left - page.left + 8f, text.top - page.top + 8f)
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { line -> line.text }
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val at = shown.indexOf(FIRST_BODY_WORD).takeIf { index -> index >= 0 }
+        ?: error("the page does not show $FIRST_BODY_WORD: $shown")
+    val box = layout.getBoundingBox(at)
+    val origin = text.boundsInRoot.topLeft
+    return Offset(origin.x - page.left + box.left + 4f, origin.y - page.top + box.top + box.height / 2f)
 }
+
+/** The first word of the sample's first paragraph, under the chapter heading. */
+private const val FIRST_BODY_WORD = "On the quiet"

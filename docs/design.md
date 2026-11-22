@@ -79,10 +79,13 @@ between the paper and normal text, so this ramp is the tightest of the three.
 the yellow was 1.5:1, the orange and green 2.3:1 — and that is a defect, not a style. Level 4 carries
 no colour because "known" is normal text, and the absence is the reward.
 
-Colouring is applied to the **letters**, with the **single underline** the reader already renders
-for every highlighted level. The underline is what carries "this is a word you are learning" to a
-reader who cannot read the hue; a different shape per level would need a custom `TextDecoration`
-renderer Compose does not offer. A **background wash** behind the word was prototyped
+Colouring is applied to the **letters**, with a **1 dp dotted rule** drawn under each highlighted
+word in that word's level's colour. The rule keeps its hue, so the page reads as a book rather than
+a wall of links, and it is the non-colour cue for a reader who cannot read the hue — weight is not a
+reliable one for low vision. It is drawn by the page from the text layout the page already keeps for
+hit-testing, not carried by the text as a `TextDecoration`: Compose renders only a solid underline,
+and a per-word annotation is a layout cost the reader has already paid once (issue #251). A known
+word carries neither the colour nor the rule. A **background wash** behind the word was prototyped
 (`traitements.png`) and rejected: it turns a page into an annotated workbook after three hundred
 pages. It remains the documented fallback if the four levels ever prove too close in hue — both
 ramps live in one file, so switching is a local change.
@@ -135,6 +138,13 @@ The scale actually used, and nothing else:
 | Value under a row title | sans | 12 sp | normal |
 | Field label, group label | sans | 11 sp | normal, muted |
 | Navigation label | sans | 11 sp | medium when current |
+
+The reading column is capped at **34 em** — about 68 characters at 18 sp, inside the 45–75 band a
+learner reads comfortably — and a wider window turns the extra width into margin, so the column
+stays centred. The cap is held in **em**, not dp, so it follows the size control and the platform's
+font scale. The reader's margin is a minimum and the cap a maximum: neither overrides the other, and
+the paginator measures the capped column, so page breaks and the **Reading progress** are the same
+whatever the window's width.
 
 ## 4. Shape, elevation and spacing
 
@@ -361,7 +371,10 @@ the next page, rightward for the previous. The page has no tap zones: a tap on a
 lookup, and a tap anywhere else does nothing, so reaching for the text never turns a page by
 accident. The bands never hide; there is no "just the content" mode. A chevron disabled at a
 bound stays visible but faded, and the next chevron stays live on the last page, where it raises
-the end of the book. A long press on a word selects a phrase (§7.3).
+the end of the book. A long press on a word selects a phrase (§7.3). The page's text column is
+capped at 34 em (§3) and centred, the extra width of a wide window becoming margin; the
+paginator measures that column, so the window's width never moves a page break or the
+**Reading progress**.
 
 The position reads the current chapter's
 title above the **Reading progress** — `XI` over `46%` — so it uses the same words as the chapter

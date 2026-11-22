@@ -287,7 +287,9 @@ search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
 rule and the hairline that parts two rows — on four books across three languages.
 Its geometry comes from the screen's own constants and its rule from the screen's
 own composable; only the words are bars, because glyphs would not verify. The
-reader adds `reader-<paper>.png` per paper (issue #209): the 48 dp top band with
+reader adds `reader-<paper>.png` per paper (issue #209): the page's lines as a
+first run — every word unknown, each line hanging the page's 1 dp dotted rule
+(issue #281) — the 48 dp top band with
 its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
 chevrons that turn the page, and the position, and one
 `reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
