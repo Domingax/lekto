@@ -324,4 +324,8 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.END_OF_BOOK_WORDS_KNOWN_ONE to "1 now known",
     TextKey.END_OF_BOOK_WORDS_KNOWN_MANY to "{0} now known",
     TextKey.SEE_THE_WORDS to "See the words",
+    TextKey.LOOKUP_STATE_SAVED to "Saved · {0}",
+    TextKey.LOOKUP_STATE_LIKELY to "Likely {0}",
+    TextKey.LOOKUP_STATE_NOT_SAVED to "Not saved",
+    TextKey.LOOKUP_STATE_FAILED to "Couldn't save",
 )

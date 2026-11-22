@@ -9,6 +9,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
@@ -70,6 +71,7 @@ import app.lekto.core.theme.AppTheme
 import app.lekto.core.theme.AppThemeStore
 import app.lekto.core.vault.DerivedAssetStore
 import app.lekto.core.vault.DeviceId
+import app.lekto.core.vault.JsonVaultStore
 import app.lekto.core.vocabulary.VaultVocabulary
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
@@ -140,6 +142,7 @@ import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
+import app.lekto.testkit.FlakyVaultFileSystem
 import app.lekto.testkit.InMemoryAppThemeStore
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
@@ -832,8 +835,8 @@ class AppSemanticsTest {
         // save defaults to the familiar level (ADR-0030).
         assertEquals(MasteryLevel.FAMILIAR, entry.mastery)
         // No toast, no dialog and no Save control: the reader's colour is the
-        // confirmation, and the footer already names the level.
-        compose.onNodeWithText("Familiar").assertIsDisplayed()
+        // confirmation, and the footer states the fact (issue #279).
+        compose.onNodeWithText("Saved · Familiar").assertIsDisplayed()
     }
 
     @Test
@@ -887,6 +890,8 @@ class AppSemanticsTest {
             vocabulary.all().single().mastery == MasteryLevel.LEARNED
         }
         assertEquals("changing the level must not add a second entry", 1, vocabulary.all().size)
+        // The footer follows the fact: the new level, not the old one (issue #279).
+        compose.onNodeWithText("Saved · Learned").assertIsDisplayed()
     }
 
     @Test
@@ -901,7 +906,7 @@ class AppSemanticsTest {
         compose.tapFirstWord()
 
         // The entry survived the restart: the sheet opens on its level.
-        compose.onNodeWithText("Learned").assertIsDisplayed()
+        compose.onNodeWithText("Saved · Learned").assertIsDisplayed()
         compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).assertIsSelected()
     }
 
@@ -930,9 +935,35 @@ class AppSemanticsTest {
         compose.tapFirstWord()
         // The same lemma again, so its entry updates in place rather than adding a
         // second one.
-        compose.onNodeWithText("Familiar").assertIsDisplayed()
+        compose.onNodeWithText("Saved · Familiar").assertIsDisplayed()
         compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsSelected()
         assertEquals(1, vocabulary.all().size)
+    }
+
+    @Test
+    fun aRefusedSaveSaysSoAndNoChipClaimsTheSave() {
+        // A full disk refuses the write: the footer must say it failed and the word
+        // must stay unsaved, not show a receipt for a record the vault never took
+        // (issue #279).
+        val files = FlakyVaultFileSystem().apply { failOn = { path -> path.startsWith("vocabulary/") } }
+        val vocabulary = VaultVocabulary(
+            JsonVaultStore(files),
+            InMemoryTombstoneStore(),
+            deterministicSeams(),
+            DeviceId("device-a"),
+        )
+        val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
+        compose.setContent { App(environment(library, vocabulary = vocabulary)) }
+
+        compose.openBook()
+        compose.tapFirstWord()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Couldn't save").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).assertIsNotSelected()
+        assertTrue("the vault refused the write, so no entry may exist", vocabulary.all().isEmpty())
     }
 
     @Test

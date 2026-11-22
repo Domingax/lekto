@@ -11,10 +11,10 @@ it is not split again, and the top of it is hidden for as long as the panel is
 open.
 
 On a desktop with a wide window the panel is not raised over the page at all: it
-takes the reader's right-hand column, and the page keeps its width. Its level name
-stands above the chips there, because five chips leave no room for the name beside
-them. Close it and the column returns to the chapter list. See
-[Reading](/reading#on-a-desktop).
+takes the reader's right-hand column, and the page keeps its width. The line that
+states whether the word is saved stands above the chips there, because five chips
+leave no room for it beside them. Close it and the column returns to the chapter
+list. See [Reading](/reading#on-a-desktop).
 
 - The word in the reading serif, with its part of speech and pronunciation under
   it.
@@ -33,9 +33,14 @@ and Lekto stores the **Vocabulary entry** at that level, with the **Context
 sentence** it appeared in and a translation to fall back on. One tap, one
 intention.
 
-The current level's name stands beside the chips, so the numbers never need a
-legend. Tapping another chip changes the level of a word you already saved, and
-the word's colour in the page follows at once. There is no separate Save button.
+The footer states the word's state, never an intention: it reads `Not saved`
+before you save, or `Likely Recognized` when the level Lekto derived from the word
+and your **Reader level** suggests one. Once the word is stored it reads `Saved ·
+Recognized` and the saved level's chip carries a ring, so a suggestion is never
+mistaken for a fact and the numbers never need a legend. Tapping another chip
+changes the level of a word you already saved, and the word's colour in the page
+follows at once. If the vault cannot take the write, the footer says `Couldn't
+save` and the word stays unsaved. There is no separate Save button.
 
 See [Vocabulary](/vocabulary) for the list of saved words.
 

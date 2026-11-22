@@ -58,18 +58,25 @@ class VocabularyController(private val vocabulary: Vocabulary, private val chang
     fun all(): List<VocabularyEntry> = saved.values.sortedWith(entryOrder)
 
     /**
-     * Saves [entry] to the vault and folds it into the reader's state. [bookId]
-     * is the book the reader saved the word from (issue #280): it is added to the
-     * entry's history once, keeping every book the record already names. A save
-     * that names no book — a level change from the list — leaves the history as it
-     * was.
+     * Saves [entry] to the vault and folds it into the reader's state, returning
+     * whether the write landed (issue #279): the vault write is blocking and can
+     * fail, and the reader's footer states the failure rather than claiming a save
+     * that never happened. A refused write leaves the state — and the revision —
+     * untouched, so the word stays unsaved and nothing recolours.
+     *
+     * [bookId] is the book the reader saved the word from (issue #280): it is
+     * added to the entry's history once, keeping every book the record already
+     * names. A save that names no book — a level change from the list — leaves the
+     * history as it was.
      */
-    fun save(entry: VocabularyEntry, bookId: String? = null) {
+    fun save(entry: VocabularyEntry, bookId: String? = null): Boolean {
         val merged = entry.remembering(bookId)
-        changedAt[merged.key] = vocabulary.save(merged)
+        val written = runCatching { vocabulary.save(merged) }.getOrNull() ?: return false
+        changedAt[merged.key] = written
         saved[merged.key] = merged
         revision++
         changes.contentChanged()
+        return true
     }
 
     /**

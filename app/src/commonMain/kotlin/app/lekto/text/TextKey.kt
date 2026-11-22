@@ -364,4 +364,12 @@ enum class TextKey {
     END_OF_BOOK_WORDS_KNOWN_ONE,
     END_OF_BOOK_WORDS_KNOWN_MANY,
     SEE_THE_WORDS,
+
+    // The lookup footer's state line (issue #279): a fact when the word is saved,
+    // a suggestion when it is not, and an honest failure. The saved and likely
+    // texts interpolate the level's name.
+    LOOKUP_STATE_SAVED,
+    LOOKUP_STATE_LIKELY,
+    LOOKUP_STATE_NOT_SAVED,
+    LOOKUP_STATE_FAILED,
 }

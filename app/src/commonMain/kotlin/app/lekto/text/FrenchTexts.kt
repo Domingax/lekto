@@ -338,6 +338,10 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.END_OF_BOOK_WORDS_KNOWN_ONE to "1 désormais connu",
     TextKey.END_OF_BOOK_WORDS_KNOWN_MANY to "{0} désormais connus",
     TextKey.SEE_THE_WORDS to "Voir les mots",
+    TextKey.LOOKUP_STATE_SAVED to "Enregistré · {0}",
+    TextKey.LOOKUP_STATE_LIKELY to "Probablement {0}",
+    TextKey.LOOKUP_STATE_NOT_SAVED to "Non enregistré",
+    TextKey.LOOKUP_STATE_FAILED to "Impossible d'enregistrer",
 )
 
 private val FrenchLanguageNames: Map<String, String> = mapOf(

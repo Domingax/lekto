@@ -415,8 +415,8 @@ the top of the page is clipped for as long as the sheet is open — a transient 
 A panel, not an outlined card: square where it joins the bottom edge like the **Aa** panel, the
 surface tone and a hairline inset to the content, and a drag handle marks where it was raised
 from. On desktop it is the context column instead, and closing the word returns the column to the
-chapter list. There the level's name stands above its chips rather than beside them: five chips
-leave no room for a name in the column.
+chapter list. There the footer's state line stands above its chips rather than beside them: five
+chips leave no room for it in the column.
 
 A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
 inflection, its parts of speech and pronunciation, the speaker and the close action; then the
@@ -426,8 +426,12 @@ sheet's edge.
 
 **There is no Save button.** The level (`Mastery`) *is* the save: one tap on a level chip stores the word at
 that level, which is one gesture for one intention. Every chip is filled with its level's colour and
-carries its number; the current one adds an ink ring, and its **name** stands beside the row, so the
-numbers never need a legend.
+carries its number. The footer **states a fact or a suggestion, never an intention**: a word that is not
+saved reads `Not saved` in the muted ink, or `Likely Recognized` in the muted ink when the derived level
+suggests one; a saved word reads `Saved · Recognized` in the ink, and its chip adds an ink ring. A
+suggestion rings no chip, so the numbers never need a legend and a suggestion never reads as a fact. A
+refused write reads `Couldn't save` in the muted ink and the word stays unsaved — there is no toast and no
+undo; a wrong tap is corrected by tapping the right chip, and the line always states the current fact.
 
 A **phrase** is the word panel's sibling on the same shell (issue #211): the phrase in the serif with
 the close icon, then the answer in the body size. **With a provider**, the translation stands first
@@ -670,7 +674,8 @@ the page behind it.
   panel's values and by the Vocabulary list's level filters, so a chip looks the same wherever it
   chooses something (§7.2, §7.4).
 - The mastery selector — `app/src/commonMain/kotlin/app/lekto/reader/MasterySelector.kt`: the level
-  named beside the five numbered chips, shared by the reader's lookup footer (§7.3) and the
+  named beside the five numbered chips — the caller's line, so the reader's footer states its saved
+  or suggested level there (§7.3) — shared by the reader's lookup footer (§7.3) and the
   Vocabulary list's level sheet (§7.4), so the two never drift into two selectors (#178).
 - The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,
