@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import app.lekto.core.book.Book
-import app.lekto.core.book.SampleRow
+import app.lekto.core.book.SampleBookRow
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
@@ -42,7 +42,7 @@ internal fun FirstRunShelf() {
  * and the removal that asks once before anything is deleted.
  */
 @Composable
-internal fun SampleBookRow(row: SampleRow, onOpen: (Book) -> Unit, onDelete: () -> Unit) {
+internal fun SampleShelfRow(row: SampleBookRow, onOpen: (Book) -> Unit, onDelete: () -> Unit) {
     BookRow(
         book = row.book,
         progress = row.progress,

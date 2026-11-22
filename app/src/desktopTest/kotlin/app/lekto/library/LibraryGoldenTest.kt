@@ -153,7 +153,7 @@ private fun ShelfPreview() {
         }
         SearchSurface()
         FilterChips()
-        SampleRowPreview()
+        SampleShelfRowPreview()
         ResumeBlockPreview(PREVIEW_BOOKS.first { book -> book.recentlyRead })
         SectionHeading(top = LektoSpacing.BetweenRelatedLines)
         PREVIEW_BOOKS.filter { book -> book.recentlyRead }.drop(1).forEach { book -> PreviewRow(book) }
@@ -169,7 +169,7 @@ private fun ShelfPreview() {
  * preview, the words are bars.
  */
 @Composable
-private fun SampleRowPreview() {
+private fun SampleShelfRowPreview() {
     val theme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),

@@ -23,7 +23,7 @@ import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ReadingState
-import app.lekto.core.book.SampleRow
+import app.lekto.core.book.SampleBookRow
 import app.lekto.core.language.SampleRoster
 import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.sample.Sample
@@ -250,7 +250,7 @@ class GuideScreenSemanticsTest {
                 LektoTheme {
                     Column(Modifier.fillMaxSize()) {
                         LibraryScreen(
-                            state = LibraryUiState(sample = sampleRow()),
+                            state = LibraryUiState(sample = sampleBookRow()),
                             levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
                             modifier = Modifier.weight(1f),
                         )
@@ -299,7 +299,7 @@ class GuideScreenSemanticsTest {
 
     private fun stageActions(onSkip: () -> Unit): GuideActions = GuideActions(onSkip = onSkip, onFinish = onSkip)
 
-    private fun sampleRow(): SampleRow = SampleRow(
+    private fun sampleBookRow(): SampleBookRow = SampleBookRow(
         book = Book(
             id = Sample.identityOf("en"),
             title = "A Guide Sample",

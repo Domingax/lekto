@@ -8,7 +8,7 @@ import app.lekto.core.book.ImportProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingState
 import app.lekto.core.book.SampleLibrary
-import app.lekto.core.book.SampleRow
+import app.lekto.core.book.SampleBookRow
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
 import kotlinx.coroutines.CoroutineDispatcher
@@ -51,7 +51,7 @@ data class LibraryUiState(
     val importing: Boolean = false,
     val progress: Float = 0f,
     val error: AppMessage? = null,
-    val sample: SampleRow? = null,
+    val sample: SampleBookRow? = null,
     val sampleFailure: AppMessage? = null,
 ) {
     /**
