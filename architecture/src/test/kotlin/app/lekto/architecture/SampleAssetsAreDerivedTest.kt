@@ -75,12 +75,13 @@ private const val CATALOGUE: String = "core/src/commonMain/resources/samples/cat
 
 /**
  * The only vault package the sample book may name (issue #278): the derived
- * store it lives in, the byte seam behind that store, and the JSON codec it is
+ * store it lives in, the byte seam behind that store, and the codecs it is
  * written through. Anything else under `app.lekto.core.vault` — a record, the
  * bundle, the manifest — would put the sample in the **Vault**.
  */
 private val DERIVED_SEAM = setOf(
     "app.lekto.core.vault.DerivedAssetStore",
+    "app.lekto.core.vault.InstantIso8601Serializer",
     "app.lekto.core.vault.VaultCodec",
     "app.lekto.core.vault.VaultFileSystem",
 )
