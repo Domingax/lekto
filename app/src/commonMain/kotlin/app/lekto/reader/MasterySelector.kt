@@ -51,7 +51,7 @@ fun MasterySelector(
     levelTag: String,
     modifier: Modifier = Modifier,
     stacked: Boolean = false,
-    name: @Composable () -> Unit = { level?.let { current -> LevelName(current, levelTag) } },
+    name: @Composable () -> Unit = { level?.let { current -> LevelName(current) } },
 ) {
     if (stacked) {
         Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
@@ -93,7 +93,7 @@ private fun Chips(level: MasteryLevel?, onSelect: (MasteryLevel) -> Unit, chipTa
 
 /** The current level's name, in ordinary ink, so a chip's number is never the only signal. */
 @Composable
-private fun LevelName(level: MasteryLevel, levelTag: String) {
+private fun LevelName(level: MasteryLevel) {
     val texts = LocalAppTexts.current
     Column(
         modifier = Modifier.heightIn(min = LektoSpacing.TouchTarget),

@@ -917,7 +917,13 @@ class AppSemanticsTest {
         // A full disk refuses the write: the footer must say it failed and the word
         // must stay unsaved, not show a receipt for a record the vault never took
         // (issue #279).
-        val vocabulary = refusingVocabulary()
+        val files = FlakyVaultFileSystem().apply { failOn = { path -> path.startsWith("vocabulary/") } }
+        val vocabulary = VaultVocabulary(
+            JsonVaultStore(files),
+            InMemoryTombstoneStore(),
+            deterministicSeams(),
+            DeviceId("device-a"),
+        )
         val library = InMemoryLibrary().apply { import("lantern.epub", byteArrayOf(1)) }
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
@@ -1660,15 +1666,6 @@ internal fun environment(
     llm = llm,
     sync = sync,
 )
-
-/**
- * A vocabulary over a vault that refuses every record write, as a full disk would
- * (issue #279): the save path must report the failure rather than claim it landed.
- */
-private fun refusingVocabulary(): Vocabulary {
-    val files = FlakyVaultFileSystem().apply { failOn = { path -> path.startsWith("vocabulary/") } }
-    return VaultVocabulary(JsonVaultStore(files), InMemoryTombstoneStore(), deterministicSeams(), DeviceId("device-a"))
-}
 
 /**
  * Sync services over [vault] and [target], turned on with a stored password, so

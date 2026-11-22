@@ -268,7 +268,9 @@ private fun stateText(vocabulary: VocabularyPanel, saved: MasteryLevel?): String
     val texts = LocalAppTexts.current
     return when {
         vocabulary.saveFailed -> texts[TextKey.LOOKUP_STATE_FAILED]
+
         saved != null -> texts.message(AppMessage.of(TextKey.LOOKUP_STATE_SAVED, texts.masteryName(saved)))
+
         vocabulary.suggestedLevel != null -> texts.message(
             AppMessage.of(TextKey.LOOKUP_STATE_LIKELY, texts.masteryName(vocabulary.suggestedLevel)),
         )
