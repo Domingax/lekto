@@ -60,8 +60,9 @@ import kotlin.test.Test
  * its muted meta line, the two real
  * icons, the numbered senses with their translations, the unsaved footer's state
  * line in the muted ink beside the five filled chip frames, none ringed, and the
- * references as one muted line — over a page lifted under the sheet by just
- * enough to keep the washed word in view, its first line clipped at the top and
+ * references as one muted line closing the body above that pinned footer — over a
+ * page lifted under the sheet by just enough to keep the washed word in view, its
+ * first line clipped at the top and
  * its words unchanged. The semantics suite proves the text, the lift, the states
  * and the interactions.
  *
@@ -98,6 +99,9 @@ private val SHEET_HEIGHT = 640.dp
 
 /** The most of the screen the sheet may cover, as the panel enforces it. */
 private val SHEET_MAX_HEIGHT = SHEET_HEIGHT * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+
+/** The offline sheet is content-sized: its message, its quiet action and the references, no more. */
+private val OFFLINE_SHEET_HEIGHT = 260.dp
 
 /** The drag handle's bar. */
 private val HANDLE_WIDTH = 32.dp
@@ -142,7 +146,10 @@ private fun LookupPreview(offline: Boolean) {
     Box(Modifier.size(width = SHEET_WIDTH, height = SHEET_HEIGHT).background(theme.background)) {
         PageBehind()
         Surface(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(SHEET_MAX_HEIGHT),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(if (offline) OFFLINE_SHEET_HEIGHT else SHEET_MAX_HEIGHT),
             color = theme.surface,
             border = BorderStroke(1.dp, theme.outline),
         ) {
@@ -235,19 +242,26 @@ private fun BandIcon(imageVector: androidx.compose.ui.graphics.vector.ImageVecto
     }
 }
 
-/** Three numbered senses, each with its translation under it in the muted ink. */
+/** Three part-of-speech groups of two numbered senses, then the references closing the same scroll. */
 @Composable
 private fun ColumnScope.SensesBody() {
     val theme = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
-        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
-    ) {
-        repeat(3) { SenseRow() }
-        Line(theme.onSurfaceVariant, LineBar(height = 9.dp, share = 0.08f))
+    Column(Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
+            repeat(3) {
+                Line(theme.onSurfaceVariant, LineBar(height = 9.dp, share = 0.12f))
+                SenseRow()
+                SenseRow()
+            }
+        }
+        PreviewDivider()
+        ReferenceLine()
     }
 }
 
@@ -264,21 +278,38 @@ private fun SenseRow() {
     }
 }
 
-/** The no-pack state: one honest sentence bar where the senses would be. */
+/**
+ * The no-pack state: the honest message, the quiet door to the dictionary, and the
+ * references closing the same scroll.
+ */
 @Composable
 private fun ColumnScope.OfflineBody() {
     val theme = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
-    ) {
-        Line(theme.onBackground, LineBar(height = 10.dp, share = 0.62f))
+    Column(Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
+            Line(theme.onBackground, LineBar(height = 10.dp, share = 0.62f))
+            InstallAction()
+        }
+        PreviewDivider()
+        ReferenceLine()
     }
 }
 
-/** The state line in the muted ink beside the five chips, then the references as one muted line. */
+/** The one quiet action under the message: a text button's shape in the accent ink. */
+@Composable
+private fun InstallAction() {
+    Box(Modifier.height(LektoSpacing.TouchTarget), contentAlignment = Alignment.CenterStart) {
+        Line(MaterialTheme.colorScheme.primary, LineBar(height = 9.dp, share = 0.34f))
+    }
+}
+
+/** The state line in the muted ink beside the five chips. The level is the footer's only content. */
 @Composable
 private fun SheetFooter() {
     val theme = MaterialTheme.colorScheme
@@ -296,8 +327,6 @@ private fun SheetFooter() {
         }
         MasteryChips()
     }
-    PreviewDivider()
-    ReferenceLine()
 }
 
 /**
