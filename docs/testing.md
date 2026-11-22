@@ -295,13 +295,15 @@ hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
 and the page clipped rather than repaginated. The lookup sheet adds one
 `word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
-(issue #210): the sheet raised over a page at the 45 % cap, square at its top
+(issue #210): the sheet raised over a page at the 60 % cap, square at its top
 edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
-meta bars, the two real icons, the numbered senses with their translations, the
-unsaved footer's state line in the muted ink beside the five filled chip frames
-(none ringed, because no level is saved yet) and the references as one muted,
-content-aligned line; the offline sheet swaps
-the senses for the honest message. The phrase sheet adds
+meta bars, the two real icons, the part-of-speech groups of numbered senses with
+their translations, the unsaved footer's state line in the muted ink beside the
+five filled chip frames (none ringed, because no level is saved yet) and the
+references as one muted, content-aligned line closing the scrolling body above
+that footer (issue #282); the offline sheet swaps
+the senses for the honest message and its quiet install action, at its
+content-sized height. The phrase sheet adds
 `phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
 (issue #211): the same shell with the phrase in the serif band and the close icon,
 then either the translation body with its disclosure or the prompt with its
@@ -1044,11 +1046,14 @@ load once, an unsaved word is unknown, a save bumps the revision that recolours,
 and a previous session's save is present at startup — is a `VocabularyControllerTest`
 in `app/desktopTest`, and the panel's level chips are its save (issue #210):
 `WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
-no separate Save control exists, that the sheet covers at most 45 % of the screen,
-and, since issue #279, that the footer states the word's state rather than a
+no separate Save control exists, that the sheet covers at most 60 % of the screen
+and is content-sized below it, that its references scroll at the end of the body
+without changing its height, that the handle's downward drag closes the sheet, and,
+since issue #279, that the footer states the word's state rather than a
 selection: `Not saved` or `Likely <level>` while it is unsaved with no chip
 marked, `Saved · <level>` and the marked chip once it is, and `Couldn't save` when
-the vault refuses the write. `VocabularyControllerTest` pins that a refused write
+the vault refuses the write. The offline sheet's `Install the offline dictionary`
+is driven from `AppSemanticsTest` into Settings ▸ Languages. `VocabularyControllerTest` pins that a refused write
 is reported and leaves the word unsaved. `AppSemanticsTest`
 also drives the reader's lift: a word at the bottom of the page is tapped, the
 sheet opens, and the word's bounds are asserted above the sheet's top while the
