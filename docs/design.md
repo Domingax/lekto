@@ -693,6 +693,11 @@ the page behind it.
   `library/LibraryRow.kt` (issue #208) and the Vocabulary list's in `vocabulary/VocabularyRow.kt`
   (issue #212), whose level sheet and desktop column are `vocabulary/VocabularyLevelSheet.kt`
   (issue #178). A new screen follows §7's shape and §4's spacing.
+- The first-launch guide — `app/src/commonMain/kotlin/app/lekto/guide/`: `GuideScreen` draws
+  the screens from the reader's own page and lookup sheet, `GuideController` owns the flow,
+  `GuideSample` builds that page, its notes and the sheet's answer from the sample's own maps
+  and glossary, `GuideDownloadController` the background download, and `GuideProgressController`
+  the device-local `guide.json` (§7.8; issue #277).
 
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
