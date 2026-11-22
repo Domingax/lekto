@@ -461,7 +461,7 @@ class LibraryControllerTest {
     }
 
     @Test
-    fun aSecondReadingLanguageNeverAddsASecondSample() = runTest {
+    fun aSecondReadingLanguageReplacesTheSampleAndKeepsOneRow() = runTest {
         val files = InMemoryVaultFileSystem()
         val controller = LibraryController(
             FakeLibrary(),
@@ -476,8 +476,8 @@ class LibraryControllerTest {
         controller.materialiseSample("fr")
         advanceUntilIdle()
 
-        assertEquals(listOf(Sample.identityOf("en")), listOfNotNull(controller.state.value.sample?.book?.id))
-        assertEquals(listOf("samples/en.json"), files.listFiles())
+        assertEquals(listOf(Sample.identityOf("fr")), listOfNotNull(controller.state.value.sample?.book?.id))
+        assertEquals(listOf("samples/fr.json"), files.listFiles())
     }
 
     @Test

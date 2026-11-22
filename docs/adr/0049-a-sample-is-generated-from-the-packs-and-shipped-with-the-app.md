@@ -98,3 +98,7 @@ tutorial cannot resurrect a removed sample and a removal cannot replay the **Gui
 the guide's progress is a third document (`guide.json`), on ADR-0023's pattern. Saving
 a word from the sample records the sample identity `sample:<language>` in the entry's
 `bookIds` (ADR-0050): a history entry that never resolves to a **Vault** **Book**.
+
+An explicit replay from Settings ▸ Application may re-run the materialisation —
+the answer replaces the device's sample, so the shelf follows the demonstration and
+there is still exactly one sample at any moment.

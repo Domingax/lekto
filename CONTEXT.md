@@ -70,9 +70,11 @@ _Avoid_: Demo book, tutorial book, sample row
 The first-launch sequence that explains Lekto on the **Sample book**: five screens
 — the language question, the page in two beats, the tapped word, the reading level
 and the arrival on the **Library** — opened once on a device that has no **Book**
-and no seen progress document. Its progress is a device-local `guide.json`, never
-a **Vault** record, and Settings ▸ Application reopens it; a replay asks no second
-language question and never materialises a second **Sample book**.
+and no completed progress document. Its progress is a device-local `guide.json`
+that records completion only, never a **Vault** record, so an unfinished guide
+starts over; Settings ▸ Application reopens it, and a replay asks the language
+question again and replaces the **Sample book**, so the shelf follows the
+demonstration. A dismissed **Sample book** is never re-materialised.
 _Avoid_: Tutorial, onboarding, walkthrough, tour
 
 **Language manifest**:

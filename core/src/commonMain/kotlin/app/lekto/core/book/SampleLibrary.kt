@@ -53,16 +53,15 @@ class SampleLibrary(
     private val cache = SampleCache(derived)
 
     /**
-     * Materialises [language]'s entry as this device's one sample, or returns
-     * `null` when there is nothing to write: the reader already dismissed the
-     * sample, this device already holds one, or [language] is not in the
-     * catalogue. The second call is therefore always a no-op — a reader who adds
-     * a language in Settings never gets a second row.
+     * Materialises [language]'s entry as this device's one sample, replacing any
+     * entry it already holds so the shelf follows an explicit replay's answer, or
+     * returns `null` when there is nothing to write: the reader dismissed the
+     * sample, or [language] is not in the catalogue. It is still exactly one
+     * sample at any moment — a reader who answers the guide again gets one row,
+     * never a second.
      */
     fun materialise(language: String): SampleBookRow? = when {
         dismissed.load().isDismissed -> null
-
-        cache.storedLanguage() != null -> row()
 
         else -> catalogue.sampleOf(language)?.let { sample ->
             cache.put(sample, textOf(sample))
