@@ -1241,21 +1241,29 @@ The **Guide** (issue #277) is proved at its own levels. Its progress store is a
 contract in `testkit`, run against the JSON document in `core/commonTest` and
 against a real directory in `core/jvmTest`, with `JsonGuideProgressStoreTest`
 adding the corrupt and the absent document. The flow is `GuideControllerTest` in
-`app/desktopTest`: the language answer materialises the sample and starts the
-download, the page's two beats, the tap that saves and states its level, the band
-that writes the **Reader level**, and a replay that opens on the sample the shelf
-already holds and asks no second language question. The download is
-`GuideDownloadControllerTest`, driven by virtual time: one line for both artefacts,
-the manifest read only after the answer, a stop that cancels both installers and
-sticks, and a failure that reports rather than crashing. The screens are
-`GuideScreenSemanticsTest` on both lanes — the roster with no preselection, the two
-beats and their notes, the real sheet's answer with no install door, the state
-line, the six bands with none chosen before a tap, `Skip` on every screen, and the
-arrival's sample row and download line — with the five screens' frames in the
-`guide-<screen>-<paper>.png` planche goldens. The once-only gate is
-`AppSemanticsTest` on both lanes: a fresh install opens on the guide, a device that
-saw it or already holds a book opens on the shell, a corrupt document reads as not
-seen, and the Settings row replays it at the language the shelf already holds.
+`app/desktopTest`: a row selects without advancing and `Continue` materialises the
+sample and starts the download, the default band is A1, the page's two beats, the
+tap that saves the tapped word and recolours it, the band writes the **Reader
+level**, a mid-guide relaunch starts over on the question, and a replay asks the
+question again and re-runs the materialisation that replaces the sample. The
+download is `GuideDownloadControllerTest`, driven by virtual time: one line for both
+artefacts, the manifest read only after the answer, the reader's own pack chosen
+after the translation default is filled from the manifest, a stop that cancels both
+installers and sticks, a failure that reports rather than crashing, and a retry
+after each of UNAVAILABLE, FAILED and STOPPED. `AppSemanticsTest` on both lanes
+drives the same path end to end over the fake fetch seams and checks the
+**Languages** surface reports both artefacts installed afterwards. The screens are
+`GuideScreenSemanticsTest` on both lanes — the roster with no preselection and its
+select-then-Continue, the two beats and their notes, the embedded block's tap
+hit-testing, the sheet on the tapped word with no install door, the save's state
+line, the six bands with none chosen before a tap, the back affordance after screen
+1, `Skip` on every screen, the download card on screen 1 only with its three
+actions, and the arrival's sample row and download line — with the five screens'
+frames in the `guide-<screen>-<paper>.png` planche goldens. The once-only gate is
+`AppSemanticsTest` too: a fresh install opens on the guide, a device that completed
+it or already holds a book opens on the shell, a corrupt document reads as not
+seen, a relaunch mid-guide opens on the question, and the Settings row replays it
+from the question and replaces the sample on the shelf.
 
 The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
