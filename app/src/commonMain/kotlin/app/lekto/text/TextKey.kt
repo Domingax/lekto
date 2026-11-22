@@ -356,4 +356,12 @@ enum class TextKey {
     CORE_SPEECH_NO_ENGINE,
     CORE_SPEECH_FAILED,
     CORE_SPEECH_STARTING,
+
+    // The lookup footer's state line (issue #279): a fact when the word is saved,
+    // a suggestion when it is not, and an honest failure. The saved and likely
+    // texts interpolate the level's name.
+    LOOKUP_STATE_SAVED,
+    LOOKUP_STATE_LIKELY,
+    LOOKUP_STATE_NOT_SAVED,
+    LOOKUP_STATE_FAILED,
 }

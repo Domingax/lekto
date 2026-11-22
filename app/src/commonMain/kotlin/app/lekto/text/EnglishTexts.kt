@@ -319,4 +319,8 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.CORE_SPEECH_NO_ENGINE to "No speech engine is available on this device.",
     TextKey.CORE_SPEECH_FAILED to "The speech engine couldn't pronounce that word.",
     TextKey.CORE_SPEECH_STARTING to "The speech engine is still starting up. Try again in a moment.",
+    TextKey.LOOKUP_STATE_SAVED to "Saved · {0}",
+    TextKey.LOOKUP_STATE_LIKELY to "Likely {0}",
+    TextKey.LOOKUP_STATE_NOT_SAVED to "Not saved",
+    TextKey.LOOKUP_STATE_FAILED to "Couldn't save",
 )
