@@ -412,6 +412,13 @@ never moves the reading position. The state hides the reader's chrome; system ba
 returns to the last page, and `Back to Library` leaves for the Library. Reopening a finished book
 opens at the saved position, not on this state.
 
+The state also reports what the book gave the reader: `18 words from this book`, then `5 now
+known`, then the text action `See the words`, which opens the **Vocabulary** narrowed to that
+book. A book with no saved word draws neither line nor action — never `0 words` — and that is
+also what a book read before words remembered their books says. The two numbers are read from
+the vocabulary, so deleting the book leaves them untouched; `See the words` leaves the book for
+the list, and Back from there lands on the **Library**.
+
 ### 7.3 The lookup panel
 
 Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
@@ -421,8 +428,8 @@ the top of the page is clipped for as long as the sheet is open — a transient 
 A panel, not an outlined card: square where it joins the bottom edge like the **Aa** panel, the
 surface tone and a hairline inset to the content, and a drag handle marks where it was raised
 from. On desktop it is the context column instead, and closing the word returns the column to the
-chapter list. There the level's name stands above its chips rather than beside them: five chips
-leave no room for a name in the column.
+chapter list. There the footer's state line stands above its chips rather than beside them: five
+chips leave no room for it in the column.
 
 A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
 inflection, its parts of speech and pronunciation, the speaker and the close action; then the
@@ -432,8 +439,12 @@ sheet's edge.
 
 **There is no Save button.** The level (`Mastery`) *is* the save: one tap on a level chip stores the word at
 that level, which is one gesture for one intention. Every chip is filled with its level's colour and
-carries its number; the current one adds an ink ring, and its **name** stands beside the row, so the
-numbers never need a legend.
+carries its number. The footer **states a fact or a suggestion, never an intention**: a word that is not
+saved reads `Not saved` in the muted ink, or `Likely Recognized` in the muted ink when the derived level
+suggests one; a saved word reads `Saved · Recognized` in the ink, and its chip adds an ink ring. A
+suggestion rings no chip, so the numbers never need a legend and a suggestion never reads as a fact. A
+refused write reads `Couldn't save` in the muted ink and the word stays unsaved — there is no toast and no
+undo; a wrong tap is corrected by tapping the right chip, and the line always states the current fact.
 
 A **phrase** is the word panel's sibling on the same shell (issue #211): the phrase in the serif with
 the close icon, then the answer in the body size. **With a provider**, the translation stands first
@@ -458,6 +469,16 @@ is a sentence inside the panel, never a dialogue over the reader.
 
 The **count** sits beside the title in the muted ink and counts the vocabulary, not the rows a
 search or a level narrowed the list to.
+
+The list opens on the words the reader last touched: its order is recently modified, read from
+each word's record, and it is frozen while the screen is open, so changing a level never reorders
+the rows under the reader. Leaving and returning sorts again.
+
+**A book's words.** `See the words` on a book's end state opens the list with a chip carrying the
+book's title before the level filters, and the rows narrowed to the words whose history names that
+book. The chip exists only while the list was reached from a book, and tapping it widens the list
+again; its narrowing is view state, never a **Vault** record, and the count beside the title stays
+the whole vocabulary.
 
 A row is the **word in the serif** — it is the word as the book printed it — then its colour-dotted
 level and name, its translation, and the sentence it came from in the muted ink; a hairline parts
@@ -666,7 +687,8 @@ the page behind it.
   panel's values and by the Vocabulary list's level filters, so a chip looks the same wherever it
   chooses something (§7.2, §7.4).
 - The mastery selector — `app/src/commonMain/kotlin/app/lekto/reader/MasterySelector.kt`: the level
-  named beside the five numbered chips, shared by the reader's lookup footer (§7.3) and the
+  named beside the five numbered chips — the caller's line, so the reader's footer states its saved
+  or suggested level there (§7.3) — shared by the reader's lookup footer (§7.3) and the
   Vocabulary list's level sheet (§7.4), so the two never drift into two selectors (#178).
 - The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,

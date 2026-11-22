@@ -49,7 +49,7 @@ class BackStackTest {
         val settings = BackStack.Root.select(ShellSection.VOCABULARY).select(ShellSection.SETTINGS)
 
         assertEquals(Destination.Settings, settings.current)
-        assertEquals(Destination.Vocabulary, settings.back().current)
+        assertEquals(Destination.Vocabulary(), settings.back().current)
         assertEquals(Destination.Library, settings.back().back().current)
         assertFalse(settings.back().back().canGoBack, "back from the Library exits")
     }
@@ -80,7 +80,7 @@ class BackStackTest {
 
         val unwound = stack.select(ShellSection.VOCABULARY)
 
-        assertEquals(Destination.Vocabulary, unwound.current)
+        assertEquals(Destination.Vocabulary(), unwound.current)
         assertEquals(Destination.Library, unwound.back().current)
         assertFalse(unwound.back().canGoBack, "the bar cannot build a loop")
     }

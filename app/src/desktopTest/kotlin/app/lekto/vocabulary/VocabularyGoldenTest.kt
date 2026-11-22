@@ -199,7 +199,7 @@ private fun ListPreview() {
     ) {
         HeaderLine()
         SearchSurface()
-        FilterRow()
+        FilterRow(withBook = true)
         PREVIEW_ENTRIES.forEachIndexed { index, entry -> PreviewRow(entry, hovered = index == 0) }
     }
 }
@@ -229,9 +229,14 @@ private fun SearchSurface() {
     }
 }
 
-/** The filter row, clipped: the last chip is cut by the edge, which is what says the row scrolls. */
+/**
+ * The filter row, clipped: the last chip is cut by the edge, which is what says
+ * the row scrolls. [withBook] draws the selected chip carrying the opened book's
+ * title before the level chips, the way a `See the words` opening does (issue
+ * #280); the sheets over a list opened another way keep the level chips alone.
+ */
 @Composable
-private fun FilterRow() {
+private fun FilterRow(withBook: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -239,9 +244,27 @@ private fun FilterRow() {
             .clipToBounds(),
         horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
+        if (withBook) BookChip()
         PREVIEW_CHIPS.forEachIndexed { index, chip -> Chip(chip, selected = index == 0) }
     }
 }
+
+/**
+ * The book chip (issue #280): a chip in the same frame as the level filters,
+ * filled in the theme's ink, with no level dot — it names a book, not a level.
+ */
+@Composable
+private fun BookChip() {
+    val theme = MaterialTheme.colorScheme
+    Box(Modifier.heightIn(min = LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+        ChipFrame(selected = true) {
+            Line(theme.onPrimary, LineBar(CHIP_LABEL_BAR, BOOK_LABEL_BAR))
+        }
+    }
+}
+
+/** The book chip's label bar: a book title is longer than a level's name. */
+private val BOOK_LABEL_BAR = 92.dp
 
 /**
  * One filter, drawn with the screen's own frame (the **Aa** panel's chip, issue

@@ -356,4 +356,20 @@ enum class TextKey {
     CORE_SPEECH_NO_ENGINE,
     CORE_SPEECH_FAILED,
     CORE_SPEECH_STARTING,
+
+    // The words a finished book gave the reader (issue #280): the two counts on
+    // the end state and the way into the list narrowed to that book.
+    END_OF_BOOK_WORDS_ONE,
+    END_OF_BOOK_WORDS_MANY,
+    END_OF_BOOK_WORDS_KNOWN_ONE,
+    END_OF_BOOK_WORDS_KNOWN_MANY,
+    SEE_THE_WORDS,
+
+    // The lookup footer's state line (issue #279): a fact when the word is saved,
+    // a suggestion when it is not, and an honest failure. The saved and likely
+    // texts interpolate the level's name.
+    LOOKUP_STATE_SAVED,
+    LOOKUP_STATE_LIKELY,
+    LOOKUP_STATE_NOT_SAVED,
+    LOOKUP_STATE_FAILED,
 }

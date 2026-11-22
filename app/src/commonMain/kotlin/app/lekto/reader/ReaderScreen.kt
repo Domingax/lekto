@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.ImageRef
+import app.lekto.core.vocabulary.BookWords
 import app.lekto.navigation.PlatformBackHandler
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
@@ -101,6 +102,8 @@ data class ReaderActions(
     val onMarkFinished: () -> Unit = {},
     /** The reader undid the declaration; only the fact is removed, never the position (ADR-0038). */
     val onMarkUnfinished: () -> Unit = {},
+    /** The reader asked to see the words this book gave them (issue #280). */
+    val onSeeWords: () -> Unit = {},
 )
 
 /**
@@ -127,6 +130,11 @@ data class ReaderActions(
  * changes where the book opens, and only seeds the end-of-book state's marked
  * face (ADR-0038).
  *
+ * [bookWords] is what the book gave the reader, counted from the vocabulary
+ * (issue #280): the end state's two numbers and the way into the list narrowed to
+ * this book. `null` or an empty count draws no line, so a book read before the
+ * history existed says nothing rather than `0 words` (ADR-0050).
+ *
  * At [WIDE_WINDOW_BREAKPOINT] and above the reader reserves the right-hand
  * **context column** ([ReaderContext]): the chapter list when nothing is touched,
  * the open lookup when something is (issue #199). The column is part of the
@@ -141,6 +149,7 @@ fun ReaderScreen(
     actions: ReaderActions = ReaderActions(),
     overlayHeightPx: Int = 0,
     initiallyFinished: Boolean = false,
+    bookWords: BookWords? = null,
     context: ReaderContext = ReaderContext(),
 ) {
     // The reader builds its typography from the preference (ADR-0035), so a change
@@ -189,6 +198,7 @@ fun ReaderScreen(
             contextColumn,
             context,
             images,
+            bookWords,
             pageInset,
         )
     }
@@ -221,6 +231,7 @@ private fun ReaderContent(
     contextColumn: Boolean,
     context: ReaderContext,
     images: ReaderImages,
+    bookWords: BookWords?,
     pageInset: Dp,
 ) {
     val current = state.page?.let { page -> entries.entryAt(page.start) }
@@ -246,6 +257,7 @@ private fun ReaderContent(
             state.endVisible -> EndOfBookPanel(
                 title = document.text.title,
                 finished = state.finished,
+                words = bookWords,
                 actions = actions,
                 onShowFinished = state::showFinished,
                 onShowUnfinished = state::showUnfinished,

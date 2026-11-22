@@ -300,8 +300,9 @@ and the page clipped rather than repaginated. The lookup sheet adds one
 (issue #210): the sheet raised over a page at the 45 % cap, square at its top
 edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
 meta bars, the two real icons, the numbered senses with their translations, the
-level named beside the five filled chip frames (the current one ringed in ink)
-and the references as one muted, content-aligned line; the offline sheet swaps
+unsaved footer's state line in the muted ink beside the five filled chip frames
+(none ringed, because no level is saved yet) and the references as one muted,
+content-aligned line; the offline sheet swaps
 the senses for the honest message. The phrase sheet adds
 `phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
 (issue #211): the same shell with the phrase in the serif band and the close icon,
@@ -309,7 +310,8 @@ then either the translation body with its disclosure or the prompt with its
 settings link, above the zero-configuration shortcut. The Vocabulary list adds
 `vocabulary-<paper>.png` per paper and `vocabulary-delete-light.png` (issue #212):
 the title and the count beside it, the shared search surface, the filter row with
-its partly cut chip, the current filter filled in ink and each chip carrying its
+a selected chip carrying the opened book's title before the level chips (issue
+#280), its partly cut chip, the current filter filled in ink and each chip carrying its
 level's dot, then each row's word bar, dot and level name, translation and muted
 sentence with a hairline between rows — the first row hovered, so the trash in the
 slot reserved for it is recorded too. Its level sheet adds
@@ -1045,8 +1047,12 @@ load once, an unsaved word is unknown, a save bumps the revision that recolours,
 and a previous session's save is present at startup — is a `VocabularyControllerTest`
 in `app/desktopTest`, and the panel's level chips are its save (issue #210):
 `WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
-no separate Save control exists, that the current level is named beside the
-chips, and that the sheet covers at most 45 % of the screen. `AppSemanticsTest`
+no separate Save control exists, that the sheet covers at most 45 % of the screen,
+and, since issue #279, that the footer states the word's state rather than a
+selection: `Not saved` or `Likely <level>` while it is unsaved with no chip
+marked, `Saved · <level>` and the marked chip once it is, and `Couldn't save` when
+the vault refuses the write. `VocabularyControllerTest` pins that a refused write
+is reported and leaves the word unsaved. `AppSemanticsTest`
 also drives the reader's lift: a word at the bottom of the page is tapped, the
 sheet opens, and the word's bounds are asserted above the sheet's top while the
 page's words stay put — the page rises under the sheet without repaginating.
@@ -1110,6 +1116,20 @@ control. `VocabularyScreenSemanticsTest` proves a chip raises its level, the
 all-levels chip clears it, the current one is announced as selected, and a filter
 that matches nothing says so, and `AppSemanticsTest` filters the list to a level
 and finds only that level's word.
+
+The book history (issue #280; ADR-0050) is proved at every seam. The record's
+shape is `VocabularyRecordPropertyTest`'s: the round-trip carries `bookIds`, the
+schema version is pinned at 2, and a body written without the field reads as an
+empty list. `BookWordsTest` proves the two counts — a word counts once per book it
+names, a word from two books counts for both, only the book's **Known** words
+count as known, and a word with no history belongs to none. The write path is
+`VocabularyControllerTest`'s: the book id reaches the record once, a second book
+keeps both, a save that names no book keeps the history, and the list orders by the
+record's update time. The end state's two numbers, singular and plural, the absent
+line and `See the words` are `ReaderScreenSemanticsTest`; the list's book chip, its
+absence, the narrowing and the frozen order under a level change are
+`VocabularyScreenSemanticsTest`, both on both lanes. `AppSemanticsTest` walks the
+loop on both lanes — save from a book, finish it, read the counts, open the list.
 
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to
