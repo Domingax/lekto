@@ -3,27 +3,38 @@
 
 package app.lekto.guide
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -31,16 +42,22 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.reader.MasteryPalette
-import app.lekto.reader.readerColor
+import app.lekto.reader.readerColorOr
+import app.lekto.reader.selectionHighlight
 import app.lekto.theme.Dark
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.Light
 import app.lekto.theme.Sepia
+import app.lekto.theme.contentColorOn
 import app.lekto.ui.HAIRLINE_THICKNESS
+import app.lekto.ui.LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+import app.lekto.ui.icons.ChevronLeft
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
+import app.lekto.ui.icons.Volume2
+import app.lekto.ui.icons.X
 import io.github.takahirom.roborazzi.captureRoboImage
 import kotlin.test.Test
 
@@ -50,12 +67,20 @@ import kotlin.test.Test
  *
  * It is deliberately text-free, like every other golden: glyphs are rendered with
  * the host's fonts and would not verify on another machine. What it records is the
- * frame — the five step marks and `Skip`, each screen's title and supporting line,
- * the eight language rows, the page's coloured word bars and the four notes, the
- * real sheet's cap and handle, the six band rows with their chosen wash, and the
- * arrival's sample row and download line. The words, the levels and the meanings
- * are the semantics suites' contract; the layout, the colour ramp and the spacing
- * are this file's.
+ * frame the field-feedback pass built — the five step marks, the back chevron and
+ * `Skip`; the language question's selected row, its running download with `Stop`
+ * and the `Continue` it reveals; the embedded page block's coloured word bars over
+ * their dotted rules, with no reader chrome and no download card; the real sheet
+ * raised at its cap over the washed word; the same block above the six bands, with
+ * A1 only the suggestion; and the arrival's sample row, level line and installed
+ * download. The words, the levels and the meanings are the semantics suites'
+ * contract; the layout, the colour ramp and the spacing are this file's.
+ *
+ * The page and level beats scroll on a 640 dp phone, so the planche folds them: the
+ * block is drawn shorter than the screen's `PAGE_HEIGHT` so the four notes and
+ * `Continue` stay in the one frame, and the level's filled action stays below the
+ * fold. No band is drawn as chosen, because the built screen marks none: A1 is the
+ * suggestion the page previews at, never a selection.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with
  * `./gradlew :app:verifyRoborazziDesktop`.
@@ -64,52 +89,57 @@ import kotlin.test.Test
 class GuideGoldenTest {
 
     @Test
-    fun lightLanguage() = golden("language-light", Light) { LanguagePreview() }
+    fun lightLanguage() = golden("language-light", Light, LANGUAGE_PROGRESS) { LanguagePreview() }
 
     @Test
-    fun darkLanguage() = golden("language-dark", Dark) { LanguagePreview() }
+    fun darkLanguage() = golden("language-dark", Dark, LANGUAGE_PROGRESS) { LanguagePreview() }
 
     @Test
-    fun sepiaLanguage() = golden("language-sepia", Sepia) { LanguagePreview() }
+    fun sepiaLanguage() = golden("language-sepia", Sepia, LANGUAGE_PROGRESS) { LanguagePreview() }
 
     @Test
-    fun lightPage() = golden("page-light", Light) { PagePreview(coloured = true) }
+    fun lightPage() = golden("page-light", Light, PAGE_PROGRESS) { PagePreview() }
 
     @Test
-    fun darkPage() = golden("page-dark", Dark) { PagePreview(coloured = true) }
+    fun darkPage() = golden("page-dark", Dark, PAGE_PROGRESS) { PagePreview() }
 
     @Test
-    fun sepiaPage() = golden("page-sepia", Sepia) { PagePreview(coloured = true) }
+    fun sepiaPage() = golden("page-sepia", Sepia, PAGE_PROGRESS) { PagePreview() }
 
     @Test
-    fun lightTap() = golden("tap-light", Light) { TapPreview() }
+    fun lightTap() = golden("tap-light", Light, TAP_PROGRESS) { TapPreview() }
 
     @Test
-    fun darkTap() = golden("tap-dark", Dark) { TapPreview() }
+    fun darkTap() = golden("tap-dark", Dark, TAP_PROGRESS) { TapPreview() }
 
     @Test
-    fun sepiaTap() = golden("tap-sepia", Sepia) { TapPreview() }
+    fun sepiaTap() = golden("tap-sepia", Sepia, TAP_PROGRESS) { TapPreview() }
 
     @Test
-    fun lightLevel() = golden("level-light", Light) { LevelPreview() }
+    fun lightLevel() = golden("level-light", Light, LEVEL_PROGRESS) { LevelPreview() }
 
     @Test
-    fun darkLevel() = golden("level-dark", Dark) { LevelPreview() }
+    fun darkLevel() = golden("level-dark", Dark, LEVEL_PROGRESS) { LevelPreview() }
 
     @Test
-    fun sepiaLevel() = golden("level-sepia", Sepia) { LevelPreview() }
+    fun sepiaLevel() = golden("level-sepia", Sepia, LEVEL_PROGRESS) { LevelPreview() }
 
     @Test
-    fun lightArrival() = golden("arrival-light", Light) { ArrivalPreview() }
+    fun lightArrival() = golden("arrival-light", Light, ARRIVAL_PROGRESS) { ArrivalPreview() }
 
     @Test
-    fun darkArrival() = golden("arrival-dark", Dark) { ArrivalPreview() }
+    fun darkArrival() = golden("arrival-dark", Dark, ARRIVAL_PROGRESS) { ArrivalPreview() }
 
     @Test
-    fun sepiaArrival() = golden("arrival-sepia", Sepia) { ArrivalPreview() }
+    fun sepiaArrival() = golden("arrival-sepia", Sepia, ARRIVAL_PROGRESS) { ArrivalPreview() }
 
-    private fun golden(name: String, theme: ColorScheme, screen: @Composable () -> Unit) = runComposeUiTest {
-        setContent { LektoTheme(theme = theme) { ScreenFrame(screen) } }
+    private fun golden(
+        name: String,
+        theme: ColorScheme,
+        progress: GuideProgress,
+        screen: @Composable ColumnScope.() -> Unit,
+    ) = runComposeUiTest {
+        setContent { LektoTheme(theme = theme) { ScreenFrame(progress, screen) } }
         onRoot().captureRoboImage("guide-$name.png")
     }
 }
@@ -117,126 +147,319 @@ class GuideGoldenTest {
 private val SCREEN_WIDTH = 360.dp
 private val SCREEN_HEIGHT = 640.dp
 
+/** The five screens the progress row marks: the four stages and the arrival. */
+private const val GUIDE_STEPS = 5
+
+/** What the step bar records on one planche: how many of the five are reached, and whether back is offered. */
+private data class GuideProgress(val stepsReached: Int, val back: Boolean)
+
+private val LANGUAGE_PROGRESS = GuideProgress(GuideStage.LANGUAGE.position, back = false)
+private val PAGE_PROGRESS = GuideProgress(GuideStage.PAGE.position, back = true)
+private val TAP_PROGRESS = GuideProgress(GuideStage.TAP.position, back = true)
+private val LEVEL_PROGRESS = GuideProgress(GuideStage.LEVEL.position, back = true)
+
+/** The arrival is the fifth mark: the shelf the guide hands over to, with no way back into the guide. */
+private val ARRIVAL_PROGRESS = GuideProgress(GUIDE_STEPS, back = false)
+
+/**
+ * The page block's height in the planche. The screen gives it 320 dp and lets the
+ * beat scroll; the frame folds that scroll so the notes and `Continue` below it
+ * are recorded too.
+ */
+private val PAGE_BLOCK_HEIGHT = 240.dp
+
+/** The level preview's block height: the same fold, so all six bands fit under it. */
+private val PREVIEW_BLOCK_HEIGHT = 150.dp
+
+/** The block's own inset: the reader's capped measure inside the guide's frame. */
+private val PAGE_INSET = 24.dp
+
+/** The measure the page block's words may fill: the screen's width less its edges and the block's inset. */
+private val PAGE_LINE_WIDTH = SCREEN_WIDTH - LektoSpacing.ScreenEdge * 2 - PAGE_INSET * 2
+
+/** The narrower measure inside the level screen's preview card. */
+private val PREVIEW_LINE_WIDTH =
+    SCREEN_WIDTH - LektoSpacing.ScreenEdge * 2 - LektoSpacing.InsidePanel * 2 - PAGE_INSET * 2
+
+/** The gap between two words on a line. */
+private val WORD_GAP = 5.dp
+
+/** The sheet's maximum height, which is what the tap planche raises it to. */
+private val SHEET_HEIGHT = SCREEN_HEIGHT * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
+
 /** The phone frame every sheet draws. */
 @Composable
-private fun ScreenFrame(screen: @Composable () -> Unit) {
+private fun ScreenFrame(progress: GuideProgress, screen: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .width(SCREEN_WIDTH)
             .height(SCREEN_HEIGHT)
             .background(MaterialTheme.colorScheme.background),
     ) {
-        GuideBarPreview()
+        GuideBarPreview(progress)
         screen()
     }
 }
 
-/** The five step marks and `Skip` at the trailing edge. */
+/** The step marks, then the back chevron after the first screen and `Skip` at the trailing edge. */
 @Composable
-private fun GuideBarPreview() {
+private fun GuideBarPreview(progress: GuideProgress) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge, vertical = 8.dp),
+        Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(5) { index ->
+        repeat(GUIDE_STEPS) { index ->
             Spacer(
                 Modifier
                     .padding(end = LektoSpacing.InsideLabelPair)
                     .width(18.dp)
                     .height(3.dp)
                     .background(
-                        if (index < 2) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline,
+                        if (index < progress.stepsReached) {
+                            MaterialTheme.colorScheme.onBackground
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
                     ),
             )
         }
         Spacer(Modifier.weight(1f))
+        if (progress.back) {
+            Icon(
+                LektoIcons.ChevronLeft,
+                null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(LektoSpacing.InsidePanel))
+        }
         Bar(MaterialTheme.colorScheme.onBackground, 32.dp, 10.dp)
     }
 }
 
-/** Screen 1: the title, its supporting lines, the eight languages and the footnote. */
+/**
+ * Screen 1: the question, the roster with one row selected, the running download
+ * with its size and `Stop`, the footnote, and the `Continue` the answer reveals.
+ */
 @Composable
-private fun LanguagePreview() {
-    Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
+private fun ColumnScope.LanguagePreview() {
+    Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
         Heading(112.dp, 188.dp, 156.dp)
-        Spacer(Modifier.height(LektoSpacing.BetweenBlocks))
-        repeat(8) { index ->
-            LanguageRowPreview(index == 0)
-            if (index != 7) Hairline()
+        Column(
+            Modifier.fillMaxWidth().weight(1f).clipToBounds().padding(top = LektoSpacing.BetweenBlocks),
+        ) {
+            repeat(8) { index ->
+                LanguageRowPreview(selected = index == 0)
+                Hairline()
+            }
         }
-        Spacer(Modifier.height(LektoSpacing.InsidePanel))
-        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 176.dp, 9.dp)
+        DownloadLine(Modifier.padding(top = LektoSpacing.BetweenRows))
+        Footnote()
+        ContinueButton()
     }
 }
 
-/** One language row: its code, its name and the chevron. */
+/** One language row: its ink rule, its code, its name and the chevron; the chosen one washed. */
 @Composable
-private fun LanguageRowPreview(first: Boolean) {
+private fun LanguageRowPreview(selected: Boolean) {
     val theme = MaterialTheme.colorScheme
     Row(
-        Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRows),
+        Modifier
+            .fillMaxWidth()
+            .background(if (selected) theme.surfaceVariant else Color.Transparent)
+            .padding(vertical = LektoSpacing.BetweenRows),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
+        Spacer(
+            Modifier.width(2.dp).height(24.dp).background(if (selected) theme.onBackground else Color.Transparent),
+        )
         Bar(theme.onSurfaceVariant, 22.dp, 9.dp)
-        Bar(theme.onBackground, if (first) 68.dp else 58.dp, 13.dp)
+        Bar(theme.onBackground, if (selected) 68.dp else 58.dp, 13.dp)
         Spacer(Modifier.weight(1f))
         Icon(LektoIcons.ChevronRight, null, tint = theme.onSurfaceVariant, modifier = Modifier.size(16.dp))
     }
 }
 
-/** Screen 2: the page in two beats; the coloured one carries the four notes. */
+/** The download line under the list: the assets, the published size and, while it runs, `Stop`. */
 @Composable
-private fun PagePreview(coloured: Boolean) {
+private fun DownloadLine(modifier: Modifier = Modifier) {
     val theme = MaterialTheme.colorScheme
-    Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
-        Heading(188.dp, 148.dp, 118.dp)
-        Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
-        Bar(theme.onSurfaceVariant, 84.dp, 9.dp)
-        Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-        DownloadLine(installed = false)
-        Spacer(Modifier.height(LektoSpacing.BetweenRows))
-        PageCard(coloured)
-        if (coloured) {
-            Spacer(Modifier.height(LektoSpacing.BetweenRows))
-            NoteRows()
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Bar(theme.onSurface, 128.dp, 10.dp)
+            Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
+            Bar(theme.onSurfaceVariant, 116.dp, 9.dp)
         }
+        Bar(theme.onSurface, 30.dp, 10.dp)
+    }
+}
+
+/** The line under the list: other languages can be added later. */
+@Composable
+private fun Footnote() {
+    Column(Modifier.padding(vertical = LektoSpacing.InsidePanel)) {
+        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 176.dp, 9.dp)
+    }
+}
+
+/** The filled `Continue` the language answer reveals, at the trailing edge. */
+@Composable
+private fun ContinueButton() {
+    val theme = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth()) {
         Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier
+                .width(96.dp)
+                .height(40.dp)
+                .background(theme.primary, LektoRadii.Control),
+            contentAlignment = Alignment.Center,
+        ) { Bar(theme.onPrimary, 44.dp, 11.dp) }
+    }
+}
+
+/** Screen 2: the embedded block, coloured at A1, and the four notes under it. No download card. */
+@Composable
+private fun ColumnScope.PagePreview() {
+    Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
+        Heading(188.dp, 148.dp, 118.dp)
+        ReadingIn()
+        PageBlock(
+            Modifier.fillMaxWidth().height(PAGE_BLOCK_HEIGHT).padding(top = LektoSpacing.BetweenRows),
+            lines = 9,
+        )
+        NoteRows(Modifier.padding(top = LektoSpacing.BetweenRows))
+        Row(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel)) {
             Spacer(Modifier.weight(1f))
-            Bar(theme.onBackground, 54.dp, 11.dp)
+            Bar(MaterialTheme.colorScheme.onBackground, 54.dp, 11.dp)
         }
     }
 }
 
-/** The page's frame as coloured word bars: a heading bar and four lines of words. */
+/** The language the sample is read in, under the page titles. */
 @Composable
-private fun PageCard(coloured: Boolean) {
-    val theme = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().height(220.dp).padding(vertical = LektoSpacing.InsidePanel)) {
-        Bar(theme.onSurfaceVariant, 72.dp, 9.dp)
-        Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-        repeat(4) { line -> WordLine(line, coloured) }
+private fun ReadingIn() {
+    Column(Modifier.padding(top = LektoSpacing.InsideLabelPair)) {
+        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 92.dp, 9.dp)
     }
 }
 
-/** One line of the page: word-width bars, the four coloured ones carrying their level's hue. */
+/**
+ * The embedded page block: the sample's first paragraph as word bars, the coloured
+ * ones carrying their level's hue and the reader's own 1 dp dotted rule (issue
+ * #281). It has no reader chrome: no page bar, no **Aa**, no page turns.
+ */
 @Composable
-private fun WordLine(line: Int, coloured: Boolean) {
-    val theme = MaterialTheme.colorScheme
-    val ramp = MasteryPalette.of(theme)
-    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        repeat(if (line == 3) 3 else 6) { word ->
-            val level = if (coloured) colourAt(line, word) else null
-            val colour = level?.readerColor(ramp) ?: theme.onBackground
-            Bar(colour, if (word % 4 == 0) 34.dp else 26.dp, 12.dp)
+private fun PageBlock(
+    modifier: Modifier = Modifier,
+    lines: Int,
+    lineWidth: Dp = PAGE_LINE_WIDTH,
+    washed: Pair<Int, Int>? = null,
+) {
+    Column(
+        modifier.clipToBounds().padding(horizontal = PAGE_INSET, vertical = LektoSpacing.InsidePanel),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        repeat(lines) { line ->
+            PageLine(
+                widths = wordsFitting(PAGE_LINES[line % PAGE_LINES.size], lineWidth),
+                line = line,
+                washedWord = if (washed?.first == line) washed.second else null,
+            )
         }
     }
 }
 
-/** The four notes: the level's coloured frame, the word, the level's name and the meaning. */
+/**
+ * The words of one line that fit [lineWidth]. The preview card is narrower than the
+ * page beat, so the same paragraph sets fewer words on a line there — a wrap, not
+ * a narrower word.
+ */
+private fun wordsFitting(widths: List<Dp>, lineWidth: Dp): List<Dp> {
+    val fitted = mutableListOf<Dp>()
+    var used = 0.dp
+    for (width in widths) {
+        val next = if (fitted.isEmpty()) width else used + WORD_GAP + width
+        if (next > lineWidth) break
+        fitted += width
+        used = next
+    }
+    return fitted
+}
+
+/** One line of the page: word-width bars, four carrying a level's colour and its rule. */
 @Composable
-private fun NoteRows() {
+private fun PageLine(widths: List<Dp>, line: Int, washedWord: Int?) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(WORD_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        widths.forEachIndexed { word, width ->
+            WordBar(width, colourAt(line, word), washed = word == washedWord)
+        }
+    }
+}
+
+/** One word: its bar and, when it is highlighted, the dotted rule under it. */
+@Composable
+private fun WordBar(width: Dp, level: MasteryLevel?, washed: Boolean) {
+    val theme = MaterialTheme.colorScheme
+    val colour = level?.readerColorOr(theme.onBackground, MasteryPalette.of(theme)) ?: theme.onBackground
+    if (washed) {
+        Box(
+            Modifier
+                .background(selectionHighlight(theme.onBackground), LektoRadii.Control)
+                .padding(2.dp),
+        ) { WordBarColumn(width, colour, level != null) }
+    } else {
+        WordBarColumn(width, colour, level != null)
+    }
+}
+
+/** A word's bar and its rule slot, so every word on a line shares one baseline. */
+@Composable
+private fun WordBarColumn(width: Dp, colour: Color, ruled: Boolean) {
+    Column {
+        Bar(colour, width, 10.dp)
+        Spacer(Modifier.height(2.dp))
+        if (ruled) {
+            DottedRule(colour, width)
+        } else {
+            Spacer(Modifier.width(width).height(1.dp))
+        }
+    }
+}
+
+/** The 1 dp dotted rule under a highlighted word, drawn where the page draws it (issue #281). */
+@Composable
+private fun DottedRule(colour: Color, width: Dp) {
+    val density = LocalDensity.current
+    Box(
+        Modifier
+            .width(width)
+            .height(1.dp)
+            .drawBehind {
+                drawLine(
+                    color = colour,
+                    start = Offset(0f, size.height / 2f),
+                    end = Offset(size.width, size.height / 2f),
+                    strokeWidth = size.height,
+                    pathEffect = PathEffect.dashPathEffect(
+                        floatArrayOf(with(density) { 1.dp.toPx() }, with(density) { 2.dp.toPx() }),
+                    ),
+                )
+            },
+    )
+}
+
+/**
+ * The four notes: the level's coloured chip and number, the word, the level's name
+ * and the sample's meaning, one per highlighted level in acquisition order.
+ */
+@Composable
+private fun NoteRows(modifier: Modifier = Modifier) {
     val theme = MaterialTheme.colorScheme
     val ramp = MasteryPalette.of(theme)
     val levels = listOf(
@@ -245,13 +468,14 @@ private fun NoteRows() {
         MasteryLevel.FAMILIAR,
         MasteryLevel.LEARNED,
     )
-    Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
         levels.forEach { level ->
+            val colour = level.readerColorOr(theme.outline, ramp)
             Row(horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
                 Box(
-                    Modifier.size(28.dp).background(level.readerColor(ramp), LektoRadii.Control),
+                    Modifier.size(28.dp).background(colour, LektoRadii.Control),
                     contentAlignment = Alignment.Center,
-                ) { Bar(theme.background, 6.dp, 8.dp) }
+                ) { Bar(contentColorOn(colour), 6.dp, 8.dp) }
                 Column {
                     Row(horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines)) {
                         Bar(theme.onBackground, 52.dp, 11.dp)
@@ -265,110 +489,226 @@ private fun NoteRows() {
     }
 }
 
-/** Screen 3: the page, with the real sheet raised at its cap over it. */
+/** Screen 3: the block with the emphasised word washed, and the real sheet raised over it at its cap. */
 @Composable
-private fun TapPreview() {
-    Box(Modifier.fillMaxWidth().height(560.dp)) {
-        Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
+private fun ColumnScope.TapPreview() {
+    Box(Modifier.fillMaxWidth().weight(1f)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge)) {
             Heading(148.dp, 208.dp, 160.dp)
-            Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            PageCard(coloured = true)
+            ReadingIn()
+            PageBlock(
+                Modifier.fillMaxWidth().height(PAGE_BLOCK_HEIGHT).padding(top = LektoSpacing.BetweenRows),
+                lines = 9,
+                washed = 0 to 1,
+            )
         }
         SheetPreview()
     }
 }
 
-/** The bottom sheet's frame: the handle, the headword, the context, the senses and the footer. */
+/**
+ * The lookup sheet at the 60 % cap: the handle, the word and its meta beside the
+ * speaker and close, the sentence it was tapped in, the one sense, the references
+ * and the footer's state beside the five chips.
+ */
 @Composable
 private fun BoxScope.SheetPreview() {
     val theme = MaterialTheme.colorScheme
-    Column(
-        Modifier
-            .align(Alignment.BottomCenter)
-            .fillMaxWidth()
-            .height(336.dp)
-            .background(theme.surface, LektoRadii.Sheet),
+    Surface(
+        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(SHEET_HEIGHT),
+        color = theme.surface,
+        border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
     ) {
-        Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Spacer(Modifier.width(32.dp).height(4.dp).background(theme.outline, LektoRadii.Control))
-        }
-        Column(Modifier.padding(horizontal = LektoSpacing.InsidePanel)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Bar(theme.onSurface, 96.dp, 24.dp)
-                Spacer(Modifier.weight(1f))
-                Bar(theme.onSurfaceVariant, 84.dp, 10.dp)
-            }
-            Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            Bar(theme.onSurfaceVariant, 140.dp, 10.dp)
-            Spacer(Modifier.height(LektoSpacing.BetweenRows))
-            Hairline()
-            Spacer(Modifier.height(LektoSpacing.BetweenRows))
-            Bar(theme.onSurface, 228.dp, 14.dp)
-            Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            Bar(theme.onSurfaceVariant, 64.dp, 10.dp)
-            Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            Bar(theme.onSurfaceVariant, 220.dp, 10.dp)
-        }
-        Spacer(Modifier.weight(1f))
-        Hairline()
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Bar(theme.onSurfaceVariant, 64.dp, 10.dp)
+        Column(Modifier.fillMaxSize()) {
+            SheetHandle()
+            SheetHeader()
+            ContextLine()
+            SheetDivider()
+            SheetAnswer()
             Spacer(Modifier.weight(1f))
-            repeat(5) { index -> ChipPreview(filled = index == 0, ringed = index == 2) }
+            SheetDivider()
+            ReferenceLine()
+            SheetDivider()
+            SheetFooter()
         }
     }
 }
 
-/** Screen 4: the preview card and the six bands, the chosen one washed and ruled. */
+/** The grabber that says the sheet was raised from the bottom edge. */
 @Composable
-private fun LevelPreview() {
-    val theme = MaterialTheme.colorScheme
-    Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
-        Heading(176.dp, 128.dp, 108.dp)
-        Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-        Bar(theme.onSurfaceVariant, 84.dp, 9.dp)
-        Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(LektoSpacing.InsidePanel)
-                .border(HAIRLINE_THICKNESS, theme.outline, LektoRadii.Surface),
-        ) {
-            Bar(theme.onSurfaceVariant, 118.dp, 9.dp)
-            Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            PageCard(coloured = true)
-        }
-        Spacer(Modifier.height(LektoSpacing.BetweenRows))
-        repeat(6) { index ->
-            BandRowPreview(index == 2)
-            if (index != 5) Hairline()
-        }
-        Spacer(Modifier.weight(1f))
-        Box(
-            Modifier.fillMaxWidth().height(48.dp).background(theme.primary, LektoRadii.Control),
-            contentAlignment = Alignment.Center,
-        ) { Bar(theme.onPrimary, 88.dp, 11.dp) }
-        Spacer(Modifier.height(LektoSpacing.InsidePanel))
+private fun SheetHandle() {
+    Box(
+        Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.width(32.dp).height(4.dp).background(MaterialTheme.colorScheme.outline, CircleShape))
     }
 }
 
-/** One band row: its code, its name, its one line and the ink rule when chosen. */
+/** The word, its meta line, and the speaker and close in their 48 dp controls. */
 @Composable
-private fun BandRowPreview(chosen: Boolean) {
+private fun SheetHeader() {
     val theme = MaterialTheme.colorScheme
     Row(
-        Modifier
-            .fillMaxWidth()
-            .background(if (chosen) theme.surfaceVariant else Color.Transparent)
-            .padding(vertical = LektoSpacing.BetweenRelatedLines),
+        Modifier.fillMaxWidth().padding(
+            start = LektoSpacing.InsidePanel,
+            end = LektoSpacing.InsideLabelPair,
+            top = LektoSpacing.InsideLabelPair,
+        ),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(Modifier.weight(1f).padding(bottom = LektoSpacing.BetweenRelatedLines)) {
+            Bar(theme.onBackground, 96.dp, 24.dp)
+            Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
+            Bar(theme.onSurfaceVariant, 84.dp, 10.dp)
+        }
+        BandIcon(LektoIcons.Volume2, theme.onBackground)
+        BandIcon(LektoIcons.X, theme.onBackground)
+    }
+}
+
+/** The sentence the word was tapped in, muted under the headword. */
+@Composable
+private fun ContextLine() {
+    Column(Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel)) {
+        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 160.dp, 9.dp)
+    }
+}
+
+/** The answer's one numbered sense: its definition and the pack's translation under it. */
+@Composable
+private fun SheetAnswer() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+    ) {
+        Bar(theme.onSurfaceVariant, 6.dp, 14.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair)) {
+            Bar(theme.onSurface, 228.dp, 12.dp)
+            Bar(theme.onSurfaceVariant, 64.dp, 9.dp)
+        }
+    }
+}
+
+/** The external references as one muted line, closing the body above the footer. */
+@Composable
+private fun ReferenceLine() {
+    val theme = MaterialTheme.colorScheme
+    val widths = listOf(58.dp, 30.dp, 30.dp, 76.dp)
+    Row(
+        Modifier.fillMaxWidth().height(LektoSpacing.TouchTarget).padding(horizontal = LektoSpacing.InsidePanel),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(
-            Modifier.width(2.dp).height(24.dp).background(if (chosen) theme.onBackground else Color.Transparent),
-        )
+        widths.forEachIndexed { index, width ->
+            if (index > 0) {
+                Box(Modifier.padding(horizontal = 4.dp).size(3.dp).background(theme.onSurfaceVariant, CircleShape))
+            }
+            Bar(theme.onSurfaceVariant, width, 9.dp)
+        }
+    }
+}
+
+/** The pinned footer: `Not saved` beside the five filled chip frames, none ringed before a save. */
+@Composable
+private fun SheetFooter() {
+    val theme = MaterialTheme.colorScheme
+    val ramp = MasteryPalette.of(theme)
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f)) { Bar(theme.onSurfaceVariant, 64.dp, 12.dp) }
+        Row {
+            MasteryLevel.entries.forEach { level ->
+                val colour = level.readerColorOr(theme.outline, ramp)
+                Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.width(32.dp).height(32.dp).background(colour, LektoRadii.Control),
+                        contentAlignment = Alignment.Center,
+                    ) { Bar(contentColorOn(colour), 6.dp, 8.dp) }
+                }
+            }
+        }
+    }
+}
+
+/** An icon in its 48 dp control, centred as the sheet's icon buttons centre theirs. */
+@Composable
+private fun BandIcon(imageVector: ImageVector, tint: Color) {
+    Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
+        Icon(imageVector = imageVector, contentDescription = null, tint = tint)
+    }
+}
+
+/** A hairline between two blocks, inset to the content as the sheet draws it. */
+@Composable
+private fun SheetDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
+        color = MaterialTheme.colorScheme.outline,
+    )
+}
+
+/** Screen 4: the same block in its preview card, above the six bands. No band is drawn as chosen. */
+@Composable
+private fun ColumnScope.LevelPreview() {
+    Column(
+        Modifier.fillMaxWidth().weight(1f).clipToBounds().padding(horizontal = LektoSpacing.ScreenEdge),
+    ) {
+        Heading(176.dp, 128.dp, 108.dp)
+        ReadingIn()
+        PreviewCard()
+        BandList()
+    }
+}
+
+/** The preview card: the embedded page at A1 under its label. */
+@Composable
+private fun PreviewCard() {
+    val theme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows),
+        shape = LektoRadii.Surface,
+        color = theme.background,
+        border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
+    ) {
+        Column(Modifier.padding(LektoSpacing.InsidePanel)) {
+            Bar(theme.onSurfaceVariant, 118.dp, 9.dp)
+            Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
+            PageBlock(
+                Modifier.fillMaxWidth().height(PREVIEW_BLOCK_HEIGHT),
+                lines = 6,
+                lineWidth = PREVIEW_LINE_WIDTH,
+            )
+        }
+    }
+}
+
+/**
+ * The six bands, code, name and one line each. None is washed or ruled: the built
+ * screen marks no band until the reader taps one, and A1 is only the band the
+ * preview above paints at.
+ */
+@Composable
+private fun BandList() {
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows)) {
+        repeat(6) { index ->
+            BandRowPreview()
+            if (index != 5) Hairline()
+        }
+    }
+}
+
+/** One band row: its code, its name, its one line, and the rule slot no choice fills yet. */
+@Composable
+private fun BandRowPreview() {
+    val theme = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = LektoSpacing.BetweenRelatedLines),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(2.dp).height(24.dp).background(Color.Transparent))
         Bar(theme.onSurfaceVariant, 20.dp, 9.dp, Modifier.padding(start = LektoSpacing.BetweenRelatedLines))
         Spacer(Modifier.width(LektoSpacing.BetweenRelatedLines))
         Bar(theme.onSurface, 86.dp, 13.dp)
@@ -377,11 +717,11 @@ private fun BandRowPreview(chosen: Boolean) {
     }
 }
 
-/** Screen 5: the shelf with the sample as its first row, the level line and the download line. */
+/** Screen 5: the shelf with the sample as its first row, the level line and the installed download. */
 @Composable
-private fun ArrivalPreview() {
+private fun ColumnScope.ArrivalPreview() {
     val theme = MaterialTheme.colorScheme
-    Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
+    Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
         Row(
             Modifier.fillMaxWidth().padding(vertical = LektoSpacing.InsidePanel),
             verticalAlignment = Alignment.CenterVertically,
@@ -413,32 +753,20 @@ private fun ArrivalPreview() {
         Bar(theme.onSurfaceVariant, 212.dp, 9.dp)
         Spacer(Modifier.weight(1f))
         Hairline()
-        Row(
-            Modifier.fillMaxWidth().padding(vertical = LektoSpacing.InsidePanel),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Bar(theme.onSurface, 132.dp, 10.dp)
-                Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
-                Bar(theme.onSurfaceVariant, 52.dp, 9.dp)
-            }
-            Spacer(Modifier.weight(1f))
-        }
+        InstalledLine(Modifier.padding(vertical = LektoSpacing.InsidePanel))
     }
 }
 
-/** The download line: its two bars and, while running, the `Stop` word at the edge. */
+/** The arrival's download line once the table and the pack have landed: the assets and `Installed`. */
 @Composable
-private fun DownloadLine(installed: Boolean) {
+private fun InstalledLine(modifier: Modifier = Modifier) {
     val theme = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column {
-            Bar(theme.onSurface, 128.dp, 10.dp)
+            Bar(theme.onSurface, 132.dp, 10.dp)
             Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
-            Bar(theme.onSurfaceVariant, if (installed) 52.dp else 116.dp, 9.dp)
+            Bar(theme.onSurfaceVariant, 52.dp, 9.dp)
         }
-        Spacer(Modifier.weight(1f))
-        if (!installed) Bar(theme.onSurface, 30.dp, 10.dp)
     }
 }
 
@@ -455,32 +783,34 @@ private fun Heading(first: Dp, second: Dp, intro: Dp) {
     }
 }
 
-/** The one mastery chip frame: filled in a level's colour, ringed when selected. */
-@Composable
-private fun ChipPreview(filled: Boolean, ringed: Boolean) {
-    val theme = MaterialTheme.colorScheme
-    val ramp = MasteryPalette.of(theme)
-    val colour = if (filled) MasteryLevel.FAMILIAR.readerColor(ramp) else theme.outline
-    Box(
-        Modifier
-            .size(32.dp)
-            .background(if (filled) colour else Color.Transparent, LektoRadii.Control)
-            .border(if (filled) 0.dp else 2.dp, colour, LektoRadii.Control),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (filled) Bar(theme.background, 6.dp, 8.dp)
-        if (ringed) Box(Modifier.size(24.dp).border(1.dp, theme.onBackground, LektoRadii.Control))
-    }
-}
-
-/** The four words the page colours, one per level, in reading order. */
+/**
+ * The four words the page colours, one per level, in reading order: A1's page
+ * carries all four highlighted levels on the sample's first paragraph.
+ */
 private fun colourAt(line: Int, word: Int): MasteryLevel? = when {
     line == 0 && word == 1 -> MasteryLevel.RECOGNIZED
-    line == 1 && word == 3 -> MasteryLevel.UNKNOWN
-    line == 2 && word == 0 -> MasteryLevel.LEARNED
-    line == 2 && word == 4 -> MasteryLevel.FAMILIAR
+    line == 2 && word == 2 -> MasteryLevel.UNKNOWN
+    line == 4 && word == 1 -> MasteryLevel.LEARNED
+    line == 5 && word == 3 -> MasteryLevel.FAMILIAR
     else -> null
 }
+
+/**
+ * The paragraph's lines as word widths. The sample's first paragraph sets about
+ * nine lines in the guide's measure; only the word counts and the rhythm matter,
+ * because the words themselves are the semantics suites' contract.
+ */
+private val PAGE_LINES: List<List<Dp>> = listOf(
+    listOf(32.dp, 24.dp, 40.dp, 28.dp, 36.dp, 20.dp, 44.dp),
+    listOf(26.dp, 42.dp, 30.dp, 24.dp, 38.dp, 20.dp, 34.dp),
+    listOf(30.dp, 22.dp, 46.dp, 26.dp, 34.dp, 40.dp, 18.dp),
+    listOf(36.dp, 24.dp, 28.dp, 44.dp, 20.dp, 32.dp, 26.dp),
+    listOf(22.dp, 38.dp, 30.dp, 26.dp, 42.dp, 24.dp, 34.dp),
+    listOf(40.dp, 26.dp, 20.dp, 36.dp, 28.dp, 44.dp, 22.dp),
+    listOf(28.dp, 34.dp, 24.dp, 40.dp, 26.dp, 20.dp, 38.dp),
+    listOf(32.dp, 22.dp, 42.dp, 26.dp, 36.dp, 24.dp, 44.dp),
+    listOf(24.dp, 30.dp, 26.dp, 20.dp),
+)
 
 /** A bar where a line of text would be. */
 @Composable
