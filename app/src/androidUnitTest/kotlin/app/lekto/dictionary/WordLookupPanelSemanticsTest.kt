@@ -378,7 +378,8 @@ class WordLookupPanelSemanticsTest {
     }
 
     @Test
-    fun `a saved word's level is stated and marked`() {        compose.setContent {
+    fun `a saved word's level is stated and marked`() {
+        compose.setContent {
             Panel(WordLookup.NotInDictionary("zzzz", "en"), entry = blorpleEntry(MasteryLevel.FAMILIAR))
         }
 
