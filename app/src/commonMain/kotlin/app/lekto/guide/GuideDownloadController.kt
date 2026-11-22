@@ -239,7 +239,8 @@ class GuideDownloadController(
         else -> Outcome.WAITING
     }
 
-    private fun DifficultyState.isBroken(): Boolean = this is DifficultyState.Corrupt || this is DifficultyState.Incompatible
+    private fun DifficultyState.isBroken(): Boolean =
+        this is DifficultyState.Corrupt || this is DifficultyState.Incompatible
 
     private fun DictionaryPackState.isBroken(): Boolean =
         this is DictionaryPackState.Corrupt || this is DictionaryPackState.Incompatible

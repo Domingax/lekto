@@ -805,7 +805,9 @@ private fun GuideDestination(
     val state = guide.state
     val sample = state.sample
     val scope = rememberCoroutineScope()
-    val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { /* the guide speaks, it does not report */ }
+    // The guide's speaker is a demonstration: a spoken word needs no receipt, and
+    // the guide carries no line for a missing voice.
+    val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { }
     val document = remember(sample, state.band, state.plain) {
         sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter) }
     }
