@@ -365,6 +365,9 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_DOWNLOAD_STOPPED to "Stopped",
     TextKey.GUIDE_DOWNLOAD_FAILED to "The download did not finish. Check your connection.",
     TextKey.GUIDE_DOWNLOAD_UNAVAILABLE to "The language data could not be reached. Check your connection.",
+    TextKey.GUIDE_DOWNLOAD_REFUSED to
+        "This build does not understand the published language data. Update the app.",
+    TextKey.GUIDE_DOWNLOAD_LANGUAGE_NOT_OFFERED to "This language is not published yet.",
     TextKey.GUIDE_DOWNLOAD_RETRY to "Retry",
     TextKey.GUIDE_DOWNLOAD_RESUME to "Resume",
     TextKey.GUIDE_LEVEL_NOT_SET to "Your reading level is not set yet. Settings ▸ Languages.",

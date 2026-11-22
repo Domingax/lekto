@@ -524,6 +524,31 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun aRefusedManifestSaysTheBuildCannotReadItAndOffersNoRetry() {
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.REFUSED, "en")),
+            actions = GuideActions(onRetryDownload = {}),
+        )
+
+        compose.onNodeWithText("This build does not understand the published language data. Update the app.")
+            .assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aLanguageTheManifestDoesNotPublishSaysSoAndOffersNoRetry() {
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.LANGUAGE_NOT_OFFERED, "en")),
+            actions = GuideActions(onRetryDownload = {}),
+        )
+
+        compose.onNodeWithText("This language is not published yet.").assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun aStoppedDownloadOffersToResume() {
         var resumed = 0
         render(

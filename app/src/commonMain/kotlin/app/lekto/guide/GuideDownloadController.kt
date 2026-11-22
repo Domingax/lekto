@@ -43,8 +43,14 @@ enum class GuideDownloadPhase {
     /** The reader stopped the download. */
     STOPPED,
 
-    /** The manifest does not publish the chosen language, or no manifest could be read. */
+    /** No manifest could be fetched: the transport or the network failed, so a retry is honest. */
     UNAVAILABLE,
+
+    /** The published manifest was fetched but this build does not understand its format. No retry. */
+    REFUSED,
+
+    /** The manifest is readable but publishes no data for the chosen language. No retry. */
+    LANGUAGE_NOT_OFFERED,
 
     /** An artefact's download failed. */
     FAILED,
@@ -79,8 +85,10 @@ data class GuideDownloadUiState(
  *
  * The demonstration never gates on it: every guide screen reads the sample's own
  * colour maps and glossary, so it works before, during and after the download. A
- * manifest that cannot be read leaves the state [GuideDownloadPhase.UNAVAILABLE]
- * rather than failing the guide.
+ * manifest that cannot be fetched leaves [GuideDownloadPhase.UNAVAILABLE]; one this
+ * build refuses leaves [GuideDownloadPhase.REFUSED]; one that does not publish the
+ * chosen language leaves [GuideDownloadPhase.LANGUAGE_NOT_OFFERED] rather than
+ * failing the guide, and the line names which of the three it is.
  *
  * The pack it chooses is the reader's own **Translation language** when the
  * manifest publishes one, otherwise the first published pack: the guide lists
@@ -123,10 +131,13 @@ class GuideDownloadController(
     /**
      * Re-runs the preparation after a failure or an unreachable manifest: the
      * reader's `Retry`, which reads the manifest again and starts the installs
-     * afresh rather than giving up silently.
+     * afresh rather than giving up silently. A refused handshake or a language the
+     * manifest does not publish has no retry: nothing the reader can do would change
+     * the answer, so the line offers none.
      */
     fun retry() {
         if (state.isRunning) return
+        if (state.phase !in RETRYABLE_PHASES) return
         state.language?.let(::start)
     }
 
@@ -144,15 +155,28 @@ class GuideDownloadController(
 
     /** The preparation itself: read the manifest, plan the artefacts, start them and watch. */
     private fun prepare(language: String) {
-        val offered = offeredLanguage(language)
+        val languages = when (val manifest = manifestLanguages()) {
+            is ManifestRead.Languages -> manifest.offered
+            ManifestRead.Refused -> {
+                state = state.copy(phase = GuideDownloadPhase.REFUSED)
+                return
+            }
+
+            ManifestRead.Unreachable -> {
+                state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
+                return
+            }
+        }
+        onOffered(languages)
+        val offered = languages.firstOrNull { offered -> baseLanguage(offered.language) == baseLanguage(language) }
         if (offered == null) {
-            state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
+            state = state.copy(phase = GuideDownloadPhase.LANGUAGE_NOT_OFFERED)
             return
         }
         target = offered
         val artifacts = guidePlanOf(offered, translationLanguage())
         if (artifacts.isEmpty()) {
-            state = state.copy(phase = GuideDownloadPhase.UNAVAILABLE)
+            state = state.copy(phase = GuideDownloadPhase.LANGUAGE_NOT_OFFERED)
             return
         }
         state = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, offered.language, artifacts)
@@ -176,17 +200,22 @@ class GuideDownloadController(
         target = null
     }
 
-    /** The manifest's offered [language], read first from the cache and fetched only when nothing is cached. */
-    private fun offeredLanguage(language: String): OfferedLanguage? {
-        val languages = manifestLanguages() ?: return null
-        onOffered(languages)
-        return languages.firstOrNull { offered -> baseLanguage(offered.language) == baseLanguage(language) }
+    /**
+     * The manifest's languages, or the honest reason it could not be read: the
+     * cache first, then one fetch. A fetch that throws is [ManifestRead.Unreachable]
+     * (the connection line, retryable); bytes this build refuses are
+     * [ManifestRead.Refused] (update the app, no retry).
+     */
+    private fun manifestLanguages(): ManifestRead = when (val status = catalog?.status()) {
+        is LanguageCatalogState.Available -> ManifestRead.Languages(status.languages)
+        else -> fetchManifest()
     }
 
-    /** The manifest's languages: the cache, or one fetch when nothing is cached. */
-    private fun manifestLanguages(): List<OfferedLanguage>? = when (val status = catalog?.status()) {
-        is LanguageCatalogState.Available -> status.languages
-        else -> (runCatching { catalog?.reload() }.getOrNull() as? LanguageCatalogState.Available)?.languages
+    /** One fetch: a thrown transport failure and a refused handshake are different answers. */
+    private fun fetchManifest(): ManifestRead = when (val reloaded = runCatching { catalog?.reload() }.getOrNull()) {
+        null -> ManifestRead.Unreachable
+        is LanguageCatalogState.Available -> ManifestRead.Languages(reloaded.languages)
+        LanguageCatalogState.Unavailable -> ManifestRead.Refused
     }
 
     private fun sameLanguage(language: String): Boolean =
@@ -220,6 +249,20 @@ class GuideDownloadController(
 
 /** Both installers' current states, bundled so a verdict stays a small function. */
 private class InstallStates(val tables: Map<String, DifficultyUiState>, val packs: Map<String, DictionaryUiState>)
+
+/** What reading the manifest produced: its languages, or the honest reason it could not be read. */
+private sealed interface ManifestRead {
+    data class Languages(val offered: List<OfferedLanguage>) : ManifestRead
+    data object Refused : ManifestRead
+    data object Unreachable : ManifestRead
+}
+
+/** The phases a retry can improve: the transport failed, an artefact failed, or the reader stopped. */
+private val RETRYABLE_PHASES = setOf(
+    GuideDownloadPhase.UNAVAILABLE,
+    GuideDownloadPhase.FAILED,
+    GuideDownloadPhase.STOPPED,
+)
 
 /** The artefacts [offered] publishes: its table, and the pack for the reader's translation language. */
 private fun guidePlanOf(offered: OfferedLanguage, translationLanguage: String?): List<OfferedArtifact> =

@@ -1251,7 +1251,9 @@ download is `GuideDownloadControllerTest`, driven by virtual time: one line for 
 artefacts, the manifest read only after the answer, the reader's own pack chosen
 after the translation default is filled from the manifest, a stop that cancels both
 installers and sticks, a failure that reports rather than crashing, and a retry
-after each of UNAVAILABLE, FAILED and STOPPED. `AppSemanticsTest` on both lanes
+after each of UNAVAILABLE, FAILED and STOPPED, and the two causes no retry can
+improve — a refused format handshake and a language the manifest does not publish —
+reported as themselves with no action. `AppSemanticsTest` on both lanes
 drives the same path end to end over the fake fetch seams and checks the
 **Languages** surface reports both artefacts installed afterwards. The screens are
 `GuideScreenSemanticsTest` on both lanes — the roster with no preselection and its

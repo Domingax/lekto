@@ -157,36 +157,72 @@ class GuideDownloadControllerTest {
     }
 
     @Test
-    fun `a language the manifest does not offer downloads nothing and says so`() = runTest {
-        val rig = rig(InMemoryLanguageCatalog(LanguageCatalogState.Available(listOf(testOfferedLanguage("fr")))))
+    fun `a language the manifest does not publish says so and offers no retry`() = runTest {
+        val catalog =
+            InMemoryLanguageCatalog(LanguageCatalogState.Available(listOf(testOfferedLanguage("fr"))))
+        val rig = rig(catalog)
 
         rig.download.start("en")
         advanceUntilIdle()
 
-        assertEquals(GuideDownloadPhase.UNAVAILABLE, rig.download.state.phase)
+        assertEquals(GuideDownloadPhase.LANGUAGE_NOT_OFFERED, rig.download.state.phase)
         assertNull(rig.download.state.sizeBytes)
+
+        rig.download.retry()
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.LANGUAGE_NOT_OFFERED, rig.download.state.phase, "there is no dead retry")
+        assertEquals(0, catalog.reloads, "the cached manifest was read once and no fetch was attempted")
     }
 
     @Test
-    fun `no readable manifest leaves the demonstration untouched and says so`() = runTest {
-        val rig = rig(InMemoryLanguageCatalog(LanguageCatalogState.Unavailable))
+    fun `a manifest this build refuses says so and offers no retry`() = runTest {
+        val catalog = InMemoryLanguageCatalog(LanguageCatalogState.Unavailable)
+        val rig = rig(catalog)
+
+        rig.download.start("en")
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.REFUSED, rig.download.state.phase)
+        assertTrue(rig.difficulty.states.value.isEmpty(), "nothing was started")
+
+        rig.download.retry()
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.REFUSED, rig.download.state.phase, "a refused handshake is not retried")
+        assertEquals(1, catalog.reloads)
+    }
+
+    @Test
+    fun `a fetch that throws is the connection case and retries`() = runTest {
+        val catalog = InMemoryLanguageCatalog(LanguageCatalogState.Unavailable)
+        catalog.failure = IllegalStateException("offline")
+        val rig = rig(catalog)
 
         rig.download.start("en")
         advanceUntilIdle()
 
         assertEquals(GuideDownloadPhase.UNAVAILABLE, rig.download.state.phase)
-        assertTrue(rig.difficulty.states.value.isEmpty(), "nothing was started")
+
+        catalog.failure = null
+        catalog.onReload = LanguageCatalogState.Available(listOf(english()))
+        rig.download.retry()
+        advanceUntilIdle()
+
+        assertEquals(GuideDownloadPhase.INSTALLED, rig.download.state.phase)
     }
 
     @Test
     fun anUnreachableManifestRetriesIntoBothInstalls() = runTest {
         val catalog = InMemoryLanguageCatalog(LanguageCatalogState.Unavailable)
+        catalog.failure = IllegalStateException("offline")
         val rig = rig(catalog)
 
         rig.download.start("en")
         advanceUntilIdle()
         assertEquals(GuideDownloadPhase.UNAVAILABLE, rig.download.state.phase)
 
+        catalog.failure = null
         catalog.onReload = LanguageCatalogState.Available(listOf(english()))
         rig.download.retry()
         advanceUntilIdle()

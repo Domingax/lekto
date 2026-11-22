@@ -160,6 +160,10 @@ private fun status(state: GuideDownloadUiState): String {
 
         GuideDownloadPhase.UNAVAILABLE -> texts[TextKey.GUIDE_DOWNLOAD_UNAVAILABLE]
 
+        GuideDownloadPhase.REFUSED -> texts[TextKey.GUIDE_DOWNLOAD_REFUSED]
+
+        GuideDownloadPhase.LANGUAGE_NOT_OFFERED -> texts[TextKey.GUIDE_DOWNLOAD_LANGUAGE_NOT_OFFERED]
+
         GuideDownloadPhase.IDLE -> ""
     }
 }
