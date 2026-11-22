@@ -90,7 +90,7 @@ import app.lekto.guide.GuideActions
 import app.lekto.guide.GuideController
 import app.lekto.guide.GuideDownloadActions
 import app.lekto.guide.GuideDownloadController
-import app.lekto.guide.GuideArrival
+import app.lekto.guide.GuideShelfFooter
 import app.lekto.guide.GuideDownloadPhase
 import app.lekto.guide.GuideDownloadUiState
 import app.lekto.guide.GuideProgressController
@@ -1071,23 +1071,30 @@ private fun LibraryDestination(
     onOpen: (ReadingSession) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        GuideArrival(
-            download = download,
-            downloadActions = GuideDownloadActions(
-                onStop = onStopDownload,
-                onRetry = onRetryDownload,
-                onResume = onResumeDownload,
-            ),
-        ) {
-            LibraryScreen(
-                state = state,
-                actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
-                covers = remember(environment.library) { LibraryBookCovers(environment.library) },
-                snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
-                levelLine = levelLine,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        LibraryScreen(
+            state = state,
+            actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
+            covers = remember(environment.library) { LibraryBookCovers(environment.library) },
+            snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
+            levelLine = levelLine,
+            footer = if (download.phase == GuideDownloadPhase.IDLE) {
+                null
+            } else {
+                {
+                    // The shelf's own item, so the download line reads as part of the
+                    // first-run shelf rather than a strip pinned under it (issue #277).
+                    GuideShelfFooter(
+                        download,
+                        GuideDownloadActions(
+                            onStop = onStopDownload,
+                            onRetry = onRetryDownload,
+                            onResume = onResumeDownload,
+                        ),
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 

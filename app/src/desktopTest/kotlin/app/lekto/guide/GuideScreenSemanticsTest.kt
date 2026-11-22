@@ -634,17 +634,16 @@ class GuideScreenSemanticsTest {
         setContent {
             CompositionLocalProvider(LocalAppTexts provides texts) {
                 LektoTheme {
-                    Column(Modifier.fillMaxSize()) {
-                        LibraryScreen(
-                            state = LibraryUiState(sample = sampleBookRow()),
-                            levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
-                            modifier = Modifier.weight(1f),
-                        )
-                        GuideDownloadLine(
-                            GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
-                            GuideDownloadActions(onStop = {}),
-                        )
-                    }
+                    LibraryScreen(
+                        state = LibraryUiState(sample = sampleBookRow()),
+                        levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
+                        footer = {
+                            GuideShelfFooter(
+                                GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
+                                GuideDownloadActions(onStop = {}),
+                            )
+                        },
+                    )
                 }
             }
         }

@@ -201,14 +201,21 @@ class GuideLayoutTest {
         }
     }
 
-    /** The arrival's frame (issue #277's third review): the download line shares the shelf's edges. */
+    /**
+     * The arrival (issue #277's third review): the download line is the shelf's own
+     * last item, under the sample's lines, sharing the shelf's edges and one row
+     * unit below them — not a strip pinned to the foot of the screen.
+     */
     private fun theArrival(frameWidth: Float, height: Float) {
         screen(frameWidth, height, { ArrivalStage() }) {
             val line = onNodeWithTag(GUIDE_DOWNLOAD_TAG).fetchSemanticsNode().boundsInRoot
+            val level = onNodeWithText("Your reading level is not set yet. Settings ▸ Languages.")
+                .fetchSemanticsNode().boundsInRoot
 
             assertEquals(LektoSpacing.ScreenEdge.value, line.left, 0.5f, "the line keeps the shelf's left edge")
             assertEquals(frameWidth - LektoSpacing.ScreenEdge.value, line.right, 0.5f, "and its right edge")
-            assertEquals(height - LektoSpacing.InsidePanel.value, line.bottom, 0.5f, "one panel above the screen edge")
+            assertEquals(LektoSpacing.BetweenRows.value, line.top - level.bottom, 0.5f, "one row unit under the sample")
+            assertTrue(line.bottom < height, "the line is part of the shelf, not pinned to its foot: $line")
         }
     }
 
@@ -311,16 +318,17 @@ class GuideLayoutTest {
 
     @Composable
     private fun ArrivalStage() {
-        GuideArrival(
-            download = GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
-            downloadActions = GuideDownloadActions(onStop = {}),
-        ) {
-            LibraryScreen(
-                state = LibraryUiState(sample = sampleBookRow()),
-                levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        LibraryScreen(
+            state = LibraryUiState(sample = sampleBookRow()),
+            levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
+            footer = {
+                GuideShelfFooter(
+                    GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
+                    GuideDownloadActions(onStop = {}),
+                )
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 
     private fun sampleBookRow(): SampleBookRow = SampleBookRow(
