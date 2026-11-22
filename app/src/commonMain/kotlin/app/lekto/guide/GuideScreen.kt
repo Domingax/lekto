@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
@@ -111,8 +112,8 @@ private const val GUIDE_STEPS = 5
 /** The height the guide gives the embedded page, so the paragraph breathes. */
 private val PAGE_HEIGHT = 320.dp
 
-/** The height the level screen's preview card gives the page, so the six bands fit under it. */
-private val PREVIEW_HEIGHT = 260.dp
+/** The height the level screen's preview card gives the page, so the six bands and the action fit too. */
+private val PREVIEW_HEIGHT = 80.dp
 
 /** The test tag on one language row, so a test can choose exactly one. */
 internal fun guideLanguageRowTag(language: String): String = "guide-language-$language"
@@ -516,15 +517,14 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
         Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
-        GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO])
-        GuideReadingIn(language)
+        GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO], topPadding = LektoSpacing.BetweenRelatedLines)
         PreviewCard(beat.document)
         BandList(state.chosenBand, beat.actions.onChooseBand)
         Button(
             onClick = beat.actions.onFinish,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = LektoSpacing.BetweenBlocks)
+                .padding(top = LektoSpacing.InsidePanel)
                 .handCursor()
                 .testTag(GUIDE_START_READING_TAG),
         ) {
@@ -533,16 +533,17 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
     }
 }
 
-/** The level screen's card: the embedded page at the band being chosen. */
+/** The level screen's card: the embedded page at the band being chosen, compacted to fit one screen. */
 @Composable
 private fun PreviewCard(document: ReaderDocument?) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows).testTag(GUIDE_LEVEL_PREVIEW_TAG),
+        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines)
+            .testTag(GUIDE_LEVEL_PREVIEW_TAG),
         shape = LektoRadii.Surface,
         color = MaterialTheme.colorScheme.background,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Column(Modifier.padding(LektoSpacing.InsidePanel)) {
+        Column(Modifier.padding(LektoSpacing.BetweenRelatedLines)) {
             document?.let { page ->
                 GuidePageBlock(page, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT))
             }
@@ -558,7 +559,7 @@ private fun PreviewCard(document: ReaderDocument?) {
 @Composable
 private fun BandList(chosen: CefrLevel, onChoose: (CefrLevel) -> Unit) {
     val texts = LocalAppTexts.current
-    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows)) {
+    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRelatedLines)) {
         CefrLevel.entries.forEachIndexed { index, level ->
             BandRow(level, selected = level == chosen, name = texts.bandName(level), line = texts.bandLine(level)) {
                 onChoose(level)
@@ -660,8 +661,8 @@ private fun NoteRow(note: GuideNote, levelName: String, colour: Color) {
 
 /** A screen's big title and, when it has one, its one supporting line. */
 @Composable
-private fun GuideHeading(title: String, intro: String?) {
-    Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel)) {
+private fun GuideHeading(title: String, intro: String?, topPadding: Dp = LektoSpacing.InsidePanel) {
+    Column(Modifier.fillMaxWidth().padding(top = topPadding)) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
