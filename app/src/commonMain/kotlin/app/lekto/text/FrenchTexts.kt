@@ -371,7 +371,6 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "Choisir un niveau enregistre le mot. Le niveau 4 n'a pas de couleur : c'est le texte normal.",
     TextKey.GUIDE_LEVEL_TITLE to "Quel est votre niveau en {0} ?",
     TextKey.GUIDE_LEVEL_INTRO to "Il colore vos livres. Changez-le : la page change.",
-    TextKey.GUIDE_LEVEL_PREVIEW to "Aperçu · la page de l'exemple",
     TextKey.GUIDE_START_READING to "Commencer à lire",
     TextKey.GUIDE_DOWNLOAD_ASSETS to "Table et dictionnaire · {0}",
     TextKey.GUIDE_DOWNLOAD_TITLE to "Table et dictionnaire",

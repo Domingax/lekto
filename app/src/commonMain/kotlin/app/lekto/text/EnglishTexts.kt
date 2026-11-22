@@ -355,7 +355,6 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
         "Choosing a level saves the word. Level 4 has no colour: it is the normal text.",
     TextKey.GUIDE_LEVEL_TITLE to "What is your level in {0}?",
     TextKey.GUIDE_LEVEL_INTRO to "It colours your books. Change it: the page changes.",
-    TextKey.GUIDE_LEVEL_PREVIEW to "Preview · the sample page",
     TextKey.GUIDE_START_READING to "Start reading",
     TextKey.GUIDE_DOWNLOAD_ASSETS to "Table and dictionary · {0}",
     TextKey.GUIDE_DOWNLOAD_TITLE to "Table and dictionary",

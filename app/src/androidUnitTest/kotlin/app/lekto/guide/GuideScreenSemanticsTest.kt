@@ -357,6 +357,14 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun theLevelPreviewCarriesNoLabel() {
+        render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
+
+        compose.onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
+        compose.onNodeWithText("Preview · the sample page").assertDoesNotExist()
+    }
+
+    @Test
     fun theDefaultBandIsASuggestionAndNoBandIsChosen() {
         render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
 

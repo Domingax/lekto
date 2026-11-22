@@ -533,10 +533,9 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
     }
 }
 
-/** The level screen's card: the embedded page at the band being chosen, under its label. */
+/** The level screen's card: the embedded page at the band being chosen. */
 @Composable
 private fun PreviewCard(document: ReaderDocument?) {
-    val texts = LocalAppTexts.current
     Surface(
         modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows).testTag(GUIDE_LEVEL_PREVIEW_TAG),
         shape = LektoRadii.Surface,
@@ -544,11 +543,6 @@ private fun PreviewCard(document: ReaderDocument?) {
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(Modifier.padding(LektoSpacing.InsidePanel)) {
-            Text(
-                text = texts[TextKey.GUIDE_LEVEL_PREVIEW],
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             document?.let { page ->
                 GuidePageBlock(page, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT))
             }
