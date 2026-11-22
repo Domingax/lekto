@@ -42,8 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
-import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.dictionary.dictionaryShortcuts
+import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.text.baseLanguage
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.Pronunciation
@@ -146,7 +146,7 @@ data class GuideActions(
  * 320 dp everything either wraps or scrolls, and on desktop the arrow keys page
  * the screens and `Escape` is `Skip` (installed by the composition root).
  */
-@Suppress("LongParameterList") // The state, its roster, the page, the notes, the download and the actions are independent.
+@Suppress("LongParameterList") // The state, its roster, the page, the notes, the download and the actions.
 @Composable
 fun GuideScreen(
     state: GuideUiState,
@@ -179,7 +179,9 @@ fun GuideScreen(
 private fun GuideBar(stage: GuideStage, onSkip: () -> Unit) {
     val texts = LocalAppTexts.current
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
@@ -278,6 +280,7 @@ private fun LanguageRow(offered: OfferedLanguage, onChoose: (String) -> Unit) {
  * all and promises no gesture; the second paints the same paragraph from the
  * sample's own map and explains four of its words, one per level, under it.
  */
+@Suppress("LongParameterList") // The state, the page, the notes, the download and the actions.
 @Composable
 private fun ColumnScope.PageBeat(
     state: GuideUiState,
@@ -308,6 +311,7 @@ private fun ColumnScope.PageBeat(
  * real **Vocabulary**; closing the sheet writes nothing and leaves the page with
  * the word still marked.
  */
+@Suppress("LongParameterList") // The state, the page, the notes, the download and the actions.
 @Composable
 private fun ColumnScope.TapBeat(
     state: GuideUiState,
@@ -414,7 +418,10 @@ private fun ColumnScope.LevelBeat(
         BandList(state.band, actions.onChooseBand)
         Button(
             onClick = actions.onFinish,
-            modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenBlocks)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = LektoSpacing.BetweenBlocks)
+                .handCursor()
                 .testTag(GUIDE_START_READING_TAG),
         ) {
             Text(texts[TextKey.GUIDE_START_READING])
@@ -458,6 +465,7 @@ private fun BandList(band: CefrLevel, onChoose: (CefrLevel) -> Unit) {
 }
 
 /** One band row: its code, its name, what it reads, and the ink rule that marks the choice. */
+@Suppress("LongParameterList") // The band, its choice, its name, its one line and the tap.
 @Composable
 private fun BandRow(level: CefrLevel, selected: Boolean, name: String, line: String, onClick: () -> Unit) {
     Row(
@@ -498,7 +506,10 @@ private fun BandRow(level: CefrLevel, selected: Boolean, name: String, line: Str
 private fun GuideNotes(notes: List<GuideNote>, modifier: Modifier = Modifier) {
     val texts = LocalAppTexts.current
     val ramp = MasteryPalette.of(MaterialTheme.colorScheme)
-    Column(modifier.fillMaxWidth().testTag(GUIDE_NOTES_TAG), verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows)) {
+    Column(
+        modifier.fillMaxWidth().testTag(GUIDE_NOTES_TAG),
+        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRows),
+    ) {
         notes.forEach { note ->
             NoteRow(note, texts.masteryName(note.level), note.level.readerColor(ramp))
         }
@@ -579,7 +590,8 @@ private fun GuideReadingIn(language: String?) {
     )
 }
 
-/** The page's quiet way forward, aligned to the trailing edge as the mockups draw it. */@Composable
+/** The page's quiet way forward, aligned to the trailing edge as the mockups draw it. */
+@Composable
 private fun GuideContinue(onClick: () -> Unit, modifier: Modifier = Modifier) {
     TextAction(onClick = onClick, modifier = modifier.testTag(GUIDE_CONTINUE_TAG)) {
         Text(LocalAppTexts.current[TextKey.GUIDE_CONTINUE], style = MaterialTheme.typography.bodyLarge)

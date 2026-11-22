@@ -12,6 +12,7 @@ import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryController
 
 /** The guide's screens, in the order a first launch walks them (issue #277). */
+@Suppress("MagicNumber") // The positions are the step numbers the five marks show.
 enum class GuideStage(val position: Int) {
     /** The language question; skipped entirely when the build ships one sample. */
     LANGUAGE(1),
@@ -55,8 +56,9 @@ data class GuideUiState(
  * maps and glossary are the demonstration's source, so every screen works before,
  * during and after the download.
  */
+@Suppress("LongParameterList") // The flow's independent inputs.
 class GuideController(
-    private val languages: List<OfferedLanguage>,
+    languages: List<OfferedLanguage>,
     private val sampleOf: (String) -> Sample?,
     private val materialise: (String) -> Unit = {},
     private val download: GuideDownloadController? = null,
@@ -98,11 +100,8 @@ class GuideController(
     fun advance() {
         state = when {
             state.stage == GuideStage.PAGE && state.plain -> state.copy(plain = false)
-
             state.stage == GuideStage.PAGE -> state.copy(stage = GuideStage.TAP, lookupOpen = true)
-
             state.stage == GuideStage.TAP && !state.lookupOpen -> state.copy(stage = GuideStage.LEVEL)
-
             else -> state
         }
     }
@@ -133,6 +132,7 @@ class GuideController(
      * sample as the book it was saved from, and states it. A refused write says so
      * and leaves the word unsaved.
      */
+    @Suppress("ReturnCount") // Three guards name the three ways there is no word to save; one happy path follows.
     fun save(level: MasteryLevel) {
         val sample = state.sample ?: return
         val note = guideNotes(sample, state.band, segmenter, translationLanguage()).firstOrNull() ?: return

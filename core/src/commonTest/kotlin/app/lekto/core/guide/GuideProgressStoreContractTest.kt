@@ -1,8 +1,8 @@
 package app.lekto.core.guide
 
+import app.lekto.testkit.GuideProgressStoreContract
 import app.lekto.testkit.InMemoryGuideProgressStore
 import app.lekto.testkit.InMemoryVaultFileSystem
-import app.lekto.testkit.GuideProgressStoreContract
 import io.kotest.core.spec.style.FunSpec
 
 /**

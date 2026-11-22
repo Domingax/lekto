@@ -228,6 +228,7 @@ private fun LibraryNarrowing(state: LibraryUiState, actions: LibraryActions) {
  * shows the sample above the explanation. The §7.1 empty state is reserved for a
  * shelf with no row at all.
  */
+@Suppress("LongParameterList") // The state, its actions and the shelf's three gestures.
 @Composable
 private fun ColumnScope.LibraryBody(
     state: LibraryUiState,

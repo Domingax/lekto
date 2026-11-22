@@ -1,8 +1,8 @@
 package app.lekto.difficulty
 
+import app.lekto.core.dictionary.PackDownloader
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.difficulty.DifficultyState
-import app.lekto.core.dictionary.PackDownloader
 import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DerivedAssetStore
@@ -37,7 +37,7 @@ import kotlin.test.assertTrue
  * driven by virtual time rather than a wall clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the controller's contract.
+@Suppress("TooManyFunctions", "MagicNumber") // One behaviour per test; the sizes and waits are parameters.
 class DifficultyControllerTest {
 
     private val derived = DerivedAssetStore(InMemoryVaultFileSystem())
@@ -186,6 +186,7 @@ class DifficultyControllerTest {
         assertEquals(1, files.getValue("en").downloads)
     }
 
+    @Suppress("InjectDispatcher") // The blocking download must run on a real thread, not the test's virtual one.
     @Test
     fun `stopping a download cancels it and clears the installing flag`() = runBlocking {
         val started = CountDownLatch(1)
@@ -202,7 +203,11 @@ class DifficultyControllerTest {
                 language = language,
             )
         }
-        val controller = DifficultyController(services, Dispatchers.IO, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val controller = DifficultyController(
+            services,
+            Dispatchers.IO,
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        )
 
         controller.install("en", artifact("en"))
         assertTrue(started.await(5, TimeUnit.SECONDS), "the download did not start")

@@ -90,7 +90,10 @@ class GuideControllerTest {
 
         assertEquals(MasteryLevel.FAMILIAR, guide.state.savedLevel)
         assertFalse(guide.state.saveFailed)
-        assertEquals(MasteryLevel.FAMILIAR, vocabulary.entryFor(app.lekto.core.text.WordKey("en", "fisherman"))?.mastery)
+        assertEquals(
+            MasteryLevel.FAMILIAR,
+            vocabulary.entryFor(app.lekto.core.text.WordKey("en", "fisherman"))?.mastery,
+        )
     }
 
     @Test

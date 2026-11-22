@@ -3,6 +3,9 @@ package app.lekto.guide
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
+import app.lekto.core.dictionary.DictionaryEntry
+import app.lekto.core.dictionary.DictionarySense
+import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.sample.Sample
 import app.lekto.core.sample.SampleGlossary
 import app.lekto.core.text.BlockKind
@@ -15,9 +18,6 @@ import app.lekto.core.text.baseLanguage
 import app.lekto.core.text.contextSentence
 import app.lekto.core.text.normaliseSurface
 import app.lekto.core.text.wordKeyOf
-import app.lekto.core.dictionary.DictionaryEntry
-import app.lekto.core.dictionary.DictionarySense
-import app.lekto.core.dictionary.WordLookup
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderRenderer
 import app.lekto.reader.ReaderText
@@ -84,6 +84,7 @@ fun guideLemmas(sample: Sample): LemmaLookup = LemmaLookup { surface, language -
 }
 
 /** The one-page document the guide's page screens host in the real reader. */
+@Suppress("LongParameterList") // The sample, the band, the beat, the segmenter and the selection.
 fun guideDocument(
     sample: Sample,
     band: CefrLevel,

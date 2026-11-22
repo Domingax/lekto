@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The whole app's flows plus the fixtures they share.
+
 package app.lekto
 
 import androidx.activity.ComponentActivity
@@ -57,8 +59,8 @@ import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
-import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
@@ -150,9 +152,9 @@ import app.lekto.testkit.FakeDictionaryPackFiles
 import app.lekto.testkit.FakeDifficultyFiles
 import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
-import app.lekto.testkit.InMemoryGuideProgressStore
 import app.lekto.testkit.FlakyVaultFileSystem
 import app.lekto.testkit.InMemoryAppThemeStore
+import app.lekto.testkit.InMemoryGuideProgressStore
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
@@ -1662,7 +1664,6 @@ class AppSemanticsTest {
     }
 }
 
-/** An **in-memory catalog** offering English, so the Languages surface lists something. */
 /** The one sample every guide test materialises, so the first launch has a language to answer. */
 private fun guideSamples(): SampleLibrary = SampleLibrary(
     catalogue = SampleCatalogContent(listOf(guideSample())),
@@ -1670,6 +1671,7 @@ private fun guideSamples(): SampleLibrary = SampleLibrary(
     dismissed = InMemorySampleDismissedStore(),
 )
 
+/** An **in-memory catalog** offering English, so the Languages surface lists something. */
 private fun languageCatalog(): LanguageCatalog =
     InMemoryLanguageCatalog(LanguageCatalogState.Available(listOf(testOfferedLanguage("en"))))
 

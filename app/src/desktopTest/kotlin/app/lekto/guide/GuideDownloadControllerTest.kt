@@ -1,8 +1,10 @@
 package app.lekto.guide
 
 import app.lekto.core.dictionary.DictionaryPackInstaller
-import app.lekto.core.difficulty.DifficultyInstaller
+import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.PackDownloader
+import app.lekto.core.difficulty.DifficultyInstaller
+import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.OfferedLanguage
@@ -45,7 +47,7 @@ import kotlin.test.assertTrue
  * work is driven by virtual time rather than a wall clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the controller's contract.
+@Suppress("TooManyFunctions", "MagicNumber") // One behaviour, one test; the sizes and waits are the test's parameters.
 class GuideDownloadControllerTest {
 
     private val derived = DerivedAssetStore(InMemoryVaultFileSystem())
@@ -65,10 +67,7 @@ class GuideDownloadControllerTest {
         val dictionary: DictionaryController,
     )
 
-    private fun TestScope.rig(
-        catalog: LanguageCatalog,
-        translation: String? = "fr",
-    ): Rig {
+    private fun TestScope.rig(catalog: LanguageCatalog, translation: String? = "fr"): Rig {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val difficulty = DifficultyController(difficultyServices, dispatcher, this)
         val dictionary = DictionaryController(dictionaryServices, dispatcher, this)
@@ -87,7 +86,11 @@ class GuideDownloadControllerTest {
         "en",
         difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz", sizeBytes = difficultySize),
         dictionaries = listOf(
-            testOfferedDictionary(translation, "lekto-dictionary-en-$translation.sqlite.gz", sizeBytes = dictionarySize),
+            testOfferedDictionary(
+                translation,
+                "lekto-dictionary-en-$translation.sqlite.gz",
+                sizeBytes = dictionarySize,
+            ),
         ),
     )
 
@@ -103,9 +106,15 @@ class GuideDownloadControllerTest {
 
         assertEquals(GuideDownloadPhase.INSTALLED, rig.download.state.phase)
         assertEquals(36_000_000L, rig.download.state.sizeBytes)
-        assertEquals(listOf("lekto-difficulty-en.sqlite.gz", "lekto-dictionary-en-fr.sqlite.gz"), rig.download.state.artifacts.map { it.name })
-        assertTrue(rig.difficulty.states.value.getValue("en").status is app.lekto.core.difficulty.DifficultyState.Ready)
-        assertTrue(rig.dictionary.states.value.getValue("lekto-dictionary-en-fr.sqlite.gz").status is app.lekto.core.dictionary.DictionaryPackState.Ready)
+        assertEquals(
+            listOf("lekto-difficulty-en.sqlite.gz", "lekto-dictionary-en-fr.sqlite.gz"),
+            rig.download.state.artifacts.map { it.name },
+        )
+        assertTrue(rig.difficulty.states.value.getValue("en").status is DifficultyState.Ready)
+        assertTrue(
+            rig.dictionary.states.value.getValue("lekto-dictionary-en-fr.sqlite.gz").status is
+                DictionaryPackState.Ready,
+        )
     }
 
     @Test
@@ -153,6 +162,7 @@ class GuideDownloadControllerTest {
         assertTrue(rig.difficulty.states.value.isEmpty(), "nothing was started")
     }
 
+    @Suppress("InjectDispatcher") // The blocking download must run on a real thread, not the test's virtual one.
     @Test
     fun `a stopped download never finishes and the line follows the stop`() = runBlocking {
         val started = CountDownLatch(1)
@@ -172,7 +182,14 @@ class GuideDownloadControllerTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val difficulty = DifficultyController(services, Dispatchers.IO, scope)
         val dictionary = DictionaryController(dictionaryServices, Dispatchers.IO, scope)
-        val download = GuideDownloadController(catalog(), difficulty, dictionary, { "fr" }, Dispatchers.IO, scope)
+        val download = GuideDownloadController(
+            catalog(),
+            difficulty,
+            dictionary,
+            { "fr" },
+            Dispatchers.IO,
+            scope,
+        )
 
         download.start("en")
         assertTrue(started.await(5, TimeUnit.SECONDS), "the download did not start")

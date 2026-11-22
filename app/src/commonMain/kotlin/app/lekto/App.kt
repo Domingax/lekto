@@ -315,7 +315,7 @@ data class LlmServices(
  * paper to the host, so the platform's own window — the strip before the first
  * frame — is the theme's background rather than a white flash.
  */
-@Suppress("LongMethod", "CyclomaticComplexMethod") // The composition root wires each independent seam once.
+@Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod") // The composition root.
 @Composable
 fun App(
     environment: AppEnvironment,
@@ -779,6 +779,7 @@ private fun AppScreens(
  * they leave any screen. The page's document is memoised on the band and the beat,
  * so a band choice repaints it at once with no transition.
  */
+@Suppress("LongParameterList", "LongMethod") // The guide's independent inputs and its one wiring.
 @Composable
 private fun GuideDestination(
     guide: GuideController,
@@ -854,6 +855,7 @@ private fun guideKey(event: KeyEvent, guide: GuideController, onFinish: () -> Un
 
 /** The word whose lookup panel is open: the tapped word and its offline result. */
 private data class WordSelection(val tap: WordTap, val result: WordLookup)
+
 /** The reader destination over an opened session, with the lookup panel it owns. */
 @Suppress("LongParameterList", "LongMethod") // The reader wires its independent pieces; splitting scatters them.
 @Composable

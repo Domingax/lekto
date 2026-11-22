@@ -40,7 +40,7 @@ import kotlin.test.assertTrue
  * a wall clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the controller's contract.
+@Suppress("TooManyFunctions", "MagicNumber") // One behaviour per test; the sizes and waits are parameters.
 class DictionaryControllerTest {
 
     private val derived = DerivedAssetStore(InMemoryVaultFileSystem())
@@ -168,6 +168,7 @@ class DictionaryControllerTest {
         assertEquals(1, files.getValue("en" to "fr").downloads)
     }
 
+    @Suppress("InjectDispatcher") // The blocking download must run on a real thread, not the test's virtual one.
     @Test
     fun `stopping a download cancels it and clears the installing flag`() = runBlocking {
         val started = CountDownLatch(1)
@@ -185,7 +186,11 @@ class DictionaryControllerTest {
                 translationLanguage = translation,
             )
         }
-        val controller = DictionaryController(services, Dispatchers.IO, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val controller = DictionaryController(
+            services,
+            Dispatchers.IO,
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        )
 
         controller.install("en", "fr", artifact("en", "fr"))
         assertTrue(started.await(5, TimeUnit.SECONDS), "the download did not start")

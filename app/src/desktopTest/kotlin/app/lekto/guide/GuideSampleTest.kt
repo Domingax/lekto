@@ -106,7 +106,9 @@ class GuideSampleTest {
 
     @Test
     fun aBandWithoutAFourthColourCarriesOnlyTheWordsItHas() {
-        val sparse = sample.copy(colourMaps = CefrLevel.entries.associateWith { mapOf("fisherman" to MasteryLevel.UNKNOWN) })
+        val sparse = sample.copy(
+            colourMaps = CefrLevel.entries.associateWith { mapOf("fisherman" to MasteryLevel.UNKNOWN) },
+        )
 
         val notes = guideNotes(sparse, CefrLevel.B1, segmenter, translationLanguage = "fr")
 

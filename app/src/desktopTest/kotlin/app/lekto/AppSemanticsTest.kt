@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The whole app's flows plus the fixtures they share.
+
 package app.lekto
 
 import androidx.compose.ui.geometry.Offset
@@ -58,8 +60,8 @@ import app.lekto.core.llm.LlmModelsResult
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
-import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer

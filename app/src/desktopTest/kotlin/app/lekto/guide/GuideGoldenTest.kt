@@ -30,10 +30,8 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
-import app.lekto.core.sample.Sample
 import app.lekto.reader.MasteryPalette
 import app.lekto.reader.readerColor
-import app.lekto.testkit.guideSample
 import app.lekto.theme.Dark
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
@@ -191,7 +189,6 @@ private fun LanguageRowPreview(first: Boolean) {
 @Composable
 private fun PagePreview(coloured: Boolean) {
     val theme = MaterialTheme.colorScheme
-    val sample = guideSample()
     Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
         Heading(188.dp, 148.dp, 118.dp)
         Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
@@ -199,10 +196,10 @@ private fun PagePreview(coloured: Boolean) {
         Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
         DownloadLine(installed = false)
         Spacer(Modifier.height(LektoSpacing.BetweenRows))
-        PageCard(sample, coloured)
+        PageCard(coloured)
         if (coloured) {
             Spacer(Modifier.height(LektoSpacing.BetweenRows))
-            NoteRows(sample)
+            NoteRows()
         }
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth()) {
@@ -214,30 +211,32 @@ private fun PagePreview(coloured: Boolean) {
 
 /** The page's frame as coloured word bars: a heading bar and four lines of words. */
 @Composable
-private fun PageCard(sample: Sample, coloured: Boolean) {
+private fun PageCard(coloured: Boolean) {
     val theme = MaterialTheme.colorScheme
-    val ramp = MasteryPalette.of(theme)
     Column(Modifier.fillMaxWidth().height(220.dp).padding(vertical = LektoSpacing.InsidePanel)) {
         Bar(theme.onSurfaceVariant, 72.dp, 9.dp)
         Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-        repeat(4) { line ->
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                repeat(if (line == 3) 3 else 6) { word ->
-                    val level = if (coloured) colourAt(line, word) else null
-                    val colour = level?.readerColor(ramp) ?: theme.onBackground
-                    Bar(colour, if (word % 4 == 0) 34.dp else 26.dp, 12.dp)
-                }
-            }
+        repeat(4) { line -> WordLine(line, coloured) }
+    }
+}
+
+/** One line of the page: word-width bars, the four coloured ones carrying their level's hue. */
+@Composable
+private fun WordLine(line: Int, coloured: Boolean) {
+    val theme = MaterialTheme.colorScheme
+    val ramp = MasteryPalette.of(theme)
+    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        repeat(if (line == 3) 3 else 6) { word ->
+            val level = if (coloured) colourAt(line, word) else null
+            val colour = level?.readerColor(ramp) ?: theme.onBackground
+            Bar(colour, if (word % 4 == 0) 34.dp else 26.dp, 12.dp)
         }
     }
 }
 
 /** The four notes: the level's coloured frame, the word, the level's name and the meaning. */
 @Composable
-private fun NoteRows(sample: Sample) {
+private fun NoteRows() {
     val theme = MaterialTheme.colorScheme
     val ramp = MasteryPalette.of(theme)
     val levels = listOf(
@@ -269,13 +268,11 @@ private fun NoteRows(sample: Sample) {
 /** Screen 3: the page, with the real sheet raised at its cap over it. */
 @Composable
 private fun TapPreview() {
-    val theme = MaterialTheme.colorScheme
-    val sample = guideSample()
     Box(Modifier.fillMaxWidth().height(560.dp)) {
         Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
             Heading(148.dp, 208.dp, 160.dp)
             Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            PageCard(sample, coloured = true)
+            PageCard(coloured = true)
         }
         SheetPreview()
     }
@@ -329,7 +326,6 @@ private fun BoxScope.SheetPreview() {
 @Composable
 private fun LevelPreview() {
     val theme = MaterialTheme.colorScheme
-    val sample = guideSample()
     Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
         Heading(176.dp, 128.dp, 108.dp)
         Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
@@ -343,7 +339,7 @@ private fun LevelPreview() {
         ) {
             Bar(theme.onSurfaceVariant, 118.dp, 9.dp)
             Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
-            PageCard(sample, coloured = true)
+            PageCard(coloured = true)
         }
         Spacer(Modifier.height(LektoSpacing.BetweenRows))
         repeat(6) { index ->
@@ -386,7 +382,10 @@ private fun BandRowPreview(chosen: Boolean) {
 private fun ArrivalPreview() {
     val theme = MaterialTheme.colorScheme
     Column(Modifier.padding(horizontal = LektoSpacing.ScreenEdge)) {
-        Row(Modifier.fillMaxWidth().padding(vertical = LektoSpacing.InsidePanel), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = LektoSpacing.InsidePanel),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Bar(theme.onBackground, 112.dp, 22.dp)
             Spacer(Modifier.weight(1f))
             Bar(theme.onBackground, 48.dp, 11.dp)
@@ -414,7 +413,10 @@ private fun ArrivalPreview() {
         Bar(theme.onSurfaceVariant, 212.dp, 9.dp)
         Spacer(Modifier.weight(1f))
         Hairline()
-        Row(Modifier.fillMaxWidth().padding(vertical = LektoSpacing.InsidePanel), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = LektoSpacing.InsidePanel),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column {
                 Bar(theme.onSurface, 132.dp, 10.dp)
                 Spacer(Modifier.height(LektoSpacing.InsideLabelPair))

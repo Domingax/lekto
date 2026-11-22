@@ -59,7 +59,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w360dp-h800dp") // `android-compileSdk`; Robolectric 4.16 supports API 36.
-@Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the screens' contract.
+@Suppress("TooManyFunctions", "LongParameterList") // One behaviour per screen; the render inputs are independent.
 class GuideScreenSemanticsTest {
 
     @get:Rule

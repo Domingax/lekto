@@ -12,7 +12,9 @@ import app.lekto.core.language.OfferedDictionary
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.text.baseLanguage
 import app.lekto.dictionary.DictionaryController
+import app.lekto.dictionary.DictionaryUiState
 import app.lekto.difficulty.DifficultyController
+import app.lekto.difficulty.DifficultyUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +86,7 @@ data class GuideDownloadUiState(
  * manifest publishes one, otherwise the first published pack: the guide lists
  * languages, not pairs, and a first launch still wants its lookup answered.
  */
+@Suppress("LongParameterList") // The catalogues, the installers, the choice and the scope.
 class GuideDownloadController(
     private val catalog: LanguageCatalog?,
     private val difficulty: DifficultyController?,
@@ -191,33 +194,32 @@ class GuideDownloadController(
     private fun verdict(
         offered: OfferedLanguage,
         artifacts: List<OfferedArtifact>,
-        tables: Map<String, app.lekto.difficulty.DifficultyUiState>,
-        packs: Map<String, app.lekto.dictionary.DictionaryUiState>,
+        tables: Map<String, DifficultyUiState>,
+        packs: Map<String, DictionaryUiState>,
     ): Verdict {
-        val tableArtifact = offered.difficulty
-        val packArtifact = chosenPack(offered)?.artifact
-        val required = artifacts.filter { artifact -> artifact == tableArtifact || artifact == packArtifact }
-        val outcomes = required.mapNotNull { artifact ->
-            when (artifact) {
-                tableArtifact -> {
-                    val table = tables[baseLanguage(offered.language)]
-                    table?.let { state -> outcome(state.status, state.error != null) }
-                }
-
-                packArtifact -> {
-                    val pack = packs[artifact.name]
-                    pack?.let { state -> outcome(state.status, state.error != null) }
-                }
-
-                else -> null
-            }
-        }
+        val outcomes = artifacts.mapNotNull { artifact -> outcomeOf(offered, artifact, tables, packs) }
         return when {
             outcomes.any { outcome -> outcome == Outcome.FAILED } -> Verdict.FAILED
+            outcomes.isEmpty() && artifacts.isEmpty() -> Verdict.READY
             outcomes.isNotEmpty() && outcomes.all { outcome -> outcome == Outcome.DONE } -> Verdict.READY
-            outcomes.isEmpty() && required.isEmpty() -> Verdict.READY
             else -> Verdict.WAITING
         }
+    }
+
+    /** One planned artefact's state: the table's when it is the table, the pack's when it is the pack. */
+    private fun outcomeOf(
+        offered: OfferedLanguage,
+        artifact: OfferedArtifact,
+        tables: Map<String, DifficultyUiState>,
+        packs: Map<String, DictionaryUiState>,
+    ): Outcome? = when {
+        artifact == offered.difficulty ->
+            tables[baseLanguage(offered.language)]?.let { table -> outcome(table.status, table.error != null) }
+
+        artifact == chosenPack(offered)?.artifact ->
+            packs[artifact.name]?.let { pack -> outcome(pack.status, pack.error != null) }
+
+        else -> null
     }
 
     private fun outcome(status: DifficultyState, failed: Boolean): Outcome = when {

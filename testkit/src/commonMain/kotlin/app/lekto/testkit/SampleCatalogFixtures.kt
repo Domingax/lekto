@@ -98,6 +98,7 @@ fun guideGlossary(): SampleGlossary = SampleGlossary(
     ),
 )
 
+@Suppress("LongParameterList") // The fixture names each field of one meaning; a bundle would hide it.
 private fun meaning(lemma: String, part: String, pronunciation: String, definition: String, translation: String) =
     SampleGlossaryEntry(lemma, part, pronunciation, listOf(SampleSense(definition, listOf(translation))))
 

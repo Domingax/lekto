@@ -31,11 +31,7 @@ internal const val GUIDE_DOWNLOAD_STOP_TAG: String = "guide-download-stop"
  * offers it, because the line is the same fact wherever it is read.
  */
 @Composable
-internal fun GuideDownloadLine(
-    state: GuideDownloadUiState,
-    onStop: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
+internal fun GuideDownloadLine(state: GuideDownloadUiState, onStop: (() -> Unit)?, modifier: Modifier = Modifier) {
     if (state.phase == GuideDownloadPhase.IDLE) return
     val texts = LocalAppTexts.current
     Row(
@@ -83,9 +79,13 @@ private fun status(state: GuideDownloadUiState): String {
         } ?: texts[TextKey.GUIDE_DOWNLOAD_PREPARING]
 
         GuideDownloadPhase.INSTALLED -> texts[TextKey.GUIDE_DOWNLOAD_INSTALLED]
+
         GuideDownloadPhase.STOPPED -> texts[TextKey.GUIDE_DOWNLOAD_STOPPED]
+
         GuideDownloadPhase.FAILED -> texts[TextKey.GUIDE_DOWNLOAD_FAILED]
+
         GuideDownloadPhase.UNAVAILABLE -> texts[TextKey.GUIDE_DOWNLOAD_UNAVAILABLE]
+
         GuideDownloadPhase.IDLE -> ""
     }
 }
