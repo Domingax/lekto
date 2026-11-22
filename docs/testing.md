@@ -350,7 +350,9 @@ sheets per paper (issue #277) — `guide-language-<paper>.png`,
 `guide-page-<paper>.png`, `guide-tap-<paper>.png`, `guide-level-<paper>.png` and
 `guide-arrival-<paper>.png` — the step marks and `Skip`, the eight language rows,
 the page's coloured word bars and four notes, the real sheet with its cap and
-handle, the six bands with their chosen wash, and the shelf's sample row with its
+handle, the six bands drawn unchosen (the A1 suggestion shows only through the
+preview card's colour, and no band is washed until the reader taps one), and the
+shelf's sample row with its
 download line. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
