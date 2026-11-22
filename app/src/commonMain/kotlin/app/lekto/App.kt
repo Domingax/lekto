@@ -485,6 +485,8 @@ fun App(
                 mastery = mastery,
                 segmenter = environment.segmenter,
                 translationLanguage = { languageSettings?.translationLanguage },
+                existingSample = { controller.state.value.sample?.book?.language },
+                readingLanguage = { readingLanguagesOf(controller.state.value.books).firstOrNull() },
             )
         }
     }

@@ -1713,7 +1713,7 @@ class AppSemanticsTest {
     }
 
     @Test
-    fun theSettingsRowReopensTheGuideOverAShelfWithBooks() = runComposeUiTest {
+    fun theSettingsRowReopensTheGuideAtTheBooksLanguage() = runComposeUiTest {
         val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
 
         setContent { App(environment(library, samples = guideSamples())) }
@@ -1721,7 +1721,9 @@ class AppSemanticsTest {
         tapSection(ShellSection.SETTINGS)
         onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
 
-        onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+        onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        onNodeWithText("Reading in English").assertIsDisplayed()
+        onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
     }
 
     /** Taps one of the shell's three sections: the bar on a phone, the column on desktop (issue #185). */
