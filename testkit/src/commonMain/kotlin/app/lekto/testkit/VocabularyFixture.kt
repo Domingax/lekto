@@ -17,10 +17,12 @@ fun testVocabularyEntry(
     translation: String? = "lanterne",
     contextSentence: String? = "The lantern burned all night.",
     mastery: MasteryLevel = MasteryLevel.LEARNED,
+    bookIds: List<String> = emptyList(),
 ): VocabularyEntry = VocabularyEntry(
     key = WordKey(language, key),
     surface = surface,
     translation = translation,
     contextSentence = contextSentence,
     mastery = mastery,
+    bookIds = bookIds,
 )

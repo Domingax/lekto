@@ -322,9 +322,12 @@ pack stores lemmas already canonicalised, so the domain uses one as-is.
 _Avoid_: Root, stem, base form
 
 **Vocabulary entry**:
-A word or phrase the user saved, with its translation, a context sentence, and a
-mastery level. Keyed by the word's **Word key**, so inflected forms share one entry;
-stored per record in the **Vault**, so a save survives a restart. The stored
+A word or phrase the user saved, with its translation, a context sentence, a
+mastery level, and the **Books** whose reading sessions saved it — each book named
+once, newest last. Keyed by the word's **Word key**, so inflected forms share one
+entry; stored per record in the **Vault**, so a save survives a restart. Its book
+history is part of the word: deleting a book never removes it, and only deleting
+the word does. The stored
 translation is the offline fallback the word was saved with; the translation the
 list shows is derived from the installed **Dictionary pack** (ADR-0032).
 _Avoid_: Card, item, saved word

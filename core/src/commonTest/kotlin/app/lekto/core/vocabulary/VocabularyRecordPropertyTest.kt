@@ -5,13 +5,17 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DeviceId
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.element
 import io.kotest.property.arbitrary.int
+import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.string
 import io.kotest.property.forAll
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.time.Instant
 
 /**
@@ -38,13 +42,15 @@ class VocabularyRecordPropertyTest :
                 Arb.long(-10_000_000_000_000L..10_000_000_000_000L),
                 Arb.string(),
                 Arb.int(),
-            ) { language, key, surface, translation, mastery, millis, device, schema ->
+                Arb.list(Arb.string()),
+            ) { language, key, surface, translation, mastery, millis, device, schema, books ->
                 val entry = VocabularyEntry(
                     key = WordKey(language, key),
                     surface = surface,
                     translation = translation,
                     contextSentence = translation,
                     mastery = mastery,
+                    bookIds = books,
                 )
                 val record = VocabularyRecord.of(
                     entry,
@@ -79,5 +85,46 @@ class VocabularyRecordPropertyTest :
             )
 
             record.kind == VocabularyRecord.KIND && record.schemaVersion == VocabularyRecord.SCHEMA_VERSION
+        }
+
+        test("the schema version moves when the body gains the book history") {
+            // Pinned as a number, not read back from the constant: the version is
+            // the record format's promise, and a body with no `bookIds` must keep
+            // reading across it (ADR-0050).
+            val record = VocabularyRecord.of(
+                VocabularyEntry(WordKey("en", "lantern"), "lantern"),
+                Instant.fromEpochMilliseconds(0),
+                DeviceId("device-a"),
+            )
+
+            record.schemaVersion shouldBe 2
+        }
+
+        test("a record written before the book history reads with no books") {
+            // The body an earlier build wrote: the entry's fields without
+            // `bookIds`. `VaultCodec`'s defaults apply it as an empty list, so an
+            // older vault loads and the word simply names no book (ADR-0050).
+            val body = buildJsonObject {
+                put(
+                    "key",
+                    buildJsonObject {
+                        put("language", "en")
+                        put("key", "lantern")
+                    },
+                )
+                put("surface", "lantern")
+                put("mastery", "LEARNED")
+            }
+            val record = VocabularyRecord.of(
+                VocabularyEntry(WordKey("en", "lantern"), "lantern"),
+                Instant.fromEpochMilliseconds(0),
+                DeviceId("device-a"),
+            ).copy(body = body)
+
+            val entry = VocabularyRecord.entryOf(record)
+
+            entry.bookIds shouldBe emptyList()
+            entry.surface shouldBe "lantern"
+            entry.mastery shouldBe MasteryLevel.LEARNED
         }
     })
