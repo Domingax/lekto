@@ -4,8 +4,12 @@ import android.content.Context
 import app.lekto.core.Seams
 import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.JsonSampleDismissedStore
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.book.VaultBookLibrary
 import app.lekto.core.epub.EpubParser
+import app.lekto.core.sample.SampleCatalogRead
+import app.lekto.core.sample.readSampleCatalog
 import app.lekto.core.sync.JsonTombstoneStore
 import app.lekto.core.text.BookTextParser
 import app.lekto.core.text.TxtParser
@@ -38,6 +42,28 @@ fun androidBookLibrary(context: Context): BookLibrary = VaultBookLibrary(
     seams = Seams.system(),
     deviceId = androidDeviceId(context),
 )
+
+/**
+ * The Android **Sample book** (issue #278), over `Context.filesDir`: the
+ * catalogue read from the assets the build packages beside the app
+ * (`app/build.gradle.kts` points that source at `core`'s committed resources, so
+ * there is one copy of the bytes), the materialised sample in `derived/`, and the
+ * reader's dismissal in `settings/`. `null` when the asset is missing or this
+ * build's reader refuses it, so a stripped build simply has no sample.
+ */
+fun androidSampleLibrary(context: Context): SampleLibrary? {
+    val bytes = runCatching { context.assets.open(SAMPLE_CATALOGUE_ASSET).use { stream -> stream.readBytes() } }
+        .getOrNull() ?: return null
+    val catalogue = (readSampleCatalog(bytes) as? SampleCatalogRead.Read)?.catalogue ?: return null
+    return SampleLibrary(
+        catalogue = catalogue,
+        derived = DerivedAssetStore(JvmVaultFileSystem(File(context.filesDir, "derived"))),
+        dismissed = JsonSampleDismissedStore(JvmVaultFileSystem(File(context.filesDir, "settings"))),
+    )
+}
+
+/** Where the build packages the **Sample catalogue**: `core`'s committed resource, mirrored into the app's assets. */
+private const val SAMPLE_CATALOGUE_ASSET: String = "samples/catalogue.json"
 
 /**
  * The Android vocabulary (issue #22) over `Context.filesDir`. The manifest is

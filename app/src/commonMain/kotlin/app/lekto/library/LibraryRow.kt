@@ -1,6 +1,5 @@
 package app.lekto.library
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,9 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -30,19 +26,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.ReadingState
-import app.lekto.core.text.baseLanguage
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
-import app.lekto.theme.LanguageHues
-import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
-import app.lekto.theme.contentColorOn
 import app.lekto.ui.DeleteAction
 import app.lekto.ui.DeletingRow
 import app.lekto.ui.handCursor
@@ -67,10 +58,6 @@ internal val PROGRESS_RULE_HEIGHT = 3.dp
 
 /** The finished line's check: the row's own small mark, not a control (docs/design.md §7.1). */
 private val FINISHED_CHECK_SIZE = 16.dp
-
-/** The language vignette's frame: 44 × 60 dp, the fallback plate where a cover may go (§7.1). */
-internal val LANGUAGE_VIGNETTE_WIDTH = 44.dp
-internal val LANGUAGE_VIGNETTE_HEIGHT = 60.dp
 
 /** What a row can do: open its book, or delete it. Bundled so a row is two values, not a parameter list. */
 internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Book) -> Unit)
@@ -98,11 +85,28 @@ internal data class BookRowActions(val onOpen: (Book) -> Unit, val onDelete: (Bo
  *
  * The file name is deliberately gone from the row: it identifies a file, not a
  * book, so it survives only in import errors and the delete confirmation.
+ *
+ * The **Sample book** is the same frame with one addition (issue #278): a small
+ * `Sample` mark beside its title, its language plaque (never a cover it cannot
+ * have) and a delete that asks once before the sample is removed.
+ *
+ * @param covers where this row's cover comes from; the sample row passes
+ *   [BookCoverLoader.None], because a sample has no cover and its identity is not
+ *   a vault record id a cover could be keyed by.
+ * @param sample whether this is the **Sample book**, which earns the mark.
  */
 @Composable
-internal fun BookRow(book: Book, progress: BookProgress, state: ReadingState, actions: BookRowActions) {
+@Suppress("LongParameterList") // The row's facts, its actions, where its cover comes from and its mark are independent.
+internal fun BookRow(
+    book: Book,
+    progress: BookProgress,
+    state: ReadingState,
+    actions: BookRowActions,
+    covers: BookCoverLoader = LocalBookCovers.current,
+    sample: Boolean = false,
+) {
     DeletingRow(DeleteAction(tag = libraryDeleteTag(book.id), onDelete = { actions.onDelete(book) })) { content ->
-        BookFrame(book, progress, state, actions, modifier = content)
+        BookFrame(book, progress, state, actions, covers, sample, modifier = content)
     }
 }
 
@@ -111,13 +115,15 @@ internal fun BookRow(book: Book, progress: BookProgress, state: ReadingState, ac
  * delete as an accessibility action too, because a screen reader cannot swipe a
  * row the way a thumb does.
  */
-@Suppress("LongParameterList") // The row's book, its two facts, its actions and the frame's modifier are independent.
+@Suppress("LongParameterList") // The row's book, its facts, its actions, its cover source and its mark are independent.
 @Composable
 private fun BookFrame(
     book: Book,
     progress: BookProgress,
     state: ReadingState,
     actions: BookRowActions,
+    covers: BookCoverLoader,
+    sample: Boolean,
     modifier: Modifier,
 ) {
     val texts = LocalAppTexts.current
@@ -137,7 +143,7 @@ private fun BookFrame(
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val cover = rememberCover(book.id, LocalBookCovers.current)
+        val cover = rememberCover(book.id, covers)
         BookPlate(
             language = book.language,
             cover = cover,
@@ -148,79 +154,27 @@ private fun BookFrame(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
         ) {
-            Text(book.title, style = MaterialTheme.typography.titleSmall)
+            BookTitle(book, sample)
             StateLine(book, progress, state)
         }
     }
 }
 
-/**
- * The book's cover, decoded off the main thread, or `null` while it loads or when
- * the book has none. A cover is a **Derived asset** the app decodes with its own
- * platform (ADR-0005, ADR-0011), never a dependency the reader has to wait for.
- */
+/** The row's title, with the **Sample book**'s mark beside it when this is the sample (issue #278). */
 @Composable
-internal fun rememberCover(bookId: String, covers: BookCoverLoader): ImageBitmap? =
-    rememberDerivedAsset(bookId, covers) { covers.load(bookId) }.value
-
-/**
- * The book's plate (docs/design.md §7.1; issue #259): its cover when one decoded,
- * the language vignette otherwise. The frame is the same 44 × 60 either way, so a
- * shelf's columns stay aligned and a book is never a hole.
- */
-@Composable
-internal fun BookPlate(language: String?, cover: ImageBitmap?, modifier: Modifier = Modifier) {
-    if (cover != null) {
-        Image(
-            bitmap = cover,
-            contentDescription = languageCode(language).ifEmpty { null },
-            contentScale = ContentScale.Crop,
-            modifier = modifier
-                .width(LANGUAGE_VIGNETTE_WIDTH)
-                .height(LANGUAGE_VIGNETTE_HEIGHT)
-                .clip(LektoRadii.Control),
-        )
-    } else {
-        LanguageVignette(language, modifier = modifier)
-    }
-}
-
-/**
- * The language vignette (docs/design.md §2.4, §7.1; issue #208): a control-shaped
- * tile in the **Reading language**'s hue, carrying its two-letter code. The code
- * is the signal — a reader who cannot tell the hues apart reads the letters — so
- * the hue never has to carry a meaning on its own.
- *
- * The size is a parameter because the resume block's plate is larger than a
- * row's (issue #288); the hue, the code and the radius are the same.
- */
-@Composable
-internal fun LanguageVignette(
-    language: String?,
-    width: Dp = LANGUAGE_VIGNETTE_WIDTH,
-    height: Dp = LANGUAGE_VIGNETTE_HEIGHT,
-    modifier: Modifier = Modifier,
-) {
-    val fill = LanguageHues.fill(language, MaterialTheme.colorScheme)
-    Box(
-        modifier = modifier
-            .width(width)
-            .height(height)
-            .background(fill, LektoRadii.Control),
-        contentAlignment = Alignment.Center,
-    ) {
+private fun BookTitle(book: Book, sample: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = languageCode(language),
-            style = MaterialTheme.typography.labelMedium,
-            // The hue is dark on the daylight papers and lifted on night's, so the
-            // code reads whichever way the theme went.
-            color = contentColorOn(fill),
+            text = book.title,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f, fill = false),
         )
+        if (sample) {
+            Spacer(Modifier.width(LektoSpacing.BetweenRelatedLines))
+            SampleMark(book.id)
+        }
     }
 }
-
-/** A **Reading language**'s two-letter code: `en-GB` reads `EN`. */
-internal fun languageCode(language: String?): String = baseLanguage(language.orEmpty()).take(2).uppercase()
 
 /**
  * The row's second line: the **Author** then the Reading state —

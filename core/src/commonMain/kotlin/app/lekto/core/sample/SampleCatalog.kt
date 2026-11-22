@@ -21,7 +21,11 @@ import kotlinx.serialization.json.Json
  * A Sample is a **Derived asset** (ADR-0005): the app materialises it into the
  * derived store under [identity], never into the **Vault**, and it is never
  * exported or synced.
+ *
+ * It is serialisable because the materialised sample is stored as the one
+ * document the demonstration and the reader both open (issue #278).
  */
+@Serializable
 data class Sample(
     val language: String,
     val title: String,
@@ -53,6 +57,7 @@ data class Sample(
  * A key may carry several entries — one per part of speech — exactly as a
  * **Dictionary pack** answers the one word.
  */
+@Serializable
 data class SampleGlossary(val entries: Map<String, List<SampleGlossaryEntry>>) {
 
     /** The meanings of the word keyed [key], empty when this glossary does not know it. */
@@ -60,6 +65,7 @@ data class SampleGlossary(val entries: Map<String, List<SampleGlossaryEntry>>) {
 }
 
 /** One meaning extracted from a **Dictionary pack** at build time. */
+@Serializable
 data class SampleGlossaryEntry(
     val lemma: String,
     val partOfSpeech: String?,
@@ -68,6 +74,7 @@ data class SampleGlossaryEntry(
 )
 
 /** One definition and its translations into the glossary's language. */
+@Serializable
 data class SampleSense(val definition: String, val translations: List<String>)
 
 /** The **Sample catalogue**'s format handshake (issue #297). */

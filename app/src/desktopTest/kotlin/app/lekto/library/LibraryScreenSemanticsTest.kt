@@ -27,6 +27,7 @@ import app.lekto.core.book.BookFormat
 import app.lekto.core.book.BookProgress
 import app.lekto.core.book.LibraryListing
 import app.lekto.core.book.ReadingState
+import app.lekto.core.book.SampleRow
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.appTextsFor
@@ -418,6 +419,93 @@ class LibraryScreenSemanticsTest {
         onNodeWithTag(LIBRARY_SHOW_ALL_TAG).assertIsDisplayed()
     }
 
+    @Test
+    fun theSampleRowLeadsTheShelfWithItsMark() = runComposeUiTest {
+        setContent {
+            Library(
+                LibraryUiState(
+                    listing = LibraryListing(others = listOf(book)),
+                    sample = sampleRow,
+                ),
+            )
+        }
+
+        val sample = onNodeWithTag(libraryRowTag(sampleRow.book.id)).assertIsDisplayed().getBoundsInRoot()
+        val vault = onNodeWithTag(libraryRowTag(book.id)).assertIsDisplayed().getBoundsInRoot()
+        onNodeWithTag(librarySampleMarkTag(sampleRow.book.id), useUnmergedTree = true).assertIsDisplayed()
+        onNodeWithText("A Test Sample").assertIsDisplayed()
+        assertTrue(sample.top < vault.top, "the sample leads the vault's books: $sample then $vault")
+    }
+
+    @Test
+    fun aVaultWithNoBookAndASampleReadsAsOneSentenceAndOneRow() = runComposeUiTest {
+        // One sentence and the sample as the first row, not the empty state's two
+        // more sets of words (issue #278; docs/design.md §7.1).
+        setContent { Library(LibraryUiState(sample = sampleRow)) }
+
+        onNodeWithTag(LIBRARY_FIRST_RUN_TAG).assertIsDisplayed()
+        onNodeWithTag(libraryRowTag(sampleRow.book.id)).assertIsDisplayed()
+        onNodeWithText("No books yet").assertDoesNotExist()
+        onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertDoesNotExist()
+        // The header keeps the shelf's one action: Import, the word.
+        onNodeWithText("Import").assertIsDisplayed()
+    }
+
+    @Test
+    fun aVaultWithNoBookAndNoSampleReadsAsTheEmptyState() = runComposeUiTest {
+        setContent { Library(LibraryUiState()) }
+
+        onNodeWithText("No books yet").assertIsDisplayed()
+        onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertIsDisplayed()
+        onNodeWithTag(LIBRARY_FIRST_RUN_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun removingTheSampleAsksOnceAndRemovesOnlyOnConfirm() = runComposeUiTest {
+        var removed = 0
+        setContent { Library(LibraryUiState(sample = sampleRow), onDismissSample = { removed++ }) }
+
+        onNodeWithTag(libraryDeleteTag(sampleRow.book.id)).assertDoesNotExist()
+        onNodeWithTag(libraryRowTag(sampleRow.book.id)).performMouseInput { moveTo(center) }
+        onNodeWithTag(libraryDeleteTag(sampleRow.book.id)).assertIsDisplayed().performClick()
+
+        onNodeWithText("Remove the sample?").assertIsDisplayed()
+        onNodeWithText("Your own books and words stay.", substring = true).assertIsDisplayed()
+        kotlin.test.assertEquals(0, removed, "the sample must stay until the reader confirms")
+        onNodeWithTag(CONFIRM_DIALOG_CONFIRM_TAG).performClick()
+
+        kotlin.test.assertEquals(1, removed)
+    }
+
+    @Test
+    fun aFailedMaterialisationLeavesOneLineAndTheEmptyState() = runComposeUiTest {
+        setContent {
+            Library(
+                LibraryUiState(sampleFailure = AppMessage.of(app.lekto.text.TextKey.LIBRARY_SAMPLE_FAILED)),
+            )
+        }
+
+        onNodeWithTag(LIBRARY_SAMPLE_FAILED_TAG).assertIsDisplayed()
+        onNodeWithText("The sample could not be written.").assertIsDisplayed()
+        // Never a row pointing at missing files: the shelf is §7.1's empty state.
+        onNodeWithText("No books yet").assertIsDisplayed()
+        onNodeWithTag(LIBRARY_EMPTY_IMPORT_TAG).assertIsDisplayed()
+    }
+
+    /** The shelf's one **Sample book** row, for the cases above (issue #278). */
+    private val sampleRow = SampleRow(
+        book = Book(
+            id = "sample:en",
+            title = "A Test Sample",
+            language = "en",
+            format = BookFormat.TXT,
+            fileName = "sample-en.txt",
+            author = "Test Author",
+        ),
+        progress = BookProgress.NotStarted,
+        state = ReadingState.UNREAD,
+    )
+
     @Composable
     @Suppress("LongParameterList") // The screen's actions, one per behaviour the tests drive.
     private fun Library(
@@ -430,6 +518,7 @@ class LibraryScreenSemanticsTest {
         onClearSearch: () -> Unit = {},
         onToggleState: (ReadingState) -> Unit = {},
         onShowAllBooks: () -> Unit = {},
+        onDismissSample: () -> Unit = {},
     ) {
         MaterialTheme {
             LibraryScreen(
@@ -443,6 +532,7 @@ class LibraryScreenSemanticsTest {
                     onClearSearch = onClearSearch,
                     onToggleState = onToggleState,
                     onShowAllBooks = onShowAllBooks,
+                    onDismissSample = onDismissSample,
                 ),
                 modifier = Modifier.size(width = 360.dp, height = 640.dp),
             )

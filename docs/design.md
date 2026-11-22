@@ -261,6 +261,14 @@ neither does a book that names none, so its line is the state alone (`28 %`), wi
 no leading separator and no placeholder word. The format is where a file came from,
 not what a reader chooses a book by, so it leaves the row.
 
+The **Sample book** leads the shelf while it exists: one row above the vault's books, the same plate
+with the language vignette and a small outlined `Sample` mark beside its title, and never more than
+one. It is a **Derived asset** beside the vault, not a book in it, so it is in no count, export or
+sync. Opening it is a normal reading session; the search and the filter narrow the vault's books
+under it and never hide it. A thumb swipes it and a pointer gets its trash, exactly like a book's
+row; both only ask. The confirmation says its files go and the reader's own books and words stay,
+and once removed it never returns, whatever a later build ships.
+
 A book is deleted **from its row or from its block**, and never from a red word that sits on every
 book. On a touch screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's
 wash and a trash appear when it is hovered, and a drag does nothing — the gesture is the thumb's
@@ -333,11 +341,16 @@ the reader can continue (ADR-0038). The leading group is hidden when it is empty
 the shelf in one more step, not instead of the filter: the two apply together, so a book the filter
 hides stays hidden by a query that matches it, and `Show all books` clears both (#173, #200).
 
-**States**: an empty vault says what to do and carries the action. A Library whose filter matches
-nothing says why — "All your books are finished." with `Show all books`, or "No books in this
-state." with the same action — and a search with no match names the query back and offers to clear
-it or show all books. Loading shows **skeleton rows**, never the empty message; a failed import is
-a bordered block in the list, with a way to dismiss it.
+**States**: the shelf has one row per vault book and, while it exists, the **Sample book** above
+them. A vault with no book but a sample says what to do in one sentence and leads with the sample
+row; `Import` stays the header's word, because there is a shelf to add to, so the action is not
+repeated. A shelf with no row at all is the empty state: it says what to do and carries its one
+filled action. A materialisation that failed leaves that empty state under one line saying what
+could not be written, never a row pointing at files that are not there. A Library whose filter
+matches nothing says why — "All your books are finished." with `Show all books`, or "No books in
+this state." with the same action — and a search with no match names the query back and offers to
+clear it or show all books. Loading shows **skeleton rows**, never the empty message; a failed
+import is a bordered block in the list, with a way to dismiss it.
 
 ### 7.2 Reader
 

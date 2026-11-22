@@ -154,6 +154,12 @@ if (androidEnabled) {
         namespace = "app.lekto"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
 
+        // The **Sample catalogue** is one committed file under `core`'s resources
+        // (issue #278). An Android app's classloader does not see a library's Kotlin
+        // resources, so the build packages the same directory as assets; there is
+        // still exactly one copy of the bytes.
+        sourceSets.getByName("main").assets.srcDir(rootProject.file("core/src/commonMain/resources"))
+
         defaultConfig {
             applicationId = "app.lekto"
             minSdk = libs.versions.android.minSdk.get().toInt()
