@@ -80,7 +80,7 @@ private val DismissDragDistance = 48.dp
  * the reader drags its handle down, which is the gesture the handle has always
  * promised (issue #282).
  */
-@Suppress("LongParameterList") // The frame, its test tag, the shape and the cap: four independent choices.
+@Suppress("LongParameterList") // The frame, its test tag, the shape, the cap and the way out: five independent choices.
 @Composable
 internal fun LookupSheet(
     modifier: Modifier = Modifier,
