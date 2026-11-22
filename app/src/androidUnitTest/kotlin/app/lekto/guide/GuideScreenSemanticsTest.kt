@@ -156,6 +156,18 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun theBackChevronHeadsTheBarAfterTheFirstScreen() {
+        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
+
+        val back = compose.onNodeWithTag(GUIDE_BACK_TAG).fetchSemanticsNode().boundsInRoot
+        val steps = compose.onNodeWithTag(GUIDE_STEPS_TAG).fetchSemanticsNode().boundsInRoot
+        val skip = compose.onNodeWithTag(GUIDE_SKIP_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue("the chevron heads the row: $back / $steps", back.right <= steps.left)
+        assertTrue("Skip keeps the far right: $steps / $skip", skip.left >= steps.right)
+    }
+
+    @Test
     fun theFirstBeatShowsTheParagraphWithNoColourAndNoNotes() {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
 

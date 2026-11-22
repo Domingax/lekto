@@ -210,7 +210,7 @@ fun GuideScreen(
     }
 }
 
-/** The guide's bar: the step marks, then the back chevron and `Skip` at the trailing edge. */
+/** The guide's bar: the back chevron at the head, then the step marks, `Skip` at the trailing edge. */
 @Composable
 private fun GuideBar(stage: GuideStage, onBack: () -> Unit, onSkip: () -> Unit) {
     Row(
@@ -219,12 +219,12 @@ private fun GuideBar(stage: GuideStage, onBack: () -> Unit, onSkip: () -> Unit) 
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StepMarks(stage)
-        Spacer(Modifier.weight(1f))
         if (stage != GuideStage.LANGUAGE) {
             BackAffordance(onBack)
             Spacer(Modifier.width(LektoSpacing.InsidePanel))
         }
+        StepMarks(stage)
+        Spacer(Modifier.weight(1f))
         SkipAction(onSkip)
     }
 }
