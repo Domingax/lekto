@@ -428,7 +428,10 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
     val texts = LocalAppTexts.current
     val washed = state.tapped ?: beat.notes.firstOrNull()
     val marked = beat.document?.let { page ->
-        washed?.let { note -> page.copy(selectedRange = note.start until note.end) } ?: page
+        when (val note = washed) {
+            null -> page
+            else -> page.copy(selectedRange = note.start until note.end)
+        }
     }
     Column(
         Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
