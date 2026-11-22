@@ -1,10 +1,7 @@
 package app.lekto.guide
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -36,13 +33,13 @@ import app.lekto.dictionary.LOOKUP_INSTALL_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
+import app.lekto.library.LibraryUiState
 import app.lekto.reader.MasteryPalette
 import app.lekto.reader.ReaderPage
 import app.lekto.reader.ReaderStyles
 import app.lekto.reader.buildChapterText
 import app.lekto.reader.buildPageTokens
 import app.lekto.reader.ruleUnder
-import app.lekto.library.LibraryUiState
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
 import app.lekto.testkit.testOfferedArtifact
@@ -389,7 +386,7 @@ class GuideScreenSemanticsTest {
             assertEquals(
                 layout.getBoundingBox(word.start).left,
                 rule.left,
-                0.01f,
+                RULE_TOLERANCE,
                 "the rule under ${word.surface} starts at the word's measured left edge",
             )
         }
@@ -715,6 +712,9 @@ class GuideScreenSemanticsTest {
         state = ReadingState.UNREAD,
     )
 }
+
+/** The layout reports the rule and the word's box from one source, so they agree to rounding. */
+private const val RULE_TOLERANCE = 0.01f
 
 /** The guide inside the test's text and theme providers, so a stage can be swapped without re-setting content. */
 @androidx.compose.runtime.Composable

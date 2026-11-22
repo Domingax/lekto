@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -90,11 +88,11 @@ import app.lekto.guide.GuideActions
 import app.lekto.guide.GuideController
 import app.lekto.guide.GuideDownloadActions
 import app.lekto.guide.GuideDownloadController
-import app.lekto.guide.GuideShelfFooter
 import app.lekto.guide.GuideDownloadPhase
 import app.lekto.guide.GuideDownloadUiState
 import app.lekto.guide.GuideProgressController
 import app.lekto.guide.GuideScreen
+import app.lekto.guide.GuideShelfFooter
 import app.lekto.guide.guideDocument
 import app.lekto.guide.guideNotes
 import app.lekto.language.LanguageController

@@ -101,9 +101,10 @@ internal const val LIBRARY_TITLE_TAG: String = "library-title"
 
 /**
  * A delete the shelf is asking about: a vault book's removal, or the **Sample
- * book**'s (issue #278). One value, so a confirmation cannot be open twice.
+ * book**'s (issue #278). One value, so a confirmation cannot be open twice;
+ * internal so the confirmation row keeps its own file.
  */
-private sealed interface PendingDelete {
+internal sealed interface PendingDelete {
 
     /** A vault book the reader asked to delete, with the book the dialog names. */
     data class VaultBook(val book: Book) : PendingDelete
@@ -179,26 +180,17 @@ fun LibraryScreen(
             )
         }
 
-        when (val target = pending) {
-            is PendingDelete.VaultBook -> BookDeleteDialog(
-                target = target.book,
-                onConfirm = {
-                    pending = null
-                    actions.onDelete(target.book)
-                },
-                onDismiss = { pending = null },
-            )
-
-            PendingDelete.Sample -> SampleDeleteDialog(
-                onConfirm = {
-                    pending = null
-                    actions.onDismissSample()
-                },
-                onDismiss = { pending = null },
-            )
-
-            null -> Unit
-        }
+        DeleteConfirmation(
+            pending = pending,
+            onConfirm = { target ->
+                pending = null
+                when (target) {
+                    is PendingDelete.VaultBook -> actions.onDelete(target.book)
+                    PendingDelete.Sample -> actions.onDismissSample()
+                }
+            },
+            onDismiss = { pending = null },
+        )
     }
 }
 

@@ -1,6 +1,5 @@
 package app.lekto.guide
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -18,8 +17,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderDocument
 import app.lekto.reader.PageRulesSurface
+import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderPage
 import app.lekto.reader.ReaderStyles
 import app.lekto.reader.WordTap

@@ -1,15 +1,11 @@
 package app.lekto.guide
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -36,19 +32,13 @@ import app.lekto.dictionary.LOOKUP_INSTALL_TAG
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
-import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderPage
-import app.lekto.reader.ReaderStyles
-import app.lekto.reader.buildChapterText
-import app.lekto.reader.buildPageTokens
-import app.lekto.reader.ruleUnder
-import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderPage
-import app.lekto.reader.ReaderStyles
-import app.lekto.reader.buildChapterText
-import app.lekto.reader.buildPageTokens
-import app.lekto.reader.ruleUnder
 import app.lekto.library.LibraryUiState
+import app.lekto.reader.MasteryPalette
+import app.lekto.reader.ReaderPage
+import app.lekto.reader.ReaderStyles
+import app.lekto.reader.buildChapterText
+import app.lekto.reader.buildPageTokens
+import app.lekto.reader.ruleUnder
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
 import app.lekto.testkit.testOfferedArtifact
@@ -379,40 +369,6 @@ class GuideScreenSemanticsTest {
             compose.waitForIdle()
             compose.onNodeWithTag(GUIDE_PAGE_TAG).assertIsDisplayed()
             compose.onNodeWithTag(app.lekto.reader.READER_PAGE_TAG).assertDoesNotExist()
-        }
-    }
-
-    @Test
-    fun aHighlightedWordsRuleStartsAtItsWordsMeasuredLeftEdge() {
-        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
-
-        val document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter)
-        val text = compose.onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
-        val results = mutableListOf<TextLayoutResult>()
-        text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-        val layout = results.first()
-        val styles = ReaderStyles.of(document.preferences, MasteryPalette.Light)
-        val chapter = buildChapterText(document.text, styles)
-        val tokens = buildPageTokens(
-            chapterText = chapter,
-            page = ReaderPage(0, chapter.length),
-            renderer = document.renderer,
-            chapter = document.text,
-            styles = styles,
-        )
-        val highlighted = tokens.words.filter { word ->
-            document.renderer.mastery.levelOf(word.key).highlighted
-        }
-
-        assertTrue("the demonstrated paragraph colours at least one word", highlighted.isNotEmpty())
-        highlighted.forEach { word ->
-            val rule = ruleUnder(layout, word).first()
-            assertEquals(
-                "the rule under ${word.surface} starts at the word's measured left edge",
-                layout.getBoundingBox(word.start).left,
-                rule.left,
-                0.01f,
-            )
         }
     }
 
