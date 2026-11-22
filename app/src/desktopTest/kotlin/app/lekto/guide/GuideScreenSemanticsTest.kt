@@ -381,14 +381,21 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun oneLanguageOpensOnThePageNamingIt() = runComposeUiTest {
+    fun oneLanguageOpensOnThePageWithoutTheQuestionOrTheLabel() = runComposeUiTest {
         render(
             GuideUiState(stage = GuideStage.PAGE, sample = sample),
             languages = listOf(app.lekto.testkit.testOfferedLanguage("en")),
         )
 
-        onNodeWithText("Reading in English").assertIsDisplayed()
         onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
+        onNodeWithText("Reading in English").assertDoesNotExist()
+    }
+
+    @Test
+    fun theTapScreenStillNamesTheReadingLanguage() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
+
+        onNodeWithText("Reading in English").assertIsDisplayed()
     }
 
     @Test

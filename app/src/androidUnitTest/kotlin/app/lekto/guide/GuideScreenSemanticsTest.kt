@@ -395,14 +395,21 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun oneLanguageOpensOnThePageNamingIt() {
+    fun oneLanguageOpensOnThePageWithoutTheQuestionOrTheLabel() {
         render(
             GuideUiState(stage = GuideStage.PAGE, sample = sample),
             languages = listOf(testOfferedLanguage("en")),
         )
 
-        compose.onNodeWithText("Reading in English").assertIsDisplayed()
         compose.onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
+        compose.onNodeWithText("Reading in English").assertDoesNotExist()
+    }
+
+    @Test
+    fun theTapScreenStillNamesTheReadingLanguage() {
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
+
+        compose.onNodeWithText("Reading in English").assertIsDisplayed()
     }
 
     @Test

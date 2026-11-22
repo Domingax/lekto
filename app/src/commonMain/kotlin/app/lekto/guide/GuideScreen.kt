@@ -402,7 +402,6 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(texts[title], texts[intro])
-        GuideReadingIn(state.sample?.language)
         beat.document?.let { page ->
             GuidePageBlock(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT).padding(top = LektoSpacing.BetweenRows))
         }
@@ -684,9 +683,10 @@ private fun GuideHeading(title: String, intro: String) {
 }
 
 /**
- * The language the sample is read in, under a page's title (issue #277): a build
- * that ships one sample never asks the question, so its page has to name the
- * language it opened in.
+ * The language the sample is read in, under the tap screen's title (issue #277):
+ * a build that ships one sample never asks the question, so a screen that answers
+ * for a language names it. The page beat speaks for itself; its paragraph needs no
+ * label.
  */
 @Composable
 private fun GuideReadingIn(language: String?) {
