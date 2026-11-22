@@ -220,16 +220,18 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theDownloadLineAnnouncesItsSizeAndCanBeStopped() = runComposeUiTest {
-        var stopped = false
+    fun theDownloadLineAnnouncesItsSizeAndFollowsTheStop() = runComposeUiTest {
         val artifacts = listOf(
             testOfferedArtifact("lekto-difficulty-en.sqlite.gz", sizeBytes = 12_000_000),
             testOfferedArtifact("lekto-dictionary-en-fr.sqlite.gz", sizeBytes = 24_000_000),
         )
+        val download = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, "en", artifacts))
         render(
             GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true),
-            download = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, "en", artifacts),
-            actions = GuideActions(onStopDownload = { stopped = true }),
+            downloadState = download,
+            actions = GuideActions(
+                onStopDownload = { download.value = download.value.copy(phase = GuideDownloadPhase.STOPPED) },
+            ),
         )
 
         onNodeWithText("Table and dictionary · English").assertIsDisplayed()
@@ -237,7 +239,8 @@ class GuideScreenSemanticsTest {
 
         onNodeWithTag(GUIDE_DOWNLOAD_STOP_TAG).performClick()
 
-        assertTrue(stopped)
+        onNodeWithText("Stopped").assertIsDisplayed()
+        onNodeWithTag(GUIDE_DOWNLOAD_STOP_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -272,6 +275,7 @@ class GuideScreenSemanticsTest {
         languages: List<app.lekto.core.language.OfferedLanguage> = sampleRosterLanguages(),
         actions: GuideActions = GuideActions(),
         download: GuideDownloadUiState = GuideDownloadUiState(),
+        downloadState: androidx.compose.runtime.MutableState<GuideDownloadUiState> = mutableStateOf(download),
         savedLevel: androidx.compose.runtime.MutableState<MasteryLevel?> = mutableStateOf(state.savedLevel),
     ) {
         val document = sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, segmenter) }
@@ -284,7 +288,7 @@ class GuideScreenSemanticsTest {
                         languages = languages,
                         document = document,
                         notes = notes,
-                        download = download,
+                        download = downloadState.value,
                         translationLanguage = "fr",
                         actions = actions,
                     )
