@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -32,6 +33,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -294,6 +296,51 @@ class GuideDownloadControllerTest {
             rig.download.state.artifacts.last().name,
             "the pack follows the filled default, not the manifest's order",
         )
+    }
+
+    @Suppress("InjectDispatcher") // Two real threads, because the point is which one the work lands on.
+    @Test
+    fun `the manifest is read on the injected dispatcher, not the composition scope`() = runBlocking {
+        // Android forbids blocking network on the main thread. The composition's
+        // scope is the UI dispatcher, so the blocking read must hop to the
+        // dispatcher the controller was built with.
+        val ui = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "guide-ui-scope") }
+            .asCoroutineDispatcher()
+        val work = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "guide-download-work") }
+            .asCoroutineDispatcher()
+        val scope = CoroutineScope(SupervisorJob() + ui)
+        val read = CountDownLatch(1)
+        var readingThread: String? = null
+        val catalog = InMemoryLanguageCatalog(LanguageCatalogState.Unavailable).apply {
+            onReload = LanguageCatalogState.Available(listOf(english()))
+            whileInFlight = {
+                readingThread = Thread.currentThread().name
+                read.countDown()
+            }
+        }
+        val difficulty = DifficultyController(difficultyServices, work, scope)
+        val dictionary = DictionaryController(dictionaryServices, work, scope)
+        val download = GuideDownloadController(
+            catalog = catalog,
+            difficulty = difficulty,
+            dictionary = dictionary,
+            translationLanguage = { "fr" },
+            dispatcher = work,
+            scope = scope,
+        )
+        try {
+            download.start("en")
+
+            assertTrue(read.await(5, TimeUnit.SECONDS), "the manifest was never read")
+            assertTrue(
+                readingThread?.startsWith("guide-download-work") == true,
+                "the blocking manifest read must not run on the composition's (UI) thread: $readingThread",
+            )
+        } finally {
+            scope.cancel()
+            ui.close()
+            work.close()
+        }
     }
 
     @Suppress("InjectDispatcher") // The blocking download must run on a real thread, not the test's virtual one.
