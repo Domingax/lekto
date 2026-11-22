@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import app.lekto.core.book.BookLibrary
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.secret.AndroidSecretStore
 import app.lekto.core.speech.AndroidPronouncer
 import app.lekto.core.text.IcuTextSegmenter
@@ -39,12 +40,13 @@ class MainActivity : ComponentActivity() {
         setTheme(androidWindowTheme(androidAppTheme(this).load(), resources.configuration))
         super.onCreate(savedInstanceState)
         val library = androidBookLibrary(this)
+        val samples = androidSampleLibrary(this)
         val vocabulary = androidVocabulary(this)
         pronouncer = AndroidPronouncer(this)
         // The device's language is read before composition and handed in, so the
         // first-launch default is a value rather than a locale read in a composable.
         val systemLanguage = Locale.getDefault().language
-        setContent { LektoApp(library, vocabulary, pronouncer, systemLanguage, ::applyWindowPaper) }
+        setContent { LektoApp(library, samples, vocabulary, pronouncer, systemLanguage, ::applyWindowPaper) }
     }
 
     /**
@@ -82,6 +84,7 @@ private const val LIGHT_PAPER_LUMINANCE: Double = 0.5
 @Composable
 private fun LektoApp(
     library: BookLibrary,
+    samples: SampleLibrary?,
     vocabulary: Vocabulary,
     speech: AndroidPronouncer?,
     systemLanguage: String,
@@ -113,6 +116,7 @@ private fun LektoApp(
         AppEnvironment(
             segmenter = segmenter,
             library = library,
+            samples = samples,
             vocabulary = vocabulary,
             readerLevels = readerLevels,
             languageSettings = languageSettings,
