@@ -21,6 +21,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -79,7 +80,7 @@ class ReaderScreenSemanticsTest {
         onNodeWithTag(READER_PAGE_TAG).performTouchInput { click(firstWordTapPoint()) }
 
         val word = assertNotNull(tapped, "a tap on a word must ask for its lookup")
-        assertEquals("The", word.token.surface)
+        assertEquals("On", word.token.surface)
         assertNotNull(word.contextSentence, "the tap carries the sentence it was found in")
     }
 
@@ -355,12 +356,26 @@ private fun ComposeUiTest.progressPercent(): Int {
         ?: error("no percentage in the position: $text")
 }
 
-/** The first word link's centre, in the reader page's coordinates. */
+/**
+ * The first body word's centre, in the reader page's coordinates. The sample
+ * opens on a chapter heading, and a heading carries no word layer (issue #281),
+ * so the tap lands on the first word of the paragraph under it.
+ */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("MagicNumber") // A few points into the text's first line.
+@Suppress("MagicNumber") // A few points into the word, so the tap lands on its glyphs.
 private fun ComposeUiTest.firstWordTapPoint(): Offset {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
-    // A few points inside the text's first line, which starts with the first word.
-    return Offset(text.left - page.left + 8f, text.top - page.top + 8f)
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { line -> line.text }
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val at = shown.indexOf(FIRST_BODY_WORD).takeIf { index -> index >= 0 }
+        ?: error("the page does not show $FIRST_BODY_WORD: $shown")
+    val box = layout.getBoundingBox(at)
+    val origin = text.boundsInRoot.topLeft
+    return Offset(origin.x - page.left + box.left + 4f, origin.y - page.top + box.top + box.height / 2f)
 }
+
+/** The first word of the sample's first paragraph, under the chapter heading. */
+private const val FIRST_BODY_WORD = "On the quiet"

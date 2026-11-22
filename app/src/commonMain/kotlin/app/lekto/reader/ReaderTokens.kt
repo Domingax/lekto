@@ -55,12 +55,13 @@ fun buildReaderTokens(
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, styles, ImageLayout(0.sp, 0.sp))
     val markers = chapter.markerRanges()
+    val headings = chapter.headingRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
     chapter.blocks.forEachIndexed { index, block ->
         tokenise(block.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
-            if (markers.isMarker(word.start)) return@forEach
+            if (markers.covers(word.start) || headings.covers(word.start)) return@forEach
             words += word
             writer.write(word, renderer.mastery.levelOf(word.key))
         }
@@ -110,18 +111,19 @@ fun buildPageTokens(
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
     val markers = chapter.markerRanges()
+    val headings = chapter.headingRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
     tokenise(slice.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
-        if (markers.isMarker(page.start + token.start)) return@forEach
+        if (markers.covers(page.start + token.start) || headings.covers(page.start + token.start)) return@forEach
         words += token
         writer.write(token, renderer.mastery.levelOf(token.key))
     }
     return ReaderTokens(builder.toAnnotatedString(), words)
 }
 
-/** Whether [offset] falls inside a list marker: a bullet or a rank is drawn, but is never a word. */
-private fun List<IntRange>.isMarker(offset: Int): Boolean = any { range -> offset in range }
+/** Whether [offset] falls inside one of these character ranges: a list marker or a heading, never a word. */
+private fun List<IntRange>.covers(offset: Int): Boolean = any { range -> offset in range }
 
 /** Appends each block, its block-level style and its runs' inline styles; returns each block's start offset. */
 private fun appendBlocks(

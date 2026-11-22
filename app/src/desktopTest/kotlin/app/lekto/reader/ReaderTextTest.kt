@@ -164,6 +164,52 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aHeadingIsInkOnlyAndCarriesNoWords() {
+        // The heading's words are the book's structure, not vocabulary: they keep
+        // the heading's size and weight and never take a mastery colour (issue #281).
+        val heading = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("The lantern"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("waits"))),
+            ),
+        )
+
+        val tokens = buildReaderTokens(heading, renderer, styles)
+
+        assertEquals(listOf("waits"), tokens.words.map { word -> word.surface })
+        val headingStyle = tokens.text.spanStyles.single { span -> span.start == 0 && span.end == 11 }.item
+        assertEquals(styles.heading.fontSize, headingStyle.fontSize)
+        assertTrue(
+            tokens.text.spanStyles.none { span -> span.start < 11 && span.item.color == styles.mastery.unknown },
+            "no mastery span may cover a heading: ${tokens.text.spanStyles}",
+        )
+    }
+
+    @Test
+    fun aPageOverAHeadingCarriesNoMasterySpan() {
+        val heading = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("The lantern"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("waits"))),
+            ),
+        )
+        val chapterText = buildChapterText(heading, styles)
+        val page = ReaderPage(0, chapterText.length)
+
+        val tokens = buildPageTokens(chapterText, page, renderer, heading, styles)
+
+        assertEquals(listOf("waits"), tokens.words.map { word -> word.surface })
+        assertTrue(
+            tokens.text.spanStyles.none { span -> span.start < 11 && span.item.color == styles.mastery.unknown },
+            "a page's heading must stay ink only: ${tokens.text.spanStyles}",
+        )
+    }
+
+    @Test
     fun theChapterTextHasNoWordLayer() {
         val chapterText = buildChapterText(chapter, styles)
 

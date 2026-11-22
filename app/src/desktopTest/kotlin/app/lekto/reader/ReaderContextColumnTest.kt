@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
@@ -31,6 +33,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -302,13 +305,28 @@ private val COLUMN_TEST_HEIGHT = 720.dp
 private fun columnTest(width: androidx.compose.ui.unit.Dp, block: suspend SkikoComposeUiTest.() -> Unit) =
     runSkikoComposeUiTest(size = Size(width.value, COLUMN_TEST_HEIGHT.value), block = block)
 
-/** Taps the page's first word: words carry no link, so the page hit-tests the tap (ADR-0007). */
+/**
+ * Taps the page's first body word: the book opens on a heading, and a heading
+ * carries no word layer (issue #281), so the tap lands on the paragraph below it.
+ * Words carry no link, so the page hit-tests the tap (ADR-0007).
+ */
 @OptIn(ExperimentalTestApi::class)
-@Suppress("MagicNumber") // A few points into the text's first line.
+@Suppress("MagicNumber") // A few points into the word, so the tap lands on its glyphs.
 private fun ComposeUiTest.tapFirstWord() {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
+    val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val shown = text.config[SemanticsProperties.Text].joinToString("") { line -> line.text }
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val at = shown.indexOf(FIRST_BODY_WORD).takeIf { index -> index >= 0 }
+        ?: error("the page does not show $FIRST_BODY_WORD: $shown")
+    val box = layout.getBoundingBox(at)
+    val origin = text.boundsInRoot.topLeft
     onNodeWithTag(READER_PAGE_TAG).performTouchInput {
-        click(Offset(text.left - page.left + 8f, text.top - page.top + 8f))
+        click(Offset(origin.x - page.left + box.left + 4f, origin.y - page.top + box.top + box.height / 2f))
     }
 }
+
+/** The first word of the first paragraph, under the book's opening heading. */
+private const val FIRST_BODY_WORD = "First body."
