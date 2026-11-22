@@ -1,7 +1,9 @@
 # Reading
 
 A **Reading session** opens a **Book** and presents the text Lekto renders for it,
-one page at a time.
+one page at a time. Lines are set justified, the way a printed book sets them:
+they run to the right margin. Only a paragraph's last line, and the bottom line
+of a page where it breaks mid-sentence, stop short. A heading stays ranged left.
 
 ## Pictures
 

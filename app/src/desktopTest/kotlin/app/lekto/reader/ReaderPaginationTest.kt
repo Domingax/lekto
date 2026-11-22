@@ -8,6 +8,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
@@ -64,6 +65,37 @@ class ReaderPaginationTest {
         assertEquals(passage.length, pages.last().end)
         pages.zipWithNext().forEach { (page, next) -> assertEquals(page.end, next.start, "pages must be contiguous") }
         pages.forEach { page -> assertTrue(page.length > 0, "a page must not be empty") }
+    }
+
+    @Test
+    fun everyWrappedLineOfTheJustifiedPageReachesTheMargin() = runComposeUiTest {
+        lateinit var result: TextLayoutResult
+        var widthRef = 0
+        setContent {
+            val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val width = with(density) { 240.dp.roundToPx() }
+            widthRef = width
+            result = measurer.measure(
+                text = AnnotatedString(passage.trimEnd()),
+                style = defaultStyles.body,
+                constraints = Constraints(maxWidth = width, maxHeight = Int.MAX_VALUE),
+            )
+        }
+        waitForIdle()
+
+        assertTrue(result.lineCount > 3, "the passage should wrap into several lines")
+        // Every line that wraps reaches the right margin: that is what justified
+        // means, and it is the page's set that carries the alignment, so the
+        // paginator measures the same line breaks the page draws.
+        for (line in 0 until result.lineCount - 1) {
+            assertEquals(
+                widthRef.toFloat(),
+                result.getLineRight(line),
+                1f,
+                "wrapped line $line ends at ${result.getLineRight(line)}, not the $widthRef margin",
+            )
+        }
     }
 
     @Test

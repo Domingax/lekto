@@ -174,6 +174,13 @@ private fun appendBlock(
     builder.append(block.text)
     if (block.kind == BlockKind.HEADING) {
         builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockStart + block.text.length)
+        // The body is justified, but a heading is not: a title that wraps keeps
+        // its ragged end, as a printed book's heading does.
+        builder.addStyle(
+            ParagraphStyle(textAlign = styles.heading.textAlign),
+            blockStart,
+            blockStart + block.text.length,
+        )
     }
     if (block.kind == BlockKind.LIST_ITEM) {
         builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockStart + block.text.length)

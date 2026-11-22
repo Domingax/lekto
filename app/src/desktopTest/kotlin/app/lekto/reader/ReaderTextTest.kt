@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
@@ -216,6 +217,25 @@ class ReaderTextTest {
             },
             "a page's heading must stay ink only: ${tokens.text.spanStyles}",
         )
+    }
+
+    @Test
+    fun aHeadingKeepsTheStartEdgeWhileTheBodyIsJustified() {
+        // The body's justification is a paragraph style; a heading must opt out
+        // of it, or a title that wraps would stretch its first line to the margin.
+        val headed = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("A Title That Wraps Over Two Lines"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("body"))),
+            ),
+        )
+
+        val chapterText = buildChapterText(headed, styles)
+
+        assertEquals(TextAlign.Start, chapterText.paragraphStyles.single().item.textAlign)
+        assertEquals(TextAlign.Justify, styles.body.textAlign)
     }
 
     @Test

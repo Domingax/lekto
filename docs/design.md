@@ -114,8 +114,12 @@ ceiling at which the level stops reading through.
 Two voices, and they never swap roles.
 
 - **Reading** — the book's text. The platform's serif by default, or its sans, chosen by the
-  reader, at a size, leading and margin the reader controls. This is a **Reading preference**
-  (ADR-0035) and the app never overrides it.
+  reader, at a size, leading and margin the reader controls. The page is set justified, as a
+  printed book is: every wrapped line runs to the right margin, while a paragraph's last line —
+  and the page's bottom line, where a page is cut mid-paragraph — keeps its ragged end; a heading
+  stays at the start edge. Alignment is fixed typography, not a **Reading preference**
+  (ADR-0035) — it moves no glyph, so it changes no page break — and the app never overrides the
+  preference.
 - **Interface** — everything the app says. The platform's sans-serif. No bundled font: a shipped
   face is a new artefact with its own licence notice, and it buys what the platform already gives.
 

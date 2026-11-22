@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -28,6 +29,13 @@ internal const val MAX_MEASURE_EM: Float = 34f
  * face, size, leading and margin come from the preference; [ink] comes from the
  * active **App theme**'s paper (`docs/design.md` §2.1), because colour does not
  * move a glyph and so cannot change a page break.
+ *
+ * The body is set justified, the way a printed book's text is: every wrapped
+ * line ends at the right margin, while a paragraph's last line keeps its ragged
+ * end — and so does a page's bottom line, since a page is a slice that ends at a
+ * line break. Alignment is fixed typography, not a **Reading preference** — it
+ * changes no glyph's advance, so it changes no page break — and the heading is
+ * held to the start edge so a title that wraps does not stretch.
  *
  * The default preference reproduces the fixed style the reader used to hold: an
  * 18px serif at a 1.7 line height and a 24px heading, in near-black ink.
@@ -72,6 +80,7 @@ data class ReaderStyles(
                     fontFamily = family,
                     fontSize = preferences.size.sp,
                     lineHeight = preferences.leading.sp,
+                    textAlign = TextAlign.Justify,
                     color = ink,
                 ),
                 heading = TextStyle(
@@ -79,6 +88,7 @@ data class ReaderStyles(
                     fontSize = (preferences.size * HEADING_SIZE_RATIO).sp,
                     lineHeight = (preferences.size * HEADING_LEADING_RATIO).sp,
                     fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Start,
                     color = ink,
                 ),
                 horizontalMargin = preferences.horizontalMargin.dp,
