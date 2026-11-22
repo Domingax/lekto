@@ -411,10 +411,13 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theTapScreenStillNamesTheReadingLanguage() = runComposeUiTest {
+    fun theTapScreenNamesNoReadingLanguage() = runComposeUiTest {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
-        onNodeWithText("Reading in English").assertIsDisplayed()
+        // The owner's third review removed the label from the last screen that
+        // carried it: the tapped word is the subject, and no beat names the language.
+        onNodeWithText("Reading in English").assertDoesNotExist()
+        onNodeWithText("Lecture en anglais").assertDoesNotExist()
     }
 
     @Test

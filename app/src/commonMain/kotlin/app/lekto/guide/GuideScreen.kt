@@ -438,7 +438,6 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(texts[TextKey.GUIDE_TAP_TITLE], texts[TextKey.GUIDE_TAP_INTRO])
-        GuideReadingIn(state.sample?.language)
         marked?.let { page ->
             GuidePageBlock(
                 page,
@@ -677,24 +676,6 @@ private fun GuideHeading(title: String, intro: String?, topPadding: Dp = LektoSp
             )
         }
     }
-}
-
-/**
- * The language the sample is read in, under the tap screen's title (issue #277):
- * a build that ships one sample never asks the question, so a screen that answers
- * for a language names it. The page beat speaks for itself; its paragraph needs no
- * label.
- */
-@Composable
-private fun GuideReadingIn(language: String?) {
-    if (language.isNullOrBlank()) return
-    val texts = LocalAppTexts.current
-    Text(
-        text = texts.message(AppMessage.of(TextKey.GUIDE_READING_IN, texts.languageName(language))),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = LektoSpacing.InsideLabelPair),
-    )
 }
 
 /** The page's quiet way forward, aligned to the trailing edge as the mockups draw it. */

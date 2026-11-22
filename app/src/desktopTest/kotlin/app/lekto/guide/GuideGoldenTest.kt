@@ -337,14 +337,6 @@ private fun ColumnScope.PagePreview() {
     }
 }
 
-/** The language the sample is read in, under the page titles. */
-@Composable
-private fun ReadingIn() {
-    Column(Modifier.padding(top = LektoSpacing.InsideLabelPair)) {
-        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 92.dp, 9.dp)
-    }
-}
-
 /**
  * The embedded page block: the sample's first paragraph as word bars, the coloured
  * ones carrying their level's hue and the reader's own 1 dp dotted rule (issue
@@ -493,7 +485,6 @@ private fun ColumnScope.TapPreview() {
     Box(Modifier.fillMaxWidth().weight(1f)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.ScreenEdge)) {
             Heading(148.dp, 208.dp, 160.dp)
-            ReadingIn()
             PageBlock(
                 Modifier.fillMaxWidth().height(PAGE_BLOCK_HEIGHT).padding(top = LektoSpacing.BetweenRows),
                 lines = 9,

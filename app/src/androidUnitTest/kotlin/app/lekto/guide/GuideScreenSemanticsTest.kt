@@ -425,10 +425,13 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theTapScreenStillNamesTheReadingLanguage() {
+    fun theTapScreenNamesNoReadingLanguage() {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
-        compose.onNodeWithText("Reading in English").assertIsDisplayed()
+        // The mirror of the desktop lane: the last screen that named the reading
+        // language no longer does.
+        compose.onNodeWithText("Reading in English").assertDoesNotExist()
+        compose.onNodeWithText("Lecture en anglais").assertDoesNotExist()
     }
 
     @Test
