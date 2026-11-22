@@ -219,6 +219,7 @@ class GuideControllerTest {
         guide.advance()
 
         assertEquals(MasteryLevel.LEARNED, guide.state.savedLevel)
+        assertEquals(key, guide.state.savedKey, "the sheet states the word it is showing")
     }
 
     @Test

@@ -123,14 +123,18 @@ class GuideController(
 
             state.stage == GuideStage.PAGE && state.plain -> state.copy(plain = false)
 
-            state.stage == GuideStage.PAGE -> state.copy(
-                stage = GuideStage.TAP,
-                lookupOpen = false,
-                tapped = null,
-                savedLevel = state.sample?.let { chosen ->
+            state.stage == GuideStage.PAGE -> {
+                val demonstrated = state.sample?.let { chosen ->
                     guideNotes(chosen, state.band, segmenter, translationLanguage()).firstOrNull()
-                }?.let { note -> mastery?.entryFor(note.key)?.mastery },
-            )
+                }
+                state.copy(
+                    stage = GuideStage.TAP,
+                    lookupOpen = false,
+                    tapped = null,
+                    savedKey = demonstrated?.key,
+                    savedLevel = demonstrated?.let { note -> mastery?.entryFor(note.key)?.mastery },
+                )
+            }
 
             state.stage == GuideStage.TAP && !state.lookupOpen -> state.copy(stage = GuideStage.LEVEL)
 
