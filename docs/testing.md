@@ -341,7 +341,13 @@ short explanation of the two derived assets, then one row per language with its
 name and level picker, each **Derived asset**'s muted state and its
 trailing text action, the hairline that parts two languages, and the attribution at
 the foot in the muted ink — three rows standing for one ready, one missing both
-derived assets and one with a corrupt dictionary. The launcher
+derived assets and one with a corrupt dictionary. The first-launch guide adds five
+sheets per paper (issue #277) — `guide-language-<paper>.png`,
+`guide-page-<paper>.png`, `guide-tap-<paper>.png`, `guide-level-<paper>.png` and
+`guide-arrival-<paper>.png` — the step marks and `Skip`, the eight language rows,
+the page's coloured word bars and four notes, the real sheet with its cap and
+handle, the six bands with their chosen wash, and the shelf's sample row with its
+download line. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.

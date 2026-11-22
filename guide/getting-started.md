@@ -11,12 +11,26 @@ The first time you open Lekto it creates a **Vault** for you: the private,
 on-device store that holds everything you author or import. You do not need to
 sign in, and nothing is uploaded anywhere.
 
-There is no setup question to answer. When Lekto ships the language your device is
-set to (English or French), it starts in that language; otherwise it starts in
-English. That is the **app language** — the language of the app's own texts — and
-you can change it any time in **Settings → App language**. The language your
-translations appear in is a separate choice, the **Translation language**, made on
-the **Languages** surface. See [Settings and FAQ](/settings-and-faq).
+It then asks one question: **Which language would you like to read first?** Pick a
+language and Lekto opens a short **Sample** of it in the reader — first with no
+colour, then the same page coloured by a level, with a few words explained under
+it. One word is there to tap: the lookup sheet opens, and choosing a level saves
+the word to your **Vocabulary**. Then the same page sits above the six CEFR bands:
+choose the one that is your **Reader level** and the page repaints. The sample is
+waiting on the Library when you finish, and the table and dictionary that make its
+colours follow your own books download in the background.
+
+You can leave the guide at any time with **Skip** — or **Escape** on a computer,
+or the system Back gesture on Android. The sample stays on the shelf, and a line
+there reminds you where its reading level is set. You can replay the guide later
+from **Settings → Application → Guide**.
+
+The app's own language is a separate thing. When Lekto ships the language your
+device is set to (English or French), it starts in that language; otherwise it
+starts in English. That is the **app language** — the language of the app's own
+texts — and you can change it any time in **Settings → App language**. The
+language your translations appear in is a separate choice, the **Translation
+language**, made on the **Languages** surface. See [Settings and FAQ](/settings-and-faq).
 
 If you already use Lekto on another device, you can turn on sync in Settings to
 bring your books, reading progress and vocabulary here. See
