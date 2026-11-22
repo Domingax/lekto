@@ -1620,7 +1620,8 @@ class AppSemanticsTest {
             )
         }
 
-        onNodeWithText("Reading in English").assertIsDisplayed()
+        onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        onNodeWithText("Reading in English").assertDoesNotExist()
         onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
     }
 
@@ -1759,7 +1760,6 @@ class AppSemanticsTest {
         onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
 
         onNodeWithText("Here is a page of your book.").assertIsDisplayed()
-        onNodeWithText("Reading in English").assertIsDisplayed()
     }
 
     @Test

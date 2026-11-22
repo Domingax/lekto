@@ -1542,7 +1542,8 @@ class AppSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("Reading in English").assertIsDisplayed()
+        compose.onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        compose.onNodeWithText("Reading in English").assertDoesNotExist()
         compose.onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
     }
 
@@ -1693,7 +1694,6 @@ class AppSemanticsTest {
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
 
         compose.onNodeWithText("Here is a page of your book.").assertIsDisplayed()
-        compose.onNodeWithText("Reading in English").assertIsDisplayed()
     }
 
     @Test
