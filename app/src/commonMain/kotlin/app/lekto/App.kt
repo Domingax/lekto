@@ -2,13 +2,17 @@
 
 package app.lekto
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -22,7 +26,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
@@ -37,11 +49,15 @@ import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.firstGloss
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.guide.GuideProgressStore
 import app.lekto.core.language.AppLanguages
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettingsStore
+import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.offeredLanguages
 import app.lekto.core.language.readingLanguagesOf
+import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -70,6 +86,16 @@ import app.lekto.dictionary.WordLookupPanel
 import app.lekto.difficulty.DifficultyController
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.difficulty.DifficultyUiState
+import app.lekto.guide.GuideActions
+import app.lekto.guide.GuideController
+import app.lekto.guide.GuideDownloadController
+import app.lekto.guide.GuideDownloadLine
+import app.lekto.guide.GuideDownloadPhase
+import app.lekto.guide.GuideDownloadUiState
+import app.lekto.guide.GuideProgressController
+import app.lekto.guide.GuideScreen
+import app.lekto.guide.guideDocument
+import app.lekto.guide.guideNotes
 import app.lekto.language.LanguageController
 import app.lekto.language.LanguageSettingsController
 import app.lekto.language.LanguagesDestination
@@ -116,9 +142,12 @@ import app.lekto.settings.VaultSettingsScreen
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
+import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
+import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
 import app.lekto.theme.WIDE_WINDOW_BREAKPOINT
 import app.lekto.theme.appThemeScheme
@@ -177,6 +206,13 @@ data class AppEnvironment(
      * sample and the app stays usable.
      */
     val samples: SampleLibrary? = null,
+    /**
+     * The app-private first-launch progress (issue #277; ADR-0023's pattern): the
+     * device-local fact that the reader has seen the guide. `null` when the
+     * platform wires none, so the gate treats the guide as seen and the app opens
+     * on its shell as before.
+     */
+    val guide: GuideProgressStore? = null,
     /**
      * The app-private language settings store (ADR-0034): the device-local
      * **app language** and **Translation language**, neither a **Vault** record.
@@ -281,7 +317,7 @@ data class LlmServices(
  * paper to the host, so the platform's own window — the strip before the first
  * frame — is the theme's background rather than a white flash.
  */
-@Suppress("LongMethod", "CyclomaticComplexMethod") // The composition root wires each independent seam once.
+@Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod") // The composition root.
 @Composable
 fun App(
     environment: AppEnvironment,
@@ -411,6 +447,61 @@ fun App(
         }
     })
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
+    // The first-launch guide (issue #277): its document's live state, the download
+    // that starts after the language answer, and the flow over the sample #278
+    // materialises. A build with no sample catalogue has no guide to show, so the
+    // gate below stays shut and the app opens on its shell as before.
+    val guideProgress = remember(environment.guide) {
+        environment.guide?.let { store -> GuideProgressController(store) }
+    }
+    val guideDownload = remember(environment.samples, environment.languages, difficulty, dictionary, scope) {
+        if (environment.samples == null) {
+            null
+        } else {
+            GuideDownloadController(
+                catalog = environment.languages,
+                difficulty = difficulty,
+                dictionary = dictionary,
+                translationLanguage = { languageSettings?.translationLanguage },
+                dispatcher = environment.dispatcher,
+                scope = scope,
+            )
+        }
+    }
+    // The roster, corrected by a cached manifest when one is already on the
+    // device: the guide never fetches for its list, so a first launch shows every
+    // language the build ships, and a later one shows what the manifest kept.
+    val guideLanguages = remember(environment.languages) {
+        val manifest = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
+        offeredLanguages(sampleRosterLanguages(), manifest)
+    }
+    val guide = remember(environment.samples, environment.segmenter, guideDownload, mastery, guideLanguages) {
+        environment.samples?.let { samples ->
+            GuideController(
+                languages = guideLanguages,
+                sampleOf = samples::sample,
+                materialise = controller::materialiseSample,
+                download = guideDownload,
+                mastery = mastery,
+                segmenter = environment.segmenter,
+                translationLanguage = { languageSettings?.translationLanguage },
+            )
+        }
+    }
+    // The guide opens once: on a device that has not seen it and whose shelf is
+    // empty. A reader who already has books never gets five screens over their
+    // shelf; the Settings row below is their way in.
+    var guideReopened by remember { mutableStateOf(false) }
+    val guideOpen = guide != null && guideLanguages.isNotEmpty() &&
+        (guideReopened || (!(guideProgress?.seen ?: true) && state.vaultEmpty))
+    // Every way out of the guide — the last screen's action and Skip on any
+    // screen — leaves the reader on the shelf with the fact recorded.
+    val closeGuide = {
+        guideProgress?.markSeen()
+        guideReopened = false
+        controller.refresh()
+    }
+    val activeGuide = guide?.takeIf { guideOpen }
     // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
     // an app-start run plus the periodic timer — and ask for a run whenever the
     // platform reports the app has resumed.
@@ -442,24 +533,40 @@ fun App(
     LektoTheme(theme = theme) {
         Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
             CompositionLocalProvider(LocalAppTexts provides appTextsFor(languageSettings?.appLanguage)) {
-                AppScreens(
-                    environment,
-                    controller,
-                    changes,
-                    state,
-                    scope,
-                    progress,
-                    settings,
-                    mastery,
-                    language,
-                    languageSettings,
-                    readingPreferences,
-                    appTheme,
-                    lemmas,
-                    difficulty,
-                    difficultyStates,
-                    dictionaryStates,
-                )
+                if (activeGuide != null) {
+                    GuideDestination(
+                        guide = activeGuide,
+                        languages = guideLanguages,
+                        download = guideDownload,
+                        environment = environment,
+                        translationLanguage = languageSettings?.translationLanguage,
+                        onFinish = closeGuide,
+                    )
+                } else {
+                    AppScreens(
+                        environment,
+                        controller,
+                        changes,
+                        state,
+                        scope,
+                        progress,
+                        settings,
+                        mastery,
+                        language,
+                        languageSettings,
+                        readingPreferences,
+                        appTheme,
+                        lemmas,
+                        difficulty,
+                        difficultyStates,
+                        dictionaryStates,
+                        guideDownload,
+                        onOpenGuide = {
+                            guide?.restart()
+                            guideReopened = true
+                        },
+                    )
+                }
             }
         }
     }
@@ -485,6 +592,8 @@ private fun AppScreens(
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
     dictionaryStates: Map<String, DictionaryUiState>,
+    guideDownload: GuideDownloadController?,
+    onOpenGuide: () -> Unit,
 ) {
     // The real back stack (issue #185; docs/design.md §6): the bar and every
     // push move it, and Back walks it. It is a value in state, so a move is a
@@ -556,6 +665,7 @@ private fun AppScreens(
             onOpenVault = { stack = stack.push(Destination.VaultSettings) },
             onOpenAttribution = { stack = stack.push(Destination.Attribution) },
             onOpenAbout = { stack = stack.push(Destination.About) },
+            onOpenGuide = onOpenGuide,
             onOpenSource = { environment.openUrl(LEKTO_SOURCE_URL) },
             onSelectAppLanguage = { code -> settings.languageSettings?.chooseAppLanguage(code) },
             onExportVault = { settings.vaultTransfer?.export() },
@@ -655,6 +765,9 @@ private fun AppScreens(
                     controller,
                     scope,
                     libraryState,
+                    levelLine = levelLine(libraryState, mastery),
+                    download = guideDownload?.state ?: GuideDownloadUiState(),
+                    onStopDownload = { guideDownload?.stop() },
                     onOpen = { session -> stack = stack.push(Destination.Reading(session)) },
                 )
 
@@ -662,6 +775,93 @@ private fun AppScreens(
                 is Destination.Reading -> Unit
             }
         }
+    }
+}
+
+/**
+ * The first-launch guide above the shell (issue #277): the real reader's page and
+ * lookup sheet over the sample, with the guide's own frame. It sits inside the
+ * app's theme and text provider, so it paints and reads exactly like every other
+ * screen.
+ *
+ * The desktop keys are the guide's: `Escape` is `Skip` and the two arrows page the
+ * screens (left back, right forward), through the same calls the controls make.
+ * `Back` on Android is `Skip` too, so a phone reader can leave the guide the way
+ * they leave any screen. The page's document is memoised on the band and the beat,
+ * so a band choice repaints it at once with no transition.
+ */
+@Suppress("LongParameterList", "LongMethod") // The guide's independent inputs and its one wiring.
+@Composable
+private fun GuideDestination(
+    guide: GuideController,
+    languages: List<OfferedLanguage>,
+    download: GuideDownloadController?,
+    environment: AppEnvironment,
+    translationLanguage: String?,
+    onFinish: () -> Unit,
+) {
+    val state = guide.state
+    val sample = state.sample
+    val document = remember(sample, state.band, state.plain) {
+        sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter) }
+    }
+    val notes = remember(sample, state.band, translationLanguage) {
+        sample?.let { chosen -> guideNotes(chosen, state.band, environment.segmenter, translationLanguage) }.orEmpty()
+    }
+    val keys = remember { FocusRequester() }
+    LaunchedEffect(state.lookupOpen) { if (!state.lookupOpen) keys.requestFocus() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .focusRequester(keys)
+            .focusable()
+            .onPreviewKeyEvent { event -> guideKey(event, guide, onFinish) },
+    ) {
+        GuideScreen(
+            state = state,
+            languages = languages,
+            document = document,
+            notes = notes,
+            download = download?.state ?: GuideDownloadUiState(),
+            translationLanguage = translationLanguage,
+            actions = GuideActions(
+                onChooseLanguage = guide::chooseLanguage,
+                onContinue = guide::advance,
+                onTapWord = guide::tapWord,
+                onDismissLookup = guide::dismissLookup,
+                onSaveWord = guide::save,
+                onChooseBand = guide::chooseBand,
+                onSkip = onFinish,
+                onFinish = onFinish,
+                onStopDownload = { download?.stop() },
+                onOpenSettings = {},
+                onSpeakWord = {},
+            ),
+        )
+    }
+    PlatformBackHandler(enabled = true) { onFinish() }
+}
+
+/** The guide's desktop keys: `Escape` leaves, the arrows page the screens (issue #277). */
+private fun guideKey(event: KeyEvent, guide: GuideController, onFinish: () -> Unit): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+    return when (event.key) {
+        Key.Escape -> {
+            onFinish()
+            true
+        }
+
+        Key.DirectionRight -> {
+            guide.advance()
+            true
+        }
+
+        Key.DirectionLeft -> {
+            guide.back()
+            true
+        }
+
+        else -> false
     }
 }
 
@@ -847,14 +1047,41 @@ private fun LibraryDestination(
     controller: LibraryController,
     scope: CoroutineScope,
     state: LibraryUiState,
+    levelLine: AppMessage?,
+    download: GuideDownloadUiState,
+    onStopDownload: () -> Unit,
     onOpen: (ReadingSession) -> Unit,
 ) {
-    LibraryScreen(
-        state = state,
-        actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
-        covers = remember(environment.library) { LibraryBookCovers(environment.library) },
-        snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
-    )
+    Column(Modifier.fillMaxSize()) {
+        LibraryScreen(
+            state = state,
+            actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
+            covers = remember(environment.library) { LibraryBookCovers(environment.library) },
+            snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
+            levelLine = levelLine,
+            modifier = Modifier.weight(1f),
+        )
+        if (download.phase != GuideDownloadPhase.IDLE) {
+            GuideDownloadLine(
+                download,
+                onStop = onStopDownload,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
+            )
+        }
+    }
+}
+
+/**
+ * The shelf's "level not set" reminder (issue #277): after the guide, the sample
+ * stays on the shelf with no **Reader level**, so the shelf says where the level
+ * is set and the line goes when it exists. A shelf with no sample has no line:
+ * there is no language whose level it could name.
+ */
+private fun levelLine(state: LibraryUiState, mastery: MasteryController?): AppMessage? {
+    val language = state.sample?.book?.language ?: return null
+    return if (mastery?.levelFor(language) == null) AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET) else null
 }
 
 /**

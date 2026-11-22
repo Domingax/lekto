@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryEntry
@@ -133,6 +134,7 @@ fun WordLookupPanel(
     actions: WordLookupActions,
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
+    context: String? = null,
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
     inColumn: Boolean = false,
@@ -143,7 +145,16 @@ fun WordLookupPanel(
         inColumn = inColumn,
         onDismiss = actions.onDismiss,
     ) {
-        SheetContent(term, result, pronunciation, shortcuts, actions.onOpenShortcut, actions.onDismiss, onOpenSettings)
+        SheetContent(
+            term,
+            result,
+            pronunciation,
+            shortcuts,
+            context,
+            actions.onOpenShortcut,
+            actions.onDismiss,
+            onOpenSettings,
+        )
         Footer(vocabulary, inColumn)
     }
 }
@@ -163,17 +174,36 @@ private fun ColumnScope.SheetContent(
     result: WordLookup,
     pronunciation: Pronunciation,
     shortcuts: List<DictionaryShortcut>,
+    context: String?,
     onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
         SheetHeader(term, result, pronunciation, onDismiss)
+        ContextLine(context)
         SheetDivider()
         SpeechMessage(pronunciation.result)
         Answer(result, onOpenSettings)
         References(shortcuts, onOpenShortcut)
     }
+}
+
+/**
+ * The sentence the word was tapped in, when the host knows it (issue #277's tap
+ * screen): muted, under the headword and above the answer, so the meaning is read
+ * against the page it came from. The reader's own sheet passes nothing, because
+ * the page is already behind it.
+ */
+@Composable
+private fun ContextLine(context: String?) {
+    if (context.isNullOrBlank()) return
+    Text(
+        text = context,
+        style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+    )
 }
 
 /**

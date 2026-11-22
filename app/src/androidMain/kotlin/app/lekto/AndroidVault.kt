@@ -3,6 +3,8 @@ package app.lekto
 import android.content.Context
 import android.net.Uri
 import app.lekto.core.Seams
+import app.lekto.core.guide.GuideProgressStore
+import app.lekto.core.guide.JsonGuideProgressStore
 import app.lekto.core.language.JsonLanguageSettingsStore
 import app.lekto.core.language.LanguageSettingsStore
 import app.lekto.core.reading.JsonReadingPreferencesStore
@@ -75,6 +77,16 @@ fun androidAppTheme(context: Context): AppThemeStore =
  */
 fun androidReadingPreferences(context: Context): ReadingPreferencesStore =
     JsonReadingPreferencesStore(JvmVaultFileSystem(File(context.filesDir, "settings")))
+
+/**
+ * The Android first-launch guide's progress (issue #277) under `Context.filesDir`:
+ * whether the reader has seen the guide, in the same `settings` root as the app
+ * language and the reading preference. It is device-local app configuration
+ * (ADR-0023's pattern), not a vault record, so it never enters an export and does
+ * not move between devices.
+ */
+fun androidGuideProgress(context: Context): GuideProgressStore =
+    JsonGuideProgressStore(JvmVaultFileSystem(File(context.filesDir, "settings")))
 
 /**
  * The vault's whole-file transfer (issue #20) over `Context.filesDir`, with the

@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The whole app's flows plus the fixtures they share.
+
 package app.lekto
 
 import androidx.compose.ui.geometry.Offset
@@ -42,9 +44,13 @@ import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingProgress
 import app.lekto.core.book.ReadingSession
 import app.lekto.core.book.ReadingState
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.book.paragraphAt
 import app.lekto.core.dictionary.DictionaryPackInstaller
 import app.lekto.core.difficulty.DifficultyInstaller
+import app.lekto.core.guide.GuideProgress
+import app.lekto.core.guide.GuideProgressStore
+import app.lekto.core.guide.JsonGuideProgressStore
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettings
@@ -55,6 +61,7 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
 import app.lekto.core.speech.Pronouncer
@@ -85,6 +92,8 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
+import app.lekto.guide.GUIDE_LANGUAGE_LIST_TAG
+import app.lekto.guide.GUIDE_SKIP_TAG
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
 import app.lekto.language.LANGUAGES_BACK_TAG
 import app.lekto.language.LANGUAGES_RELOAD_TAG
@@ -124,6 +133,7 @@ import app.lekto.settings.APP_LANGUAGE_BACK_TAG
 import app.lekto.settings.APP_LANGUAGE_LINK_TAG
 import app.lekto.settings.ATTRIBUTION_BACK_TAG
 import app.lekto.settings.ATTRIBUTION_LINK_TAG
+import app.lekto.settings.GUIDE_LINK_TAG
 import app.lekto.settings.LANGUAGES_LINK_TAG
 import app.lekto.settings.LEKTO_SOURCE_URL
 import app.lekto.settings.MODEL_FIELD_TAG
@@ -148,12 +158,14 @@ import app.lekto.testkit.FakeLlmClient
 import app.lekto.testkit.FakePronouncer
 import app.lekto.testkit.FlakyVaultFileSystem
 import app.lekto.testkit.InMemoryAppThemeStore
+import app.lekto.testkit.InMemoryGuideProgressStore
 import app.lekto.testkit.InMemoryLanguageCatalog
 import app.lekto.testkit.InMemoryLanguageSettingsStore
 import app.lekto.testkit.InMemoryLlmSettingsStore
 import app.lekto.testkit.InMemoryReaderLevels
 import app.lekto.testkit.InMemoryReadingPreferencesStore
 import app.lekto.testkit.InMemoryRemoteIndexStore
+import app.lekto.testkit.InMemorySampleDismissedStore
 import app.lekto.testkit.InMemorySecretStore
 import app.lekto.testkit.InMemorySyncOutcomeStore
 import app.lekto.testkit.InMemorySyncSettingsStore
@@ -164,6 +176,7 @@ import app.lekto.testkit.InMemoryVaultStore
 import app.lekto.testkit.TestClock
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.deterministicSeams
+import app.lekto.testkit.guideSample
 import app.lekto.testkit.inMemoryVocabulary
 import app.lekto.testkit.testOfferedArtifact
 import app.lekto.testkit.testOfferedDictionary
@@ -1587,6 +1600,130 @@ class AppSemanticsTest {
         onNodeWithText("is installed", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun aManifestThatLeavesOneLanguageOpensOnItsPage() = runComposeUiTest {
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                    languages = InMemoryLanguageCatalog(
+                        LanguageCatalogState.Available(listOf(testOfferedLanguage("en"))),
+                    ),
+                ),
+            )
+        }
+
+        onNodeWithText("Reading in English").assertIsDisplayed()
+        onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aFreshInstallOpensOnTheGuideBeforeTheShell() = runComposeUiTest {
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                ),
+            )
+        }
+
+        onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+        onNodeWithTag(GUIDE_SKIP_TAG).assertIsDisplayed()
+        onNodeWithTag(LIBRARY_TITLE_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aReaderWhoSawTheGuideOpensOnTheShell() = runComposeUiTest {
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(GuideProgress.SEEN),
+                ),
+            )
+        }
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun aCorruptGuideDocumentReadsAsNotSeen() = runComposeUiTest {
+        val files = InMemoryVaultFileSystem()
+        files.writeAtomically(JsonGuideProgressStore.PATH, "not json at all".encodeToByteArray())
+
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = JsonGuideProgressStore(files),
+                ),
+            )
+        }
+
+        onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+    }
+
+    @Test
+    fun aVaultWithABookDoesNotOpenTheGuide() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
+
+        setContent {
+            App(
+                environment(
+                    library,
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                ),
+            )
+        }
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun skipLeavesTheGuideForTheShelf() = runComposeUiTest {
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                ),
+            )
+        }
+
+        onNodeWithTag(GUIDE_SKIP_TAG).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun theSettingsRowReopensTheGuideOverAShelfWithBooks() = runComposeUiTest {
+        val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
+
+        setContent { App(environment(library, samples = guideSamples())) }
+
+        tapSection(ShellSection.SETTINGS)
+        onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
+
+        onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+    }
+
     /** Taps one of the shell's three sections: the bar on a phone, the column on desktop (issue #185). */
     private fun ComposeUiTest.tapSection(section: ShellSection) {
         onNodeWithTag(shellSectionTag(section)).performClick()
@@ -1625,6 +1762,13 @@ class AppSemanticsTest {
         onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
     }
 }
+
+/** The one sample every guide test materialises, so the first launch has a language to answer. */
+private fun guideSamples(): SampleLibrary = SampleLibrary(
+    catalogue = SampleCatalogContent(listOf(guideSample())),
+    derived = DerivedAssetStore(InMemoryVaultFileSystem()),
+    dismissed = InMemorySampleDismissedStore(),
+)
 
 /** An **in-memory catalog** offering English, so the Languages surface lists something. */
 private fun languageCatalog(): LanguageCatalog =
@@ -1687,6 +1831,8 @@ private fun difficultyServices(): DifficultyServices {
 @Suppress("LongParameterList") // The environment's inputs are independent; a bundle would only hide that.
 internal fun environment(
     library: BookLibrary,
+    samples: SampleLibrary? = null,
+    guide: GuideProgressStore = InMemoryGuideProgressStore(GuideProgress.SEEN),
     pickFile: (suspend () -> PickedFile?)? = null,
     dictionary: DictionaryServices? = null,
     languages: LanguageCatalog? = null,
@@ -1707,6 +1853,8 @@ internal fun environment(
 ) = AppEnvironment(
     segmenter = WhitespaceTextSegmenter(),
     library = library,
+    samples = samples,
+    guide = guide,
     mastery = MasteryLookup.AllKnown,
     lemmas = lemmas,
     vocabulary = vocabulary,

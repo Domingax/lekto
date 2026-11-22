@@ -606,9 +606,22 @@ proportions — there is nothing to keep in step. The layer's paper rim (§5) is
 off the Light paper: on the Dark paper the foot is ink on ink, and the rim is the edge that separates
 them. A dark theme that flashes white has a bug, not a style.
 
-The first frame is the shell with the Library's rows **in skeleton**, never a bare logo: the wait
-is a local vault read, and a screen shown for 40 ms is a flicker, which reads as slowness. No
-animation, no tagline, no artificial delay.
+The first frame is **the guide** when the device has not seen it and the **Vault** holds no book, and the shell's Library otherwise. The gate reads two local facts, not a network answer: the `guide.json` progress document and the vault's listing, so the decision is made before the first frame and no skeleton stands in front of it. A device that has seen the guide — or that already has a book, even a device upgraded from a build before the guide existed — opens on the shell with the Library's rows in skeleton, never a bare logo: the wait is a local vault read, and a screen shown for 40 ms is a flicker, which reads as slowness. No animation, no tagline, no artificial delay.
+
+### 7.8 First launch
+
+The guide is a **first session**, not front matter: four screens the reader walks, then the arrival on the shelf. It is built from the surfaces the product already has — the reader's own page and the reader's own lookup sheet — not from drawings of them, so the demonstration cannot drift the first time either changes. The sample is the build's one **Sample book** (ADR-0023, ADR-0049): a **Derived asset**, never a **Vault** record.
+
+1. **The language.** `Which language would you like to read first?` over one row per language of the embedded roster — its code in the muted ink, its name in the body size, a `chevron-right` — with **no preselection** and no spinner. The list is the roster itself, never a network read, so it is complete on the first frame with no connection; it scrolls at 320 dp, and a line underneath says other languages can be added later in Settings. The row *is* the answer: there is no `Continue` acting on a choice that was never made. The choice materialises that language's sample through the **Sample book** seam and starts the background download, announced with its published size and a `Stop`.
+2. **The page, in two beats.** The sample's first paragraph in the reader's own page, with **no colour at all** first — `Nothing is coloured yet. Look.` — then the same paragraph painted from the sample's own band map: `The more you know, the less colour.` Four notes follow, one per highlighted **Mastery level**: the level's chip and number, the word, the level's name and the sample's meaning in the reader's **Translation language**. This screen promises no gesture; the notes carry the chips as labels, so nothing invites a tap it cannot answer. The page and the notes name the language under the title.
+3. **The tap.** The reader's **real** lookup sheet, raised over the same page, with one word carrying the selection wash. Its meanings come from the sample's glossary, so it answers before any **Dictionary pack** is installed. The header carries the word, its part of speech, its pronunciation and the sentence it was tapped in; the footer is the same `Not saved` / `Saved · <level>` line the reader has. One tap on a level saves the word to the real **Vocabulary** and the line states it; closing the sheet writes nothing.
+4. **Your reading level.** The same page above the six CEFR bands, each with its one line — *Beginner — simple sentences*, … *Mastery — everything* — and the chosen one washed with an ink rule. It is the **only** screen that carries the band, and it carries it as the reader's **Reader level**: choosing a band writes it through the **Languages** surface's own action, and the page recolours at once. The filled `Start reading` action finishes the guide; leaving the guide without choosing leaves the level undeclared.
+5. **The arrival.** The shell's own shelf, with the sample as its first row and the **Sample** mark, the first-run sentence above it, and the download's state in one line under the shelf — `Out in the background · Stop`, `Installed`, `Stopped`. Until a **Reader level** exists, the shelf carries `Your reading level is not set yet. Settings ▸ Languages.`; the line goes the moment the level does, from this guide, the Languages surface or a sync.
+
+**`Skip` sits on every screen**, at the trailing edge of the step bar, and it does not merely close: it lands on the shelf, records the guide as seen, leaves the sample coloured at the default band and the level undeclared. On Android the system Back is `Skip`; on desktop `Escape` is, and the two arrow keys page the screens. The guide opens **once**: a device that has seen it, or one whose vault already holds a book, gets the `Guide` row in Settings ▸ Application rather than five screens over its shelf.
+
+A build whose roster carries **one** language asks nothing: it opens on the page and names that language under the title, because a question with one answer is not a question. The download never gates the demonstration: every screen reads the sample's own colour maps and glossary, so the page, the tap and the band work before, during and after the bytes land. The colours arrive without a transition — there is no motion to reduce — and nothing is lost when the gesture is absent: the selected word is a static wash, not a pulse.
+
 
 ## 8. States and feedback
 
@@ -641,7 +654,7 @@ the page behind it.
 
 - **4.5:1** for any coloured word (§2.2), measured per theme, and **1.25:1** between any two
   coloured levels — a page puts any two words side by side, not only the neighbours of the scale.
-- A **non-colour indicator** for every highlighted level: the underline.
+- A **non-colour indicator** for every highlighted level: the 1 dp dotted rule the page draws under the word in the level's colour (#281), beside the colour itself.
 - A **pale tint** behind a highlighted word on the daylight papers is the second cue; on Dark the
   lifted hues stand alone. The tint is tonal, not a pattern — a per-level pattern is the separate
   issue WCAG 1.4.1 asks for.

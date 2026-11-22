@@ -68,6 +68,7 @@ class SettingsScreenSemanticsTest {
         var appearance = false
         var appLanguage = false
         var languages = false
+        var guide = false
         var provider = false
         var vault = false
         var attribution = false
@@ -77,6 +78,7 @@ class SettingsScreenSemanticsTest {
                 onOpenAppearance = { appearance = true },
                 onOpenAppLanguage = { appLanguage = true },
                 onOpenLanguages = { languages = true },
+                onOpenGuide = { guide = true },
                 onOpenProvider = { provider = true },
                 onOpenVault = { vault = true },
                 onOpenAttribution = { attribution = true },
@@ -87,6 +89,7 @@ class SettingsScreenSemanticsTest {
         compose.onNodeWithTag(APPEARANCE_LINK_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(APP_LANGUAGE_LINK_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(LANGUAGES_LINK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(PROVIDER_LINK_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(VAULT_LINK_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(ATTRIBUTION_LINK_TAG).performScrollTo().performClick()
@@ -95,6 +98,7 @@ class SettingsScreenSemanticsTest {
         assertTrue("Appearance opens its screen", appearance)
         assertTrue("App language opens its screen", appLanguage)
         assertTrue("Reading languages opens the Languages surface", languages)
+        assertTrue("Guide reopens the first-launch screens", guide)
         assertTrue("LLM provider opens its screen", provider)
         assertTrue("Vault and sync opens its screen", vault)
         assertTrue("Attribution opens its screen", attribution)

@@ -24,6 +24,7 @@ data class SettingsActions(
     val onOpenAppearance: () -> Unit = {},
     val onOpenAppLanguage: () -> Unit = {},
     val onOpenLanguages: () -> Unit = {},
+    val onOpenGuide: () -> Unit = {},
     val onOpenProvider: () -> Unit = {},
     val onOpenVault: () -> Unit = {},
     val onOpenAttribution: () -> Unit = {},

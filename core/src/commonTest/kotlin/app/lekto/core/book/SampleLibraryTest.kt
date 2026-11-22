@@ -162,6 +162,14 @@ class SampleLibraryTest :
             sampleLibrary(InMemoryVaultFileSystem()).open(Sample.identityOf("ja")) shouldBe null
         }
 
+        test("the catalogue's sample is readable before it is materialised") {
+            val library = sampleLibrary(InMemoryVaultFileSystem())
+
+            library.sample("fr")?.language shouldBe "fr"
+            library.sample("xx") shouldBe null
+            library.row() shouldBe null
+        }
+
         test("the sample's book is a text book the reader opens like any other") {
             val library = sampleLibrary(InMemoryVaultFileSystem())
 

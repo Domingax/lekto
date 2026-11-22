@@ -81,3 +81,13 @@ climbing. **Any two** of every theme's four coloured levels are now measured aga
 remains the documented fallback rather than the default. `docs/design.md` §2.2 carries the tokens and
 the measured values (issue #300). Colour still carries the level; the per-level non-colour pattern
 WCAG 1.4.1 asks for is its own issue.
+
+## Update — the non-colour indicator is a dotted rule, not an underline
+
+The single underline this ADR chose has become a **1 dp dotted rule** drawn under the word in the
+level's own colour (issue #281; `docs/design.md` §2.2). The intent is unchanged and still met: every
+highlighted word carries an indicator beside its colour, so a reader who cannot separate the four
+hues still sees that the word is one they are learning — and the rule repeats the level's colour, so
+the signal is redundant rather than colour-only. What changed is how it is drawn: the page paints the
+rule from its retained layout instead of asking the text decorator, which is what made a per-level
+shape impossible here. The ramp, its 4.5:1 paper bar and its 1.25:1 pair bar are untouched.

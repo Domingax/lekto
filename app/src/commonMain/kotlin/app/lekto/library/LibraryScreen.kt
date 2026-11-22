@@ -84,6 +84,9 @@ private const val SAMPLE_ROW_KEY: String = "sample-row"
 /** The lazy item key of the first-run sentence above the sample (issue #278). */
 private const val FIRST_RUN_KEY: String = "first-run"
 
+/** The lazy item key of the "level not set" line under the sample (issue #277). */
+private const val LEVEL_LINE_KEY: String = "level-not-set"
+
 /** The lazy item key of the "Other books" heading, which is not a book either. */
 private const val OTHER_BOOKS_KEY: String = "other-books"
 
@@ -143,6 +146,7 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     covers: BookCoverLoader = BookCoverLoader.None,
     snippets: BookSnippetLoader = BookSnippetLoader.None,
+    levelLine: AppMessage? = null,
 ) {
     var pending by remember { mutableStateOf<PendingDelete?>(null) }
     val texts = LocalAppTexts.current
@@ -161,6 +165,7 @@ fun LibraryScreen(
                 actions,
                 onDelete = { target -> pending = PendingDelete.VaultBook(target) },
                 onSampleDelete = { pending = PendingDelete.Sample },
+                levelLine = levelLine,
             )
         }
 
@@ -223,12 +228,14 @@ private fun LibraryNarrowing(state: LibraryUiState, actions: LibraryActions) {
  * shows the sample above the explanation. The §7.1 empty state is reserved for a
  * shelf with no row at all.
  */
+@Suppress("LongParameterList") // The state, its actions and the shelf's three gestures.
 @Composable
 private fun ColumnScope.LibraryBody(
     state: LibraryUiState,
     actions: LibraryActions,
     onDelete: (Book) -> Unit,
     onSampleDelete: () -> Unit,
+    levelLine: AppMessage?,
 ) {
     when {
         // A shelf being read is not an empty one: skeleton rows say what is
@@ -250,6 +257,7 @@ private fun ColumnScope.LibraryBody(
             onOpen = actions.onOpen,
             onDelete = onDelete,
             onSampleDelete = onSampleDelete,
+            levelLine = levelLine,
         )
     }
 }
@@ -375,6 +383,7 @@ private fun ColumnScope.LibraryList(
     onOpen: (Book) -> Unit,
     onDelete: (Book) -> Unit,
     onSampleDelete: () -> Unit,
+    levelLine: AppMessage?,
 ) {
     val texts = LocalAppTexts.current
     LazyColumn(
@@ -392,6 +401,18 @@ private fun ColumnScope.LibraryList(
         }
         state.sample?.let { row ->
             item(key = SAMPLE_ROW_KEY) { SampleBookRow(row, onOpen = onOpen, onDelete = onSampleDelete) }
+        }
+        // The sample is on the shelf but no Reader level colours it yet (issue
+        // #277): the line says where that level is set, and goes when it exists.
+        levelLine?.let { message ->
+            item(key = LEVEL_LINE_KEY) {
+                Text(
+                    text = texts.message(message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
+                )
+            }
         }
         if (!state.vaultEmpty && state.visibleBooks.isEmpty()) {
             item(key = NO_MATCHES_KEY) { LibraryNoMatches(state, actions) }
