@@ -19,10 +19,44 @@ import kotlin.test.assertTrue
  * highlighted **Mastery level** with the sample's meaning. Everything is pure,
  * so the screens' layout and the demonstration's content are proved apart.
  */
+@Suppress("TooManyFunctions") // One behaviour per helper: the page, the notes, the lookup and the save.
 class GuideSampleTest {
 
     private val segmenter = WhitespaceTextSegmenter()
     private val sample = guideSample()
+
+    @Test
+    fun theDemonstrationDefaultsToTheLowestBand() {
+        assertEquals(CefrLevel.A1, GUIDE_DEFAULT_BAND, "A1 colours the most words before any band is chosen")
+    }
+
+    @Test
+    fun aSavedLevelOverridesTheDemonstratedWordsMastery() {
+        val saved = WordKey("en", "calm") to MasteryLevel.KNOWN
+
+        val mastery = guideMastery(sample, CefrLevel.A1, plain = false, saved = saved)
+
+        assertEquals(MasteryLevel.KNOWN, mastery.levelOf(WordKey("en", "calm")), "level 4 is normal ink")
+        assertEquals(MasteryLevel.UNKNOWN, mastery.levelOf(WordKey("en", "fisherman")), "the other words stay put")
+    }
+
+    @Test
+    fun theDottedRulesFollowTheSaveThroughTheDocument() {
+        val key = WordKey("en", "fisherman")
+
+        val plain = guideDocument(sample, CefrLevel.A1, plain = false, segmenter = segmenter)
+        val saved = guideDocument(
+            sample,
+            CefrLevel.A1,
+            plain = false,
+            segmenter = segmenter,
+            saved = key to MasteryLevel.KNOWN,
+        )
+
+        assertEquals(MasteryLevel.UNKNOWN, plain.renderer.mastery.levelOf(key))
+        assertEquals(MasteryLevel.KNOWN, saved.renderer.mastery.levelOf(key))
+        assertTrue(saved.masteryRevision != plain.masteryRevision, "the page rebuilds for the save")
+    }
 
     @Test
     fun theFirstParagraphIsTheOnePageDocument() {

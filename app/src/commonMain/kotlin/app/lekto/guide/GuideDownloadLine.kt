@@ -21,17 +21,37 @@ internal const val GUIDE_DOWNLOAD_TAG: String = "guide-download"
 /** The test tag on the line's `Stop`, so a UI test can stop exactly the download. */
 internal const val GUIDE_DOWNLOAD_STOP_TAG: String = "guide-download-stop"
 
+/** The test tag on the line's `Retry`, so a UI test can retry a failed download. */
+internal const val GUIDE_DOWNLOAD_RETRY_TAG: String = "guide-download-retry"
+
+/** The test tag on the line's `Resume`, so a UI test can resume a stopped download. */
+internal const val GUIDE_DOWNLOAD_RESUME_TAG: String = "guide-download-resume"
+
+/**
+ * What the line's phase can offer the reader: `Stop` while it runs, `Retry` when
+ * the manifest or an artefact failed, `Resume` when the reader stopped it. A
+ * `null` is a surface that does not act on that phase; the line still tells the
+ * truth about where the download stands.
+ */
+data class GuideDownloadActions(
+    val onStop: (() -> Unit)? = null,
+    val onRetry: (() -> Unit)? = null,
+    val onResume: (() -> Unit)? = null,
+)
+
 /**
  * The background download in one line (issue #277): what it fetches, its published
- * size while it runs, and the `Stop` that cancels it. It appears on the guide's
- * page screens and on the shelf after the arrival, so the reader can always tell
- * whether the table and dictionary are on their way, installed or stopped.
- *
- * [onStop] is `null` where stopping is not the surface's act — the shelf still
- * offers it, because the line is the same fact wherever it is read.
+ * size while it runs, and the action its phase offers — `Stop`, `Retry` or
+ * `Resume`. It appears on the language question and on the shelf after the
+ * arrival, so the reader can always tell whether the table and dictionary are on
+ * their way, installed, stopped or failed, and can act on the answer.
  */
 @Composable
-internal fun GuideDownloadLine(state: GuideDownloadUiState, onStop: (() -> Unit)?, modifier: Modifier = Modifier) {
+internal fun GuideDownloadLine(
+    state: GuideDownloadUiState,
+    actions: GuideDownloadActions = GuideDownloadActions(),
+    modifier: Modifier = Modifier,
+) {
     if (state.phase == GuideDownloadPhase.IDLE) return
     val texts = LocalAppTexts.current
     Row(
@@ -50,11 +70,37 @@ internal fun GuideDownloadLine(state: GuideDownloadUiState, onStop: (() -> Unit)
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (state.isRunning && onStop != null) {
-            TextAction(onClick = onStop, modifier = Modifier.testTag(GUIDE_DOWNLOAD_STOP_TAG)) {
-                Text(texts[TextKey.GUIDE_DOWNLOAD_STOP], style = MaterialTheme.typography.bodyMedium)
-            }
+        when {
+            state.isRunning && actions.onStop != null -> DownloadAction(
+                text = texts[TextKey.GUIDE_DOWNLOAD_STOP],
+                tag = GUIDE_DOWNLOAD_STOP_TAG,
+                onClick = actions.onStop,
+            )
+
+            state.isFailed() && actions.onRetry != null -> DownloadAction(
+                text = texts[TextKey.GUIDE_DOWNLOAD_RETRY],
+                tag = GUIDE_DOWNLOAD_RETRY_TAG,
+                onClick = actions.onRetry,
+            )
+
+            state.phase == GuideDownloadPhase.STOPPED && actions.onResume != null -> DownloadAction(
+                text = texts[TextKey.GUIDE_DOWNLOAD_RESUME],
+                tag = GUIDE_DOWNLOAD_RESUME_TAG,
+                onClick = actions.onResume,
+            )
         }
+    }
+}
+
+/** Whether the line's phase is one the reader can retry: an unreachable manifest or a failed artefact. */
+private fun GuideDownloadUiState.isFailed(): Boolean =
+    phase == GuideDownloadPhase.UNAVAILABLE || phase == GuideDownloadPhase.FAILED
+
+/** One action at the line's trailing edge. */
+@Composable
+private fun DownloadAction(text: String, tag: String, onClick: () -> Unit) {
+    TextAction(onClick = onClick, modifier = Modifier.testTag(tag)) {
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

@@ -6,7 +6,10 @@ import kotlinx.serialization.json.Json
 
 /**
  * What this device knows about the first-launch guide (issue #277): whether the
- * reader has seen it.
+ * reader has completed it. It records completion **only** — there is no stage
+ * field — so nothing is written until the last screen is reached or `Skip` is
+ * taken, and a mid-guide relaunch has nothing to resume from: it starts on the
+ * first screen every time.
  *
  * It is deliberately a document of its own rather than a field of the **Sample
  * book**'s dismissal (#278): a corrupt tutorial must never resurrect a sample the
@@ -23,10 +26,10 @@ import kotlinx.serialization.json.Json
 data class GuideProgress(val seen: Boolean = false) {
 
     companion object {
-        /** A fresh install, which has not seen the guide. */
+        /** A fresh install, which has not completed the guide. */
         val NOT_SEEN: GuideProgress = GuideProgress(seen = false)
 
-        /** The reader has been through the guide (or skipped it). */
+        /** The reader has completed the guide (or skipped it); it opens no more unless replayed. */
         val SEEN: GuideProgress = GuideProgress(seen = true)
     }
 }

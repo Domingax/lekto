@@ -8,8 +8,10 @@ import app.lekto.core.MasteryLevel
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.core.sample.Sample
 import app.lekto.core.text.TextSegmenter
+import app.lekto.core.text.WordKey
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasteryController
+import app.lekto.reader.WordTap
 
 /** The guide's screens, in the order a first launch walks them (issue #277). */
 @Suppress("MagicNumber") // The positions are the step numbers the five marks show.
@@ -28,23 +30,28 @@ enum class GuideStage(val position: Int) {
 }
 
 /**
- * What the guide's screens render (issue #277): the stage, the sample once a
- * language is answered, the band the page paints at, the band the reader actually
- * tapped, the beat of the page, whether the real sheet is open, the level the
- * word was saved at, and an honest failure when the write was refused. The
- * arrival is the shell's own shelf, so it is not a stage here.
+ * What the guide's screens render (issue #277): the stage, the language the
+ * reader selected, the sample once `Continue` answers, the band the page paints
+ * at, the band the reader actually tapped, the beat of the page, the word whose
+ * sheet is open, the level the word was saved at, and an honest failure when the
+ * write was refused. The arrival is the shell's own shelf, so it is not a stage.
  *
  * [band] is the suggestion the page demonstrates before any choice; [chosenBand]
  * is the **Reader level** the reader tapped, so a suggestion is never drawn as a
- * selection (issue #279's rule, applied to the bands).
+ * selection (issue #279's rule, applied to the bands). [tapped] is the word the
+ * reader touched, so the sheet answers **that** word; [savedKey] and [savedLevel]
+ * are the save the page recolours by.
  */
 data class GuideUiState(
     val stage: GuideStage = GuideStage.LANGUAGE,
+    val selectedLanguage: String? = null,
     val sample: Sample? = null,
     val band: CefrLevel = GUIDE_DEFAULT_BAND,
     val chosenBand: CefrLevel? = null,
     val plain: Boolean = true,
     val lookupOpen: Boolean = false,
+    val tapped: GuideNote? = null,
+    val savedKey: WordKey? = null,
     val savedLevel: MasteryLevel? = null,
     val saveFailed: Boolean = false,
 )
@@ -67,59 +74,67 @@ class GuideController(
     languages: List<OfferedLanguage>,
     private val sampleOf: (String) -> Sample?,
     private val materialise: (String) -> Unit = {},
-    private val download: GuideDownloadController? = null,
+    private val startDownload: (String) -> Unit = {},
     private val mastery: MasteryController? = null,
     private val segmenter: TextSegmenter,
     private val translationLanguage: () -> String? = { null },
-    private val existingSample: () -> String? = { null },
-    private val readingLanguage: () -> String? = { null },
 ) {
 
     private val singleLanguage: String? = languages.singleOrNull()?.language
 
     /**
-     * The screens' state. It opens on the page when the shelf already implies a
-     * language — a materialised sample, or the reader's first **Reading language**
-     * — and on the question only on a true first launch (issue #277's review).
+     * The screens' state. It always opens on the language question — or, in a
+     * build that ships one sample, straight on the page — because the guide's
+     * document records completion only: a mid-guide relaunch starts over.
      */
     var state by mutableStateOf(GuideUiState())
         private set
 
     private var chosenLanguage: String? = null
 
-    /** Whether this run asked the language question, so `Back` may return to it. */
-    private var asksLanguage: Boolean = false
+    /** Whether this run has a language question, so `Back` may return to it. */
+    private val asksLanguage: Boolean = singleLanguage == null
 
     init {
-        // A build that ships one sample has nothing to ask; the first launch
-        // materialises it at once. A replay never does (see restart).
-        val firstLaunchSingle = existingSample() == null && readingLanguage() == null
+        // A build that ships one sample has nothing to ask, so it chooses it and
+        // starts its download at once; every other build waits for the answer.
         open()
-        if (firstLaunchSingle) singleLanguage?.let(::begin)
-    }
-
-    /** The language answer: materialise its sample and start the download, then show the page. */
-    fun chooseLanguage(language: String) {
-        if (state.stage != GuideStage.LANGUAGE) return
-        begin(language)
-        chosenLanguage = language
-        state = GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
     }
 
     /**
-     * The page's next beat: plain to coloured, coloured to the tap, and the tap's
-     * own dismissal to the level. It does nothing on the question, which the rows
-     * answer, and while the sheet covers the tap screen's continue.
+     * Selects [language] on the question: the row carries the selected treatment,
+     * the background download starts, and nothing is written until `Continue`.
+     */
+    fun selectLanguage(language: String) {
+        if (state.stage != GuideStage.LANGUAGE) return
+        state = state.copy(selectedLanguage = language)
+        startDownload(language)
+    }
+
+    /**
+     * The screen's way forward: `Continue` on the question materialises the
+     * selected language's sample and shows its page; on the page it moves to the
+     * second beat and then the tap screen; on the tap screen, with the sheet
+     * closed, it moves to the level screen.
      */
     fun advance() {
         state = when {
+            state.stage == GuideStage.LANGUAGE -> continueFromQuestion()
+
             state.stage == GuideStage.PAGE && state.plain -> state.copy(plain = false)
 
-            state.stage == GuideStage.PAGE -> state.copy(
-                stage = GuideStage.TAP,
-                lookupOpen = true,
-                savedLevel = existingLevel(state.sample),
-            )
+            state.stage == GuideStage.PAGE -> {
+                val demonstrated = state.sample?.let { chosen ->
+                    guideNotes(chosen, state.band, segmenter, translationLanguage()).firstOrNull()
+                }
+                state.copy(
+                    stage = GuideStage.TAP,
+                    lookupOpen = false,
+                    tapped = null,
+                    savedKey = demonstrated?.key,
+                    savedLevel = demonstrated?.let { note -> mastery?.entryFor(note.key)?.mastery },
+                )
+            }
 
             state.stage == GuideStage.TAP && !state.lookupOpen -> state.copy(stage = GuideStage.LEVEL)
 
@@ -127,9 +142,15 @@ class GuideController(
         }
     }
 
-    /** Reopens the real sheet on the tap screen, after the reader closed it once. */
-    fun tapWord() {
-        if (state.stage == GuideStage.TAP) state = state.copy(lookupOpen = true)
+    /**
+     * Opens the sheet for the word [tap] landed on, when the sample's glossary
+     * answers it: the sheet is the reader's tap, never an arrival, so a tap on
+     * empty space or on a word with no meaning writes nothing.
+     */
+    fun tapWord(tap: WordTap) {
+        val sample = state.sample?.takeIf { state.stage == GuideStage.TAP } ?: return
+        val note = guideNoteFor(sample, tap, state.band, translationLanguage()) ?: return
+        state = state.copy(lookupOpen = true, tapped = note)
     }
 
     /** The desktop's left arrow: back one screen, never before the question or the single page. */
@@ -149,14 +170,20 @@ class GuideController(
     }
 
     /**
-     * Saves the demonstrated word at [level] to the real **Vocabulary**, with the
-     * sample as the book it was saved from, and states it. A refused write says so
-     * and leaves the word unsaved.
+     * Saves the word the sheet is open on at [level] to the real **Vocabulary**,
+     * with the sample as the book it was saved from, and states it. The saved
+     * level then overrides that word's mastery on the page, so the reader sees the
+     * demonstration's point — a known word (level 4) reads as normal ink, with no
+     * rule. A refused write says so and leaves the word unsaved.
      */
     @Suppress("ReturnCount") // Three guards name the three ways there is no word to save; one happy path follows.
     fun save(level: MasteryLevel) {
         val sample = state.sample ?: return
-        val note = guideNotes(sample, state.band, segmenter, translationLanguage()).firstOrNull() ?: return
+        val note = state.tapped
+            ?: state.sample?.let { chosen ->
+                guideNotes(chosen, state.band, segmenter, translationLanguage()).firstOrNull()
+            }
+            ?: return
         val writer = mastery ?: run {
             state = state.copy(saveFailed = true)
             return
@@ -169,7 +196,11 @@ class GuideController(
             mastery = level,
         )
         val landed = writer.save(entry, sample.identity)
-        state = state.copy(savedLevel = if (landed) level else state.savedLevel, saveFailed = !landed)
+        state = if (landed) {
+            state.copy(savedKey = note.key, savedLevel = level, saveFailed = false)
+        } else {
+            state.copy(saveFailed = true)
+        }
     }
 
     /** Writes [band] as the reader's level for the chosen language and repaints the page. */
@@ -179,44 +210,42 @@ class GuideController(
     }
 
     /**
-     * Puts the flow back at its opening screen, so the Settings ▸ Application row
-     * can replay it over an existing shelf. It demonstrates the sample the device
-     * already holds, or the first language of the reader's books, and never
-     * materialises a second sample or replaces the first. The download is not
-     * restarted: an installed table stays installed and a stopped one stays
-     * stopped.
+     * Puts the flow back at its first screen, so the Settings ▸ Application row
+     * can replay it. A replay is a deliberate redo: it asks the language question
+     * again, and the answer replaces the device's sample, so the demonstration and
+     * the shelf cannot diverge (ADR-0049's update; item 12 of the feedback).
      */
     fun restart() {
         open()
     }
 
     /**
-     * Opens on the page when the shelf already implies a language — the sample it
-     * holds, or the first **Reading language** of the reader's books — and on the
-     * question only on a true first launch.
+     * Opens on the language question, or on the page when the build ships a single
+     * sample and has nothing to ask. It never resumes a stage: `guide.json` records
+     * completion only, so an unfinished guide starts over on every launch.
      */
     private fun open() {
-        val language = existingSample() ?: readingLanguage() ?: singleLanguage
-        chosenLanguage = language
-        asksLanguage = language == null
-        state = if (language == null) {
-            GuideUiState(stage = GuideStage.LANGUAGE)
+        val single = singleLanguage
+        chosenLanguage = single
+        if (single == null) {
+            state = GuideUiState(stage = GuideStage.LANGUAGE)
         } else {
-            GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
+            begin(single)
+            state = GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(single), plain = true)
         }
+    }
+
+    /** `Continue` on the question: materialise the selected language and show its page. */
+    private fun continueFromQuestion(): GuideUiState {
+        val language = state.selectedLanguage ?: return state
+        chosenLanguage = language
+        begin(language)
+        return GuideUiState(stage = GuideStage.PAGE, sample = sampleOf(language), plain = true)
     }
 
     /** Materialises [language]'s sample and asks for its download, once per answer. */
     private fun begin(language: String) {
         materialise(language)
-        download?.start(language)
-    }
-
-    /** The level the demonstrated word already carries in the vault, so a replay states a fact. */
-    private fun existingLevel(sample: Sample?): MasteryLevel? {
-        val note = sample?.let { chosen ->
-            guideNotes(chosen, state.band, segmenter, translationLanguage()).firstOrNull()
-        }
-        return note?.let { chosen -> mastery?.entryFor(chosen.key)?.mastery }
+        startDownload(language)
     }
 }

@@ -3,7 +3,10 @@ package app.lekto.guide
 import app.lekto.LocalChanges
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
+import app.lekto.core.text.WordKey
+import app.lekto.core.text.WordToken
 import app.lekto.reader.MasteryController
+import app.lekto.reader.WordTap
 import app.lekto.testkit.InMemoryReaderLevels
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
@@ -34,23 +37,35 @@ class GuideControllerTest {
         LocalChanges(),
     )
     private val materialised = mutableListOf<String>()
+    private val downloads = mutableListOf<String>()
     private val languages = listOf(testOfferedLanguage("en"), testOfferedLanguage("fr"))
 
     private fun controller(
         languages: List<app.lekto.core.language.OfferedLanguage> = this.languages,
-        existingSample: () -> String? = { null },
-        readingLanguage: () -> String? = { null },
     ): GuideController = GuideController(
         languages = languages,
         sampleOf = { language -> guideSample(language).takeIf { it.language == language } },
         materialise = { language -> materialised += language },
-        download = null,
+        startDownload = { language -> downloads += language },
         mastery = mastery,
         segmenter = WhitespaceTextSegmenter(),
         translationLanguage = { "fr" },
-        existingSample = existingSample,
-        readingLanguage = readingLanguage,
     )
+
+    private fun GuideController.answer(language: String) {
+        selectLanguage(language)
+        advance()
+    }
+
+    /** A tap on [surface] in the sample's first paragraph, keyed as the reader's tokeniser keys it. */
+    private fun tap(surface: String): WordTap {
+        val paragraph = guideSample().paragraphs.first()
+        val start = paragraph.indexOf(surface)
+        return WordTap(
+            token = WordToken(surface, start, start + surface.length, WordKey("en", surface)),
+            contextSentence = paragraph,
+        )
+    }
 
     @Test
     fun twoLanguagesOpenOnTheQuestion() {
@@ -58,13 +73,50 @@ class GuideControllerTest {
 
         assertEquals(GuideStage.LANGUAGE, guide.state.stage)
         assertNull(guide.state.sample)
+        assertNull(guide.state.selectedLanguage, "the question has no default answer")
+    }
+
+    @Test
+    fun selectingALanguageChoosesItWithoutAdvancing() {
+        val guide = controller()
+
+        guide.selectLanguage("en")
+
+        assertEquals(GuideStage.LANGUAGE, guide.state.stage)
+        assertEquals("en", guide.state.selectedLanguage)
+        assertNull(guide.state.sample, "the page waits for Continue")
+        assertTrue(materialised.isEmpty(), "a selection writes no sample")
+        assertEquals(listOf("en"), downloads, "the selection starts the background download")
+    }
+
+    @Test
+    fun continuingFromTheQuestionMaterialisesTheChosenLanguage() {
+        val guide = controller()
+        guide.selectLanguage("en")
+
+        guide.advance()
+
+        assertEquals(listOf("en"), materialised)
+        assertEquals(GuideStage.PAGE, guide.state.stage)
+        assertEquals("en", guide.state.sample?.language)
+        assertTrue(guide.state.plain, "the first beat has no colour")
+    }
+
+    @Test
+    fun continuingWithoutAChoiceStaysOnTheQuestion() {
+        val guide = controller()
+
+        guide.advance()
+
+        assertEquals(GuideStage.LANGUAGE, guide.state.stage)
+        assertTrue(materialised.isEmpty())
     }
 
     @Test
     fun theLanguageAnswerMaterialisesTheSampleAndOpensThePage() {
         val guide = controller()
 
-        guide.chooseLanguage("en")
+        guide.answer("en")
 
         assertEquals(listOf("en"), materialised)
         assertEquals(GuideStage.PAGE, guide.state.stage)
@@ -75,20 +127,65 @@ class GuideControllerTest {
     @Test
     fun thePageAdvanceRevealsTheColoursThenTheTap() {
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
 
         guide.advance()
         assertFalse(guide.state.plain, "the second beat is the same paragraph coloured")
 
         guide.advance()
         assertEquals(GuideStage.TAP, guide.state.stage)
-        assertTrue(guide.state.lookupOpen, "the tap screen opens the real sheet")
+        assertFalse(guide.state.lookupOpen, "the sheet opens on the reader's tap, not on arrival")
+        assertNull(guide.state.tapped)
+    }
+
+    @Test
+    fun aTapOpensTheSheetForThatWord() {
+        val guide = controller()
+        guide.answer("en")
+        guide.advance()
+        guide.advance()
+
+        guide.tapWord(tap("calm"))
+
+        assertTrue(guide.state.lookupOpen)
+        assertEquals("calm", guide.state.tapped?.surface)
+    }
+
+    @Test
+    fun aTapOnAWordWithNoMeaningOpensNothing() {
+        val guide = controller()
+        guide.answer("en")
+        guide.advance()
+        guide.advance()
+
+        guide.tapWord(tap("his"))
+
+        assertFalse(guide.state.lookupOpen, "a word the glossary does not answer is not a door")
+        assertNull(guide.state.tapped)
+    }
+
+    @Test
+    fun savingTheTappedWordRecoloursThatWord() {
+        val guide = controller()
+        guide.answer("en")
+        guide.advance()
+        guide.advance()
+        guide.tapWord(tap("calm"))
+
+        guide.save(MasteryLevel.LEARNED)
+
+        assertEquals(app.lekto.core.text.WordKey("en", "calm"), guide.state.savedKey)
+        assertEquals(MasteryLevel.LEARNED, guide.state.savedLevel)
+        assertEquals(
+            MasteryLevel.LEARNED,
+            vocabulary.entryFor(app.lekto.core.text.WordKey("en", "calm"))?.mastery,
+        )
     }
 
     @Test
     fun aLevelSavesTheWordAndStatesIt() {
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
         guide.advance()
         guide.advance()
 
@@ -116,20 +213,22 @@ class GuideControllerTest {
         )
         mastery.refresh()
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
 
         guide.advance()
         guide.advance()
 
         assertEquals(MasteryLevel.LEARNED, guide.state.savedLevel)
+        assertEquals(key, guide.state.savedKey, "the sheet states the word it is showing")
     }
 
     @Test
     fun closingTheSheetWithoutChoosingWritesNothing() {
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
         guide.advance()
         guide.advance()
+        guide.tapWord(tap("calm"))
 
         guide.dismissLookup()
 
@@ -141,7 +240,7 @@ class GuideControllerTest {
     @Test
     fun theBandWritesThroughTheLanguagesAction() {
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
         guide.advance()
         guide.advance()
         guide.dismissLookup()
@@ -157,7 +256,7 @@ class GuideControllerTest {
     @Test
     fun theBandIsASuggestionUntilOneIsTapped() {
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
         guide.advance()
         guide.advance()
         guide.dismissLookup()
@@ -175,7 +274,7 @@ class GuideControllerTest {
     @Test
     fun theLeftArrowWalksBackToTheQuestion() {
         val guide = controller()
-        guide.chooseLanguage("en")
+        guide.answer("en")
         guide.advance()
         guide.advance()
 
@@ -191,43 +290,42 @@ class GuideControllerTest {
     }
 
     @Test
-    fun aDeviceThatAlreadyHoldsASampleOpensOnItsPageAndWritesNothing() {
-        val guide = controller(existingSample = { "en" })
+    fun aRelaunchMidGuideStartsOverOnTheQuestion() {
+        val guide = controller()
+        guide.answer("en")
+        guide.advance()
 
-        assertEquals(GuideStage.PAGE, guide.state.stage)
-        assertEquals("en", guide.state.sample?.language)
-        assertTrue(materialised.isEmpty(), "a replay never materialises a second sample")
+        val relaunch = controller()
+
+        assertEquals(GuideStage.LANGUAGE, relaunch.state.stage, "the document records completion only")
+        assertNull(relaunch.state.selectedLanguage, "a relaunch asks the question again")
     }
 
     @Test
-    fun aReplayWithBooksDemonstratesTheirFirstReadingLanguage() {
-        val guide = controller(readingLanguage = { "fr" })
+    fun aReplayAsksTheLanguageQuestionAgain() {
+        val guide = controller()
+        guide.answer("en")
 
-        assertEquals(GuideStage.PAGE, guide.state.stage)
-        assertEquals("fr", guide.state.sample?.language)
-        assertTrue(materialised.isEmpty(), "the page demonstrates a book's language without writing a sample")
-    }
-
-    @Test
-    fun aReplayNeverReplacesTheSampleItAlreadyHolds() {
-        val guide = controller(existingSample = { "en" }, readingLanguage = { "fr" })
-
-        assertEquals("en", guide.state.sample?.language)
         guide.restart()
 
-        assertEquals(GuideStage.PAGE, guide.state.stage)
-        assertEquals("en", guide.state.sample?.language)
-        assertTrue(materialised.isEmpty())
+        assertEquals(GuideStage.LANGUAGE, guide.state.stage)
+        assertNull(guide.state.selectedLanguage)
+        assertNull(guide.state.sample)
     }
 
     @Test
-    fun aReplayDoesNotAskTheLanguageAgain() {
-        val guide = controller(existingSample = { "en" })
+    fun theReplayAnswerGoesThroughTheMaterialisingSeamAgain() {
+        val guide = controller()
+        guide.answer("en")
 
-        guide.back()
+        guide.restart()
+        guide.answer("fr")
 
-        assertEquals(GuideStage.PAGE, guide.state.stage)
-        assertTrue(guide.state.plain, "the page stays on its first beat")
+        assertEquals(
+            listOf("en", "fr"),
+            materialised,
+            "the answer re-runs the materialisation that replaces the sample",
+        )
     }
 
     @Test

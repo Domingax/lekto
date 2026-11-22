@@ -53,15 +53,29 @@ class SampleLibraryTest :
             }
         }
 
-        test("a second language materialises nothing: one sample, forever") {
+        test("a second language replaces the sample: still exactly one row") {
             val files = InMemoryVaultFileSystem()
             val library = sampleLibrary(files)
 
             library.materialise("en")
             val again = library.materialise("fr")
 
-            again?.book?.id shouldBe Sample.identityOf("en")
-            files.listFiles() shouldBe listOf("samples/en.json")
+            again?.book?.id shouldBe Sample.identityOf("fr")
+            library.row()?.book?.language shouldBe "fr"
+            files.listFiles() shouldBe listOf("samples/fr.json")
+        }
+
+        test("a replay answer replaces the sample and its reading position") {
+            val files = InMemoryVaultFileSystem()
+            val library = sampleLibrary(files, paragraphs = listOf("0123456789"))
+            library.materialise("en")
+            library.savePosition(ReadingPosition(Sample.identityOf("en"), 5))
+
+            library.materialise("fr")
+
+            library.row()?.progress shouldBe BookProgress.NotStarted
+            library.open(Sample.identityOf("fr"))?.position shouldBe null
+            files.listFiles() shouldBe listOf("samples/fr.json")
         }
 
         test("a language the catalogue does not ship materialises nothing") {
@@ -134,7 +148,7 @@ class SampleLibraryTest :
             files.listFiles() shouldBe listOf("samples/en.json")
         }
 
-        test("a corrupt materialised sample leaves no row and never a half-written one") {
+        test("a corrupt materialised sample is replaced by the next answer") {
             val files = InMemoryVaultFileSystem()
             files.writeAtomically("samples/en.json", "not a sample at all".encodeToByteArray())
 
@@ -142,10 +156,10 @@ class SampleLibraryTest :
 
             library.row() shouldBe null
             library.open(Sample.identityOf("en")) shouldBe null
-            // The corrupt file still counts as the one sample: the shelf never
-            // invents a second row, and never points at the broken one.
-            library.materialise("fr") shouldBe null
-            files.listFiles() shouldBe listOf("samples/en.json")
+            // The corrupt file is a derived asset, so a new answer recovers the
+            // shelf by replacing it rather than leaving it stuck for ever.
+            library.materialise("fr")?.book?.id shouldBe Sample.identityOf("fr")
+            files.listFiles() shouldBe listOf("samples/fr.json")
         }
 
         test("a failed write leaves no row behind") {

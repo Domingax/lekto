@@ -69,12 +69,13 @@ internal class SampleCache(private val derived: DerivedAssetStore) {
     }
 
     /**
-     * Writes [sample] with [text] as this device's one sample. A sample already
-     * stored is left alone: the reader gets one sample, in the language they
-     * chose at the first launch, whatever the guide offers later.
+     * Writes [sample] with [text] as this device's one sample, replacing whatever
+     * entry it already holds. An explicit replay's answer is the reader's deliberate
+     * redo, so the shelf follows it; there is still exactly one sample at any
+     * moment, because the previous entry's file is removed first.
      */
     fun put(sample: Sample, text: StructuredText) {
-        check(storedLanguage() == null) { "this device already holds a sample" }
+        storedLanguage()?.let(::remove)
         write(MaterialisedSample(sample = sample, text = text))
     }
 

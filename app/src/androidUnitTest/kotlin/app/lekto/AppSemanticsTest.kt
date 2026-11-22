@@ -60,6 +60,7 @@ import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmProviderConfig
 import app.lekto.core.reading.ReadingPreferencesStore
 import app.lekto.core.readinglevel.ReaderLevels
+import app.lekto.core.sample.Sample
 import app.lekto.core.sample.SampleCatalogContent
 import app.lekto.core.secret.SecretResult
 import app.lekto.core.secret.SecretStore
@@ -90,7 +91,10 @@ import app.lekto.dictionary.PRONOUNCE_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.guide.GUIDE_CONTINUE_TAG
+import app.lekto.guide.GUIDE_DOWNLOAD_RETRY_TAG
 import app.lekto.guide.GUIDE_LANGUAGE_LIST_TAG
+import app.lekto.guide.GUIDE_PAGE_TAG
+import app.lekto.guide.GUIDE_PAGE_TEXT_TAG
 import app.lekto.guide.GUIDE_SKIP_TAG
 import app.lekto.guide.guideLanguageRowTag
 import app.lekto.language.LANGUAGES_ATTRIBUTION_TAG
@@ -1562,11 +1566,22 @@ class AppSemanticsTest {
     @Test
     fun theGuidesSpeakerPronouncesTheDemonstratedWord() {
         val pronouncer = FakePronouncer()
+        // Robolectric's text hit-testing only reaches the first word of a line, so
+        // this lane's sample leads with the demonstrated word; the desktop lane
+        // proves a tap on a word further along the paragraph.
+        val sample = guideSample().let { fixture ->
+            fixture.copy(
+                paragraphs = listOf("fisherman rowed the boat"),
+                colourMaps = CefrLevel.entries.associateWith {
+                    mapOf("fisherman" to MasteryLevel.UNKNOWN)
+                },
+            )
+        }
         compose.setContent {
             App(
                 environment(
                     InMemoryLibrary(),
-                    samples = guideSamples(),
+                    samples = guideSamples(sample),
                     guide = InMemoryGuideProgressStore(),
                     pronouncer = pronouncer,
                 ),
@@ -1574,8 +1589,11 @@ class AppSemanticsTest {
         }
 
         compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("Tap a word to save it.").assertIsDisplayed()
+        compose.tapAGuideWord()
         compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
@@ -1661,7 +1679,7 @@ class AppSemanticsTest {
     }
 
     @Test
-    fun theSettingsRowReopensTheGuideAtTheBooksLanguage() {
+    fun theSettingsRowReopensTheGuideAtTheQuestion() {
         val library = InMemoryLibrary().apply { import("book.txt", ByteArray(0)) {} }
 
         compose.setContent { App(environment(library, samples = guideSamples())) }
@@ -1669,9 +1687,116 @@ class AppSemanticsTest {
         compose.tapSection(ShellSection.SETTINGS)
         compose.onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
 
+        compose.onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+
         compose.onNodeWithText("Here is a page of your book.").assertIsDisplayed()
         compose.onNodeWithText("Reading in English").assertIsDisplayed()
-        compose.onNodeWithText("Which language would you like to read first?").assertDoesNotExist()
+    }
+
+    @Test
+    fun aRelaunchMidGuideOpensOnTheQuestion() {
+        // The language answer materialised a sample, but no progress document was
+        // completed: the guide records completion only, so the relaunch starts over.
+        val samples = guideSamples().apply { materialise("en") }
+
+        compose.setContent {
+            App(environment(InMemoryLibrary(), samples = samples, guide = InMemoryGuideProgressStore()))
+        }
+
+        compose.onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+    }
+
+    @Test
+    fun aReplayReplacesTheSampleWithTheAnsweredLanguage() {
+        val samples = SampleLibrary(
+            catalogue = SampleCatalogContent(
+                listOf(guideSample("en"), guideSample("fr").copy(title = "Échantillon français")),
+            ),
+            derived = DerivedAssetStore(InMemoryVaultFileSystem()),
+            dismissed = InMemorySampleDismissedStore(),
+        )
+        samples.materialise("en")
+
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = samples,
+                    guide = InMemoryGuideProgressStore(GuideProgress.SEEN),
+                ),
+            )
+        }
+
+        compose.tapSection(ShellSection.SETTINGS)
+        compose.onNodeWithTag(GUIDE_LINK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(guideLanguageRowTag("fr")).performScrollTo().performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            samples.row()?.book?.language == "fr"
+        }
+        compose.onNodeWithTag(GUIDE_SKIP_TAG).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Échantillon français").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Échantillon français").assertIsDisplayed()
+    }
+
+    @Test
+    fun theLanguageAnswerInstallsBothArtefactsAndTheLanguagesSurfaceShowsThem() {
+        val rig = guideDownloadRig()
+
+        compose.setContent { App(rig.environment) }
+
+        // The selection starts the background download on screen 1, before Continue.
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Table and dictionary · English").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Installed").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        assertTrue("the difficulty table was installed", rig.tables.downloads > 0)
+        assertTrue(
+            "the reader's own en→fr pack was installed",
+            rig.packs.lastUrl.orEmpty().contains("en-fr"),
+        )
+
+        compose.onNodeWithTag(GUIDE_SKIP_TAG).performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithTag(LIBRARY_TITLE_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.openLanguages()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Word difficulty is installed.").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Word difficulty is installed.").assertIsDisplayed()
+        compose.onNodeWithText("Offline dictionary is installed.", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aFailedGuideDownloadSaysSoAndRetries() {
+        val rig = guideDownloadRig(failingTable = true)
+
+        compose.setContent { App(rig.environment) }
+
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("The download did not finish. Check your connection.")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        rig.tables.failure = null
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Installed").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     /** Taps one of the shell's three sections: the bar on a phone, the column on desktop (issue #185). */
@@ -1713,9 +1838,58 @@ class AppSemanticsTest {
     }
 }
 
+/** The two fakes and the environment a guide-download test drives, over one shared derived store. */
+private class GuideDownloadRig(
+    val environment: AppEnvironment,
+    val tables: FakeDifficultyFiles,
+    val packs: FakeDictionaryPackFiles,
+)
+
+/**
+ * A first launch whose manifest offers English and French, with English publishing
+ * a difficulty table and two packs (Spanish first, French second) and the device's
+ * language French: the guide must follow the reader's language, not the manifest's
+ * order. [failingTable] makes the first table download fail, for the retry.
+ */
+private fun guideDownloadRig(failingTable: Boolean = false): GuideDownloadRig {
+    val derived = DerivedAssetStore(InMemoryVaultFileSystem())
+    val tables = FakeDifficultyFiles(derived, "en").apply {
+        if (failingTable) failure = IllegalStateException("offline")
+    }
+    val packs = FakeDictionaryPackFiles(derived, "en", "fr")
+    val catalog = InMemoryLanguageCatalog(
+        LanguageCatalogState.Available(
+            listOf(
+                testOfferedLanguage(
+                    "en",
+                    difficulty = testOfferedArtifact("lekto-difficulty-en.sqlite.gz", sizeBytes = 12_000_000),
+                    dictionaries = listOf(
+                        testOfferedDictionary("es", "lekto-dictionary-en-es.sqlite.gz", sizeBytes = 1_000_000),
+                        testOfferedDictionary("fr", "lekto-dictionary-en-fr.sqlite.gz", sizeBytes = 24_000_000),
+                    ),
+                ),
+                testOfferedLanguage("fr"),
+            ),
+        ),
+    )
+    val environment = environment(
+        InMemoryLibrary(),
+        samples = guideSamples(),
+        guide = InMemoryGuideProgressStore(),
+        languages = catalog,
+        difficulty = DifficultyServices { language -> DifficultyInstaller(derived, tables, tables, language) },
+        dictionary = DictionaryServices { reading, translation ->
+            DictionaryPackInstaller(derived, packs, packs, reading, translation)
+        },
+        languageSettings = InMemoryLanguageSettingsStore(LanguageSettings(appLanguage = "en")),
+        systemLanguage = "fr",
+    )
+    return GuideDownloadRig(environment, tables, packs)
+}
+
 /** The one sample every guide test materialises, so the first launch has a language to answer. */
-private fun guideSamples(): SampleLibrary = SampleLibrary(
-    catalogue = SampleCatalogContent(listOf(guideSample())),
+private fun guideSamples(sample: Sample = guideSample()): SampleLibrary = SampleLibrary(
+    catalogue = SampleCatalogContent(listOf(sample)),
     derived = DerivedAssetStore(InMemoryVaultFileSystem()),
     dismissed = InMemorySampleDismissedStore(),
 )
@@ -1865,6 +2039,38 @@ private fun ComposeTestRule.tapFirstWord() {
         if (openedLookup()) return
     }
     throw AssertionError("no word opened a lookup: the tap never landed on one")
+}
+
+/**
+ * Taps the embedded page until a glossary-backed word opens its sheet (issue
+ * #277's feedback). Robolectric's semantics layout and the rendered layout
+ * disagree on glyph widths, so a few points along the line are probed rather than
+ * one fixed coordinate.
+ */
+@Suppress("MagicNumber") // The fractions are the points the tap probes.
+private fun ComposeTestRule.tapAGuideWord() {
+    waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+        onAllNodesWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNodes().isNotEmpty()
+    }
+    waitForIdle()
+    val page = onNodeWithTag(GUIDE_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+    val text = onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
+    val results = mutableListOf<TextLayoutResult>()
+    text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+    val layout = results.first()
+    val origin = text.boundsInRoot.topLeft
+    val lineTop = layout.getBoundingBox(0).let { box -> box.top + box.height / 2f }
+    var x = 8f
+    val right = layout.size.width.toFloat() - 8f
+    while (x < right) {
+        onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput {
+            click(Offset(origin.x - page.left + x, origin.y - page.top + lineTop))
+        }
+        waitForIdle()
+        if (openedLookup()) return
+        x += 10f
+    }
+    throw AssertionError("no tap on the embedded page opened the guide's sheet")
 }
 
 /** Whether the lookup panel is open, waiting for its entrance rather than sampling a frame. */

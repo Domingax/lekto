@@ -5,20 +5,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.book.Book
@@ -55,8 +57,9 @@ import kotlin.test.assertTrue
  * and the arrival's sample row and download line. The copy is the contract here;
  * the goldens carry the layout.
  */
+// One behaviour per screen; the render inputs are independent.
 @OptIn(ExperimentalTestApi::class)
-@Suppress("TooManyFunctions", "LongParameterList") // One behaviour per screen; the render inputs are independent.
+@Suppress("TooManyFunctions", "LongParameterList", "LargeClass")
 class GuideScreenSemanticsTest {
 
     private val segmenter = WhitespaceTextSegmenter()
@@ -72,22 +75,76 @@ class GuideScreenSemanticsTest {
         SampleRoster.LANGUAGES.forEach { language ->
             onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsDisplayed()
         }
-        // No row carries a selection: the question has no default answer.
-        onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)).assertCountEquals(0)
+        // No row carries a selection and no Continue is offered: the question has no default answer.
+        SampleRoster.LANGUAGES.forEach { language ->
+            onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsNotSelected()
+        }
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertDoesNotExist()
     }
 
     @Test
-    fun choosingALanguageRaisesIt() = runComposeUiTest {
+    fun selectingALanguageRaisesIt() = runComposeUiTest {
         var chosen: String? = null
         render(
             GuideUiState(stage = GuideStage.LANGUAGE),
             sample = null,
-            actions = GuideActions(onChooseLanguage = { language -> chosen = language }),
+            actions = GuideActions(onSelectLanguage = { language -> chosen = language }),
         )
 
         onNodeWithTag(guideLanguageRowTag("fr")).performClick()
 
         assertEquals("fr", chosen)
+    }
+
+    @Test
+    fun theSelectedLanguageCarriesTheSelectedTreatmentAndRevealsContinue() = runComposeUiTest {
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "fr"),
+            sample = null,
+            actions = GuideActions(onContinue = { continued++ }),
+        )
+
+        onNodeWithTag(guideLanguageRowTag("fr")).assertIsSelected()
+        SampleRoster.LANGUAGES.filter { language -> language != "fr" }.forEach { language ->
+            onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsNotSelected()
+        }
+
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+
+        assertEquals(1, continued)
+    }
+
+    @Test
+    fun everyScreenAfterTheFirstCarriesTheBackAffordance() = runComposeUiTest {
+        var backed = 0
+        val stages = listOf(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true),
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false),
+            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false),
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false),
+        )
+        val current = mutableStateOf(stages.first())
+        setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme { GuideUnderTest(current.value, GuideActions(onBack = { backed++ })) }
+            }
+        }
+
+        stages.forEach { stage ->
+            current.value = stage
+            waitForIdle()
+            onNodeWithTag(GUIDE_BACK_TAG).performClick()
+        }
+
+        assertEquals(stages.size, backed)
+    }
+
+    @Test
+    fun theFirstScreenCarriesNoBackAffordance() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.LANGUAGE), sample = null)
+
+        onNodeWithTag(GUIDE_BACK_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -121,14 +178,41 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theTapOpensTheRealSheetAnsweredFromTheSample() = runComposeUiTest {
-        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true))
+    fun theTapScreenArrivesWithoutTheSheetOpen() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
+
+        onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aTapOnAWordAsksForThatWord() = runComposeUiTest {
+        var tapped: app.lekto.reader.WordTap? = null
+        render(
+            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false),
+            actions = GuideActions(onTapWord = { tap -> tapped = tap }),
+        )
+
+        onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(guideWordTapPoint("calm")) }
+
+        assertEquals("calm", tapped?.token?.surface, "the embedded page hit-tests the reader's own word layer")
+    }
+
+    @Test
+    fun theTapOpensTheRealSheetForTheTappedWord() = runComposeUiTest {
+        render(
+            GuideUiState(
+                stage = GuideStage.TAP,
+                sample = sample,
+                plain = false,
+                lookupOpen = true,
+                tapped = note("calm"),
+            ),
+        )
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
-        onNodeWithText("fisherman").assertIsDisplayed()
-        onNodeWithText("→ pêcheur", substring = true).assertExists()
-        onAllNodesWithText("The old fisherman rowed his small boat across the calm water.")
-            .assertCountEquals(2)
+        onNodeWithText("calm").assertIsDisplayed()
+        onNodeWithText("→ calme", substring = true).assertExists()
         onNodeWithText("Not saved").assertExists()
     }
 
@@ -136,7 +220,15 @@ class GuideScreenSemanticsTest {
     fun theTapSheetOffersNoInstallAction() = runComposeUiTest {
         // The guide answers from the sample's glossary, never from the offline
         // pack, so the offline door has nothing to open here (issue #282's seam).
-        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true))
+        render(
+            GuideUiState(
+                stage = GuideStage.TAP,
+                sample = sample,
+                plain = false,
+                lookupOpen = true,
+                tapped = note("calm"),
+            ),
+        )
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         onNodeWithTag(LOOKUP_INSTALL_TAG).assertDoesNotExist()
@@ -146,7 +238,14 @@ class GuideScreenSemanticsTest {
     fun tappingALevelSavesTheWordAndStatesIt() = runComposeUiTest {
         val saved = mutableStateOf<MasteryLevel?>(null)
         render(
-            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true),
+            GuideUiState(
+                stage = GuideStage.TAP,
+                sample = sample,
+                plain = false,
+                lookupOpen = true,
+                tapped = note("calm"),
+                savedKey = note("calm").key,
+            ),
             actions = GuideActions(onSaveWord = { level -> saved.value = level }),
             savedLevel = saved,
         )
@@ -161,7 +260,13 @@ class GuideScreenSemanticsTest {
         var saved: MasteryLevel? = null
         var closed = false
         render(
-            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false, lookupOpen = true),
+            GuideUiState(
+                stage = GuideStage.TAP,
+                sample = sample,
+                plain = false,
+                lookupOpen = true,
+                tapped = note("calm"),
+            ),
             actions = GuideActions(
                 onSaveWord = { level -> saved = level },
                 onDismissLookup = { closed = true },
@@ -172,6 +277,28 @@ class GuideScreenSemanticsTest {
 
         assertTrue(closed, "the sheet closes")
         assertEquals(null, saved, "closing is not a save")
+    }
+
+    @Test
+    fun thePageScreensHostTheEmbeddedBlockAndNoReaderChrome() = runComposeUiTest {
+        val stages = listOf(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false),
+            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false),
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false),
+        )
+        val current = mutableStateOf(stages.first())
+        setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme { GuideUnderTest(current.value, GuideActions()) }
+            }
+        }
+
+        stages.forEach { stage ->
+            current.value = stage
+            waitForIdle()
+            onNodeWithTag(GUIDE_PAGE_TAG).assertIsDisplayed()
+            onNodeWithTag(app.lekto.reader.READER_PAGE_TAG).assertDoesNotExist()
+        }
     }
 
     @Test
@@ -253,14 +380,14 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theDownloadLineAnnouncesItsSizeAndFollowsTheStop() = runComposeUiTest {
+    fun theDownloadCardSitsOnTheFirstScreenAndOffersStop() = runComposeUiTest {
         val artifacts = listOf(
             testOfferedArtifact("lekto-difficulty-en.sqlite.gz", sizeBytes = 12_000_000),
             testOfferedArtifact("lekto-dictionary-en-fr.sqlite.gz", sizeBytes = 24_000_000),
         )
         val download = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, "en", artifacts))
         render(
-            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true),
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
             downloadState = download,
             actions = GuideActions(
                 onStopDownload = { download.value = download.value.copy(phase = GuideDownloadPhase.STOPPED) },
@@ -274,6 +401,84 @@ class GuideScreenSemanticsTest {
 
         onNodeWithText("Stopped").assertIsDisplayed()
         onNodeWithTag(GUIDE_DOWNLOAD_STOP_TAG).assertDoesNotExist()
+        onNodeWithTag(GUIDE_DOWNLOAD_RESUME_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theMiddleScreensShowNoDownloadCard() = runComposeUiTest {
+        val download = GuideDownloadUiState(GuideDownloadPhase.DOWNLOADING, "en")
+        val stages = listOf(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true),
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false),
+            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false),
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false),
+        )
+        val current = mutableStateOf(stages.first())
+        setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme {
+                    GuideScreen(
+                        state = current.value,
+                        languages = sampleRosterLanguages(),
+                        document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter),
+                        notes = guideNotes(sample, GUIDE_DEFAULT_BAND, segmenter, "fr"),
+                        download = download,
+                        translationLanguage = "fr",
+                    )
+                }
+            }
+        }
+
+        stages.forEach { stage ->
+            current.value = stage
+            waitForIdle()
+            onNodeWithTag(GUIDE_DOWNLOAD_TAG).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun aFailedDownloadSaysSoAndOffersRetry() = runComposeUiTest {
+        var retried = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.FAILED, "en")),
+            actions = GuideActions(onRetryDownload = { retried++ }),
+        )
+
+        onNodeWithText("The download did not finish. Check your connection.").assertIsDisplayed()
+        onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).performClick()
+
+        assertEquals(1, retried)
+    }
+
+    @Test
+    fun anUnreachableManifestSaysSoAndOffersRetry() = runComposeUiTest {
+        var retried = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.UNAVAILABLE, "en")),
+            actions = GuideActions(onRetryDownload = { retried++ }),
+        )
+
+        onNodeWithText("The language data could not be reached. Check your connection.").assertIsDisplayed()
+        onNodeWithTag(GUIDE_DOWNLOAD_RETRY_TAG).performClick()
+
+        assertEquals(1, retried)
+    }
+
+    @Test
+    fun aStoppedDownloadOffersToResume() = runComposeUiTest {
+        var resumed = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE, selectedLanguage = "en"),
+            downloadState = mutableStateOf(GuideDownloadUiState(GuideDownloadPhase.STOPPED, "en")),
+            actions = GuideActions(onResumeDownload = { resumed++ }),
+        )
+
+        onNodeWithText("Stopped").assertIsDisplayed()
+        onNodeWithTag(GUIDE_DOWNLOAD_RESUME_TAG).performClick()
+
+        assertEquals(1, resumed)
     }
 
     @Test
@@ -289,7 +494,7 @@ class GuideScreenSemanticsTest {
                         )
                         GuideDownloadLine(
                             GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
-                            onStop = {},
+                            GuideDownloadActions(onStop = {}),
                         )
                     }
                 }
@@ -331,6 +536,25 @@ class GuideScreenSemanticsTest {
     }
 
     private fun stageActions(onSkip: () -> Unit): GuideActions = GuideActions(onSkip = onSkip, onFinish = onSkip)
+
+    /** The note the covered word would produce, for the sheet and its save. */
+    private fun note(surface: String): GuideNote = guideNotes(sample, GUIDE_DEFAULT_BAND, segmenter, "fr")
+        .first { note -> note.surface == surface }
+
+    /** The point at the centre of [word] on the embedded page, in the page block's own coordinates. */
+    private fun ComposeUiTest.guideWordTapPoint(word: String): Offset {
+        val page = onNodeWithTag(GUIDE_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+        val text = onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
+        val shown = text.config[SemanticsProperties.Text].joinToString("") { line -> line.text }
+        val results = mutableListOf<TextLayoutResult>()
+        text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+        val layout = results.first()
+        val at = shown.indexOf(word).takeIf { index -> index >= 0 }
+            ?: error("the page does not show $word: $shown")
+        val box = layout.getBoundingBox(at)
+        val origin = text.boundsInRoot.topLeft
+        return Offset(origin.x - page.left + box.left + box.width / 2f, origin.y - page.top + box.top + box.height / 2f)
+    }
 
     private fun sampleBookRow(): SampleBookRow = SampleBookRow(
         book = Book(

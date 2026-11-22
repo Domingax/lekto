@@ -11,19 +11,24 @@ The first time you open Lekto it creates a **Vault** for you: the private,
 on-device store that holds everything you author or import. You do not need to
 sign in, and nothing is uploaded anywhere.
 
-It then asks one question: **Which language would you like to read first?** Pick a
-language and Lekto opens a short **Sample** of it in the reader — first with no
-colour, then the same page coloured by a level, with a few words explained under
-it. One word is there to tap: the lookup sheet opens, and choosing a level saves
-the word to your **Vocabulary**. Then the same page sits above the six CEFR bands:
-choose the one that is your **Reader level** and the page repaints. The sample is
-waiting on the Library when you finish, and the table and dictionary that make its
-colours follow your own books download in the background.
+It then asks one question: **Which language would you like to read first?** Choose a
+language — the row stays selected and a **Continue** button appears — then
+**Continue** opens a short **Sample** of it in the reader: first with no colour,
+then the same page coloured by a level, with a few words explained under it. Under
+the language list, a card names the word-difficulty table and offline dictionary
+that choice downloads in the background, with **Stop** while it runs and
+**Resume** or **Retry** if you stop it or it fails. Tap any word the sample
+explains and the lookup sheet opens; choosing a level saves the word to your
+**Vocabulary** and recolours it on the page. Then the same page sits above the six
+CEFR bands: choose the one that is your **Reader level** and the page repaints.
+The sample is waiting on the Library when you finish.
 
 You can leave the guide at any time with **Skip** — or **Escape** on a computer,
-or the system Back gesture on Android. The sample stays on the shelf, and a line
-there reminds you where its reading level is set. You can replay the guide later
-from **Settings → Application → Guide**.
+or the system Back gesture on Android. Every screen after the first also has a back
+chevron beside **Skip**. The sample stays on the shelf, and a line there reminds you
+where its reading level is set. The guide records only that you finished it, so an
+unfinished guide starts over next time; you can replay it later from
+**Settings → Application → Guide**, and a replay asks the language question again.
 
 The app's own language is a separate thing. When Lekto ships the language your
 device is set to (English or French), it starts in that language; otherwise it

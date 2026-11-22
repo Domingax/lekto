@@ -55,9 +55,8 @@ import app.lekto.dictionary.VocabularyPanel
 import app.lekto.dictionary.WordLookupActions
 import app.lekto.dictionary.WordLookupPanel
 import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderActions
 import app.lekto.reader.ReaderDocument
-import app.lekto.reader.ReaderScreen
+import app.lekto.reader.WordTap
 import app.lekto.reader.readerColor
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
@@ -67,6 +66,7 @@ import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
 import app.lekto.ui.TextAction
 import app.lekto.ui.handCursor
+import app.lekto.ui.icons.ChevronLeft
 import app.lekto.ui.icons.ChevronRight
 import app.lekto.ui.icons.LektoIcons
 import app.lekto.ui.plainClickable
@@ -78,8 +78,17 @@ internal const val GUIDE_TITLE_TAG: String = "guide-title"
 /** The test tag on `Skip`, which sits on every guide screen. */
 internal const val GUIDE_SKIP_TAG: String = "guide-skip"
 
-/** The test tag on the page's `Continue`. */
+/** The test tag on the chevron that returns to the previous screen. */
+internal const val GUIDE_BACK_TAG: String = "guide-back"
+
+/** The test tag on the guide's `Continue`, on the question and on the page. */
 internal const val GUIDE_CONTINUE_TAG: String = "guide-continue"
+
+/** The test tag on the embedded page block, so a test can tap a word on it. */
+internal const val GUIDE_PAGE_TAG: String = "guide-page"
+
+/** The test tag on the embedded page block's text, so a test can read the words it shows. */
+internal const val GUIDE_PAGE_TEXT_TAG: String = "guide-page-text"
 
 /** The test tag on the level screen's filled action. */
 internal const val GUIDE_START_READING_TAG: String = "guide-start-reading"
@@ -99,11 +108,11 @@ internal const val GUIDE_LEVEL_PREVIEW_TAG: String = "guide-level-preview"
 /** The number of marks in the guide's progress row: the four guide screens plus the arrival. */
 private const val GUIDE_STEPS = 5
 
-/** The height the guide gives the real reader page in each of its screens. */
-private val PAGE_HEIGHT = 220.dp
+/** The height the guide gives the embedded page, so the paragraph breathes. */
+private val PAGE_HEIGHT = 320.dp
 
 /** The height the level screen's preview card gives the page, so the six bands fit under it. */
-private val PREVIEW_HEIGHT = 180.dp
+private val PREVIEW_HEIGHT = 260.dp
 
 /** The test tag on one language row, so a test can choose exactly one. */
 internal fun guideLanguageRowTag(language: String): String = "guide-language-$language"
@@ -115,22 +124,26 @@ internal fun guideNoteTag(level: MasteryLevel): String = "guide-note-${level.nam
 internal fun guideBandTag(level: CefrLevel): String = "guide-band-${level.name}"
 
 /**
- * The actions the guide raises (issue #277): the language answer, the page's next
- * beat, the tap that reopens the sheet, its dismissal, the level that saves the
- * word, the band that colours the page, `Skip`, the arrival's start, and the
- * download's `Stop`. The real surfaces raise their own events through these, so a
- * test drives the whole flow with plain lambdas.
+ * The actions the guide raises (issue #277): the language selection, the
+ * `Continue` that answers it, the tap on a page word, the sheet's dismissal, the
+ * level that saves the word, the band that colours the page, the back affordance,
+ * `Skip`, the arrival's start, and the download's `Stop` and retry. The real
+ * surfaces raise their own events through these, so a test drives the whole flow
+ * with plain lambdas.
  */
 data class GuideActions(
-    val onChooseLanguage: (String) -> Unit = {},
+    val onSelectLanguage: (String) -> Unit = {},
     val onContinue: () -> Unit = {},
-    val onTapWord: () -> Unit = {},
+    val onTapWord: (WordTap) -> Unit = {},
     val onDismissLookup: () -> Unit = {},
     val onSaveWord: (MasteryLevel) -> Unit = {},
     val onChooseBand: (CefrLevel) -> Unit = {},
+    val onBack: () -> Unit = {},
     val onSkip: () -> Unit = {},
     val onFinish: () -> Unit = {},
     val onStopDownload: () -> Unit = {},
+    val onRetryDownload: () -> Unit = {},
+    val onResumeDownload: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
     val onSpeakWord: () -> Unit = {},
 )
@@ -154,16 +167,19 @@ private class GuideBeat(
  * notes, the tap on the real lookup sheet, and the six CEFR bands under the same
  * page. The screens are render-only; [GuideController] owns the flow.
  *
- * The page is the reader's own [ReaderScreen] over a one-page document, and the
- * sheet is the reader's own [WordLookupPanel] fed from the sample's glossary, so
- * neither a drawing nor a second implementation can drift from what the product
- * actually shows. The sample's colours come from its own band map.
+ * The page is the guide's embedded [GuidePageBlock] — the reader's own word layer,
+ * dotted rules and retained layout, inside the guide's frame and without the
+ * reader's chrome, page turns or **Aa** panel — and the sheet is the reader's own
+ * [WordLookupPanel] fed from the sample's glossary, so neither a drawing nor a
+ * second implementation can drift from what the product actually shows. The
+ * sample's colours come from its own band map.
  *
- * The arrangement is the guide's, not the reader's: the progress marks and `Skip`
- * share one bar, each screen's title is the guide's own, and the page keeps a
- * fixed height so the notes, the bands or the sheet beside it stay in view. At
- * 320 dp everything either wraps or scrolls, and on desktop the arrow keys page
- * the screens and `Escape` is `Skip` (installed by the composition root).
+ * The arrangement is the guide's, not the reader's: the progress marks, the back
+ * chevron and `Skip` share one bar, each screen's title is the guide's own, and the
+ * page keeps a fixed height so the notes, the bands or the sheet beside it stay in
+ * view. The download card appears on the language question and on the arrival
+ * only. On desktop the arrow keys page the screens and `Escape` is `Skip`
+ * (installed by the composition root).
  */
 @Suppress("LongParameterList") // The state, its roster, the page, the notes, the download and the actions.
 @Composable
@@ -180,66 +196,99 @@ fun GuideScreen(
     Box(modifier.fillMaxSize()) {
         val beat = GuideBeat(state, document, notes, download, actions)
         Column(Modifier.fillMaxSize()) {
-            GuideBar(state.stage, actions.onSkip)
+            GuideBar(state.stage, actions.onBack, actions.onSkip)
             when (state.stage) {
-                GuideStage.LANGUAGE -> LanguageQuestion(languages, actions.onChooseLanguage)
+                GuideStage.LANGUAGE -> LanguageQuestion(beat, languages)
                 GuideStage.PAGE -> PageBeat(beat)
                 GuideStage.TAP -> TapBeat(beat)
                 GuideStage.LEVEL -> LevelBeat(beat)
             }
         }
         if (state.stage == GuideStage.TAP && state.lookupOpen) {
-            TapSheet(beat, notes.firstOrNull(), translationLanguage)
+            TapSheet(beat, state.tapped, translationLanguage)
         }
     }
 }
 
-/** The guide's bar: the step marks, then `Skip` at the trailing edge, on every screen. */
+/** The guide's bar: the step marks, then the back chevron and `Skip` at the trailing edge. */
 @Composable
-private fun GuideBar(stage: GuideStage, onSkip: () -> Unit) {
-    val texts = LocalAppTexts.current
+private fun GuideBar(stage: GuideStage, onBack: () -> Unit, onSkip: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsideLabelPair),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.testTag(GUIDE_STEPS_TAG),
-            horizontalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(GUIDE_STEPS) { index ->
-                Box(
-                    Modifier
-                        .width(18.dp)
-                        .height(3.dp)
-                        .background(
-                            if (index < stage.position) {
-                                MaterialTheme.colorScheme.onBackground
-                            } else {
-                                MaterialTheme.colorScheme.outline
-                            },
-                        ),
-                )
-            }
-        }
+        StepMarks(stage)
         Spacer(Modifier.weight(1f))
-        TextAction(onClick = onSkip, modifier = Modifier.testTag(GUIDE_SKIP_TAG)) {
-            Text(texts[TextKey.GUIDE_SKIP], style = MaterialTheme.typography.bodyMedium)
+        if (stage != GuideStage.LANGUAGE) {
+            BackAffordance(onBack)
+            Spacer(Modifier.width(LektoSpacing.InsidePanel))
         }
+        SkipAction(onSkip)
+    }
+}
+
+/** The five marks: the reached screens filled, the rest outlined. */
+@Composable
+private fun StepMarks(stage: GuideStage) {
+    Row(
+        modifier = Modifier.testTag(GUIDE_STEPS_TAG),
+        horizontalArrangement = Arrangement.spacedBy(LektoSpacing.InsideLabelPair),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(GUIDE_STEPS) { index ->
+            Box(
+                Modifier
+                    .width(18.dp)
+                    .height(3.dp)
+                    .background(
+                        if (index < stage.position) {
+                            MaterialTheme.colorScheme.onBackground
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                    ),
+            )
+        }
+    }
+}
+
+/** The chevron that returns to the previous screen, beside `Skip`. */
+@Composable
+private fun BackAffordance(onBack: () -> Unit) {
+    val texts = LocalAppTexts.current
+    TextAction(onClick = onBack, modifier = Modifier.testTag(GUIDE_BACK_TAG)) {
+        Icon(
+            imageVector = LektoIcons.ChevronLeft,
+            contentDescription = texts[TextKey.BACK],
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+/** The guide's way out, on every screen. */
+@Composable
+private fun SkipAction(onSkip: () -> Unit) {
+    val texts = LocalAppTexts.current
+    TextAction(onClick = onSkip, modifier = Modifier.testTag(GUIDE_SKIP_TAG)) {
+        Text(texts[TextKey.GUIDE_SKIP], style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 /**
  * Screen 1: the language question. One row per offered language — its code and its
- * name, nothing else — and no preselection. The list is the roster the caller
- * resolved, so it reads no manifest and shows no spinner; eight rows scroll at
- * 320 dp. A build that ships one sample never reaches this screen.
+ * name — and no preselection. A row tap selects it and starts the background
+ * download, the card names their combined size and offers `Stop`, and `Continue`
+ * appears once a language is chosen. The list is the roster the caller resolved, so
+ * it reads no manifest and shows no spinner; eight rows scroll at 320 dp. A build
+ * that ships one sample never reaches this screen.
  */
 @Composable
-private fun ColumnScope.LanguageQuestion(languages: List<OfferedLanguage>, onChoose: (String) -> Unit) {
+private fun ColumnScope.LanguageQuestion(beat: GuideBeat, languages: List<OfferedLanguage>) {
     val texts = LocalAppTexts.current
+    val selected = beat.state.selectedLanguage
     Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
         GuideHeading(texts[TextKey.GUIDE_LANGUAGE_TITLE], texts[TextKey.GUIDE_LANGUAGE_INTRO])
         LazyColumn(
@@ -247,22 +296,39 @@ private fun ColumnScope.LanguageQuestion(languages: List<OfferedLanguage>, onCho
                 .testTag(GUIDE_LANGUAGE_LIST_TAG),
         ) {
             items(languages, key = { offered -> offered.language }) { offered ->
-                LanguageRow(offered, onChoose)
+                LanguageRow(offered, selected = offered.language == selected, onSelect = beat.actions.onSelectLanguage)
                 Hairline()
             }
         }
+        GuideDownloadLine(
+            beat.download,
+            GuideDownloadActions(
+                onStop = beat.actions.onStopDownload,
+                onRetry = beat.actions.onRetryDownload,
+                onResume = beat.actions.onResumeDownload,
+            ),
+            modifier = Modifier.padding(top = LektoSpacing.BetweenRows),
+        )
         Text(
             text = texts[TextKey.GUIDE_LANGUAGE_FOOTNOTE],
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = LektoSpacing.InsidePanel),
         )
+        if (selected != null) {
+            Button(
+                onClick = beat.actions.onContinue,
+                modifier = Modifier.align(Alignment.End).handCursor().testTag(GUIDE_CONTINUE_TAG),
+            ) {
+                Text(texts[TextKey.GUIDE_CONTINUE])
+            }
+        }
     }
 }
 
-/** One language: its code in the muted ink, its name, and the chevron that opens it. */
+/** One language: its code in the muted ink, its name, the chevron, and the ink rule when selected. */
 @Composable
-private fun LanguageRow(offered: OfferedLanguage, onChoose: (String) -> Unit) {
+private fun LanguageRow(offered: OfferedLanguage, selected: Boolean, onSelect: (String) -> Unit) {
     val texts = LocalAppTexts.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -270,21 +336,19 @@ private fun LanguageRow(offered: OfferedLanguage, onChoose: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = LektoSpacing.TouchTarget)
+            .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .rowHover(hovered, MaterialTheme.colorScheme.onBackground)
             .handCursor()
             .hoverable(interaction)
-            .plainClickable(role = Role.Button) { onChoose(offered.language) }
+            .plainClickable(role = Role.Button) { onSelect(offered.language) }
+            .semantics { this.selected = selected }
             .testTag(guideLanguageRowTag(offered.language))
             .padding(vertical = LektoSpacing.BetweenRows),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
-        Text(
-            text = offered.language.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(28.dp),
-        )
+        InkRule(selected)
+        LanguageCode(offered.language)
         Text(
             text = texts.languageName(offered.language),
             style = MaterialTheme.typography.bodyLarge,
@@ -299,10 +363,33 @@ private fun LanguageRow(offered: OfferedLanguage, onChoose: (String) -> Unit) {
     }
 }
 
+/** The language's code, in the muted ink, in the fixed column every row shares. */
+@Composable
+private fun LanguageCode(language: String) {
+    Text(
+        text = language.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.width(28.dp),
+    )
+}
+
+/** The 2 dp ink rule that marks a chosen row, transparent when the row is not chosen. */
+@Composable
+private fun InkRule(selected: Boolean) {
+    Box(
+        Modifier
+            .width(2.dp)
+            .height(24.dp)
+            .background(if (selected) MaterialTheme.colorScheme.onBackground else Color.Transparent),
+    )
+}
+
 /**
  * Screen 2: the page in two beats. The first shows the paragraph with no colour at
  * all and promises no gesture; the second paints the same paragraph from the
- * sample's own map and explains four of its words, one per level, under it.
+ * sample's own map and explains four of its words, one per level, under it. The
+ * download card is not here: it lives on the question and on the arrival.
  */
 @Composable
 private fun ColumnScope.PageBeat(beat: GuideBeat) {
@@ -316,12 +403,9 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
     ) {
         GuideHeading(texts[title], texts[intro])
         GuideReadingIn(state.sample?.language)
-        GuideDownloadLine(
-            beat.download,
-            beat.actions.onStopDownload,
-            Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-        )
-        beat.document?.let { page -> ReaderScreen(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT)) }
+        beat.document?.let { page ->
+            GuidePageBlock(page, Modifier.fillMaxWidth().height(PAGE_HEIGHT).padding(top = LektoSpacing.BetweenRows))
+        }
         if (!state.plain) GuideNotes(beat.notes, Modifier.padding(top = LektoSpacing.BetweenRows))
         GuideContinue(
             beat.actions.onContinue,
@@ -331,17 +415,20 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
 }
 
 /**
- * Screen 3: the tap. One word carries the selection wash, the real sheet is open
- * over the page with the sample's answer, and a level saves the word into the
- * real **Vocabulary**; closing the sheet writes nothing and leaves the page with
- * the word still marked.
+ * Screen 3: the tap. One word carries the selection wash, and the real sheet is
+ * raised only when the reader taps a word the sample's glossary answers — the
+ * demonstrated word is the natural target, but any word with a meaning answers and
+ * a tap on empty space does nothing. A level saves **that** word into the real
+ * **Vocabulary** and recolours it on the page; closing the sheet writes nothing.
+ * `Continue` remains the way forward.
  */
 @Composable
 private fun ColumnScope.TapBeat(beat: GuideBeat) {
     val state = beat.state
     val texts = LocalAppTexts.current
+    val washed = state.tapped ?: beat.notes.firstOrNull()
     val marked = beat.document?.let { page ->
-        beat.notes.firstOrNull()?.let { note -> page.copy(selectedRange = note.start until note.end) } ?: page
+        washed?.let { note -> page.copy(selectedRange = note.start until note.end) } ?: page
     }
     Column(
         Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
@@ -349,16 +436,12 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
     ) {
         GuideHeading(texts[TextKey.GUIDE_TAP_TITLE], texts[TextKey.GUIDE_TAP_INTRO])
         GuideReadingIn(state.sample?.language)
-        GuideDownloadLine(
-            beat.download,
-            beat.actions.onStopDownload,
-            Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-        )
         marked?.let { page ->
-            ReaderScreen(
+            GuidePageBlock(
                 page,
-                modifier = Modifier.fillMaxWidth().height(PAGE_HEIGHT),
-                actions = ReaderActions(onWordTap = { beat.actions.onTapWord() }),
+                Modifier.fillMaxWidth().height(PAGE_HEIGHT).padding(top = LektoSpacing.BetweenRows),
+                selectedRange = page.selectedRange,
+                onWordTap = beat.actions.onTapWord,
             )
         }
         Text(
@@ -376,7 +459,7 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
     }
 }
 
-/** The real sheet over the tap screen, fed from the sample's glossary and saving into the real list. */
+/** The real sheet over the tap screen, for the word the reader tapped and the sample's answer. */
 @Composable
 private fun BoxScope.TapSheet(beat: GuideBeat, note: GuideNote?, translationLanguage: String?) {
     val sample = beat.state.sample ?: return
@@ -392,7 +475,9 @@ private fun BoxScope.TapSheet(beat: GuideBeat, note: GuideNote?, translationLang
         actions = WordLookupActions(onOpenShortcut = {}, onDismiss = beat.actions.onDismissLookup),
         pronunciation = Pronunciation(onSpeak = beat.actions.onSpeakWord),
         vocabulary = VocabularyPanel(
-            entry = beat.state.savedLevel?.let { level -> savedEntry(note, level) },
+            entry = beat.state.savedLevel?.takeIf { beat.state.savedKey == note.key }?.let { level ->
+                savedEntry(note, level)
+            },
             onSave = beat.actions.onSaveWord,
             saveFailed = beat.state.saveFailed,
         ),
@@ -414,7 +499,8 @@ private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = 
 /**
  * Screen 4: the same page above the six CEFR bands, one line each. Choosing a band
  * writes the **Reader level** through the Languages surface's own action and
- * repaints the page; the filled action finishes the guide onto the shelf.
+ * repaints the page; the filled action finishes the guide onto the shelf. The
+ * download card is not here either.
  */
 @Composable
 private fun ColumnScope.LevelBeat(beat: GuideBeat) {
@@ -430,11 +516,6 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
     ) {
         GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO])
         GuideReadingIn(language)
-        GuideDownloadLine(
-            beat.download,
-            beat.actions.onStopDownload,
-            Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
-        )
         PreviewCard(beat.document)
         BandList(state.chosenBand, beat.actions.onChooseBand)
         Button(
@@ -450,7 +531,7 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
     }
 }
 
-/** The level screen's card: the real page at the band being chosen, under its label. */
+/** The level screen's card: the embedded page at the band being chosen, under its label. */
 @Composable
 private fun PreviewCard(document: ReaderDocument?) {
     val texts = LocalAppTexts.current
@@ -466,7 +547,9 @@ private fun PreviewCard(document: ReaderDocument?) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            document?.let { page -> ReaderScreen(page, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT)) }
+            document?.let { page ->
+                GuidePageBlock(page, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT))
+            }
         }
     }
 }
@@ -509,12 +592,7 @@ private fun BandRow(level: CefrLevel, selected: Boolean, name: String, line: Str
             .padding(vertical = LektoSpacing.BetweenRelatedLines),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .width(2.dp)
-                .height(24.dp)
-                .background(if (selected) MaterialTheme.colorScheme.onBackground else Color.Transparent),
-        )
+        InkRule(selected)
         Text(
             text = level.name,
             style = MaterialTheme.typography.labelSmall,
