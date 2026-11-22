@@ -154,6 +154,24 @@ class GuideControllerTest {
     }
 
     @Test
+    fun theBandIsASuggestionUntilOneIsTapped() {
+        val guide = controller()
+        guide.chooseLanguage("en")
+        guide.advance()
+        guide.advance()
+        guide.dismissLookup()
+        guide.advance()
+
+        assertEquals(GuideStage.LEVEL, guide.state.stage)
+        assertEquals(GUIDE_DEFAULT_BAND, guide.state.band, "the page still colours at the default band")
+        assertNull(guide.state.chosenBand, "nothing is chosen before a band is tapped")
+
+        guide.chooseBand(CefrLevel.C1)
+
+        assertEquals(CefrLevel.C1, guide.state.chosenBand)
+    }
+
+    @Test
     fun theLeftArrowWalksBackToTheQuestion() {
         val guide = controller()
         guide.chooseLanguage("en")

@@ -11,6 +11,8 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -180,6 +182,26 @@ class GuideScreenSemanticsTest {
         onNodeWithTag(guideBandTag(CefrLevel.C1)).performScrollTo().performClick()
 
         assertEquals(CefrLevel.C1, chosen)
+    }
+
+    @Test
+    fun theDefaultBandIsASuggestionAndNoBandIsChosen() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false))
+
+        onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
+        CefrLevel.entries.forEach { level -> onNodeWithTag(guideBandTag(level)).assertIsNotSelected() }
+    }
+
+    @Test
+    fun aTappedBandIsTheOnlyOneChosen() = runComposeUiTest {
+        render(
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false, chosenBand = CefrLevel.C1),
+        )
+
+        onNodeWithTag(guideBandTag(CefrLevel.C1)).assertIsSelected()
+        CefrLevel.entries.filter { level -> level != CefrLevel.C1 }.forEach { level ->
+            onNodeWithTag(guideBandTag(level)).assertIsNotSelected()
+        }
     }
 
     @Test

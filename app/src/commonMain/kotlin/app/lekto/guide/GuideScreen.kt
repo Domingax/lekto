@@ -425,7 +425,7 @@ private fun ColumnScope.LevelBeat(
         GuideReadingIn(language)
         GuideDownloadLine(download, actions.onStopDownload, Modifier.padding(top = LektoSpacing.BetweenRelatedLines))
         PreviewCard(document)
-        BandList(state.band, actions.onChooseBand)
+        BandList(state.chosenBand, actions.onChooseBand)
         Button(
             onClick = actions.onFinish,
             modifier = Modifier
@@ -460,13 +460,17 @@ private fun PreviewCard(document: ReaderDocument?) {
     }
 }
 
-/** The six bands: code, name, the one thing each reads, and the chosen one washed and ruled. */
+/**
+ * The six bands: code, name, the one thing each reads, and the tapped one washed
+ * and ruled. [chosen] is `null` until the reader taps a band, so the default band
+ * the page previews at is a suggestion, never a selection.
+ */
 @Composable
-private fun BandList(band: CefrLevel, onChoose: (CefrLevel) -> Unit) {
+private fun BandList(chosen: CefrLevel?, onChoose: (CefrLevel) -> Unit) {
     val texts = LocalAppTexts.current
     Column(Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows)) {
         CefrLevel.entries.forEachIndexed { index, level ->
-            BandRow(level, selected = level == band, name = texts.bandName(level), line = texts.bandLine(level)) {
+            BandRow(level, selected = level == chosen, name = texts.bandName(level), line = texts.bandLine(level)) {
                 onChoose(level)
             }
             if (index != CefrLevel.entries.lastIndex) Hairline()

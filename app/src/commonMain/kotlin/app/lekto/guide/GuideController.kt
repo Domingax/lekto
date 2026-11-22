@@ -29,14 +29,20 @@ enum class GuideStage(val position: Int) {
 
 /**
  * What the guide's screens render (issue #277): the stage, the sample once a
- * language is answered, the beat of the page, whether the real sheet is open, the
- * level the word was saved at, and an honest failure when the write was refused.
- * The arrival is the shell's own shelf, so it is not a stage here.
+ * language is answered, the band the page paints at, the band the reader actually
+ * tapped, the beat of the page, whether the real sheet is open, the level the
+ * word was saved at, and an honest failure when the write was refused. The
+ * arrival is the shell's own shelf, so it is not a stage here.
+ *
+ * [band] is the suggestion the page demonstrates before any choice; [chosenBand]
+ * is the **Reader level** the reader tapped, so a suggestion is never drawn as a
+ * selection (issue #279's rule, applied to the bands).
  */
 data class GuideUiState(
     val stage: GuideStage = GuideStage.LANGUAGE,
     val sample: Sample? = null,
     val band: CefrLevel = GUIDE_DEFAULT_BAND,
+    val chosenBand: CefrLevel? = null,
     val plain: Boolean = true,
     val lookupOpen: Boolean = false,
     val savedLevel: MasteryLevel? = null,
@@ -170,7 +176,7 @@ class GuideController(
 
     /** Writes [band] as the reader's level for the chosen language and repaints the page. */
     fun chooseBand(band: CefrLevel) {
-        state = state.copy(band = band)
+        state = state.copy(band = band, chosenBand = band)
         chosenLanguage?.let { language -> mastery?.setLevel(language, band) }
     }
 
