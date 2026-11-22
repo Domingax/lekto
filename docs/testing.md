@@ -1174,7 +1174,33 @@ every glossary covers every highlighted word — so the frozen copy is asserted
 against the rule, not only against a snapshot. `SampleAssetsAreDerivedTest` in
 `architecture` pins the remaining rule: the sample model names no vault store, the
 catalogue lives under resources and never under a vault path, and neither
-`VaultBundle` nor `VaultManifest` names a sample. The app's
+`VaultBundle` nor `VaultManifest` names a sample.
+
+The **Sample book** (issue #278) is proved at its seam and on the shelf. The
+materialisation is `SampleLibraryTest` in `core/commonTest`: the catalogue entry
+lands as the one derived file whose name encodes `sample:<language>` (`VaultPaths`
+rejects the identity's `:`), a second language writes nothing, a dismissal records
+its own document, deletes the files and keeps the identity reserved, a page turn
+and a **Finished** declaration stay beside the sample rather than in the **Vault**,
+and a corrupt or unwritable sample leaves no row. The reader is
+`ShippedSampleCatalogueTest` in `core/jvmTest`, which loads the committed
+catalogue exactly as the desktop client does, and `AndroidSampleLibraryTest` in
+`app/androidUnitTest`, which proves the same bytes are packaged as an Android asset
+— a library's Kotlin resources are not on an Android app's classloader. The
+dismissal's store seam is `SampleDismissedStoreContract` against the in-memory fake
+and the JSON document in `core/commonTest`, and against a real directory in
+`core/jvmTest`, with `JsonSampleDismissedStoreTest` adding the corrupt document.
+The shelf's projection is `LibraryControllerTest` in `app/desktopTest` — one row at
+most after a second language, absent from `LibraryUiState.books`, and a failed
+materialisation landing one line — and the screen is
+`LibraryScreenSemanticsTest` on both lanes: the row above the vault's books with
+its mark, the one-sentence first-run state, the §7.1 empty state, the removal's
+one confirmation, and the failed-materialisation line. The shelf golden
+(`library-*.png`) gains the sample row. `SampleAssetsAreDerivedTest` extends its
+rule to the materialiser: it may name the derived store, its byte seam and its
+codec, and nothing else under the vault package.
+
+The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
 level and the difficulty, with the one revision the reader recolours on — is
 `MasteryControllerTest` in `app/desktopTest`, which pins that setting **and**

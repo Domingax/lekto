@@ -57,6 +57,15 @@ the first launch needs no network. It is a **Derived asset**, produced from the
 roster of languages the guide offers.
 _Avoid_: Demo list, sample registry, tutorial catalogue
 
+**Sample book**:
+The one **Sample** a device materialises for the first launch, under the stable
+identity `sample:<language>`: the text the demonstration and the reader both open,
+listed on the **Library** above the vault's books with a `Sample` mark and read as
+a normal reading session. A **Derived asset**, never a **Vault** record, so it
+appears in no count, export or **Sync**; removing it asks once, and the identity
+stays reserved so no later build brings it back.
+_Avoid_: Demo book, tutorial book, sample row
+
 **Language manifest**:
 The catalogue of what Lekto offers for reading: each **Reading language** and the
 artefacts published for it — a **Difficulty table** per reading language, and a
