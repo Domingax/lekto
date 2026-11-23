@@ -70,9 +70,10 @@ import kotlin.test.Test
  * coloured word bars, with no reader chrome and no download
  * card; the real sheet raised at its cap over the washed word; the same block above
  * the six bands, A1 washed and ruled as the standing choice and `Start reading`
- * inside the one screen; and the arrival's sample row, level line and installed
- * download. The words, the levels and the meanings are the semantics suites'
- * contract; the layout, the colour ramp and the spacing are this file's.
+ * inside the one screen; and the arrival's sample row and level line, with no
+ * line about the download. The words, the levels and the meanings are the
+ * semantics suites' contract; the layout, the colour ramp and the spacing are
+ * this file's.
  *
  * The page, tap and level beats fit one 640 dp phone without scrolling: the page
  * planche draws the four notes centred between the paragraph and the action, and
@@ -666,7 +667,7 @@ private fun StartReadingButton() {
     ) { Bar(theme.onPrimary, 92.dp, 11.dp) }
 }
 
-/** Screen 5: the shelf with the sample as its first row, the level line and the installed download. */
+/** Screen 5: the shelf with the sample as its first row and the level line, and no download line. */
 @Composable
 private fun ColumnScope.ArrivalPreview() {
     val theme = MaterialTheme.colorScheme
@@ -700,20 +701,6 @@ private fun ColumnScope.ArrivalPreview() {
         }
         Spacer(Modifier.height(LektoSpacing.BetweenRelatedLines))
         Bar(theme.onSurfaceVariant, 212.dp, 9.dp)
-        InstalledLine(Modifier.padding(top = LektoSpacing.BetweenRows, bottom = LektoSpacing.InsidePanel))
-    }
-}
-
-/** The arrival's download line once the table and the pack have landed: the assets and `Installed`. */
-@Composable
-private fun InstalledLine(modifier: Modifier = Modifier) {
-    val theme = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column {
-            Bar(theme.onSurface, 132.dp, 10.dp)
-            Spacer(Modifier.height(LektoSpacing.InsideLabelPair))
-            Bar(theme.onSurfaceVariant, 52.dp, 9.dp)
-        }
     }
 }
 

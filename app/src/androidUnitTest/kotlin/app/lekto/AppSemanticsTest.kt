@@ -92,6 +92,7 @@ import app.lekto.dictionary.masteryTag
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.guide.GUIDE_CONTINUE_TAG
 import app.lekto.guide.GUIDE_DOWNLOAD_RETRY_TAG
+import app.lekto.guide.GUIDE_DOWNLOAD_TAG
 import app.lekto.guide.GUIDE_LANGUAGE_LIST_TAG
 import app.lekto.guide.GUIDE_PAGE_TAG
 import app.lekto.guide.GUIDE_PAGE_TEXT_TAG
@@ -1868,6 +1869,29 @@ class AppSemanticsTest {
         compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
             compose.onAllNodesWithText("Installed").fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun theShelfAfterTheGuideCarriesNoDownloadLine() {
+        // The owner's final directive: the download's home is the guide's language
+        // question, where it starts and can be stopped. The shelf the guide hands
+        // over to says nothing about it, and the sample's own row is answer enough.
+        val rig = guideDownloadRig()
+
+        compose.setContent { App(rig.environment) }
+
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("Installed").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_SKIP_TAG).performClick()
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            compose.onAllNodesWithText("A Guide Sample").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("A Guide Sample").assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_TAG).assertDoesNotExist()
     }
 
     /** Taps one of the shell's three sections: the bar on a phone, the column on desktop (issue #185). */

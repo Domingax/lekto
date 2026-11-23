@@ -115,12 +115,6 @@ class GuideLayoutTest {
     }
 
     @Test
-    fun theArrivalSitsTheDownloadLineInsideTheShelfFrame() = theArrival(frameWidth = 360f, height = 640f)
-
-    @Test
-    fun theNarrowPhoneArrivalSitsTheDownloadLineInsideTheShelfFrame() = theArrival(frameWidth = 320f, height = 640f)
-
-    @Test
     fun everyWaysForwardIsAWideButtonInsideTheScreenEdges() = wideWayForwardButton(width = 360f)
 
     /** The one filled action fills the screen's width inside the edge insets. */
@@ -218,39 +212,6 @@ class GuideLayoutTest {
         return previewHeight
     }
 
-    /**
-     * The arrival (issue #277's third review): the download line is the shelf's own
-     * last item, under the sample's lines, sharing the shelf's edges and one row
-     * unit below them — not a strip pinned to the foot of the screen.
-     */
-    private fun theArrival(frameWidth: Float, height: Float) {
-        screen(frameWidth, height, { ArrivalStage() }) {
-            val line = onNodeWithTag(GUIDE_DOWNLOAD_TAG).fetchSemanticsNode().boundsInRoot
-            val level = onNodeWithText("Your reading level is not set yet. Settings ▸ Languages.")
-                .fetchSemanticsNode().boundsInRoot
-
-            assertEquals(
-                LektoSpacing.ScreenEdge.value,
-                line.left,
-                FIT_SLACK,
-                "the line keeps the shelf's left edge",
-            )
-            assertEquals(
-                frameWidth - LektoSpacing.ScreenEdge.value,
-                line.right,
-                FIT_SLACK,
-                "and its right edge",
-            )
-            assertEquals(
-                LektoSpacing.BetweenRows.value,
-                line.top - level.bottom,
-                FIT_SLACK,
-                "one row unit under the sample",
-            )
-            assertTrue(line.bottom < height, "the line is part of the shelf, not pinned to its foot: $line")
-        }
-    }
-
     /** Asserts [tag] is displayed and its whole bounds lie inside a [height]-tall screen. */
     private fun ComposeUiTest.assertWithin(height: Float, tag: String) {
         onNodeWithTag(tag).assertIsDisplayed()
@@ -286,7 +247,7 @@ class GuideLayoutTest {
         }
         screen(width, height, { ArrivalStage() }) {
             onNodeWithText("A Guide Sample").performScrollTo().assertIsDisplayed()
-            onNodeWithText("Installed").assertIsDisplayed()
+            onNodeWithText("Your reading level is not set yet. Settings ▸ Languages.").assertIsDisplayed()
         }
     }
 
@@ -350,17 +311,12 @@ class GuideLayoutTest {
         )
     }
 
+    /** The shelf the guide hands over to: the sample, the level line, and nothing about the download. */
     @Composable
     private fun ArrivalStage() {
         LibraryScreen(
             state = LibraryUiState(sample = sampleBookRow()),
             levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
-            footer = {
-                GuideShelfFooter(
-                    GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
-                    GuideDownloadActions(onStop = {}),
-                )
-            },
             modifier = Modifier.fillMaxSize(),
         )
     }

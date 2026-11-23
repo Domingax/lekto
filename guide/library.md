@@ -67,12 +67,11 @@ is a real reading session — open it like any book, and it keeps its place and 
 **Finished** declaration the same way.
 
 The first launch also downloads the language's word-difficulty data and offline
-dictionary in the background. One line under the shelf says what is arriving and
-its published size while it runs, with a **Stop** action beside it; it then reads
-`Installed`, `Stopped` or why it did not finish. A stopped download offers
-**Resume** and a failed one offers **Retry** in that same line; a format this
-version cannot read, or a language that is not published yet, says so without an
-action it cannot change, and the Languages surface can download it again too.
+dictionary in the background. The guide's language question shows what is
+arriving and its published size while it runs, with a **Stop** action beside it.
+After that, the [Languages](/settings-and-faq) surface says where each one stands
+— installed, stopped or why it did not finish — and offers the download again
+when it has to.
 
 Until you set a **Reader level** for the sample's language, the shelf carries
 `Your reading level is not set yet. Settings ▸ Languages.` The line goes as soon

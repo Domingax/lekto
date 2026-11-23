@@ -345,8 +345,8 @@ sheets per paper (issue #277) — `guide-language-<paper>.png`,
 `guide-arrival-<paper>.png` — the step marks and `Skip`, the eight language rows,
 the page's coloured word bars and four notes, the real sheet with its cap and
 handle, the six bands with A1 washed and ruled as the standing choice from entry,
-and the shelf's sample row with its
-download line. The launcher
+and the shelf's sample row above its
+level line. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.
@@ -1259,7 +1259,7 @@ anchored at the very bottom, the back chevron at the head of the bar after scree
 a left-to-right swipe that goes back while a leftward one does nothing (and the
 question ignores both), `Skip` on every
 screen, the download card on screen 1 only with
-its three actions, and the arrival's sample row and download line — with the five
+its three actions, and the arrival's sample row and level line — with the five
 screens'
 frames in the `guide-<screen>-<paper>.png` planche goldens. The once-only gate is
 `AppSemanticsTest` too: a fresh install opens on the guide, a device that completed
