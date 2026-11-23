@@ -491,12 +491,12 @@ class GuideScreenSemanticsTest {
         compose.onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
         compose.onNodeWithText("What is your level in English?").assertIsDisplayed()
         CefrLevel.entries.forEach { level ->
-            compose.onNodeWithTag(guideBandTag(level)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag(guideBandTag(level)).assertIsDisplayed()
             compose.onNodeWithText(texts.bandName(level)).assertExists()
             compose.onNodeWithText(texts.bandLine(level)).assertExists()
         }
 
-        compose.onNodeWithTag(guideBandTag(CefrLevel.C1)).performScrollTo().performClick()
+        compose.onNodeWithTag(guideBandTag(CefrLevel.C1)).performClick()
 
         assertEquals(CefrLevel.C1, chosen)
     }

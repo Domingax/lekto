@@ -24,8 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -130,14 +128,6 @@ private val NoteGap: Dp = LektoSpacing.BetweenRows
  * never floats on a dead zone nor touches the block above it.
  */
 private val ActionGap: Dp = LektoSpacing.InsidePanel
-
-/**
- * The height the level screen's preview card gives the page. Compact on purpose: the
- * six bands and the action are the screen's job, and the card only has to show the
- * colours the chosen band paints (it replaced a taller card that pushed the action
- * off a 640 dp phone).
- */
-private val PREVIEW_HEIGHT = 56.dp
 
 /** The test tag on one language row, so a test can choose exactly one. */
 internal fun guideLanguageRowTag(language: String): String = "guide-language-$language"
@@ -536,11 +526,13 @@ private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = 
 /**
  * Screen 4: the same page above the six CEFR bands, one line each. Choosing a band
  * writes the **Reader level** through the Languages surface's own action and
- * repaints the page; the filled action finishes the guide onto the shelf. The
- * rhythm is the guide's: a panel unit under the heading, a row unit between the
- * preview and the bands, and a row unit under the action, so nothing is glued and
- * the screen still fits a 320 dp phone without scrolling. The download card is not
- * here either.
+ * repaints the page; the filled action anchors the very bottom and finishes the
+ * guide onto the shelf, the same button in the same place as every other beat's way
+ * forward. The preview takes whatever the heading, the six bands and the bottom bar
+ * leave (the owner's fifth review), so a taller screen shows more of the sample's
+ * coloured words — the point of a screen that recolours on every choice. The bands
+ * stay compact, so the screen still fits a 320 dp phone without scrolling. The
+ * download card is not here either.
  */
 @Composable
 private fun ColumnScope.LevelBeat(beat: GuideBeat) {
@@ -551,38 +543,37 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
         AppMessage.of(TextKey.GUIDE_LEVEL_TITLE, language?.let(texts::languageName).orEmpty()),
     )
     Column(
-        Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
+        Modifier.fillMaxWidth().weight(1f)
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO])
-        PreviewCard(beat.document)
+        PreviewCard(beat.document, Modifier.fillMaxWidth().weight(1f).padding(top = NoteGap))
         BandList(state.chosenBand, beat.actions.onChooseBand)
-        Button(
+        GuideFilledAction(
+            label = texts[TextKey.GUIDE_START_READING],
+            tag = GUIDE_START_READING_TAG,
             onClick = beat.actions.onFinish,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = ActionGap, bottom = LektoSpacing.BetweenRelatedLines)
-                .handCursor()
-                .testTag(GUIDE_START_READING_TAG),
-        ) {
-            Text(texts[TextKey.GUIDE_START_READING])
-        }
+            modifier = Modifier.padding(top = ActionGap),
+        )
     }
 }
 
-/** The level screen's card: the embedded page at the band being chosen, compacted to fit one screen. */
+/**
+ * The level screen's card: the embedded page at the band being chosen. Its height is
+ * the flexible middle the caller gives it; the block is clipped by the card, so a
+ * taller card shows more of the paragraph and more of its coloured words.
+ */
 @Composable
-private fun PreviewCard(document: ReaderDocument?) {
+private fun PreviewCard(document: ReaderDocument?, modifier: Modifier = Modifier) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = NoteGap)
-            .testTag(GUIDE_LEVEL_PREVIEW_TAG),
+        modifier = modifier.testTag(GUIDE_LEVEL_PREVIEW_TAG),
         shape = LektoRadii.Surface,
         color = MaterialTheme.colorScheme.background,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(Modifier.padding(LektoSpacing.BetweenRelatedLines)) {
             document?.let { page ->
-                GuidePageBlock(page, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT))
+                GuidePageBlock(page, Modifier.fillMaxWidth().weight(1f))
             }
         }
     }
@@ -719,11 +710,26 @@ private fun GuideHeading(title: String, intro: String?, topPadding: Dp = LektoSp
 /** The screen's one way forward: a real, filled, full-width button, centred under the content. */
 @Composable
 private fun GuideContinue(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    GuideFilledAction(
+        label = LocalAppTexts.current[TextKey.GUIDE_CONTINUE],
+        tag = GUIDE_CONTINUE_TAG,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The filled action every beat ends with: `Continue` on the question and the page
+ * beats, `Start reading` on the level beat. One composable so the button, its
+ * width and its place in the bottom bar cannot drift between screens.
+ */
+@Composable
+private fun GuideFilledAction(label: String, tag: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().handCursor().testTag(GUIDE_CONTINUE_TAG),
+        modifier = modifier.fillMaxWidth().handCursor().testTag(tag),
     ) {
-        Text(LocalAppTexts.current[TextKey.GUIDE_CONTINUE])
+        Text(label)
     }
 }
 
