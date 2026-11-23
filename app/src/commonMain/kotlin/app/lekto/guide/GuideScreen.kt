@@ -192,10 +192,12 @@ private class GuideBeat(
  *
  * The arrangement is the guide's, not the reader's: the progress marks, the back
  * chevron and `Skip` share one bar, each screen's title is the guide's own, and the
- * page takes the flexible middle of its beat so the notes and the way forward sit
- * under it without a dead zone. The download card appears on the language question
- * and on the arrival only. On desktop the arrow keys page the screens and `Escape`
- * is `Skip` (installed by the composition root).
+ * one filled action anchors the foot of every beat. The page takes the flexible
+ * height on its plain beat; on the coloured one the four notes take the space
+ * between the text and the action evenly, and on the level screen the preview takes
+ * it. The download card appears on the language question and on the arrival only.
+ * On desktop the arrow keys page the screens and `Escape` is `Skip` (installed by
+ * the composition root).
  */
 @Suppress("LongParameterList") // The state, its roster, the page, the notes, the download and the actions.
 @Composable

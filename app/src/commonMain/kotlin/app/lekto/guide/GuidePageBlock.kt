@@ -40,6 +40,10 @@ import app.lekto.reader.wordTapOf
  * the word under it; a tap that misses every word does nothing. The guide decides
  * which tapped words the sample can answer, so a tap on an unglossed word is as
  * inert as a tap on empty space (issue #277's feedback, item 8).
+ *
+ * The block wraps its paragraph and clips what a caller's height cuts off: a beat
+ * that gives it no weight shows the whole text, while the level screen's preview
+ * gives it the card's height and so shows as much of the page as the card allows.
  */
 @Composable
 internal fun GuidePageBlock(
