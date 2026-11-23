@@ -72,10 +72,10 @@ class GuideLayoutTest {
     fun theLevelScreenFitsANarrowPhoneWithoutScrolling() = theLevelScreenFits(width = 320f, height = 640f)
 
     @Test
-    fun thePageBlockTakesTheFlexibleHeightAndTheActionSitsUnderTheNotes() = thePageRhythm(width = 360f, height = 640f)
+    fun thePageNotesSitEvenlyBetweenTheTextAndTheAction() = theNotesRhythm(width = 360f, height = 640f)
 
     @Test
-    fun theNarrowPhonePageBlockTakesTheFlexibleHeight() = thePageRhythm(width = 320f, height = 640f)
+    fun theNarrowPhonePageNotesSitEvenlyBetweenTheTextAndTheAction() = theNotesRhythm(width = 320f, height = 640f)
 
     @Test
     fun theLevelScreenBreathesWithoutScrolling() = theLevelRhythm(width = 360f, height = 640f)
@@ -114,29 +114,33 @@ class GuideLayoutTest {
     }
 
     /**
-     * The page beat's rhythm (issue #277's third review): the block takes the
-     * flexible middle and is taller than the four notes under it, the notes sit one
-     * row unit under it and the way forward one panel unit under the notes, all of
-     * it inside the screen without a scroll.
+     * The page beat's rhythm (issue #277's fifth review): the notes are no longer
+     * pressed against the action after a tall empty page block. The notes column
+     * sits in the middle between the page's text and the way forward, so the gap
+     * above the notes and the gap below them match within one spacing unit, and the
+     * action still anchors the screen.
      */
-    private fun thePageRhythm(width: Float, height: Float) {
+    private fun theNotesRhythm(width: Float, height: Float) {
         screen(width, height, { PageStage(sample) }) {
             val block = onNodeWithTag(GUIDE_PAGE_TAG).fetchSemanticsNode().boundsInRoot
             val notes = onNodeWithTag(GUIDE_NOTES_TAG).fetchSemanticsNode().boundsInRoot
             val action = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot
+            val above = notes.top - block.bottom
+            val below = action.top - notes.bottom
 
-            assertTrue(block.height > notes.height, "the page is the star: $block / $notes")
-            assertEquals(
-                LektoSpacing.BetweenRows.value,
-                notes.top - block.bottom,
-                FIT_SLACK,
-                "the notes stay compact",
-            )
+            assertTrue(above > 0f, "the text keeps its air: $block / $notes")
             // The filled button carries Material's touch inset inside its node, so
-            // the layout gap is at least the panel unit the screen asks for.
+            // its measured gap can exceed the layout gap by that inset; one scale
+            // unit absorbs it.
+            assertEquals(
+                above,
+                below,
+                LektoSpacing.BetweenRelatedLines.value + FIT_SLACK,
+                "the notes sit evenly between the text and the action: $above / $below",
+            )
             assertTrue(
-                action.top - notes.bottom >= LektoSpacing.InsidePanel.value - FIT_SLACK,
-                "one panel under the notes: $notes / $action",
+                below >= LektoSpacing.BetweenBlocks.value - FIT_SLACK,
+                "the notes are not glued to the action: $notes / $action",
             )
             assertTrue(action.bottom <= height + FIT_SLACK, "the action anchors the screen: $action")
         }

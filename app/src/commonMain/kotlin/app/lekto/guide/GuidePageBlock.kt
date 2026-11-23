@@ -1,7 +1,7 @@
 package app.lekto.guide
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,7 +67,6 @@ internal fun GuidePageBlock(
     Box(
         modifier
             .clipToBounds()
-            .fillMaxSize()
             .testTag(GUIDE_PAGE_TAG)
             .readerTapInput(tap)
             .padding(horizontal = styles.horizontalMargin),
@@ -75,7 +74,7 @@ internal fun GuidePageBlock(
         Text(
             text = tokens.text,
             style = styles.body,
-            modifier = Modifier.fillMaxSize().testTag(GUIDE_PAGE_TEXT_TAG),
+            modifier = Modifier.fillMaxWidth().testTag(GUIDE_PAGE_TEXT_TAG),
             onTextLayout = { result -> layout = result },
         )
     }

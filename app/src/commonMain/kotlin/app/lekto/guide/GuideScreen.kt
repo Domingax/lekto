@@ -420,10 +420,12 @@ private fun InkRule(selected: Boolean) {
  * Screen 2: the page in two beats. The first shows the paragraph with no colour at
  * all and promises no gesture; the second paints the same paragraph from the
  * sample's own map and explains four of its words, one per level, under it. The
- * page is the beat's flexible middle: it takes every dp the heading, the notes and
- * the way forward leave, so the block is the star and the action sits at the foot
- * of the screen instead of leaving a dead zone above it. The download card is not
- * here: it lives on the question and on the arrival.
+ * coloured beat's notes sit in the middle between the text and the way forward
+ * (the owner's fifth review): the page block keeps the flexible weight on the plain
+ * beat, and on the coloured one two equal spacers take that weight so the notes
+ * breathe as far from the text as from the action instead of hanging off a tall
+ * empty block. The download card is not here: it lives on the question and on the
+ * arrival.
  */
 @Composable
 private fun ColumnScope.PageBeat(beat: GuideBeat) {
@@ -433,19 +435,22 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
     val intro = texts[
         if (state.plain) TextKey.GUIDE_PAGE_PLAIN_INTRO else TextKey.GUIDE_PAGE_COLOURED_INTRO,
     ]
+    val explains = !state.plain
     Column(
         Modifier.fillMaxWidth().weight(1f)
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(texts[title], intro)
         beat.document?.let { page ->
-            GuidePageBlock(page, Modifier.fillMaxWidth().weight(1f).padding(top = HeadingBlockGap))
+            val pageModifier = if (explains) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().weight(1f)
+            GuidePageBlock(page, pageModifier.padding(top = HeadingBlockGap))
         }
-        if (!state.plain) GuideNotes(beat.notes, Modifier.padding(top = NoteGap))
-        GuideContinue(
-            beat.actions.onContinue,
-            Modifier.padding(top = ActionGap),
-        )
+        if (explains) {
+            Spacer(Modifier.weight(1f))
+            GuideNotes(beat.notes, Modifier.padding(vertical = NoteGap))
+            Spacer(Modifier.weight(1f))
+        }
+        GuideContinue(beat.actions.onContinue)
     }
 }
 
