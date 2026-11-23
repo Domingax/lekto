@@ -4,7 +4,6 @@ package app.lekto.dictionary
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,11 +58,13 @@ import kotlin.test.Test
  * the sheet's frame — square where it joins the bottom edge like the **Aa**
  * panel, the surface tone and the inset hairline, the drag handle, the word and
  * its muted meta line, the two real
- * icons, the numbered senses with their translations, the level named beside the
- * five chips, and the references as one muted line — over a page lifted under
- * the sheet by just enough to keep the washed word in view, its first line
- * clipped at the top and its words unchanged. The semantics suite proves
- * the text, the lift and the interactions.
+ * icons, the numbered senses with their translations, the unsaved footer's state
+ * line in the muted ink beside the five filled chip frames, none ringed, and the
+ * references as one muted line closing the body above that pinned footer — over a
+ * page lifted under the sheet by just enough to keep the washed word in view, its
+ * first line clipped at the top and
+ * its words unchanged. The semantics suite proves the text, the lift, the states
+ * and the interactions.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with
  * `./gradlew :app:verifyRoborazziDesktop`.
@@ -99,6 +100,9 @@ private val SHEET_HEIGHT = 640.dp
 /** The most of the screen the sheet may cover, as the panel enforces it. */
 private val SHEET_MAX_HEIGHT = SHEET_HEIGHT * LOOKUP_SHEET_MAX_HEIGHT_FRACTION
 
+/** The offline sheet is content-sized: its message, its quiet action and the references, no more. */
+private val OFFLINE_SHEET_HEIGHT = 260.dp
+
 /** The drag handle's bar. */
 private val HANDLE_WIDTH = 32.dp
 private val HANDLE_HEIGHT = 4.dp
@@ -115,8 +119,7 @@ private val META_BAR = LineBar(height = 10.dp, share = 0.24f)
 private val SENSE_NUMBER_BAR = LineBar(height = 9.dp, share = 0.03f)
 private val SENSE_BAR = LineBar(height = 10.dp, share = 0.82f)
 private val TRANSLATION_BAR = LineBar(height = 9.dp, share = 0.36f)
-private val LEVEL_LABEL_BAR = LineBar(height = 8.dp, share = 0.1f)
-private val LEVEL_NAME_BAR = LineBar(height = 12.dp, share = 0.18f)
+private val STATE_LINE_BAR = LineBar(height = 12.dp, share = 0.24f)
 private val CHIP_LABEL_BAR = LineBar(height = 9.dp, share = 0.4f)
 private val REFERENCE_BARS = listOf(58.dp, 30.dp, 30.dp, 76.dp)
 
@@ -143,7 +146,10 @@ private fun LookupPreview(offline: Boolean) {
     Box(Modifier.size(width = SHEET_WIDTH, height = SHEET_HEIGHT).background(theme.background)) {
         PageBehind()
         Surface(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(SHEET_MAX_HEIGHT),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(if (offline) OFFLINE_SHEET_HEIGHT else SHEET_MAX_HEIGHT),
             color = theme.surface,
             border = BorderStroke(1.dp, theme.outline),
         ) {
@@ -236,19 +242,26 @@ private fun BandIcon(imageVector: androidx.compose.ui.graphics.vector.ImageVecto
     }
 }
 
-/** Three numbered senses, each with its translation under it in the muted ink. */
+/** Three part-of-speech groups of two numbered senses, then the references closing the same scroll. */
 @Composable
 private fun ColumnScope.SensesBody() {
     val theme = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
-        verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
-    ) {
-        repeat(3) { SenseRow() }
-        Line(theme.onSurfaceVariant, LineBar(height = 9.dp, share = 0.08f))
+    Column(Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
+            repeat(3) {
+                Line(theme.onSurfaceVariant, LineBar(height = 9.dp, share = 0.12f))
+                SenseRow()
+                SenseRow()
+            }
+        }
+        PreviewDivider()
+        ReferenceLine()
     }
 }
 
@@ -265,21 +278,38 @@ private fun SenseRow() {
     }
 }
 
-/** The no-pack state: one honest sentence bar where the senses would be. */
+/**
+ * The no-pack state: the honest message, the quiet door to the dictionary, and the
+ * references closing the same scroll.
+ */
 @Composable
 private fun ColumnScope.OfflineBody() {
     val theme = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
-    ) {
-        Line(theme.onBackground, LineBar(height = 10.dp, share = 0.62f))
+    Column(Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
+            verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
+        ) {
+            Line(theme.onBackground, LineBar(height = 10.dp, share = 0.62f))
+            InstallAction()
+        }
+        PreviewDivider()
+        ReferenceLine()
     }
 }
 
-/** The level named beside the five chips, then the references as one muted line. */
+/** The one quiet action under the message: a text button's shape in the accent ink. */
+@Composable
+private fun InstallAction() {
+    Box(Modifier.height(LektoSpacing.TouchTarget), contentAlignment = Alignment.CenterStart) {
+        Line(MaterialTheme.colorScheme.primary, LineBar(height = 9.dp, share = 0.34f))
+    }
+}
+
+/** The state line in the muted ink beside the five chips. The level is the footer's only content. */
 @Composable
 private fun SheetFooter() {
     val theme = MaterialTheme.colorScheme
@@ -293,35 +323,31 @@ private fun SheetFooter() {
             modifier = Modifier.height(LektoSpacing.TouchTarget),
             verticalArrangement = Arrangement.Center,
         ) {
-            Line(theme.onSurfaceVariant, LEVEL_LABEL_BAR)
-            Spacer(Modifier.height(4.dp))
-            Line(theme.onBackground, LEVEL_NAME_BAR)
+            Line(theme.onSurfaceVariant, STATE_LINE_BAR)
         }
         MasteryChips()
     }
-    PreviewDivider()
-    ReferenceLine()
 }
 
-/** The five chip frames, each filled with its level's colour; the selected one keeps an ink ring. */
+/**
+ * The five chip frames, each filled with its level's colour, none ringed: the
+ * preview draws the unsaved footer, where the state line is a suggestion and no
+ * chip claims a level (issue #279).
+ */
 @Composable
 private fun MasteryChips() {
     val theme = MaterialTheme.colorScheme
     val ramp = MasteryPalette.of(theme)
     val levels = listOf(ramp.unknown, ramp.recognized, ramp.familiar, ramp.learned, null)
     Row {
-        levels.forEachIndexed { index, colour ->
-            val selected = index == 1
+        levels.forEach { colour ->
             val fill = colour ?: theme.outline
             Box(Modifier.size(LektoSpacing.TouchTarget), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
                         .width(CHIP_WIDTH)
                         .height(CHIP_HEIGHT)
-                        .background(fill, LektoRadii.Control)
-                        .then(
-                            if (selected) Modifier.border(2.dp, theme.onBackground, LektoRadii.Control) else Modifier,
-                        ),
+                        .background(fill, LektoRadii.Control),
                     contentAlignment = Alignment.Center,
                 ) {
                     Line(contentColorOn(fill), CHIP_LABEL_BAR)

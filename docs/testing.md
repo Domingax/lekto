@@ -295,19 +295,23 @@ hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
 and the page clipped rather than repaginated. The lookup sheet adds one
 `word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
-(issue #210): the sheet raised over a page at the 45 % cap, square at its top
+(issue #210): the sheet raised over a page at the 60 % cap, square at its top
 edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
-meta bars, the two real icons, the numbered senses with their translations, the
-level named beside the five filled chip frames (the current one ringed in ink)
-and the references as one muted, content-aligned line; the offline sheet swaps
-the senses for the honest message. The phrase sheet adds
+meta bars, the two real icons, the part-of-speech groups of numbered senses with
+their translations, the unsaved footer's state line in the muted ink beside the
+five filled chip frames (none ringed, because no level is saved yet) and the
+references as one muted, content-aligned line closing the scrolling body above
+that footer (issue #282); the offline sheet swaps
+the senses for the honest message and its quiet install action, at its
+content-sized height. The phrase sheet adds
 `phrase-lookup-connected-light.png` and `phrase-lookup-unconnected-light.png`
 (issue #211): the same shell with the phrase in the serif band and the close icon,
 then either the translation body with its disclosure or the prompt with its
 settings link, above the zero-configuration shortcut. The Vocabulary list adds
 `vocabulary-<paper>.png` per paper and `vocabulary-delete-light.png` (issue #212):
 the title and the count beside it, the shared search surface, the filter row with
-its partly cut chip, the current filter filled in ink and each chip carrying its
+a selected chip carrying the opened book's title before the level chips (issue
+#280), its partly cut chip, the current filter filled in ink and each chip carrying its
 level's dot, then each row's word bar, dot and level name, translation and muted
 sentence with a hairline between rows — the first row hovered, so the trash in the
 slot reserved for it is recorded too. Its level sheet adds
@@ -335,7 +339,14 @@ short explanation of the two derived assets, then one row per language with its
 name and level picker, each **Derived asset**'s muted state and its
 trailing text action, the hairline that parts two languages, and the attribution at
 the foot in the muted ink — three rows standing for one ready, one missing both
-derived assets and one with a corrupt dictionary. The launcher
+derived assets and one with a corrupt dictionary. The first-launch guide adds five
+sheets per paper (issue #277) — `guide-language-<paper>.png`,
+`guide-page-<paper>.png`, `guide-tap-<paper>.png`, `guide-level-<paper>.png` and
+`guide-arrival-<paper>.png` — the step marks and `Skip`, the eight language rows,
+the page's coloured word bars and four notes, the real sheet with its cap and
+handle, the six bands with A1 washed and ruled as the standing choice from entry,
+and the shelf's sample row above its
+level line. The launcher
 mark has one sheet, `app-mark.png`, at 48 dp — the size it has to survive — with the
 coloured letter on the paper and the monochrome letter tinted on the night surface (issue
 #177); it is text-free by construction, because the letter is an outline, not a glyph.
@@ -1043,8 +1054,15 @@ load once, an unsaved word is unknown, a save bumps the revision that recolours,
 and a previous session's save is present at startup — is a `VocabularyControllerTest`
 in `app/desktopTest`, and the panel's level chips are its save (issue #210):
 `WordLookupPanelSemanticsTest` proves that choosing a level stores the word, that
-no separate Save control exists, that the current level is named beside the
-chips, and that the sheet covers at most 45 % of the screen. `AppSemanticsTest`
+no separate Save control exists, that the sheet covers at most 60 % of the screen
+and is content-sized below it, that its references scroll at the end of the body
+without changing its height, that the handle's downward drag closes the sheet, and,
+since issue #279, that the footer states the word's state rather than a
+selection: `Not saved` or `Likely <level>` while it is unsaved with no chip
+marked, `Saved · <level>` and the marked chip once it is, and `Couldn't save` when
+the vault refuses the write. The offline sheet's `Install the offline dictionary`
+is driven from `AppSemanticsTest` into Settings ▸ Languages. `VocabularyControllerTest` pins that a refused write
+is reported and leaves the word unsaved. `AppSemanticsTest`
 also drives the reader's lift: a word at the bottom of the page is tapped, the
 sheet opens, and the word's bounds are asserted above the sheet's top while the
 page's words stay put — the page rises under the sheet without repaginating.
@@ -1108,6 +1126,20 @@ control. `VocabularyScreenSemanticsTest` proves a chip raises its level, the
 all-levels chip clears it, the current one is announced as selected, and a filter
 that matches nothing says so, and `AppSemanticsTest` filters the list to a level
 and finds only that level's word.
+
+The book history (issue #280; ADR-0050) is proved at every seam. The record's
+shape is `VocabularyRecordPropertyTest`'s: the round-trip carries `bookIds`, the
+schema version is pinned at 2, and a body written without the field reads as an
+empty list. `BookWordsTest` proves the two counts — a word counts once per book it
+names, a word from two books counts for both, only the book's **Known** words
+count as known, and a word with no history belongs to none. The write path is
+`VocabularyControllerTest`'s: the book id reaches the record once, a second book
+keeps both, a save that names no book keeps the history, and the list orders by the
+record's update time. The end state's two numbers, singular and plural, the absent
+line and `See the words` are `ReaderScreenSemanticsTest`; the list's book chip, its
+absence, the narrowing and the frozen order under a level change are
+`VocabularyScreenSemanticsTest`, both on both lanes. `AppSemanticsTest` walks the
+loop on both lanes — save from a book, finish it, read the counts, open the list.
 
 The translation the list shows (issue #67; ADR-0032) is derived from the installed
 **Dictionary packs**, not the one the entry froze at save time, and falls back to
@@ -1174,7 +1206,68 @@ every glossary covers every highlighted word — so the frozen copy is asserted
 against the rule, not only against a snapshot. `SampleAssetsAreDerivedTest` in
 `architecture` pins the remaining rule: the sample model names no vault store, the
 catalogue lives under resources and never under a vault path, and neither
-`VaultBundle` nor `VaultManifest` names a sample. The app's
+`VaultBundle` nor `VaultManifest` names a sample.
+
+The **Sample book** (issue #278) is proved at its seam and on the shelf. The
+materialisation is `SampleLibraryTest` in `core/commonTest`: the catalogue entry
+lands as the one derived file whose name encodes `sample:<language>` (`VaultPaths`
+rejects the identity's `:`), a second language writes nothing, a dismissal records
+its own document, deletes the files and keeps the identity reserved, a page turn
+and a **Finished** declaration stay beside the sample rather than in the **Vault**,
+and a corrupt or unwritable sample leaves no row. The reader is
+`ShippedSampleCatalogueTest` in `core/jvmTest`, which loads the committed
+catalogue exactly as the desktop client does, and `AndroidSampleLibraryTest` in
+`app/androidUnitTest`, which proves the same bytes are packaged as an Android asset
+— a library's Kotlin resources are not on an Android app's classloader. The
+dismissal's store seam is `SampleDismissedStoreContract` against the in-memory fake
+and the JSON document in `core/commonTest`, and against a real directory in
+`core/jvmTest`, with `JsonSampleDismissedStoreTest` adding the corrupt document.
+The shelf's projection is `LibraryControllerTest` in `app/desktopTest` — one row at
+most after a second language, absent from `LibraryUiState.books`, and a failed
+materialisation landing one line — and the screen is
+`LibraryScreenSemanticsTest` on both lanes: the row above the vault's books with
+its mark, the one-sentence first-run state, the §7.1 empty state, the removal's
+one confirmation, and the failed-materialisation line. The shelf golden
+(`library-*.png`) gains the sample row. `SampleAssetsAreDerivedTest` extends its
+rule to the materialiser: it may name the derived store, its byte seam and its
+codec, and nothing else under the vault package.
+
+The **Guide** (issue #277) is proved at its own levels. Its progress store is a
+contract in `testkit`, run against the JSON document in `core/commonTest` and
+against a real directory in `core/jvmTest`, with `JsonGuideProgressStoreTest`
+adding the corrupt and the absent document. The flow is `GuideControllerTest` in
+`app/desktopTest`: a row selects without advancing and `Continue` materialises the
+sample and starts the download, the default band is A1, the page's two beats, the
+tap that saves the tapped word and recolours it, the band writes the **Reader
+level**, a mid-guide relaunch starts over on the question, and a replay asks the
+question again and re-runs the materialisation that replaces the sample. The
+download is `GuideDownloadControllerTest`, driven by virtual time: one line for both
+artefacts, the manifest read only after the answer, the reader's own pack chosen
+after the translation default is filled from the manifest, a stop that cancels both
+installers and sticks, a failure that reports rather than crashing, and a retry
+after each of UNAVAILABLE, FAILED and STOPPED, and the two causes no retry can
+improve — a refused format handshake and a language the manifest does not publish —
+reported as themselves with no action. `AppSemanticsTest` on both lanes
+drives the same path end to end over the fake fetch seams and checks the
+**Languages** surface reports both artefacts installed afterwards. The screens are
+`GuideScreenSemanticsTest` on both lanes — the roster with no preselection and a
+full-width `Continue` that is shown but disabled until a row is chosen, the two
+beats and their notes, the embedded block's tap
+hit-testing, the sheet on the tapped word with no install door, the save's state
+line, the six bands with A1 chosen from entry, the filled `Start reading` action
+anchored at the very bottom, the back chevron at the head of the bar after screen 1,
+a left-to-right swipe that goes back while a leftward one does nothing (and the
+question ignores both), `Skip` on every
+screen, the download card on screen 1 only with
+its three actions, and the arrival's sample row and level line — with the five
+screens'
+frames in the `guide-<screen>-<paper>.png` planche goldens. The once-only gate is
+`AppSemanticsTest` too: a fresh install opens on the guide, a device that completed
+it or already holds a book opens on the shell, a corrupt document reads as not
+seen, a relaunch mid-guide opens on the question, and the Settings row replays it
+from the question and replaces the sample on the shelf.
+
+The app's
 single `MasteryController` — the composition of saved vocabulary, the reader
 level and the difficulty, with the one revision the reader recolours on — is
 `MasteryControllerTest` in `app/desktopTest`, which pins that setting **and**

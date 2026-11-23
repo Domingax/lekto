@@ -5,7 +5,9 @@ import app.lekto.core.sync.TombstoneStore
 import app.lekto.core.text.WordKey
 import app.lekto.core.vault.DeviceId
 import app.lekto.core.vault.Tombstone
+import app.lekto.core.vault.VaultRecord
 import app.lekto.core.vault.VaultStore
+import kotlin.time.Instant
 
 /**
  * The [Vocabulary] over a [VaultStore] (issue #22): a saved word is a vault
@@ -22,6 +24,9 @@ import app.lekto.core.vault.VaultStore
  * store (ADR-0015), so the deletion survives a sync instead of being copied back
  * from a device that has not seen it. The store is the same one the sync engine
  * reads, so it is the composition root's job to point both at it.
+ *
+ * A record's `updatedAt` is also the vocabulary list's recency (ADR-0050), so
+ * [allWithTimes] hands it out with the entry and [save] returns what it wrote.
  */
 class VaultVocabulary(
     private val vault: VaultStore,
@@ -30,15 +35,19 @@ class VaultVocabulary(
     private val deviceId: DeviceId,
 ) : Vocabulary {
 
-    override fun all(): List<VocabularyEntry> = vault.all()
+    override fun all(): List<VocabularyEntry> = allWithTimes().map { saved -> saved.entry }
+
+    override fun allWithTimes(): List<VocabularyEntryTime> = vault.all()
         .filter { record -> record.kind == VocabularyRecord.KIND }
-        .mapNotNull { record -> runCatching { VocabularyRecord.entryOf(record) }.getOrNull() }
+        .mapNotNull { record -> entryTimeOf(record) }
 
     override fun entryFor(key: WordKey): VocabularyEntry? = vault.get(VocabularyRecord.idOf(key))
         ?.let { record -> runCatching { VocabularyRecord.entryOf(record) }.getOrNull() }
 
-    override fun save(entry: VocabularyEntry) {
-        vault.put(VocabularyRecord.of(entry, seams.clock.now(), deviceId))
+    override fun save(entry: VocabularyEntry): Instant {
+        val record = VocabularyRecord.of(entry, seams.clock.now(), deviceId)
+        vault.put(record)
+        return record.updatedAt
     }
 
     override fun delete(key: WordKey) {
@@ -47,4 +56,9 @@ class VaultVocabulary(
         vault.remove(id)
         tombstones.put(Tombstone(id = id, updatedAt = seams.clock.now(), deviceId = deviceId))
     }
+
+    /** One record's entry and time, or `null` when the body cannot be read. */
+    private fun entryTimeOf(record: VaultRecord): VocabularyEntryTime? = runCatching {
+        VocabularyEntryTime(VocabularyRecord.entryOf(record), record.updatedAt)
+    }.getOrNull()
 }

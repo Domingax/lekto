@@ -2,6 +2,7 @@
 
 package app.lekto
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,13 +23,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.book.BookLibrary
 import app.lekto.core.book.ReadingPosition
 import app.lekto.core.book.ReadingSession
+import app.lekto.core.book.SampleLibrary
 import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
 import app.lekto.core.dictionary.WordLookup
@@ -36,11 +46,15 @@ import app.lekto.core.dictionary.dictionaryShortcuts
 import app.lekto.core.dictionary.firstGloss
 import app.lekto.core.dictionary.translationShortcut
 import app.lekto.core.difficulty.DifficultyState
+import app.lekto.core.guide.GuideProgressStore
 import app.lekto.core.language.AppLanguages
 import app.lekto.core.language.LanguageCatalog
 import app.lekto.core.language.LanguageCatalogState
 import app.lekto.core.language.LanguageSettingsStore
+import app.lekto.core.language.OfferedLanguage
+import app.lekto.core.language.offeredLanguages
 import app.lekto.core.language.readingLanguagesOf
+import app.lekto.core.language.sampleRosterLanguages
 import app.lekto.core.llm.LlmClient
 import app.lekto.core.llm.LlmProvider
 import app.lekto.core.llm.LlmSettingsStore
@@ -56,6 +70,7 @@ import app.lekto.core.text.WordKey
 import app.lekto.core.text.baseLanguage
 import app.lekto.core.theme.AppTheme
 import app.lekto.core.theme.AppThemeStore
+import app.lekto.core.vocabulary.BookWords
 import app.lekto.core.vocabulary.Vocabulary
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.dictionary.DictionaryController
@@ -68,6 +83,14 @@ import app.lekto.dictionary.WordLookupPanel
 import app.lekto.difficulty.DifficultyController
 import app.lekto.difficulty.DifficultyServices
 import app.lekto.difficulty.DifficultyUiState
+import app.lekto.guide.GuideActions
+import app.lekto.guide.GuideController
+import app.lekto.guide.GuideDownloadController
+import app.lekto.guide.GuideDownloadUiState
+import app.lekto.guide.GuideProgressController
+import app.lekto.guide.GuideScreen
+import app.lekto.guide.guideDocument
+import app.lekto.guide.guideNotes
 import app.lekto.language.LanguageController
 import app.lekto.language.LanguageSettingsController
 import app.lekto.language.LanguagesDestination
@@ -114,7 +137,9 @@ import app.lekto.settings.VaultSettingsScreen
 import app.lekto.settings.VaultTransfer
 import app.lekto.settings.VaultTransferController
 import app.lekto.settings.VaultUiState
+import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
 import app.lekto.text.appTextsFor
 import app.lekto.theme.AppThemeController
 import app.lekto.theme.LektoTheme
@@ -125,11 +150,14 @@ import app.lekto.translation.PhraseLookupPanel
 import app.lekto.translation.PhraseTranslationUiState
 import app.lekto.translation.rememberTranslation
 import app.lekto.vocabulary.VocabularyActions
+import app.lekto.vocabulary.VocabularyBook
 import app.lekto.vocabulary.VocabularyController
 import app.lekto.vocabulary.VocabularyLevelColumn
 import app.lekto.vocabulary.VocabularyLevelSheet
+import app.lekto.vocabulary.VocabularyOrder
 import app.lekto.vocabulary.VocabularyScreen
 import app.lekto.vocabulary.VocabularyUiState
+import app.lekto.vocabulary.filterByBook
 import app.lekto.vocabulary.filterByMastery
 import app.lekto.vocabulary.packTranslations
 import app.lekto.vocabulary.searchVocabulary
@@ -165,6 +193,20 @@ data class AppEnvironment(
     val lemmas: LemmaLookup = LemmaLookup.None,
     val vocabulary: Vocabulary? = null,
     val readerLevels: ReaderLevels? = null,
+    /**
+     * The build's **Sample book** seam (issue #278): the catalogue it ships and
+     * the derived store the first launch materialises one entry into. `null` when
+     * the platform wires none or ships no catalogue, so the shelf simply has no
+     * sample and the app stays usable.
+     */
+    val samples: SampleLibrary? = null,
+    /**
+     * The app-private first-launch progress (issue #277; ADR-0023's pattern): the
+     * device-local fact that the reader has seen the guide. `null` when the
+     * platform wires none, so the gate treats the guide as seen and the app opens
+     * on its shell as before.
+     */
+    val guide: GuideProgressStore? = null,
     /**
      * The app-private language settings store (ADR-0034): the device-local
      * **app language** and **Translation language**, neither a **Vault** record.
@@ -269,7 +311,7 @@ data class LlmServices(
  * paper to the host, so the platform's own window — the strip before the first
  * frame — is the theme's background rather than a white flash.
  */
-@Suppress("LongMethod", "CyclomaticComplexMethod") // The composition root wires each independent seam once.
+@Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod") // The composition root.
 @Composable
 fun App(
     environment: AppEnvironment,
@@ -280,14 +322,17 @@ fun App(
     // The one signal the local writers raise and sync subscribes to (issue #121):
     // a book imported, a word saved or deleted, a reading position moved.
     val changes = remember { LocalChanges() }
-    val controller = remember(environment.library, environment.dispatcher, changes) {
-        LibraryController(environment.library, changes, environment.dispatcher)
+    val controller = remember(environment.library, environment.dispatcher, changes, environment.samples) {
+        LibraryController(environment.library, changes, environment.dispatcher, samples = environment.samples)
     }
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
-    val progress = remember(environment.library, environment.dispatcher, scope, changes) {
+    // The sample's page turns are kept beside the sample, never in the vault
+    // (issue #278); anything else is the vault's own position as before.
+    val samples = environment.samples
+    val progress = remember(environment.library, environment.dispatcher, scope, changes, samples) {
         ReadingProgressWriter(scope, environment.dispatcher, changes) { position, blocks ->
-            environment.library.savePosition(position, blocks)
+            if (samples?.savePosition(position) != true) environment.library.savePosition(position, blocks)
         }
     }
     val dictionary = remember(environment.dictionary, environment.dispatcher) {
@@ -396,6 +441,64 @@ fun App(
         }
     })
     val syncState = sync?.state?.collectAsState()?.value ?: SyncUiState()
+    // The first-launch guide (issue #277): its document's live state, the download
+    // that starts after the language answer, and the flow over the sample #278
+    // materialises. A build with no sample catalogue has no guide to show, so the
+    // gate below stays shut and the app opens on its shell as before.
+    val guideProgress = remember(environment.guide) {
+        environment.guide?.let { store -> GuideProgressController(store) }
+    }
+    val guideDownload = remember(environment.samples, environment.languages, difficulty, dictionary, scope) {
+        if (environment.samples == null) {
+            null
+        } else {
+            GuideDownloadController(
+                catalog = environment.languages,
+                difficulty = difficulty,
+                dictionary = dictionary,
+                translationLanguage = { languageSettings?.translationLanguage },
+                onOffered = { offered ->
+                    languageSettings?.applyTranslationLanguageDefault(environment.systemLanguage, offered)
+                },
+                dispatcher = environment.dispatcher,
+                scope = scope,
+            )
+        }
+    }
+    // The roster, corrected by a cached manifest when one is already on the
+    // device: the guide never fetches for its list, so a first launch shows every
+    // language the build ships, and a later one shows what the manifest kept.
+    val guideLanguages = remember(environment.languages) {
+        val manifest = (environment.languages?.status() as? LanguageCatalogState.Available)?.languages
+        offeredLanguages(sampleRosterLanguages(), manifest)
+    }
+    val guide = remember(environment.samples, environment.segmenter, guideDownload, mastery, guideLanguages) {
+        environment.samples?.let { samples ->
+            GuideController(
+                languages = guideLanguages,
+                sampleOf = samples::sample,
+                materialise = controller::materialiseSample,
+                startDownload = { language -> guideDownload?.start(language) },
+                mastery = mastery,
+                segmenter = environment.segmenter,
+                translationLanguage = { languageSettings?.translationLanguage },
+            )
+        }
+    }
+    // The guide opens once: on a device that has not seen it and whose shelf is
+    // empty. A reader who already has books never gets five screens over their
+    // shelf; the Settings row below is their way in.
+    var guideReopened by remember { mutableStateOf(false) }
+    val guideOpen = guide != null && guideLanguages.isNotEmpty() &&
+        (guideReopened || (!(guideProgress?.seen ?: true) && state.vaultEmpty))
+    // Every way out of the guide — the last screen's action and Skip on any
+    // screen — leaves the reader on the shelf with the fact recorded.
+    val closeGuide = {
+        guideProgress?.markSeen()
+        guideReopened = false
+        controller.refresh()
+    }
+    val activeGuide = guide?.takeIf { guideOpen }
     // Automatic sync (issue #121; ADR-0028): arm it once the app is composed —
     // an app-start run plus the periodic timer — and ask for a run whenever the
     // platform reports the app has resumed.
@@ -427,24 +530,39 @@ fun App(
     LektoTheme(theme = theme) {
         Box(Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
             CompositionLocalProvider(LocalAppTexts provides appTextsFor(languageSettings?.appLanguage)) {
-                AppScreens(
-                    environment,
-                    controller,
-                    changes,
-                    state,
-                    scope,
-                    progress,
-                    settings,
-                    mastery,
-                    language,
-                    languageSettings,
-                    readingPreferences,
-                    appTheme,
-                    lemmas,
-                    difficulty,
-                    difficultyStates,
-                    dictionaryStates,
-                )
+                if (activeGuide != null) {
+                    GuideDestination(
+                        guide = activeGuide,
+                        languages = guideLanguages,
+                        download = guideDownload,
+                        environment = environment,
+                        translationLanguage = languageSettings?.translationLanguage,
+                        onFinish = closeGuide,
+                    )
+                } else {
+                    AppScreens(
+                        environment,
+                        controller,
+                        changes,
+                        state,
+                        scope,
+                        progress,
+                        settings,
+                        mastery,
+                        language,
+                        languageSettings,
+                        readingPreferences,
+                        appTheme,
+                        lemmas,
+                        difficulty,
+                        difficultyStates,
+                        dictionaryStates,
+                        onOpenGuide = {
+                            guide?.restart()
+                            guideReopened = true
+                        },
+                    )
+                }
             }
         }
     }
@@ -470,6 +588,7 @@ private fun AppScreens(
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
     dictionaryStates: Map<String, DictionaryUiState>,
+    onOpenGuide: () -> Unit,
 ) {
     // The real back stack (issue #185; docs/design.md §6): the bar and every
     // push move it, and Back walks it. It is a value in state, so a move is a
@@ -512,10 +631,17 @@ private fun AppScreens(
             onBack = { stack = stack.back() },
             onOpenSettings = { stack = stack.replace(Destination.Settings) },
             onMarkFinished = {
-                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markFinished)
+                setFinished(environment, controller, changes, scope, bookId, finished = true)
             },
             onMarkUnfinished = {
-                setFinished(environment, controller, changes, scope, bookId, BookLibrary::markUnfinished)
+                setFinished(environment, controller, changes, scope, bookId, finished = false)
+            },
+            // The book does not stay behind the list: the reader leaves the book
+            // for its words, and Back lands on the Library (issue #280).
+            onSeeWords = {
+                stack = stack.replace(
+                    Destination.Vocabulary(VocabularyBook(bookId, current.session.book.title)),
+                )
             },
         )
     } else {
@@ -534,6 +660,7 @@ private fun AppScreens(
             onOpenVault = { stack = stack.push(Destination.VaultSettings) },
             onOpenAttribution = { stack = stack.push(Destination.Attribution) },
             onOpenAbout = { stack = stack.push(Destination.About) },
+            onOpenGuide = onOpenGuide,
             onOpenSource = { environment.openUrl(LEKTO_SOURCE_URL) },
             onSelectAppLanguage = { code -> settings.languageSettings?.chooseAppLanguage(code) },
             onExportVault = { settings.vaultTransfer?.export() },
@@ -619,13 +746,21 @@ private fun AppScreens(
                     onBack = { stack = stack.back() },
                 )
 
-                Destination.Vocabulary -> VocabularyDestination(mastery, environment, languageSettings, scope)
+                is Destination.Vocabulary -> VocabularyDestination(
+                    mastery = mastery,
+                    environment = environment,
+                    languageSettings = languageSettings,
+                    scope = scope,
+                    book = current.book,
+                    onClearBook = { stack = stack.replace(Destination.Vocabulary()) },
+                )
 
                 Destination.Library -> LibraryDestination(
                     environment,
                     controller,
                     scope,
                     libraryState,
+                    levelLine = levelLine(libraryState, mastery),
                     onOpen = { session -> stack = stack.push(Destination.Reading(session)) },
                 )
 
@@ -633,6 +768,107 @@ private fun AppScreens(
                 is Destination.Reading -> Unit
             }
         }
+    }
+}
+
+/**
+ * The first-launch guide above the shell (issue #277): the real reader's page and
+ * lookup sheet over the sample, with the guide's own frame. It sits inside the
+ * app's theme and text provider, so it paints and reads exactly like every other
+ * screen.
+ *
+ * The desktop keys are the guide's: `Escape` is `Skip` and the two arrows page the
+ * screens (left back, right forward), through the same calls the controls make.
+ * `Back` on Android is `Skip` too, so a phone reader can leave the guide the way
+ * they leave any screen. The page's document is memoised on the band and the beat,
+ * so a band choice repaints it at once with no transition.
+ */
+@Suppress("LongParameterList", "LongMethod") // The guide's independent inputs and its one wiring.
+@Composable
+private fun GuideDestination(
+    guide: GuideController,
+    languages: List<OfferedLanguage>,
+    download: GuideDownloadController?,
+    environment: AppEnvironment,
+    translationLanguage: String?,
+    onFinish: () -> Unit,
+) {
+    val state = guide.state
+    val sample = state.sample
+    val scope = rememberCoroutineScope()
+    // The guide's speaker is a demonstration: a spoken word needs no receipt, and
+    // the guide carries no line for a missing voice.
+    val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { }
+    val document = remember(sample, state.band, state.plain, state.savedKey, state.savedLevel) {
+        val saved = state.savedKey?.let { key -> state.savedLevel?.let { level -> key to level } }
+        sample?.let { chosen -> guideDocument(chosen, state.band, state.plain, environment.segmenter, saved = saved) }
+    }
+    val notes = remember(sample, state.band, translationLanguage) {
+        sample?.let { chosen -> guideNotes(chosen, state.band, environment.segmenter, translationLanguage) }.orEmpty()
+    }
+    val keys = remember { FocusRequester() }
+    LaunchedEffect(state.lookupOpen) { if (!state.lookupOpen) keys.requestFocus() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .focusRequester(keys)
+            .focusable()
+            .onPreviewKeyEvent { event -> guideKey(event, guide, onFinish) },
+    ) {
+        GuideScreen(
+            state = state,
+            languages = languages,
+            document = document,
+            notes = notes,
+            download = download?.state ?: GuideDownloadUiState(),
+            translationLanguage = translationLanguage,
+            actions = GuideActions(
+                onSelectLanguage = guide::selectLanguage,
+                onContinue = guide::advance,
+                onTapWord = guide::tapWord,
+                onDismissLookup = guide::dismissLookup,
+                onSaveWord = guide::save,
+                onChooseBand = guide::chooseBand,
+                onBack = guide::back,
+                onSkip = onFinish,
+                onFinish = {
+                    guide.startReading()
+                    onFinish()
+                },
+                onStopDownload = { download?.stop() },
+                onRetryDownload = { download?.retry() },
+                onResumeDownload = { download?.resume() },
+                onOpenSettings = {},
+                // The sheet speaks the word it shows: it hands over that word's
+                // surface and language, so the demonstrated note is never spoken in
+                // another word's place (issue #277's sixth review).
+                onSpeakWord = speak,
+            ),
+        )
+    }
+    PlatformBackHandler(enabled = true) { onFinish() }
+}
+
+/** The guide's desktop keys: `Escape` leaves, the arrows page the screens (issue #277). */
+private fun guideKey(event: KeyEvent, guide: GuideController, onFinish: () -> Unit): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+    return when (event.key) {
+        Key.Escape -> {
+            onFinish()
+            true
+        }
+
+        Key.DirectionRight -> {
+            guide.advance()
+            true
+        }
+
+        Key.DirectionLeft -> {
+            guide.back()
+            true
+        }
+
+        else -> false
     }
 }
 
@@ -656,10 +892,15 @@ private fun ReaderDestination(
     onOpenSettings: () -> Unit,
     onMarkFinished: () -> Unit,
     onMarkUnfinished: () -> Unit,
+    onSeeWords: () -> Unit,
 ) {
     var selection by remember { mutableStateOf<WordSelection?>(null) }
     var phrase by remember { mutableStateOf<PhraseSelection?>(null) }
     var speech by remember { mutableStateOf<SpeechResult?>(null) }
+    // The last save's outcome (issue #279): a refused vault write is stated by the
+    // footer instead of vanishing as an unhandled coroutine failure. Cleared when
+    // another word is tapped and before each new attempt.
+    var saveFailed by remember { mutableStateOf(false) }
     val speak = speakHandler(environment.pronouncer, scope, environment.dispatcher) { result -> speech = result }
     val wordMastery = mastery?.mastery ?: environment.mastery
     val translation = rememberTranslation(environment, scope, languageSettings)
@@ -670,9 +911,16 @@ private fun ReaderDestination(
         pronunciation = pronunciationFor(selection, speech, speak),
         vocabulary = VocabularyPanel(
             entry = selection?.let { selected -> mastery?.entryFor(selected.tap.token.key) },
-            onSave = { level -> selection?.let { chosen -> saveWord(mastery, scope, environment, chosen, level) } },
-            defaultLevel = selection?.let { selected -> mastery?.freshSaveLevel(selected.tap.token.key) }
-                ?: MasteryLevel.RECOGNIZED,
+            onSave = { level ->
+                selection?.let { chosen ->
+                    saveFailed = false
+                    saveWord(mastery, scope, environment, chosen, level, session.book.id) { landed ->
+                        saveFailed = !landed
+                    }
+                }
+            },
+            suggestedLevel = selection?.let { selected -> mastery?.freshSaveLevel(selected.tap.token.key) },
+            saveFailed = saveFailed,
         ),
         translation = translation.state,
         translationLanguage = chosenLanguage,
@@ -682,6 +930,7 @@ private fun ReaderDestination(
             translation.dismiss()
             selection = WordSelection(tap, result)
             speech = null
+            saveFailed = false
         },
         onPhraseSelected = { chosen ->
             selection = null
@@ -705,9 +954,11 @@ private fun ReaderDestination(
         lemmas = lemmas,
         lookup = lookup,
         readingPreferences = readingPreferences,
+        bookWords = mastery?.let { controller -> BookWords.of(controller.all(), session.book.id) },
         onBack = onBack,
         onMarkFinished = onMarkFinished,
         onMarkUnfinished = onMarkUnfinished,
+        onSeeWords = onSeeWords,
         onPositionChange = { offset ->
             progress.record(ReadingPosition(session.book.id, offset), session.text.blocks)
         },
@@ -727,8 +978,11 @@ private fun pronunciationFor(
 /**
  * Saves the word behind [selection] at [level] (issue #22): the entry carries the
  * token's identity — the lemma when the dictionary knew one — its translation
- * and context sentence, so an inflected form updates its lemma's entry. The vault
- * write is blocking, so it runs on the environment's dispatcher.
+ * and context sentence, so an inflected form updates its lemma's entry. [bookId]
+ * is the book being read, which the entry remembers as a book it was saved from
+ * (issue #280; ADR-0050). The vault write is blocking, so it runs on the
+ * environment's dispatcher, and its outcome reaches [onOutcome] on the
+ * composition's thread so the footer can state a refusal (issue #279).
  */
 @Suppress("LongParameterList") // The save's inputs are the reader's own pieces; a bundle would only hide that.
 private fun saveWord(
@@ -737,16 +991,21 @@ private fun saveWord(
     environment: AppEnvironment,
     selection: WordSelection,
     level: MasteryLevel,
+    bookId: String,
+    onOutcome: (Boolean) -> Unit,
 ) {
     mastery ?: return
-    val entry = VocabularyEntry(
+    val entry = VocabularyEntry.saved(
         key = selection.tap.token.key,
         surface = selection.tap.token.surface,
         translation = selection.result.firstGloss(),
         contextSentence = selection.tap.contextSentence,
         mastery = level,
     )
-    scope.launch { withContext(environment.dispatcher) { mastery.save(entry) } }
+    scope.launch {
+        val landed = withContext(environment.dispatcher) { mastery.save(entry, bookId) }
+        onOutcome(landed)
+    }
 }
 
 /**
@@ -795,6 +1054,7 @@ private fun LibraryDestination(
     controller: LibraryController,
     scope: CoroutineScope,
     state: LibraryUiState,
+    levelLine: AppMessage?,
     onOpen: (ReadingSession) -> Unit,
 ) {
     LibraryScreen(
@@ -802,16 +1062,35 @@ private fun LibraryDestination(
         actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
         covers = remember(environment.library) { LibraryBookCovers(environment.library) },
         snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
+        levelLine = levelLine,
+        modifier = Modifier.fillMaxSize(),
     )
 }
 
 /**
- * The vocabulary list destination (issue #23; the level sheet #178): the reader's
- * live vocabulary, the search query the user has typed, the entry whose level
- * sheet is open, and the delete that removes an entry from the vault. The query
- * and the open word are local to the screen; the writes are blocking vault writes,
- * so they run on the environment's dispatcher, and the reader recolours through
- * the controller's bumped revision.
+ * The shelf's "level not set" reminder (issue #277): after the guide, the sample
+ * stays on the shelf with no **Reader level**, so the shelf says where the level
+ * is set and the line goes when it exists. A shelf with no sample has no line:
+ * there is no language whose level it could name.
+ */
+private fun levelLine(state: LibraryUiState, mastery: MasteryController?): AppMessage? {
+    val language = state.sample?.book?.language ?: return null
+    return if (mastery?.levelFor(language) == null) AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET) else null
+}
+
+/**
+ * The vocabulary list destination (issue #23; the level sheet #178; the book
+ * filter #280): the reader's live vocabulary, the search query the user has
+ * typed, the entry whose level sheet is open, and the delete that removes an
+ * entry from the vault. The query, the book and the open word are local to the
+ * screen; the writes are blocking vault writes, so they run on the environment's
+ * dispatcher, and the reader recolours through the controller's bumped revision.
+ *
+ * The order is the controller's recently-modified one, frozen when the screen
+ * opens ([VocabularyOrder]): a level change rewrites the word's record but never
+ * reorders the rows under the reader. [book] is the book `See the words` came
+ * from; its narrowing is view state that never reaches the vault, and the count
+ * beside the title stays the whole vocabulary.
  *
  * The translation each row shows is derived from the installed **Dictionary
  * packs** (issue #67; ADR-0032), not the one the entry froze at save time, so the
@@ -829,13 +1108,18 @@ private fun VocabularyDestination(
     environment: AppEnvironment,
     languageSettings: LanguageSettingsController?,
     scope: CoroutineScope,
+    book: VocabularyBook?,
+    onClearBook: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var masteryLevel by remember { mutableStateOf<MasteryLevel?>(null) }
     var openKey by remember { mutableStateOf<WordKey?>(null) }
     val all = mastery?.all().orEmpty()
-    val derived = derivedTranslations(all, languageSettings?.translationLanguage, environment)
-    val shown = all.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
+    // Taken once, when the screen opens: leaving and returning takes a new one.
+    val openingOrder = remember { VocabularyOrder(all) }
+    val recent = openingOrder.apply(all)
+    val derived = derivedTranslations(recent, languageSettings?.translationLanguage, environment)
+    val shown = recent.map { entry -> entry.copy(translation = derived[entry.key] ?: entry.translation) }
     // The open word is resolved from the whole list, not the narrowed one, so a
     // filter that excludes the chosen level cannot close the sheet.
     val open = openKey?.let { key -> shown.firstOrNull { entry -> entry.key == key } }
@@ -844,11 +1128,12 @@ private fun VocabularyDestination(
     // than leaving a stale one over the list.
     LaunchedEffect(openKey, vanished) { if (vanished) openKey = null }
 
-    val state = vocabularyState(shown, query, masteryLevel, all.size)
+    val state = vocabularyState(filterByBook(shown, book?.id), query, masteryLevel, all.size, book)
     val actions = VocabularyActions(
         onSearch = { text -> query = text },
         onFilter = { chosen -> masteryLevel = chosen },
         onClearSearch = { query = "" },
+        onClearBook = onClearBook,
         onDelete = { entry ->
             scope.launch { withContext(environment.dispatcher) { mastery?.delete(entry.key) } }
         },
@@ -888,13 +1173,16 @@ private fun raiseLevel(
 /**
  * The list's state: the search and the level filter applied to [shown], and the
  * vocabulary's own count beside the title — the count is not the narrowed list's
- * (docs/design.md §7.4).
+ * (docs/design.md §7.4). [book] is the book the list was reached from, carried so
+ * the screen can name it and widen back; [shown] is already narrowed to it.
  */
+@Suppress("LongParameterList") // The list's filters and count are independent inputs.
 private fun vocabularyState(
     shown: List<VocabularyEntry>,
     query: String,
     masteryLevel: MasteryLevel?,
     total: Int,
+    book: VocabularyBook?,
 ): VocabularyUiState = if (total == 0) {
     VocabularyUiState.Empty
 } else {
@@ -903,6 +1191,7 @@ private fun vocabularyState(
         query = query,
         masteryLevel = masteryLevel,
         total = total,
+        book = book,
     )
 }
 
@@ -1032,7 +1321,12 @@ internal fun speakHandler(
     }
 }
 
-/** The library's actions: import through the platform picker, open a book, dismiss a failure. */
+/**
+ * The library's actions: import through the platform picker, open a book or the
+ * **Sample book**, dismiss a failure, remove the sample. Opening asks the sample
+ * first (issue #278): its identity is not a vault record, so the vault library
+ * cannot answer for it, and everything else is the vault's as before.
+ */
 private fun libraryActions(
     environment: AppEnvironment,
     controller: LibraryController,
@@ -1049,10 +1343,14 @@ private fun libraryActions(
     },
     onOpen = { book ->
         scope.launch {
-            withContext(environment.dispatcher) { environment.library.open(book.id) }?.let(navigation.onOpen)
+            val session = withContext(environment.dispatcher) {
+                environment.samples?.open(book.id) ?: environment.library.open(book.id)
+            }
+            session?.let(navigation.onOpen)
         }
     },
     onDelete = { book -> controller.delete(book.id) },
+    onDismissSample = controller::dismissSample,
     onDismissError = controller::dismissError,
     onSearch = controller::search,
     onClearSearch = controller::clearSearch,
@@ -1070,6 +1368,9 @@ private class LibraryNavigation(val onOpen: (ReadingSession) -> Unit)
  * pushes it, and the Library is re-listed so its filter sees the new state on
  * return. A failed write is swallowed like a failed position save: losing one
  * declaration is better than bringing the reader down.
+ *
+ * The **Sample book** keeps its declaration beside itself (issue #278): it is a
+ * derived fact, so no vault record is written and no sync signal is raised.
  */
 @Suppress("LongParameterList") // The caller's wiring and the fact it records; a bundle would only hide them.
 private fun setFinished(
@@ -1078,11 +1379,20 @@ private fun setFinished(
     changes: LocalChanges,
     scope: CoroutineScope,
     bookId: String,
-    write: (BookLibrary, String) -> Unit,
+    finished: Boolean,
 ) {
     scope.launch {
+        val sampleOwned = withContext(environment.dispatcher) {
+            environment.samples?.markFinished(bookId, finished) == true
+        }
+        if (sampleOwned) {
+            controller.refresh()
+            return@launch
+        }
         runCatching {
-            withContext(environment.dispatcher) { write(environment.library, bookId) }
+            withContext(environment.dispatcher) {
+                if (finished) environment.library.markFinished(bookId) else environment.library.markUnfinished(bookId)
+            }
         }.onSuccess {
             changes.contentChanged()
             controller.refresh()
@@ -1101,9 +1411,11 @@ private fun ReaderSession(
     lemmas: LemmaLookup,
     lookup: Lookup,
     readingPreferences: ReadingPreferencesController?,
+    bookWords: BookWords?,
     onBack: () -> Unit,
     onMarkFinished: () -> Unit,
     onMarkUnfinished: () -> Unit,
+    onSeeWords: () -> Unit,
     onPositionChange: (Int) -> Unit,
 ) {
     // The reader shows the whole book and its chapter list; the chrome carries
@@ -1147,9 +1459,11 @@ private fun ReaderSession(
             onDismissOverlay = if (lookup.hasPanel) lookup.onDismiss else null,
             onMarkFinished = onMarkFinished,
             onMarkUnfinished = onMarkUnfinished,
+            onSeeWords = onSeeWords,
         ),
         overlayHeightPx = if (lookup.selection != null) wordPanelHeightPx else 0,
         initiallyFinished = session.finished != null,
+        bookWords = bookWords,
         // The word or phrase panel is the reader's to place (issue #199): the
         // context column on desktop, the bottom sheet on a phone.
         context = ReaderContext(
@@ -1186,6 +1500,7 @@ private fun LookupOverlays(
             vocabulary = lookup.vocabulary,
             translationLanguage = lookup.translationLanguage,
             openUrl = openUrl,
+            onOpenSettings = lookup.onOpenSettings,
             onDismiss = lookup.onDismiss,
             onPanelHeight = onWordPanelHeight,
             inColumn = inColumn,
@@ -1216,6 +1531,7 @@ private fun LookupPanel(
     vocabulary: VocabularyPanel,
     translationLanguage: String?,
     openUrl: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
     onPanelHeight: (Int) -> Unit,
     inColumn: Boolean,
@@ -1236,6 +1552,7 @@ private fun LookupPanel(
         ),
         pronunciation = pronunciation,
         vocabulary = vocabulary,
+        onOpenSettings = onOpenSettings,
         modifier = modifier.onSizeChanged { size -> onPanelHeight(size.height) },
         inColumn = inColumn,
     )

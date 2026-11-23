@@ -52,4 +52,6 @@ behaviour updates the page(s) named below in the same pull request, the way
 | The LLM provider, API key or Translation shortcut | `llm-provider.md` |
 | The Vault, export/import or syncing to a WebDAV server | `vault-and-sync.md` |
 | Settings, attribution or a common failure | `settings-and-faq.md` |
+| The first-launch guide, its five screens, its sample or its `Skip` | `getting-started.md`, `library.md`, `reading.md`, `word-lookup.md` |
+| The `Guide` row that replays the first launch | `settings-and-faq.md` |
 | First launch or the download links | `getting-started.md`, `index.md`, `desktop.md` |

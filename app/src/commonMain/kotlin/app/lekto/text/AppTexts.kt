@@ -1,6 +1,7 @@
 package app.lekto.text
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryLookup
 import app.lekto.core.dictionary.DictionaryPackState
@@ -61,6 +62,12 @@ class AppTexts internal constructor(
 
     /** A **Mastery level**'s readable name, so the list and filter name it, not only its colour. */
     fun masteryName(level: MasteryLevel): String = this[MASTERY_KEYS.getValue(level)]
+
+    /** A **Reader level**'s readable name (issue #277): the CEFR band the guide offers. */
+    fun bandName(level: CefrLevel): String = this[BAND_KEYS.getValue(level)]
+
+    /** The one line that names what a band reads, beside its name (issue #277). */
+    fun bandLine(level: CefrLevel): String = this[BAND_LINE_KEYS.getValue(level)]
 
     /** An **App theme**'s readable name, so the Appearance screen and Settings name the current one. */
     fun themeName(theme: AppTheme): String = this[THEME_KEYS.getValue(theme)]
@@ -138,6 +145,24 @@ class AppTexts internal constructor(
             MasteryLevel.FAMILIAR to TextKey.MASTERY_FAMILIAR,
             MasteryLevel.LEARNED to TextKey.MASTERY_LEARNED,
             MasteryLevel.KNOWN to TextKey.MASTERY_KNOWN,
+        )
+
+        val BAND_KEYS: Map<CefrLevel, TextKey> = mapOf(
+            CefrLevel.A1 to TextKey.GUIDE_BAND_A1,
+            CefrLevel.A2 to TextKey.GUIDE_BAND_A2,
+            CefrLevel.B1 to TextKey.GUIDE_BAND_B1,
+            CefrLevel.B2 to TextKey.GUIDE_BAND_B2,
+            CefrLevel.C1 to TextKey.GUIDE_BAND_C1,
+            CefrLevel.C2 to TextKey.GUIDE_BAND_C2,
+        )
+
+        val BAND_LINE_KEYS: Map<CefrLevel, TextKey> = mapOf(
+            CefrLevel.A1 to TextKey.GUIDE_BAND_A1_LINE,
+            CefrLevel.A2 to TextKey.GUIDE_BAND_A2_LINE,
+            CefrLevel.B1 to TextKey.GUIDE_BAND_B1_LINE,
+            CefrLevel.B2 to TextKey.GUIDE_BAND_B2_LINE,
+            CefrLevel.C1 to TextKey.GUIDE_BAND_C1_LINE,
+            CefrLevel.C2 to TextKey.GUIDE_BAND_C2_LINE,
         )
 
         val THEME_KEYS: Map<AppTheme, TextKey> = mapOf(

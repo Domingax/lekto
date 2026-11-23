@@ -586,7 +586,11 @@ difficulty table or no dictionary for is refused: the guide must not show a colo
 it cannot compute or a tap it cannot answer. The build fails if a glossary misses a
 word the sample highlights. The catalogue is a **Derived asset** shipped in the app
 under `core/src/commonMain/resources/samples/catalogue.json`; regenerate it when
-the table or any published pack changes, in the same commit. Its languages are
+the table or any published pack changes, in the same commit. The desktop client
+reads it through `ShippedSampleCatalogue` in `core/jvmSharedMain`; an Android app's
+classloader does not see a library's Kotlin resources, so `app/build.gradle.kts`
+packages the same directory with `assets.srcDir` and the Android client reads those
+assets — one copy of the bytes, two ways in. Its languages are
 the embedded roster the guide and the **Languages** surface list
 (`SampleRoster.LANGUAGES` in `core`, issue #298); `CommittedSampleCatalogTest`
 fails if the two drift, so a regenerated catalogue updates the roster in the
@@ -775,7 +779,7 @@ macOS the ICNS.
 
 | Module                  | What it is                                                          |
 | ----------------------- | ------------------------------------------------------------------- |
-| `core`                  | The domain: vault, records, merge, tokenisation, word identity, vocabulary, import and library, sync engine, parsers, the dictionary-pack reader. |
+| `core`                  | The domain: vault, records, merge, tokenisation, word identity, vocabulary, import and library, sync engine, parsers, the dictionary-pack reader, the sample library and the guide's progress store. |
 | `testkit`               | Contract suites and in-memory fakes shared by the other modules' tests. Published as a library so a KMP `commonTest` set can be shared. |
 | `integrations/webdav`   | The first sync driver, isolated from the domain; a JVM (desktop) and an Android target behind one `WebDavTransport` seam (ADR-0026). |
 | `app`                   | The Compose Multiplatform application (Android + desktop).           |

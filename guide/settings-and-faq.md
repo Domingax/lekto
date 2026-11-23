@@ -47,6 +47,10 @@ itself.
 - **LLM provider** — a screen of its own, reached from Settings. Choose a provider,
   enter an API key, load and pick a model, and test the connection. See
   [LLM provider and privacy](/llm-provider).
+- **Guide** — replays the first-launch guide from its first screen, including the
+  language question; the answer replaces the sample your device holds, so the
+  shelf follows the demonstration. The guide itself opens only once, on a device
+  that has no books; this row is the way back to it afterwards.
 - **Attribution** — the licences and sources of the data you download and of the
   icons the app draws.
 - **About** — the version of Lekto you are running, the licence it is released

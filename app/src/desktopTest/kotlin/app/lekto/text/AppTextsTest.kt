@@ -1,5 +1,6 @@
 package app.lekto.text
 
+import app.lekto.core.CefrLevel
 import app.lekto.core.llm.LlmConnectionResult
 import app.lekto.core.secret.SecretStore
 import kotlin.test.Test
@@ -13,6 +14,7 @@ import kotlin.test.assertTrue
  * outcome reads in the chosen language, and a message survives storage so a kept
  * sync outcome still reads after a restart.
  */
+@Suppress("TooManyFunctions") // One case per text contract; the suite is the tables' completeness guard.
 class AppTextsTest {
 
     @Test
@@ -43,6 +45,74 @@ class AppTextsTest {
         assertEquals("Exporter le coffre", appTextsFor("fr")[TextKey.EXPORT_VAULT_TITLE])
         assertEquals("Import a vault", appTextsFor("en")[TextKey.IMPORT_VAULT_TITLE])
         assertEquals("Importer un coffre", appTextsFor("fr")[TextKey.IMPORT_VAULT_TITLE])
+    }
+
+    @Test
+    fun `the guide's language question states the owner's wording in both languages`() {
+        assertEquals(
+            "We prepare the app around your target language. You can add more later.",
+            appTextsFor("en")[TextKey.GUIDE_LANGUAGE_INTRO],
+        )
+        assertEquals(
+            "Nous préparons l'application en fonction de votre langue cible. " +
+                "Vous pourrez en ajouter d'autres plus tard.",
+            appTextsFor("fr")[TextKey.GUIDE_LANGUAGE_INTRO],
+        )
+    }
+
+    /**
+     * The owner's punctuation rule for the guide (issue #277's sixth review): a
+     * main title carries no trailing period — the two questions keep their question
+     * mark — and every sub-line under one carries a period. Both tables answer to
+     * the rule, so a new line cannot reintroduce the inconsistency.
+     */
+    @Test
+    fun `the guide's titles carry no period and its sub-lines do`() {
+        val titles = listOf(
+            TextKey.GUIDE_LANGUAGE_TITLE,
+            TextKey.GUIDE_PAGE_PLAIN_TITLE,
+            TextKey.GUIDE_PAGE_COLOURED_TITLE,
+            TextKey.GUIDE_TAP_TITLE,
+            TextKey.GUIDE_LEVEL_TITLE,
+        )
+        val subLines = listOf(
+            TextKey.GUIDE_LANGUAGE_INTRO,
+            TextKey.GUIDE_PAGE_PLAIN_INTRO,
+            TextKey.GUIDE_PAGE_COLOURED_INTRO,
+            TextKey.GUIDE_TAP_INTRO,
+            TextKey.GUIDE_LEVEL_INTRO,
+            TextKey.GUIDE_LEVEL_NOT_SET,
+        )
+
+        listOf("en", "fr").forEach { language ->
+            val texts = appTextsFor(language)
+            titles.forEach { key ->
+                assertTrue(!texts[key].endsWith("."), "$language title $key carries a trailing period")
+            }
+            subLines.forEach { key ->
+                assertTrue(texts[key].endsWith("."), "$language sub-line $key has no trailing period")
+            }
+            CefrLevel.entries.forEach { level ->
+                assertTrue(
+                    texts.bandLine(level).endsWith("."),
+                    "$language band line for $level has no trailing period",
+                )
+            }
+        }
+    }
+
+    /**
+     * The fifth field pass removed both of the guide's footnotes: the language
+     * question folded its promise into the intro line, and the tap screen's receipt
+     * in the sheet already states what choosing a level does. A key left behind
+     * would be dead text.
+     */
+    @Test
+    fun `the guide's removed footnotes keep no key or text`() {
+        val names = TextKey.entries.map { it.name }
+
+        assertTrue("GUIDE_LANGUAGE_FOOTNOTE" !in names, "the language footnote's promise moved into the intro")
+        assertTrue("GUIDE_TAP_FOOTNOTE" !in names, "the sheet's receipt states the save")
     }
 
     @Test

@@ -85,3 +85,20 @@ is committed with its six maps and glossaries, so a review sees both the input
 change and the produced sample; adding a reading language is a text and its packs;
 and the sample format has its own version handshake, duplicated on the producer and
 consumer sides and kept in step by an architecture test (ADR-0013).
+
+## Update — the sample is materialised, kept and dismissed outside the vault
+
+The language answer materialises the chosen entry under `samples/<language>.json` in
+the **Derived asset** store. The domain identity stays `sample:<language>`, while
+`VaultPaths` rejects `:` in a path segment, so the file name encodes it. The sample's
+reading position and its **Finished** stamp live beside that file in the same derived
+store — never a **Vault** record and never synced — and removing the sample deletes
+them with it. The dismissal is a document of its own (`sampleDismissed`), so a corrupt
+tutorial cannot resurrect a removed sample and a removal cannot replay the **Guide**;
+the guide's progress is a third document (`guide.json`), on ADR-0023's pattern. Saving
+a word from the sample records the sample identity `sample:<language>` in the entry's
+`bookIds` (ADR-0050): a history entry that never resolves to a **Vault** **Book**.
+
+An explicit replay from Settings ▸ Application may re-run the materialisation —
+the answer replaces the device's sample, so the shelf follows the demonstration and
+there is still exactly one sample at any moment.

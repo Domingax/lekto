@@ -265,6 +265,14 @@ neither does a book that names none, so its line is the state alone (`28 %`), wi
 no leading separator and no placeholder word. The format is where a file came from,
 not what a reader chooses a book by, so it leaves the row.
 
+The **Sample book** leads the shelf while it exists: one row above the vault's books, the same plate
+with the language vignette and a small outlined `Sample` mark beside its title, and never more than
+one. It is a **Derived asset** beside the vault, not a book in it, so it is in no count, export or
+sync. Opening it is a normal reading session; the search and the filter narrow the vault's books
+under it and never hide it. A thumb swipes it and a pointer gets its trash, exactly like a book's
+row; both only ask. The confirmation says its files go and the reader's own books and words stay,
+and once removed it never returns, whatever a later build ships.
+
 A book is deleted **from its row or from its block**, and never from a red word that sits on every
 book. On a touch screen a swipe from the trailing edge uncovers `Delete`; with a mouse, the row's
 wash and a trash appear when it is hovered, and a drag does nothing — the gesture is the thumb's
@@ -337,11 +345,16 @@ the reader can continue (ADR-0038). The leading group is hidden when it is empty
 the shelf in one more step, not instead of the filter: the two apply together, so a book the filter
 hides stays hidden by a query that matches it, and `Show all books` clears both (#173, #200).
 
-**States**: an empty vault says what to do and carries the action. A Library whose filter matches
-nothing says why — "All your books are finished." with `Show all books`, or "No books in this
-state." with the same action — and a search with no match names the query back and offers to clear
-it or show all books. Loading shows **skeleton rows**, never the empty message; a failed import is
-a bordered block in the list, with a way to dismiss it.
+**States**: the shelf has one row per vault book and, while it exists, the **Sample book** above
+them. A vault with no book but a sample says what to do in one sentence and leads with the sample
+row; `Import` stays the header's word, because there is a shelf to add to, so the action is not
+repeated. A shelf with no row at all is the empty state: it says what to do and carries its one
+filled action. A materialisation that failed leaves that empty state under one line saying what
+could not be written, never a row pointing at files that are not there. A Library whose filter
+matches nothing says why — "All your books are finished." with `Show all books`, or "No books in
+this state." with the same action — and a search with no match names the query back and offers to
+clear it or show all books. Loading shows **skeleton rows**, never the empty message; a failed
+import is a bordered block in the list, with a way to dismiss it.
 
 ### 7.2 Reader
 
@@ -403,28 +416,42 @@ never moves the reading position. The state hides the reader's chrome; system ba
 returns to the last page, and `Back to Library` leaves for the Library. Reopening a finished book
 opens at the saved position, not on this state.
 
+The state also reports what the book gave the reader: `18 words from this book`, then `5 now
+known`, then the text action `See the words`, which opens the **Vocabulary** narrowed to that
+book. A book with no saved word draws neither line nor action — never `0 words` — and that is
+also what a book read before words remembered their books says. The two numbers are read from
+the vocabulary, so deleting the book leaves them untouched; `See the words` leaves the book for
+the list, and Back from there lands on the **Library**.
+
 ### 7.3 The lookup panel
 
-Raised from the bottom over the reader, never above ~45 % of the height, the page still visible
-and the touched word still washed above it. The page **lifts** under the sheet by just enough to
-clear the word: it is not repaginated, so the page and the **Reading progress** do not move, and
-the top of the page is clipped for as long as the sheet is open — a transient state, not a new page.
-A panel, not an outlined card: square where it joins the bottom edge like the **Aa** panel, the
-surface tone and a hairline inset to the content, and a drag handle marks where it was raised
-from. On desktop it is the context column instead, and closing the word returns the column to the
-chapter list. There the level's name stands above its chips rather than beside them: five chips
-leave no room for a name in the column.
+Raised from the bottom over the reader, never above ~60 % of the height and only as tall as its
+content needs — a one-sense word opens much shorter, a long answer rises to the cap and scrolls
+inside its body — the page still visible and the touched word still washed above it. The page
+**lifts** under the sheet by just enough to clear the word: it is not repaginated, so the page and
+the **Reading progress** do not move, and the top of the page is clipped for as long as the sheet is
+open — a transient state, not a new page. A panel, not an outlined card: square where it joins the
+bottom edge like the **Aa** panel, the surface tone and a hairline inset to the content, and a drag
+handle marks where it was raised from — dragging it down closes the sheet, the gesture the handle
+promises. On desktop it is the context column instead, and closing the word returns the column to
+the chapter list. There the footer's state line stands above its chips rather than beside them: five
+chips leave no room for it in the column.
 
 A **word**: the word in the serif, the **Lemma** it resolved to when the touched form is an
 inflection, its parts of speech and pronunciation, the speaker and the close action; then the
-senses with their translation; then the level; then the external references as a muted line. The
-header and the senses share one scroll, so a short screen never pushes the pinned footer past the
-sheet's edge.
+senses with their translation; then the external references as a muted line at the end of that same
+scroll. The level selector is the only thing pinned below it. The header, the senses and the
+references share one scroll, so a short screen never pushes the pinned level past the sheet's edge,
+and a wrapped reference line can never take height from the definition at rest.
 
 **There is no Save button.** The level (`Mastery`) *is* the save: one tap on a level chip stores the word at
 that level, which is one gesture for one intention. Every chip is filled with its level's colour and
-carries its number; the current one adds an ink ring, and its **name** stands beside the row, so the
-numbers never need a legend.
+carries its number. The footer **states a fact or a suggestion, never an intention**: a word that is not
+saved reads `Not saved` in the muted ink, or `Likely Recognized` in the muted ink when the derived level
+suggests one; a saved word reads `Saved · Recognized` in the ink, and its chip adds an ink ring. A
+suggestion rings no chip, so the numbers never need a legend and a suggestion never reads as a fact. A
+refused write reads `Couldn't save` in the muted ink and the word stays unsaved — there is no toast and no
+undo; a wrong tap is corrected by tapping the right chip, and the line always states the current fact.
 
 A **phrase** is the word panel's sibling on the same shell (issue #211): the phrase in the serif with
 the close icon, then the answer in the body size. **With a provider**, the translation stands first
@@ -439,7 +466,8 @@ There are **no dictionary tabs**. The app has one offline dictionary and four ex
 that leave the app; presenting them as tabs would promise a symmetry that does not exist.
 
 **States**: a missing dictionary still allows the save, and says so
-(`The offline dictionary isn't installed yet.`); a phrase with no provider
+(`The offline dictionary isn't installed yet.`) while offering `Install the offline dictionary`, which
+leaves the book for Settings ▸ Languages; a phrase with no provider
 explains that a phrase needs an AI while a word does not, and offers the settings link; a failure
 is a sentence inside the panel, never a dialogue over the reader.
 
@@ -449,6 +477,16 @@ is a sentence inside the panel, never a dialogue over the reader.
 
 The **count** sits beside the title in the muted ink and counts the vocabulary, not the rows a
 search or a level narrowed the list to.
+
+The list opens on the words the reader last touched: its order is recently modified, read from
+each word's record, and it is frozen while the screen is open, so changing a level never reorders
+the rows under the reader. Leaving and returning sorts again.
+
+**A book's words.** `See the words` on a book's end state opens the list with a chip carrying the
+book's title before the level filters, and the rows narrowed to the words whose history names that
+book. The chip exists only while the list was reached from a book, and tapping it widens the list
+again; its narrowing is view state, never a **Vault** record, and the count beside the title stays
+the whole vocabulary.
 
 A row is the **word in the serif** — it is the word as the book printed it — then its colour-dotted
 level and name, its translation, and the sentence it came from in the muted ink; a hairline parts
@@ -559,9 +597,22 @@ proportions — there is nothing to keep in step. The layer's paper rim (§5) is
 off the Light paper: on the Dark paper the foot is ink on ink, and the rim is the edge that separates
 them. A dark theme that flashes white has a bug, not a style.
 
-The first frame is the shell with the Library's rows **in skeleton**, never a bare logo: the wait
-is a local vault read, and a screen shown for 40 ms is a flicker, which reads as slowness. No
-animation, no tagline, no artificial delay.
+The first frame is **the guide** when the device has not seen it and the **Vault** holds no book, and the shell's Library otherwise. The gate reads two local facts, not a network answer: the `guide.json` progress document and the vault's listing, so the decision is made before the first frame and no skeleton stands in front of it. A device that has seen the guide — or that already has a book, even a device upgraded from a build before the guide existed — opens on the shell with the Library's rows in skeleton, never a bare logo: the wait is a local vault read, and a screen shown for 40 ms is a flicker, which reads as slowness. No animation, no tagline, no artificial delay.
+
+### 7.8 First launch
+
+The guide is a **first session**, not front matter: four screens the reader walks, then the arrival on the shelf. It is built from the surfaces the product already has — the reader's own page and the reader's own lookup sheet — not from drawings of them, so the demonstration cannot drift the first time either changes. The sample is the build's one **Sample book** (ADR-0005, ADR-0049): a **Derived asset**, never a **Vault** record.
+
+1. **The language.** `Which language would you like to read first?` over one row per language of the embedded roster — its code in the muted ink, its name in the body size, a `chevron-right` — with **no preselection** and no spinner. The list is the roster itself, never a network read, so it is complete on the first frame with no connection; it scrolls at 320 dp, and its supporting line says the app is prepared around the target language and that others can be added later. A row tap *selects*: the chosen row carries an ink rule and a wash, and the screen's one way forward is a filled, full-width button, centred and disabled until that choice, which starts the background download on the spot, announced under the list with its published size and a `Stop` (`Resume` after a stop, `Retry` after a failure). `Continue` materialises that language's sample through the **Sample book** seam.
+2. **The page, in two beats.** The sample's best paragraph for the band in an embedded page block — the one whose coloured words cover the most distinct **Mastery level**s, so the page can show one word per level — the reader's own word layer, underline and retained layout, inside the guide's frame and without the reader's page turns, **Aa** panel or chapter chrome — with **no colour at all** first — `Here is a page as you are used to reading it.` — then the same paragraph painted from the sample's own band map at **A1**, so the demonstration carries the most colour: `The more you know, the less colour`, with its one line `Lekto colours words according to how well you know your target language.` Four notes follow, one per highlighted **Mastery level**: the level's chip and number, the word, the level's name and the sample's meaning in the reader's **Translation language**, centred between the page and the way forward so the gap above and the gap below them are the same. A level the sample's paragraph does not colour has no note rather than an invented one. This screen promises no gesture; the notes carry the chips as labels, so nothing invites a tap it cannot answer. No download card sits on this screen.
+3. **The tap.** The reader's **real** lookup sheet, raised over the same page only when the reader taps a word the sample's glossary answers — the demonstrated word carries the selection wash as the natural target, but any glossed word answers and a tap on empty space does nothing. Its meanings come from the sample's glossary, so it answers before any **Dictionary pack** is installed, and the screen's supporting line promises the vocabulary the save feeds. The header carries the word, its part of speech, its pronunciation and the sentence it was tapped in; the footer is the same `Not saved` / `Saved · <level>` line the reader has. One tap on a level saves that word to the real **Vocabulary** and recolours it on the page at once; level 4 reads as normal ink with no highlight. Closing the sheet writes nothing, and a tap outside it dismisses it through the reader's own outside-tap seam.
+4. **Your reading level.** The same embedded page above the six CEFR bands, each with its one line — *Beginner — simple sentences.*, … *Mastery — everything.* — and the chosen one washed with an ink rule. It is the **only** screen that carries the band, and it carries it as the reader's **Reader level**. **A1 is the standing choice from entry**: the page colours at A1, so the selected treatment tells the truth, and `Start reading` writes A1 through the **Languages** surface's own action unless the reader tapped another band, which then becomes the selected and written one. The preview takes whatever the heading, the six bands and the bottom bar leave, so a taller screen shows more of the sample's coloured words, and the action anchors the very bottom in the same place as every other beat's way forward; the whole screen fits one phone without scrolling. `Skip` still writes nothing.
+5. **The arrival.** The shell's own shelf, with the sample as its first row and the **Sample** mark, and the first-run sentence above it. The shelf says nothing about the download: its home is the language question, and the **Languages** surface owns its state from then on. Until a **Reader level** exists, the shelf carries `Your reading level is not set yet. Settings ▸ Languages.`; the line goes the moment the level does, from this guide, the Languages surface or a sync.
+
+**`Skip` sits on every screen**, at the trailing edge of the step bar, and it does not merely close: it lands on the shelf, records the guide as completed, leaves the sample coloured at the default band and the level undeclared. Every screen after the first carries a back chevron at the head of that bar, and a left-to-right swipe or the left arrow does the same; a leftward swipe does nothing, a swipe never advances, and the question — with no previous step — ignores both. On Android the system Back is still `Skip`, on desktop `Escape` is, and the two arrow keys page both directions. The guide opens **once**: a device that has not completed it and whose vault holds no book gets the five screens; a device that has completed it, or that already has a book, gets the `Guide` row in Settings ▸ Application. The document records completion only, so an unfinished guide starts over on the next launch. The Settings row replays from the language question, and the answer replaces the device's sample so the shelf follows the demonstration.
+
+A build whose roster carries **one** language asks nothing: it opens on the page, and the tap screen names the language it reads. The download never gates the demonstration: every screen reads the sample's own colour maps and glossary, so the page, the tap and the band work before, during and after the bytes land. The colours arrive without a transition — there is no motion to reduce — and nothing is lost when the gesture is absent: the selected word is a static wash, not a pulse.
+
 
 ## 8. States and feedback
 
@@ -633,6 +684,11 @@ the page behind it.
   `library/LibraryRow.kt` (issue #208) and the Vocabulary list's in `vocabulary/VocabularyRow.kt`
   (issue #212), whose level sheet and desktop column are `vocabulary/VocabularyLevelSheet.kt`
   (issue #178). A new screen follows §7's shape and §4's spacing.
+- The first-launch guide — `app/src/commonMain/kotlin/app/lekto/guide/`: `GuideScreen` draws
+  the screens from the reader's own page and lookup sheet, `GuideController` owns the flow,
+  `GuideSample` builds that page, its notes and the sheet's answer from the sample's own maps
+  and glossary, `GuideDownloadController` the background download, and `GuideProgressController`
+  the device-local `guide.json` (§7.8; issue #277).
 
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that
@@ -657,7 +713,8 @@ the page behind it.
   panel's values and by the Vocabulary list's level filters, so a chip looks the same wherever it
   chooses something (§7.2, §7.4).
 - The mastery selector — `app/src/commonMain/kotlin/app/lekto/reader/MasterySelector.kt`: the level
-  named beside the five numbered chips, shared by the reader's lookup footer (§7.3) and the
+  named beside the five numbered chips — the caller's line, so the reader's footer states its saved
+  or suggested level there (§7.3) — shared by the reader's lookup footer (§7.3) and the
   Vocabulary list's level sheet (§7.4), so the two never drift into two selectors (#178).
 - The shell, its three sections and the back stack — `app/src/commonMain/kotlin/app/lekto/navigation/`:
   `AppShell` (a bar on a phone, a column beside the screen from 600 dp), `Destination` (§6's places,

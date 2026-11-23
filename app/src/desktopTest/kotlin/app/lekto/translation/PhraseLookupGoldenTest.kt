@@ -105,7 +105,7 @@ private val PAGE_LIFT = 24.dp
 private fun PhraseLookupPreview(connected: Boolean) {
     Box(Modifier.size(width = SHEET_WIDTH, height = SHEET_HEIGHT).background(MaterialTheme.colorScheme.background)) {
         PageBehind()
-        LookupSheet(modifier = Modifier.matchParentSize()) {
+        LookupSheet(modifier = Modifier.matchParentSize(), onDismiss = {}) {
             Column(Modifier.fillMaxWidth()) {
                 PhraseHeader()
                 PreviewDivider()

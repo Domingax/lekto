@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -20,12 +21,19 @@ import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
+import app.lekto.ui.handCursor
 
 /** The minimum column a sense's number occupies, so definitions start on the same line. */
 private val NumberWidth = 24.dp
 
 /** The test tag on a sense's number, so a layout test can read it apart from the level chips. */
 internal fun senseNumberTag(number: Int): String = "lookup-sense-$number"
+
+/** The test tag on the answer itself, so a layout test can prove its room is the definition's. */
+internal const val LOOKUP_ANSWER_TAG: String = "lookup-answer"
+
+/** The test tag on the offline message's way into Settings ▸ Languages. */
+internal const val LOOKUP_INSTALL_TAG: String = "lookup-install-dictionary"
 
 /** The honest outcome of the last pronunciation attempt: a failure is a sentence, success is silent. */
 @Composable
@@ -49,12 +57,18 @@ internal fun SpeechMessage(speech: SpeechResult?) {
     }
 }
 
-/** The offline answer, or the honest message when there is none. */
+/**
+ * The offline answer, or the honest message when there is none. A missing
+ * **Dictionary pack** still leaves a way forward: [onOpenSettings] is the one
+ * quiet action that names where the pack is installed, on the same seam as the
+ * phrase panel's provider prompt (issue #282).
+ */
 @Composable
-internal fun Answer(result: WordLookup) {
+internal fun Answer(result: WordLookup, onOpenSettings: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(LOOKUP_ANSWER_TAG)
             .padding(horizontal = LektoSpacing.InsidePanel, vertical = LektoSpacing.BetweenRows),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
@@ -66,11 +80,25 @@ internal fun Answer(result: WordLookup) {
                 style = MaterialTheme.typography.bodyLarge,
             )
 
-            is WordLookup.Unavailable -> Text(
-                text = LocalAppTexts.current.coreMessage(result.message),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            is WordLookup.Unavailable -> {
+                Text(
+                    text = LocalAppTexts.current.coreMessage(result.message),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                InstallDictionary(onOpenSettings)
+            }
         }
+    }
+}
+
+/** The offline sheet's one quiet action: the door to Settings ▸ Languages, never a download here. */
+@Composable
+private fun InstallDictionary(onOpenSettings: () -> Unit) {
+    TextButton(
+        onClick = onOpenSettings,
+        modifier = Modifier.handCursor().testTag(LOOKUP_INSTALL_TAG),
+    ) {
+        Text(LocalAppTexts.current[TextKey.LOOKUP_INSTALL_DICTIONARY])
     }
 }
 

@@ -1,0 +1,335 @@
+package app.lekto.guide
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.test.ComposeUiTest
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
+import app.lekto.core.CefrLevel
+import app.lekto.core.book.Book
+import app.lekto.core.book.BookFormat
+import app.lekto.core.book.BookProgress
+import app.lekto.core.book.ReadingState
+import app.lekto.core.book.SampleBookRow
+import app.lekto.core.language.sampleRosterLanguages
+import app.lekto.core.sample.Sample
+import app.lekto.dictionary.LOOKUP_PANEL_TAG
+import app.lekto.library.LibraryScreen
+import app.lekto.library.LibraryUiState
+import app.lekto.testkit.WhitespaceTextSegmenter
+import app.lekto.testkit.guideSample
+import app.lekto.text.AppMessage
+import app.lekto.text.LocalAppTexts
+import app.lekto.text.TextKey
+import app.lekto.text.appTextsFor
+import app.lekto.theme.LektoSpacing
+import app.lekto.theme.LektoTheme
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+/** Half a pixel of tolerance for the rounding a layout does at the screen's edge. */
+private const val FIT_SLACK = 0.5f
+
+/** The two screen heights the preview's flexibility is measured between. */
+private const val PHONE_HEIGHT = 640f
+private const val TALL_PHONE_HEIGHT = 800f
+
+/**
+ * The guide at the sizes the ticket names (issue #277): a 320 dp phone, a 360 dp
+ * phone and a 700 × 500 desktop window. Each screen keeps its title, its `Skip`
+ * and its one action reachable, and the rows that do not fit scroll — the
+ * language roster, the four notes, the six bands. This is layout alone; the copy
+ * and the interactions are the semantics lanes' contract, and the planches record
+ * the papers.
+ */
+@OptIn(ExperimentalTestApi::class)
+@Suppress("TooManyFunctions") // One scene per size and stage; the file is the guide's layout matrix.
+class GuideLayoutTest {
+
+    private val texts = appTextsFor("en")
+    private val sample = guideSample()
+
+    @Test
+    fun aNarrowPhoneHoldsEveryScreen() = holdsEveryScreen(width = 320f, height = 640f)
+
+    @Test
+    fun aPhoneHoldsEveryScreen() = holdsEveryScreen(width = 360f, height = 640f)
+
+    @Test
+    fun aSmallDesktopWindowHoldsEveryScreen() = holdsEveryScreen(width = 700f, height = 500f)
+
+    @Test
+    fun theLevelScreenFitsAPhoneWithoutScrolling() = theLevelScreenFits(width = 360f, height = 640f)
+
+    @Test
+    fun theLevelScreenFitsANarrowPhoneWithoutScrolling() = theLevelScreenFits(width = 320f, height = 640f)
+
+    @Test
+    fun thePageNotesSitEvenlyBetweenTheTextAndTheAction() = theNotesRhythm(width = 360f, height = 640f)
+
+    @Test
+    fun theNarrowPhonePageNotesSitEvenlyBetweenTheTextAndTheAction() = theNotesRhythm(width = 320f, height = 640f)
+
+    @Test
+    fun theLevelScreenBreathesWithoutScrolling() = theLevelRhythm(width = 360f, height = 640f)
+
+    @Test
+    fun theNarrowPhoneLevelScreenBreathesWithoutScrolling() = theLevelRhythm(width = 320f, height = 640f)
+
+    @Test
+    fun theLevelPreviewTakesWhateverTheScreenLeaves() {
+        val phone = levelPreviewHeight(width = 360f, height = 640f)
+        val tall = levelPreviewHeight(width = 360f, height = 800f)
+
+        assertEquals(
+            TALL_PHONE_HEIGHT - PHONE_HEIGHT,
+            tall - phone,
+            FIT_SLACK,
+            "the preview takes the extra screen height",
+        )
+    }
+
+    @Test
+    fun theLevelScreensActionAnchorsWhereEveryBeatAnchorsItsWayForward() {
+        var pageBottom = 0f
+        var levelBottom = 0f
+        screen(width = 360f, height = 640f, { PageStage(sample) }) {
+            pageBottom = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot.bottom
+        }
+        screen(width = 360f, height = 640f, { LevelStage(sample) }) {
+            levelBottom = onNodeWithTag(GUIDE_START_READING_TAG).fetchSemanticsNode().boundsInRoot.bottom
+        }
+
+        assertEquals(pageBottom, levelBottom, FIT_SLACK, "the level's action shares the bottom bar")
+    }
+
+    @Test
+    fun everyWaysForwardIsAWideButtonInsideTheScreenEdges() = wideWayForwardButton(width = 360f)
+
+    /** The one filled action fills the screen's width inside the edge insets. */
+    private fun wideWayForwardButton(width: Float) = screen(width = width, height = 640f, { LanguageStage() }) {
+        val button = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot
+        assertEquals(LektoSpacing.ScreenEdge.value, button.left, FIT_SLACK, "the button starts at the screen edge")
+        assertEquals(
+            width - LektoSpacing.ScreenEdge.value,
+            button.right,
+            FIT_SLACK,
+            "the button fills the width inside the screen edge",
+        )
+    }
+
+    /** Every part of the level screen — heading, preview, six bands and the action — is on screen. */
+    private fun theLevelScreenFits(width: Float, height: Float) {
+        screen(width, height, { LevelStage(sample) }) {
+            val tags = listOf(GUIDE_TITLE_TAG, GUIDE_LEVEL_PREVIEW_TAG, GUIDE_START_READING_TAG) +
+                CefrLevel.entries.map(::guideBandTag)
+            tags.forEach { tag -> assertWithin(height, tag) }
+        }
+    }
+
+    /**
+     * The page beat's rhythm (issue #277's fifth review): the notes are no longer
+     * pressed against the action after a tall empty page block. The notes column
+     * sits in the middle between the page's text and the way forward, so the gap
+     * above the notes and the gap below them match within one spacing unit, and the
+     * action still anchors the screen.
+     */
+    private fun theNotesRhythm(width: Float, height: Float) {
+        screen(width, height, { PageStage(sample) }) {
+            val block = onNodeWithTag(GUIDE_PAGE_TAG).fetchSemanticsNode().boundsInRoot
+            val notes = onNodeWithTag(GUIDE_NOTES_TAG).fetchSemanticsNode().boundsInRoot
+            val action = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot
+            val above = notes.top - block.bottom
+            val below = action.top - notes.bottom
+
+            assertTrue(above > 0f, "the text keeps its air: $block / $notes")
+            // The filled button carries Material's touch inset inside its node, so
+            // its measured gap can exceed the layout gap by that inset; one scale
+            // unit absorbs it.
+            assertEquals(
+                above,
+                below,
+                LektoSpacing.BetweenRelatedLines.value + FIT_SLACK,
+                "the notes sit evenly between the text and the action: $above / $below",
+            )
+            assertTrue(
+                below >= LektoSpacing.BetweenBlocks.value - FIT_SLACK,
+                "the notes are not glued to the action: $notes / $action",
+            )
+            assertTrue(action.bottom <= height + FIT_SLACK, "the action anchors the screen: $action")
+        }
+    }
+
+    /**
+     * The level screen's rhythm (issue #277's third and fifth reviews): the preview,
+     * the six bands and the action are separated by units of the scale, the action
+     * anchors the very bottom like every other beat's way forward, and the whole
+     * screen still fits a phone without scrolling.
+     */
+    private fun theLevelRhythm(width: Float, height: Float) {
+        screen(width, height, { LevelStage(sample) }) {
+            val preview = onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).fetchSemanticsNode().boundsInRoot
+            val title = onNodeWithTag(GUIDE_TITLE_TAG).fetchSemanticsNode().boundsInRoot
+            val bands = onNodeWithTag(guideBandTag(CefrLevel.A1)).fetchSemanticsNode().boundsInRoot
+            val lastBand = onNodeWithTag(guideBandTag(CefrLevel.C2)).fetchSemanticsNode().boundsInRoot
+            val action = onNodeWithTag(GUIDE_START_READING_TAG).fetchSemanticsNode().boundsInRoot
+
+            assertTrue(
+                preview.top - title.bottom >= LektoSpacing.InsidePanel.value - FIT_SLACK,
+                "the preview keeps a panel unit under the heading: $title / $preview",
+            )
+            assertEquals(LektoSpacing.BetweenRows.value, bands.top - preview.bottom, FIT_SLACK, "the bands breathe")
+            // The filled button carries Material's touch inset inside its node, so the
+            // layout gap is at least the panel unit the screen asks for.
+            assertTrue(
+                action.top - lastBand.bottom >= LektoSpacing.InsidePanel.value - FIT_SLACK,
+                "the action is a panel unit under the bands: $lastBand / $action",
+            )
+            assertTrue(
+                height - action.bottom <= LektoSpacing.InsideLabelPair.value + FIT_SLACK,
+                "the action anchors the very bottom: $action",
+            )
+        }
+    }
+
+    /** The level preview's height on one screen size, so the flexible middle can be compared. */
+    private fun levelPreviewHeight(width: Float, height: Float): Float {
+        var previewHeight = 0f
+        screen(width, height, { LevelStage(sample) }) {
+            previewHeight = onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).fetchSemanticsNode().boundsInRoot.height
+        }
+        return previewHeight
+    }
+
+    /** Asserts [tag] is displayed and its whole bounds lie inside a [height]-tall screen. */
+    private fun ComposeUiTest.assertWithin(height: Float, tag: String) {
+        onNodeWithTag(tag).assertIsDisplayed()
+        val bounds = onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        assertTrue(bounds.top >= -FIT_SLACK && bounds.bottom <= height + FIT_SLACK, "$tag fits the screen: $bounds")
+    }
+
+    private fun holdsEveryScreen(width: Float, height: Float) {
+        screen(width, height, { LanguageStage() }) {
+            onNodeWithText("Which language would you like to read first?").assertIsDisplayed()
+            onNodeWithTag(GUIDE_SKIP_TAG).assertIsDisplayed()
+            onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG)
+                .performScrollToNode(hasTestTag(guideLanguageRowTag("tr")))
+            onNodeWithTag(guideLanguageRowTag("tr")).assertIsDisplayed()
+            sampleRosterLanguages().forEach { offered ->
+                onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG)
+                    .performScrollToNode(hasTestTag(guideLanguageRowTag(offered.language)))
+                onNodeWithTag(guideLanguageRowTag(offered.language)).assertIsNotSelected()
+            }
+        }
+        screen(width, height, { PageStage(sample) }) {
+            onNodeWithText("The more you know, the less colour").assertIsDisplayed()
+            onNodeWithTag(GUIDE_NOTES_TAG).assertIsDisplayed()
+            onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
+        }
+        screen(width, height, { TapStage(sample) }) {
+            onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+            onNodeWithTag(GUIDE_SKIP_TAG).assertIsDisplayed()
+        }
+        screen(width, height, { LevelStage(sample) }) {
+            onNodeWithTag(guideBandTag(CefrLevel.C2)).assertIsDisplayed()
+            onNodeWithTag(GUIDE_START_READING_TAG).assertIsDisplayed()
+        }
+        screen(width, height, { ArrivalStage() }) {
+            onNodeWithText("A Guide Sample").performScrollTo().assertIsDisplayed()
+            onNodeWithText("Your reading level is not set yet. Settings ▸ Languages.").assertIsDisplayed()
+        }
+    }
+
+    /** One size's scene, with the assertions the surface's own line makes. */
+    private fun screen(
+        width: Float,
+        height: Float,
+        content: @Composable () -> Unit,
+        assertions: ComposeUiTest.() -> Unit,
+    ) = runSkikoComposeUiTest(size = Size(width, height)) {
+        setContent { CompositionLocalProvider(LocalAppTexts provides texts) { LektoTheme { content() } } }
+        assertions()
+    }
+
+    @Composable
+    private fun LanguageStage() {
+        GuideScreen(
+            state = GuideUiState(stage = GuideStage.LANGUAGE),
+            languages = sampleRosterLanguages(),
+            document = null,
+        )
+    }
+
+    @Composable
+    private fun PageStage(sample: Sample) {
+        GuideScreen(
+            state = GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false),
+            languages = sampleRosterLanguages(),
+            document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, WhitespaceTextSegmenter()),
+            notes = guideNotes(sample, GUIDE_DEFAULT_BAND, WhitespaceTextSegmenter(), "fr"),
+            download = GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
+            translationLanguage = "fr",
+        )
+    }
+
+    @Composable
+    private fun TapStage(sample: Sample) {
+        GuideScreen(
+            state = GuideUiState(
+                stage = GuideStage.TAP,
+                sample = sample,
+                plain = false,
+                lookupOpen = true,
+                tapped = guideNotes(sample, GUIDE_DEFAULT_BAND, WhitespaceTextSegmenter(), "fr").first(),
+            ),
+            languages = sampleRosterLanguages(),
+            document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, WhitespaceTextSegmenter()),
+            notes = guideNotes(sample, GUIDE_DEFAULT_BAND, WhitespaceTextSegmenter(), "fr"),
+            translationLanguage = "fr",
+        )
+    }
+
+    @Composable
+    private fun LevelStage(sample: Sample) {
+        GuideScreen(
+            state = GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false),
+            languages = sampleRosterLanguages(),
+            document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, WhitespaceTextSegmenter()),
+            download = GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
+            translationLanguage = "fr",
+        )
+    }
+
+    /** The shelf the guide hands over to: the sample, the level line, and nothing about the download. */
+    @Composable
+    private fun ArrivalStage() {
+        LibraryScreen(
+            state = LibraryUiState(sample = sampleBookRow()),
+            levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+
+    private fun sampleBookRow(): SampleBookRow = SampleBookRow(
+        book = Book(
+            id = Sample.identityOf("en"),
+            title = "A Guide Sample",
+            language = "en",
+            format = BookFormat.TXT,
+            fileName = "sample-en.txt",
+        ),
+        progress = BookProgress.NotStarted,
+        state = ReadingState.UNREAD,
+    )
+}

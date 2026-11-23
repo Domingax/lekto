@@ -1,5 +1,6 @@
 package app.lekto.difficulty
 
+import app.lekto.core.dictionary.PackDownloader
 import app.lekto.core.difficulty.DifficultyInstaller
 import app.lekto.core.difficulty.DifficultyState
 import app.lekto.core.language.OfferedArtifact
@@ -10,14 +11,21 @@ import app.lekto.testkit.InMemoryVaultFileSystem
 import app.lekto.testkit.MISMATCHED_SHA256
 import app.lekto.testkit.testOfferedArtifact
 import app.lekto.text.AppMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -29,7 +37,7 @@ import kotlin.test.assertTrue
  * driven by virtual time rather than a wall clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("TooManyFunctions") // One behaviour, one test; splitting the class hides the controller's contract.
+@Suppress("TooManyFunctions", "MagicNumber") // One behaviour per test; the sizes and waits are parameters.
 class DifficultyControllerTest {
 
     private val derived = DerivedAssetStore(InMemoryVaultFileSystem())
@@ -176,6 +184,50 @@ class DifficultyControllerTest {
         advanceUntilIdle()
 
         assertEquals(1, files.getValue("en").downloads)
+    }
+
+    @Suppress("InjectDispatcher") // The blocking download must run on a real thread, not the test's virtual one.
+    @Test
+    fun `stopping a download cancels it and clears the installing flag`() = runBlocking {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val databases = FakeDifficultyFiles(derived, "en")
+        val services = DifficultyServices { language ->
+            DifficultyInstaller(
+                derived = derived,
+                downloader = PackDownloader { _, _, _ ->
+                    started.countDown()
+                    release.await()
+                },
+                databases = databases,
+                language = language,
+            )
+        }
+        val controller = DifficultyController(
+            services,
+            Dispatchers.IO,
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        )
+
+        controller.install("en", artifact("en"))
+        assertTrue(started.await(5, TimeUnit.SECONDS), "the download did not start")
+        controller.stop("en")
+        release.countDown()
+
+        assertFalse(controller.states.value.getValue("en").installing, "a stopped download is not still running")
+        assertTrue(controller.states.value.getValue("en").status is DifficultyState.NotInstalled)
+    }
+
+    @Test
+    fun `a stopped download never reaches the reader`() = runTest {
+        val controller = controller()
+
+        controller.install("en", artifact("en"))
+        controller.stop("en")
+        advanceUntilIdle()
+
+        assertEquals(0, files.getValue("en").downloads, "the cancelled work must not download after the stop")
+        assertFalse(controller.states.value.getValue("en").installing)
     }
 
     @Test

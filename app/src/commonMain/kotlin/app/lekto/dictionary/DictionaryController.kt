@@ -6,9 +6,11 @@ import app.lekto.core.language.OfferedArtifact
 import app.lekto.core.language.OfferedLanguage
 import app.lekto.text.AppMessage
 import app.lekto.text.TextKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +44,9 @@ class DictionaryController(
 ) {
 
     private val _states = MutableStateFlow<Map<String, DictionaryUiState>>(emptyMap())
+
+    /** The download each published pair currently has in flight, so a stop can cancel it. */
+    private val downloads = mutableMapOf<String, Job>()
 
     /** Each published pair's pack state, keyed by its manifest artifact name. */
     val states: StateFlow<Map<String, DictionaryUiState>> = _states.asStateFlow()
@@ -77,10 +82,12 @@ class DictionaryController(
         // ever written from the surface's own thread (docs/testing.md, "Deterministic seams").
         val installer = services.installer(readingLanguage, translationLanguage)
         update(artifact.name) { current -> current.copy(installing = true, error = null) }
-        scope.launch {
+        downloads[artifact.name] = scope.launch {
             try {
                 val status = withContext(dispatcher) { installer.install(artifact.url, artifact.sha256) }
                 update(artifact.name) { current -> current.copy(status = status, installing = false) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (failure: Exception) {
                 update(artifact.name) { current ->
                     current.copy(
@@ -90,6 +97,18 @@ class DictionaryController(
                 }
             }
         }
+    }
+
+    /**
+     * Stops [artifact]'s download in flight, if any, and clears its installing
+     * flag at once (issue #277's `Stop`). A download already past the point of no
+     * return may still finish writing its bytes, but the cancelled coroutine never
+     * lands its result, so the surface neither reports a pack the reader stopped
+     * nor claims one is still coming.
+     */
+    fun stop(artifact: String) {
+        downloads.remove(artifact)?.cancel()
+        update(artifact) { current -> current.copy(installing = false, error = null) }
     }
 
     /** Dismisses [artifact]'s current error, so the app stays usable after a failure. */

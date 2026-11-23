@@ -165,6 +165,58 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aHeadingKeepsItsStyleAndCarriesTheWordLayer() {
+        // A heading is the book's structure and keeps its size and weight, but its
+        // words are words: they carry the same mastery spans as any paragraph's.
+        val heading = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("The lantern"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("waits"))),
+            ),
+        )
+
+        val tokens = buildReaderTokens(heading, renderer, styles)
+
+        assertEquals(listOf("The", "lantern", "waits"), tokens.words.map { word -> word.surface })
+        val headingEnd = "The lantern".length
+        val headingStyle = tokens.text.spanStyles.single { span -> span.start == 0 && span.end == headingEnd }.item
+        assertEquals(styles.heading.fontSize, headingStyle.fontSize)
+        assertTrue(
+            tokens.text.spanStyles.any { span ->
+                span.start < headingEnd && span.item.color == styles.mastery.unknown
+            },
+            "the heading's words take a mastery span: ${tokens.text.spanStyles}",
+        )
+    }
+
+    @Test
+    fun aPageOverAHeadingCarriesTheHeadingWordsMastery() {
+        val heading = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("The lantern"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("waits"))),
+            ),
+        )
+        val chapterText = buildChapterText(heading, styles)
+        val page = ReaderPage(0, chapterText.length)
+
+        val tokens = buildPageTokens(chapterText, page, renderer, heading, styles)
+
+        assertEquals(listOf("The", "lantern", "waits"), tokens.words.map { word -> word.surface })
+        val headingEnd = "The lantern".length
+        assertTrue(
+            tokens.text.spanStyles.any { span ->
+                span.start < headingEnd && span.item.color == styles.mastery.unknown
+            },
+            "a page's heading words take their mastery span: ${tokens.text.spanStyles}",
+        )
+    }
+
+    @Test
     fun aHeadingKeepsTheStartEdgeWhileTheBodyIsJustified() {
         // The body's justification is a paragraph style; a heading must opt out
         // of it, or a title that wraps would stretch its first line to the margin.

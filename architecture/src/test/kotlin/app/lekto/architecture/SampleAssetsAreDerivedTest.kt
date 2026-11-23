@@ -31,6 +31,17 @@ class SampleAssetsAreDerivedTest :
                 .shouldBeEmpty()
         }
 
+        test("the sample book is a derived asset, never a vault record") {
+            val sources = RepositoryScanner.scan(root).sources
+                .filter { source -> source.path.contains("/core/book/Sample") }
+
+            sources.shouldNotBeEmpty()
+            sources.flatMap { source -> source.imports }
+                .filter { import -> import.startsWith("app.lekto.core.vault.") }
+                .filterNot { import -> import in DERIVED_SEAM }
+                .shouldBeEmpty()
+        }
+
         test("the vault's export never names a sample") {
             VAULT_EXPORT.forEach { path ->
                 val text = File(root, path).readText().lowercase()
@@ -61,6 +72,19 @@ private fun consumedFormatVersion(root: File): Int {
 }
 
 private const val CATALOGUE: String = "core/src/commonMain/resources/samples/catalogue.json"
+
+/**
+ * The only vault package the sample book may name (issue #278): the derived
+ * store it lives in, the byte seam behind that store, and the codecs it is
+ * written through. Anything else under `app.lekto.core.vault` — a record, the
+ * bundle, the manifest — would put the sample in the **Vault**.
+ */
+private val DERIVED_SEAM = setOf(
+    "app.lekto.core.vault.DerivedAssetStore",
+    "app.lekto.core.vault.InstantIso8601Serializer",
+    "app.lekto.core.vault.VaultCodec",
+    "app.lekto.core.vault.VaultFileSystem",
+)
 
 private const val PRODUCER_FORMAT: String =
     "tools/dictionaries/src/main/kotlin/app/lekto/tools/dictionaries/SampleContent.kt"

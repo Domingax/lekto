@@ -27,6 +27,7 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
+import app.lekto.core.vocabulary.BookWords
 import app.lekto.testkit.WhitespaceTextSegmenter
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -277,6 +278,57 @@ class ReaderScreenSemanticsTest {
     }
 
     @Test
+    fun theEndStateReportsTheWordsTheBookGaveAndHowManyAreKnown() = runComposeUiTest {
+        // The book's two true numbers, read from the vocabulary: how many words
+        // it gave the reader, and how many of those are known (issue #280).
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, bookWords = BookWords(total = 18, known = 5)) }
+        openEndState()
+
+        onNodeWithText("18 words from this book").assertIsDisplayed()
+        onNodeWithText("5 now known").assertIsDisplayed()
+        onNodeWithTag(READER_SEE_WORDS_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theEndStateCountsOneWordInTheSingular() = runComposeUiTest {
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, bookWords = BookWords(total = 1, known = 1)) }
+        openEndState()
+
+        onNodeWithText("1 word from this book").assertIsDisplayed()
+        onNodeWithText("1 now known").assertIsDisplayed()
+    }
+
+    @Test
+    fun aBookWithNoSavedWordDrawsNoWordsLine() = runComposeUiTest {
+        // A book that gave the reader no word says nothing — never `0 words` —
+        // and offers no way into an empty list (issue #280).
+        setContent { Reader(renderer, initialOffset = Int.MAX_VALUE, bookWords = BookWords(total = 0, known = 0)) }
+        openEndState()
+
+        onNodeWithText("words from this book", substring = true).assertDoesNotExist()
+        onNodeWithText("now known", substring = true).assertDoesNotExist()
+        onNodeWithTag(READER_SEE_WORDS_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun seeTheWordsAsksToOpenTheVocabulary() = runComposeUiTest {
+        var opened = false
+        setContent {
+            Reader(
+                renderer,
+                initialOffset = Int.MAX_VALUE,
+                bookWords = BookWords(total = 2, known = 1),
+                onSeeWords = { opened = true },
+            )
+        }
+        openEndState()
+
+        onNodeWithTag(READER_SEE_WORDS_TAG).performClick()
+
+        assertTrue(opened, "the text action opens the book's words")
+    }
+
+    @Test
     fun aPageTurnReportsItsPosition() = runComposeUiTest {
         var reported = -1
         setContent { Reader(renderer, onPositionChange = { offset -> reported = offset }) }
@@ -314,12 +366,14 @@ class ReaderScreenSemanticsTest {
         chapter: ReaderText = SampleChapter.chapter,
         initialOffset: Int = 0,
         initiallyFinished: Boolean = false,
+        bookWords: BookWords? = null,
         onBack: () -> Unit = {},
         onPositionChange: (Int) -> Unit = {},
         onWordTap: (WordTap) -> Unit = {},
         onPhraseSelected: (PhraseSelection) -> Unit = {},
         onMarkFinished: () -> Unit = {},
         onMarkUnfinished: () -> Unit = {},
+        onSeeWords: () -> Unit = {},
     ) {
         MaterialTheme {
             ReaderScreen(
@@ -332,8 +386,10 @@ class ReaderScreenSemanticsTest {
                     onPositionChange = onPositionChange,
                     onMarkFinished = onMarkFinished,
                     onMarkUnfinished = onMarkUnfinished,
+                    onSeeWords = onSeeWords,
                 ),
                 initiallyFinished = initiallyFinished,
+                bookWords = bookWords,
             )
         }
     }
@@ -355,12 +411,14 @@ private fun ComposeUiTest.progressPercent(): Int {
         ?: error("no percentage in the position: $text")
 }
 
-/** The first word link's centre, in the reader page's coordinates. */
+/**
+ * The first word's centre, in the reader page's coordinates: a few points inside
+ * the text's first line, which starts with the first word.
+ */
 @OptIn(ExperimentalTestApi::class)
 @Suppress("MagicNumber") // A few points into the text's first line.
 private fun ComposeUiTest.firstWordTapPoint(): Offset {
     val page = onNodeWithTag(READER_PAGE_TAG).fetchSemanticsNode().boundsInRoot
     val text = onNodeWithTag(READER_PAGE_TEXT_TAG).fetchSemanticsNode().boundsInRoot
-    // A few points inside the text's first line, which starts with the first word.
     return Offset(text.left - page.left + 8f, text.top - page.top + 8f)
 }

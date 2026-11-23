@@ -20,6 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.dictionary.DictionaryEntry
@@ -29,6 +33,7 @@ import app.lekto.core.dictionary.WordLookup
 import app.lekto.core.speech.SpeechResult
 import app.lekto.core.vocabulary.VocabularyEntry
 import app.lekto.reader.MasterySelector
+import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
 import app.lekto.theme.LektoSpacing
@@ -49,7 +54,7 @@ internal const val PRONOUNCE_TAG: String = "lookup-pronounce"
 /** The test tag on the sheet's close action. */
 internal const val LOOKUP_CLOSE_TAG: String = "lookup-close"
 
-/** The test tag on the current level's name and label, so a layout test can compare it with the chips. */
+/** The test tag on the footer's state line, so a layout test can compare it with the chips. */
 internal const val LOOKUP_LEVEL_TAG: String = "lookup-level"
 
 /** The test tag on the sheet itself, so a layout test can read how much of the screen it takes. */
@@ -69,19 +74,24 @@ private val ReferenceGap = 4.dp
 data class Pronunciation(val onSpeak: () -> Unit, val result: SpeechResult? = null)
 
 /**
- * The lookup panel's vocabulary controls (issue #22): the saved [entry] for the
- * tapped word (`null` until it is saved) and the [onSave] that saves it or moves
- * it to another level. [defaultLevel] is the level a fresh save starts at, so
- * the footer names a level before the word is saved; one tap on a level chip
- * saves at that level (issue #210).
+ * The lookup panel's vocabulary controls (issues #22 and #279): the saved [entry]
+ * for the tapped word (`null` until it is saved), the [onSave] that saves it or
+ * moves it to another level, the [suggestedLevel] a fresh save would start at,
+ * and whether the last write [saveFailed]. One tap on a level chip saves at that
+ * level (issue #210).
+ *
+ * The footer states a fact or a suggestion, never an intention: the saved level
+ * is a fact, the suggested one is only likely, and neither is a selection until
+ * the vault holds the entry.
  */
 data class VocabularyPanel(
     val entry: VocabularyEntry?,
     val onSave: (MasteryLevel) -> Unit,
-    val defaultLevel: MasteryLevel = MasteryLevel.RECOGNIZED,
+    val suggestedLevel: MasteryLevel? = null,
+    val saveFailed: Boolean = false,
 ) {
-    /** The level the selector marks: the saved one, or the fresh default. */
-    val level: MasteryLevel get() = entry?.mastery ?: defaultLevel
+    /** The level the word is saved at, or `null` while it is not — the fact the footer states. */
+    val savedLevel: MasteryLevel? get() = entry?.mastery
 }
 
 /**
@@ -104,14 +114,19 @@ data class WordLookupActions(val onOpenShortcut: (DictionaryShortcut) -> Unit, v
  * screen, so the page stays visible and the touched word stays washed above it.
  * Its header is the word in the serif with its part of speech and pronunciation,
  * the speaker and the close as icons; its body lists the senses, each with its
- * translation; its
- * footer names the level and carries the five chips. **There is no Save button**:
- * a level *is* the save, one tap for one intention, and the reader's colour
- * updating is the only confirmation.
+ * translation, then the external references as last line of the same scroll; its
+ * footer **states the word's state** — `Saved · <level>` once it
+ * is stored, `Likely <level>` or `Not saved` before, `Couldn't save` after a
+ * refused write — and carries the five chips (issue #279). **There is no Save
+ * button**: a level *is* the save, one tap for one intention, and the line
+ * updating is the receipt.
  *
  * The sheet swallows taps that land on it, so only a tap truly outside it — which
  * its [app.lekto.ui.DismissScrim] handles — dismisses it; a tap on the reader
- * behind it then never turns the page or opens another lookup.
+ * behind it then never turns the page or opens another lookup. A missing pack is
+ * never a dead end: the offline message carries [onOpenSettings] as one quiet
+ * `Install the offline dictionary` action, which leaves the book for Settings
+ * ▸ Languages (issue #282).
  */
 @Suppress("LongParameterList") // The panel's inputs are independent; a bundle would only hide that.
 @Composable
@@ -122,6 +137,8 @@ fun WordLookupPanel(
     actions: WordLookupActions,
     pronunciation: Pronunciation,
     vocabulary: VocabularyPanel = VocabularyPanel(entry = null, onSave = {}),
+    context: String? = null,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
     inColumn: Boolean = false,
 ) {
@@ -129,31 +146,67 @@ fun WordLookupPanel(
         modifier = modifier,
         sheetModifier = Modifier.testTag(LOOKUP_PANEL_TAG),
         inColumn = inColumn,
+        onDismiss = actions.onDismiss,
     ) {
-        SheetContent(term, result, pronunciation, actions.onDismiss)
-        Footer(shortcuts, actions.onOpenShortcut, vocabulary, inColumn)
+        SheetContent(
+            term,
+            result,
+            pronunciation,
+            shortcuts,
+            context,
+            actions.onOpenShortcut,
+            actions.onDismiss,
+            onOpenSettings,
+        )
+        Footer(vocabulary, inColumn)
     }
 }
 
 /**
- * The header and the answer, in one scroll: on a phone the sheet fits them under
- * the cap, and on a short screen — a landscape phone — the header scrolls with
- * the senses rather than pushing the pinned footer past the edge. The footer
- * stays, so the level and the references are always reachable.
+ * The header, the answer and the references, in one scroll: on a phone the sheet
+ * fits them under the cap, and on a short screen — a landscape phone — the header
+ * scrolls with the senses rather than pushing the pinned footer past the edge. The
+ * references come last, after the answer, so a long reference line can never take
+ * height from the definition at rest (issue #282). The footer stays, so the level
+ * is always reachable.
  */
+@Suppress("LongParameterList") // The answer, its references and the ways out: independent inputs.
 @Composable
 private fun ColumnScope.SheetContent(
     term: String,
     result: WordLookup,
     pronunciation: Pronunciation,
+    shortcuts: List<DictionaryShortcut>,
+    context: String?,
+    onOpenShortcut: (DictionaryShortcut) -> Unit,
     onDismiss: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
         SheetHeader(term, result, pronunciation, onDismiss)
+        ContextLine(context)
         SheetDivider()
         SpeechMessage(pronunciation.result)
-        Answer(result)
+        Answer(result, onOpenSettings)
+        References(shortcuts, onOpenShortcut)
     }
+}
+
+/**
+ * The sentence the word was tapped in, when the host knows it (issue #277's tap
+ * screen): muted, under the headword and above the answer, so the meaning is read
+ * against the page it came from. The reader's own sheet passes nothing, because
+ * the page is already behind it.
+ */
+@Composable
+private fun ContextLine(context: String?) {
+    if (context.isNullOrBlank()) return
+    Text(
+        text = context,
+        style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LektoSpacing.InsidePanel),
+    )
 }
 
 /**
@@ -204,40 +257,78 @@ private fun Meta(entries: List<DictionaryEntry>) {
 }
 
 /**
- * The pinned footer: the level that saves, then the external references as one
- * muted line (docs/design.md §7.3). The level's **name** stands beside the chips,
- * so the numbers never need a legend, and one tap on a chip stores the word at
- * that level. In the fixed footer the two stay reachable however long the senses
- * run.
+ * The pinned footer: the word's state and the level that saves (docs/design.md
+ * §7.3). The state line names the saved level as a fact, the suggested one as
+ * only likely, and a refused write as a failure — so one tap on a chip stores the
+ * word and the footer states what happened (issue #279). The footer holds only
+ * that selector: the external references scroll with the answer above it, so no
+ * wrapped reference line can take height from the definition (issue #282).
  *
- * In the context column there is no room for the name beside five chips (issue
- * #199), so it stands above them: the same two blocks, stacked, rather than a
- * name broken mid-word.
+ * In the context column there is no room for the line beside five chips (issue
+ * #199), so it stands above them: the same blocks, stacked, rather than a line
+ * broken mid-word.
  */
 @Composable
-private fun Footer(
-    shortcuts: List<DictionaryShortcut>,
-    onOpenShortcut: (DictionaryShortcut) -> Unit,
-    vocabulary: VocabularyPanel,
-    inColumn: Boolean,
-) {
+private fun Footer(vocabulary: VocabularyPanel, inColumn: Boolean) {
     SheetDivider()
     MasterySelector(
-        level = vocabulary.level,
+        level = vocabulary.savedLevel,
         onSelect = vocabulary.onSave,
         chipTag = ::masteryTag,
         levelTag = LOOKUP_LEVEL_TAG,
         modifier = Modifier.padding(horizontal = LektoSpacing.InsidePanel),
         stacked = inColumn,
+        name = { StateLine(vocabulary) },
     )
-    References(shortcuts, onOpenShortcut)
+}
+
+/**
+ * The footer's sentence: `Saved · <level>` in the ink once the vault holds the
+ * word, `Couldn't save` after a refused write, `Likely <level>` for a suggestion,
+ * and `Not saved` when there is none. A suggestion is never marked like a fact,
+ * so the level is muted until it is true.
+ *
+ * The line changes under the reader's finger, so it is a **polite live region**:
+ * a screen reader announces the receipt the sighted reader sees (issue #279).
+ */
+@Composable
+private fun StateLine(vocabulary: VocabularyPanel) {
+    val saved = vocabulary.savedLevel
+    Text(
+        text = stateText(vocabulary, saved),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (saved != null && !vocabulary.saveFailed) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
+}
+
+/** The footer's text for [vocabulary]'s state, in the reader's language. */
+@Composable
+private fun stateText(vocabulary: VocabularyPanel, saved: MasteryLevel?): String {
+    val texts = LocalAppTexts.current
+    return when {
+        vocabulary.saveFailed -> texts[TextKey.LOOKUP_STATE_FAILED]
+
+        saved != null -> texts.message(AppMessage.of(TextKey.LOOKUP_STATE_SAVED, texts.masteryName(saved)))
+
+        vocabulary.suggestedLevel != null -> texts.message(
+            AppMessage.of(TextKey.LOOKUP_STATE_LIKELY, texts.masteryName(vocabulary.suggestedLevel)),
+        )
+
+        else -> texts[TextKey.LOOKUP_STATE_NOT_SAVED]
+    }
 }
 
 /**
  * The external references as a single muted line, not four buttons (issue #210):
  * each name is still its own control, so a screen reader and a mouse reach each
  * one, but the row reads as the sentence `WordReference · Reverso · …` the design
- * draws. The line wraps rather than clipping when the names outgrow the sheet.
+ * draws. It closes the scrolling body, below the answer, so its wrapping never
+ * competes with the definition for the sheet's height (issue #282).
  */
 @OptIn(ExperimentalLayoutApi::class) // `FlowRow` wraps a reference line too wide to share one row.
 @Composable

@@ -29,6 +29,8 @@ fun main() {
     preloadSystemFreeType()
     application {
         val library = remember { desktopBookLibrary() }
+        val samples = remember { desktopSampleLibrary() }
+        val guide = remember { desktopGuideProgress() }
         val vocabulary = remember { desktopVocabulary() }
         val readerLevels = remember { desktopReaderLevels() }
         val languageSettings = remember { desktopLanguageSettings() }
@@ -77,6 +79,8 @@ fun main() {
                 AppEnvironment(
                     segmenter = IcuTextSegmenter(),
                     library = library,
+                    samples = samples,
+                    guide = guide,
                     vocabulary = vocabulary,
                     readerLevels = readerLevels,
                     languageSettings = languageSettings,
