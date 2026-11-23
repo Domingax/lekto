@@ -165,7 +165,7 @@ private val ARRIVAL_PROGRESS = GuideProgress(GUIDE_STEPS, back = false)
  */
 private val PREVIEW_BLOCK_HEIGHT = 56.dp
 
-/** The block's own inset: the reader's capped measure inside the guide's frame. */
+/** The block's own inset: the reader's reading margin inside the guide's frame. */
 private val PAGE_INSET = 24.dp
 
 /** The measure the page block's words may fill: the screen's width less its edges and the block's inset. */
