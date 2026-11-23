@@ -6,7 +6,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -86,13 +85,10 @@ import app.lekto.difficulty.DifficultyServices
 import app.lekto.difficulty.DifficultyUiState
 import app.lekto.guide.GuideActions
 import app.lekto.guide.GuideController
-import app.lekto.guide.GuideDownloadActions
 import app.lekto.guide.GuideDownloadController
-import app.lekto.guide.GuideDownloadPhase
 import app.lekto.guide.GuideDownloadUiState
 import app.lekto.guide.GuideProgressController
 import app.lekto.guide.GuideScreen
-import app.lekto.guide.GuideShelfFooter
 import app.lekto.guide.guideDocument
 import app.lekto.guide.guideNotes
 import app.lekto.language.LanguageController
@@ -561,7 +557,6 @@ fun App(
                         difficulty,
                         difficultyStates,
                         dictionaryStates,
-                        guideDownload,
                         onOpenGuide = {
                             guide?.restart()
                             guideReopened = true
@@ -593,7 +588,6 @@ private fun AppScreens(
     difficulty: DifficultyController?,
     difficultyStates: Map<String, DifficultyUiState>,
     dictionaryStates: Map<String, DictionaryUiState>,
-    guideDownload: GuideDownloadController?,
     onOpenGuide: () -> Unit,
 ) {
     // The real back stack (issue #185; docs/design.md §6): the bar and every
@@ -767,10 +761,6 @@ private fun AppScreens(
                     scope,
                     libraryState,
                     levelLine = levelLine(libraryState, mastery),
-                    download = guideDownload?.state ?: GuideDownloadUiState(),
-                    onStopDownload = { guideDownload?.stop() },
-                    onRetryDownload = { guideDownload?.retry() },
-                    onResumeDownload = { guideDownload?.resume() },
                     onOpen = { session -> stack = stack.push(Destination.Reading(session)) },
                 )
 
@@ -1065,38 +1055,16 @@ private fun LibraryDestination(
     scope: CoroutineScope,
     state: LibraryUiState,
     levelLine: AppMessage?,
-    download: GuideDownloadUiState,
-    onStopDownload: () -> Unit,
-    onRetryDownload: () -> Unit,
-    onResumeDownload: () -> Unit,
     onOpen: (ReadingSession) -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        LibraryScreen(
-            state = state,
-            actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
-            covers = remember(environment.library) { LibraryBookCovers(environment.library) },
-            snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
-            levelLine = levelLine,
-            footer = if (download.phase == GuideDownloadPhase.IDLE) {
-                null
-            } else {
-                {
-                    // The shelf's own item, so the download line reads as part of the
-                    // first-run shelf rather than a strip pinned under it (issue #277).
-                    GuideShelfFooter(
-                        download,
-                        GuideDownloadActions(
-                            onStop = onStopDownload,
-                            onRetry = onRetryDownload,
-                            onResume = onResumeDownload,
-                        ),
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
+    LibraryScreen(
+        state = state,
+        actions = libraryActions(environment, controller, scope, LibraryNavigation(onOpen)),
+        covers = remember(environment.library) { LibraryBookCovers(environment.library) },
+        snippets = remember(environment.library) { LibraryBookSnippets(environment.library) },
+        levelLine = levelLine,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 /**

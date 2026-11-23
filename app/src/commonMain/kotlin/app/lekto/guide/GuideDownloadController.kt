@@ -56,9 +56,9 @@ enum class GuideDownloadPhase {
 }
 
 /**
- * What the guide and the shelf say about the background download (issue #277): the
- * phase, the language, the artefacts it covers and their published size, so the
- * line can name the cost before the bytes arrive.
+ * What the guide says about the background download (issue #277): the phase, the
+ * language, the artefacts it covers and their published size, so the line can
+ * name the cost before the bytes arrive.
  */
 data class GuideDownloadUiState(
     val phase: GuideDownloadPhase = GuideDownloadPhase.IDLE,
@@ -104,7 +104,7 @@ class GuideDownloadController(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher),
 ) {
 
-    /** The current phase and what it covers, observed by the guide's line and the shelf's. */
+    /** The current phase and what it covers, observed by the guide's language question. */
     var state by mutableStateOf(GuideDownloadUiState())
         private set
 

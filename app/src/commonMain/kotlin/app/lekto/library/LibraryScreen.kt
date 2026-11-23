@@ -93,9 +93,6 @@ private const val OTHER_BOOKS_KEY: String = "other-books"
 /** The lazy item key of the explanation that stands in for an empty filtered list under the sample. */
 private const val NO_MATCHES_KEY: String = "no-matches"
 
-/** The lazy item key of the caller's footer, under the sample's lines and before the shelf's groups. */
-private const val FOOTER_KEY: String = "shelf-footer"
-
 /** The test tag on the Library's title, so a layout test can find it apart from the shell's bar. */
 internal const val LIBRARY_TITLE_TAG: String = "library-title"
 
@@ -141,11 +138,6 @@ internal sealed interface PendingDelete {
  * block** above it (issue #288); [covers] and [snippets] are the derived assets
  * that block shows, resolved off the main thread so the shelf never waits on a
  * file.
- *
- * [footer] is the caller's line under the sample's own lines (the guide's
- * background download, issue #277): it is a list item, so it scrolls with the
- * shelf and the shelf's row spacing governs it, rather than sitting in a separate
- * strip at the foot of the screen.
  */
 @Composable
 @Suppress("LongParameterList") // The state, its actions, the frame, and the two derived-asset loaders are independent.
@@ -156,7 +148,6 @@ fun LibraryScreen(
     covers: BookCoverLoader = BookCoverLoader.None,
     snippets: BookSnippetLoader = BookSnippetLoader.None,
     levelLine: AppMessage? = null,
-    footer: (@Composable () -> Unit)? = null,
 ) {
     var pending by remember { mutableStateOf<PendingDelete?>(null) }
     val texts = LocalAppTexts.current
@@ -176,7 +167,6 @@ fun LibraryScreen(
                 onDelete = { target -> pending = PendingDelete.VaultBook(target) },
                 onSampleDelete = { pending = PendingDelete.Sample },
                 levelLine = levelLine,
-                footer = footer,
             )
         }
 
@@ -238,7 +228,6 @@ private fun ColumnScope.LibraryBody(
     onDelete: (Book) -> Unit,
     onSampleDelete: () -> Unit,
     levelLine: AppMessage?,
-    footer: (@Composable () -> Unit)?,
 ) {
     when {
         // A shelf being read is not an empty one: skeleton rows say what is
@@ -261,7 +250,6 @@ private fun ColumnScope.LibraryBody(
             onDelete = onDelete,
             onSampleDelete = onSampleDelete,
             levelLine = levelLine,
-            footer = footer,
         )
     }
 }
@@ -388,7 +376,6 @@ private fun ColumnScope.LibraryList(
     onDelete: (Book) -> Unit,
     onSampleDelete: () -> Unit,
     levelLine: AppMessage?,
-    footer: (@Composable () -> Unit)? = null,
 ) {
     val texts = LocalAppTexts.current
     LazyColumn(
@@ -418,9 +405,6 @@ private fun ColumnScope.LibraryList(
                     modifier = Modifier.padding(top = LektoSpacing.BetweenRelatedLines),
                 )
             }
-        }
-        footer?.let { line ->
-            item(key = FOOTER_KEY) { line() }
         }
         if (!state.vaultEmpty && state.visibleBooks.isEmpty()) {
             item(key = NO_MATCHES_KEY) { LibraryNoMatches(state, actions) }

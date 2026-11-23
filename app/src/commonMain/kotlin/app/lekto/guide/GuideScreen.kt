@@ -195,7 +195,8 @@ private class GuideBeat(
  * one filled action anchors the foot of every beat. The page takes the flexible
  * height on its plain beat; on the coloured one the four notes take the space
  * between the text and the action evenly, and on the level screen the preview takes
- * it. The download card appears on the language question and on the arrival only.
+ * it. The download card appears on the language question only: that is the
+ * download's home, and the shelf the guide hands over to says nothing about it.
  * On desktop the arrow keys page the screens and `Escape` is `Skip` (installed by
  * the composition root).
  */

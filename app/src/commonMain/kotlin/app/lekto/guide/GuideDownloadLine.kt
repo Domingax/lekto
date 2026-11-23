@@ -46,9 +46,9 @@ data class GuideDownloadActions(
  * The background download in one block (issue #277): what it fetches, its
  * published size while it runs, and the action its phase offers — `Stop` beside
  * the running line, `Retry` or `Resume` on its own row under the message. It
- * appears on the language question and on the shelf after the arrival, so the
- * reader can always tell whether the table and dictionary are on their way,
- * installed, stopped or failed, and can act on the answer.
+ * appears on the guide's language question, the download's only home, so the
+ * reader can tell whether the table and dictionary are on their way, installed,
+ * stopped or failed, and can act on the answer; the shelf says nothing about it.
  *
  * The failure and stopped actions are separate rows, never a word glued to the
  * end of the sentence: the eye must not read `…votreRéessayer`.
@@ -163,22 +163,3 @@ private fun status(state: GuideDownloadUiState): String {
 private fun downloadingStatus(state: GuideDownloadUiState, texts: AppTexts): String = state.sizeBytes?.let { bytes ->
     texts.message(AppMessage.of(TextKey.GUIDE_DOWNLOAD_BACKGROUND, artifactSizeText(texts, bytes)))
 } ?: texts[TextKey.GUIDE_DOWNLOAD_PREPARING]
-
-/**
- * The guide's download line as the shelf's own footer item (issue #277's third
- * review): one row unit above it and a panel unit under it, so it reads as the
- * first-run shelf's last line rather than a strip pinned to the foot of the
- * screen. The **Library** owns the item; this only fixes its spacing.
- */
-@Composable
-fun GuideShelfFooter(
-    download: GuideDownloadUiState,
-    actions: GuideDownloadActions = GuideDownloadActions(),
-    modifier: Modifier = Modifier,
-) {
-    GuideDownloadLine(
-        state = download,
-        actions = actions,
-        modifier = modifier.padding(top = LektoSpacing.BetweenRows, bottom = LektoSpacing.InsidePanel),
-    )
-}

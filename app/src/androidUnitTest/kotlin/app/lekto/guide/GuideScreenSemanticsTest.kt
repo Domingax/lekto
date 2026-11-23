@@ -753,19 +753,13 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theArrivalIsTheShelfWithTheSampleAndTheDownloadLine() {
+    fun theArrivalIsTheShelfWithTheSampleAndNoDownloadLine() {
         compose.setContent {
             CompositionLocalProvider(LocalAppTexts provides texts) {
                 LektoTheme {
                     LibraryScreen(
                         state = LibraryUiState(sample = sampleBookRow()),
                         levelLine = AppMessage.of(TextKey.GUIDE_LEVEL_NOT_SET),
-                        footer = {
-                            GuideShelfFooter(
-                                GuideDownloadUiState(GuideDownloadPhase.INSTALLED, "en"),
-                                GuideDownloadActions(onStop = {}),
-                            )
-                        },
                     )
                 }
             }
@@ -773,7 +767,7 @@ class GuideScreenSemanticsTest {
 
         compose.onNodeWithText("A Guide Sample").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Your reading level is not set yet. Settings ▸ Languages.").assertIsDisplayed()
-        compose.onNodeWithText("Installed").assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_DOWNLOAD_TAG).assertDoesNotExist()
     }
 
     /** Renders the guide over [state], with the page and notes its sample produces. */
