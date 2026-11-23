@@ -358,16 +358,15 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_CONTINUE to "Continuer",
     TextKey.GUIDE_LANGUAGE_TITLE to "Quelle langue voulez-vous lire en premier ?",
     TextKey.GUIDE_LANGUAGE_INTRO to
-        "Lekto colore les mots à partir de votre niveau de maîtrise de la langue que vous souhaitez apprendre.",
-    TextKey.GUIDE_LANGUAGE_FOOTNOTE to "Vous pourrez en ajouter d'autres plus tard, dans Réglages.",
-    TextKey.GUIDE_PAGE_PLAIN_TITLE to "Voici une page de votre livre.",
-    TextKey.GUIDE_PAGE_PLAIN_INTRO to "Rien n'est encore coloré. Regardez.",
+        "Nous préparons l'application en fonction de votre langue cible. " +
+            "Vous pourrez en ajouter d'autres plus tard.",
+    TextKey.GUIDE_PAGE_PLAIN_TITLE to "Lekto revoit votre façon de découvrir une nouvelle langue",
+    TextKey.GUIDE_PAGE_PLAIN_INTRO to "Voici une page comme vous avez l'habitude de la lire",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur.",
-    TextKey.GUIDE_TAP_TITLE to "Touchez un mot pour l'enregistrer.",
-    TextKey.GUIDE_TAP_INTRO to
-        "La fiche répond depuis l'exemple, avant tout dictionnaire installé.",
-    TextKey.GUIDE_TAP_FOOTNOTE to
-        "Choisir un niveau enregistre le mot. Le niveau 4 n'a pas de couleur : c'est le texte normal.",
+    TextKey.GUIDE_PAGE_COLOURED_INTRO to
+        "Lekto colore les mots à partir de votre niveau de maîtrise de votre langue cible.",
+    TextKey.GUIDE_TAP_TITLE to "Touchez un mot : découvrez sa signification",
+    TextKey.GUIDE_TAP_INTRO to "Apprenez et enrichissez votre vocabulaire",
     TextKey.GUIDE_LEVEL_TITLE to "Quel est votre niveau en {0} ?",
     TextKey.GUIDE_LEVEL_INTRO to "Il colore vos livres. Changez-le : la page change.",
     TextKey.GUIDE_START_READING to "Commencer à lire",

@@ -343,15 +343,14 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_CONTINUE to "Continue",
     TextKey.GUIDE_LANGUAGE_TITLE to "Which language would you like to read first?",
     TextKey.GUIDE_LANGUAGE_INTRO to
-        "Lekto colours words according to how well you know the language you want to read.",
-    TextKey.GUIDE_LANGUAGE_FOOTNOTE to "You can add other languages later in Settings.",
-    TextKey.GUIDE_PAGE_PLAIN_TITLE to "Here is a page of your book.",
-    TextKey.GUIDE_PAGE_PLAIN_INTRO to "Nothing is coloured yet. Look.",
+        "We prepare the app around your target language. You can add more later.",
+    TextKey.GUIDE_PAGE_PLAIN_TITLE to "Lekto rethinks the way you discover a new language",
+    TextKey.GUIDE_PAGE_PLAIN_INTRO to "Here is a page as you are used to reading it",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "The more you know, the less colour.",
-    TextKey.GUIDE_TAP_TITLE to "Tap a word to save it.",
-    TextKey.GUIDE_TAP_INTRO to "The sheet answers from the sample, before any dictionary is installed.",
-    TextKey.GUIDE_TAP_FOOTNOTE to
-        "Choosing a level saves the word. Level 4 has no colour: it is the normal text.",
+    TextKey.GUIDE_PAGE_COLOURED_INTRO to
+        "Lekto colours words according to how well you know your target language.",
+    TextKey.GUIDE_TAP_TITLE to "Tap a word: discover its meaning",
+    TextKey.GUIDE_TAP_INTRO to "Learn and grow your vocabulary",
     TextKey.GUIDE_LEVEL_TITLE to "What is your level in {0}?",
     TextKey.GUIDE_LEVEL_INTRO to "It colours your books. Change it: the page changes.",
     TextKey.GUIDE_START_READING to "Start reading",

@@ -1542,7 +1542,7 @@ class AppSemanticsTest {
             )
         }
 
-        compose.onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        compose.onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
         compose.onNodeWithText("Reading in English").assertDoesNotExist()
         compose.onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
     }
@@ -1593,7 +1593,7 @@ class AppSemanticsTest {
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
-        compose.onNodeWithText("Tap a word to save it.").assertIsDisplayed()
+        compose.onNodeWithText("Tap a word: discover its meaning").assertIsDisplayed()
         compose.tapAGuideWord()
         compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
 
@@ -1693,7 +1693,7 @@ class AppSemanticsTest {
         compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
 
-        compose.onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        compose.onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
     }
 
     @Test

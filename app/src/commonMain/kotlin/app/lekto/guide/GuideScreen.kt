@@ -346,16 +346,11 @@ private fun ColumnScope.LanguageQuestion(beat: GuideBeat, languages: List<Offere
             ),
             modifier = Modifier.padding(top = LektoSpacing.BetweenRows),
         )
-        Text(
-            text = texts[TextKey.GUIDE_LANGUAGE_FOOTNOTE],
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = LektoSpacing.InsidePanel),
-        )
         Button(
             onClick = beat.actions.onContinue,
             enabled = selected != null,
-            modifier = Modifier.fillMaxWidth().handCursor().testTag(GUIDE_CONTINUE_TAG),
+            modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows).handCursor()
+                .testTag(GUIDE_CONTINUE_TAG),
         ) {
             Text(texts[TextKey.GUIDE_CONTINUE])
         }
@@ -435,7 +430,9 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
     val state = beat.state
     val texts = LocalAppTexts.current
     val title = if (state.plain) TextKey.GUIDE_PAGE_PLAIN_TITLE else TextKey.GUIDE_PAGE_COLOURED_TITLE
-    val intro = if (state.plain) texts[TextKey.GUIDE_PAGE_PLAIN_INTRO] else null
+    val intro = texts[
+        if (state.plain) TextKey.GUIDE_PAGE_PLAIN_INTRO else TextKey.GUIDE_PAGE_COLOURED_INTRO,
+    ]
     Column(
         Modifier.fillMaxWidth().weight(1f)
             .padding(horizontal = LektoSpacing.ScreenEdge),
@@ -485,12 +482,6 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
                 onWordTap = beat.actions.onTapWord,
             )
         }
-        Text(
-            text = texts[TextKey.GUIDE_TAP_FOOTNOTE],
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = NoteGap),
-        )
         if (!state.lookupOpen) {
             GuideContinue(
                 beat.actions.onContinue,

@@ -1619,7 +1619,7 @@ class AppSemanticsTest {
             )
         }
 
-        onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
         onNodeWithText("Reading in English").assertDoesNotExist()
         onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG).assertDoesNotExist()
     }
@@ -1758,7 +1758,7 @@ class AppSemanticsTest {
         onNodeWithTag(guideLanguageRowTag("en")).performClick()
         onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
 
-        onNodeWithText("Here is a page of your book.").assertIsDisplayed()
+        onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
     }
 
     @Test

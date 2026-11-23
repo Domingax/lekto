@@ -256,10 +256,20 @@ class GuideScreenSemanticsTest {
     fun theFirstBeatShowsTheParagraphWithNoColourAndNoNotes() = runComposeUiTest {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
 
-        onNodeWithText("Here is a page of your book.").assertIsDisplayed()
-        onNodeWithText("Nothing is coloured yet. Look.").assertIsDisplayed()
+        onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
+        onNodeWithText("Here is a page as you are used to reading it").assertIsDisplayed()
         onNodeWithTag(GUIDE_NOTES_TAG).assertDoesNotExist()
         onNodeWithText("fisherman", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theQuestionCarriesTheOwnersIntroAndNoFootnote() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.LANGUAGE), sample = null)
+
+        onNodeWithText("We prepare the app around your target language. You can add more later.")
+            .assertIsDisplayed()
+        // The owner's fifth review folded the footnote's promise into the intro line.
+        onNodeWithText("You can add other languages later in Settings.").assertDoesNotExist()
     }
 
     @Test
@@ -283,11 +293,24 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theColouredBeatKeepsItsHeadingAndDropsTheSecondLine() = runComposeUiTest {
+    fun theColouredBeatAddsItsOneLineUnderTheHeading() = runComposeUiTest {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
 
         onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        onNodeWithText("Lekto colours words according to how well you know your target language.")
+            .assertIsDisplayed()
         onNodeWithText("Four words on this page, four levels.").assertDoesNotExist()
+    }
+
+    @Test
+    fun theTapScreenAsksTheWordAndPromisesTheVocabulary() = runComposeUiTest {
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
+
+        onNodeWithText("Tap a word: discover its meaning").assertIsDisplayed()
+        onNodeWithText("Learn and grow your vocabulary").assertIsDisplayed()
+        // The sheet's own receipt states the save, so the guide's explainer is gone.
+        onNodeWithText("Choosing a level saves the word. Level 4 has no colour: it is the normal text.")
+            .assertDoesNotExist()
     }
 
     @Test
