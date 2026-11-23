@@ -182,13 +182,13 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.CONNECTION to "Connexion",
     TextKey.APP_LANGUAGE_DESCRIPTION to "La langue que Lekto utilise pour ses propres textes.",
     TextKey.THEME_SYSTEM to "Système",
-    TextKey.THEME_SYSTEM_DESCRIPTION to "Suit le réglage de l'appareil",
+    TextKey.THEME_SYSTEM_DESCRIPTION to "Suit le réglage de l'appareil.",
     TextKey.THEME_LIGHT to "Clair",
-    TextKey.THEME_LIGHT_DESCRIPTION to "Papier chaud, encre noire",
+    TextKey.THEME_LIGHT_DESCRIPTION to "Papier chaud, encre noire.",
     TextKey.THEME_DARK to "Sombre",
-    TextKey.THEME_DARK_DESCRIPTION to "Nuit chaude, encre claire",
+    TextKey.THEME_DARK_DESCRIPTION to "Nuit chaude, encre claire.",
     TextKey.THEME_SEPIA to "Sépia",
-    TextKey.THEME_SEPIA_DESCRIPTION to "Papier chiffon",
+    TextKey.THEME_SEPIA_DESCRIPTION to "Papier chiffon.",
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to
