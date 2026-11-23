@@ -6,7 +6,10 @@ application's `releases/latest` keeps meaning its latest application version
 
 The four-layer build is the application's reusable workflow,
 [`.github/workflows/dictionary-data.yml`](../../../.github/workflows/dictionary-data.yml).
-The data repository holds only the triggers, in
+A fifth, validation job rebuilds the app's **Sample catalogue** from the snapshot
+the run just published and enforces the guide's coverage bars (issue #324); it
+uploads the catalogue for the review that commits it and never changes the data
+release. The data repository holds only the triggers, in
 [`lekto-data.yml`](lekto-data.yml), copied to its
 `.github/workflows/dictionary-data.yml`. ADR-0048 records why the build itself
 stays with the CLI it drives.

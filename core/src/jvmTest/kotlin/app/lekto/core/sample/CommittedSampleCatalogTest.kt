@@ -4,9 +4,14 @@ import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
 import app.lekto.core.derivedMastery
 import app.lekto.core.language.SampleRoster
+import app.lekto.core.text.IcuTextSegmenter
+import app.lekto.core.text.LemmaLookup
+import app.lekto.core.text.normaliseSurface
+import app.lekto.core.text.wordKeyOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /**
  * The catalogue the build committed (issue #297) is decoded through the app's own
@@ -61,6 +66,39 @@ class CommittedSampleCatalogTest {
     }
 
     @Test
+    fun `every language's A1 paragraph shows the guide's four notes`() {
+        committedCatalogue().samples.forEach { sample ->
+            val levels = demonstratedLevels(sample, CefrLevel.A1).distinct().toSet()
+
+            assertEquals(
+                MasteryLevel.entries.filter(MasteryLevel::highlighted).toSet(),
+                levels,
+                "${sample.language}: A1 must carry a word at every highlighted level",
+            )
+        }
+    }
+
+    @Test
+    fun `every band from A1 to B2 keeps three coloured words over two levels`() {
+        committedCatalogue().samples.forEach { sample ->
+            SPREAD_BANDS.forEach { band ->
+                val levels = demonstratedLevels(sample, band)
+
+                assertTrue(
+                    levels.size >= MIN_COLOURED_WORDS,
+                    "${sample.language} at $band must keep $MIN_COLOURED_WORDS coloured words, " +
+                        "not ${levels.size}",
+                )
+                assertTrue(
+                    levels.distinct().size >= MIN_HIGHLIGHTED_LEVELS,
+                    "${sample.language} at $band must span $MIN_HIGHLIGHTED_LEVELS levels, " +
+                        "not ${levels.distinct().size}",
+                )
+            }
+        }
+    }
+
+    @Test
     fun `every glossary covers every word its sample highlights`() {
         committedCatalogue().samples.forEach { sample ->
             val highlighted = sample.difficulty.keys.filter { word ->
@@ -90,6 +128,26 @@ class CommittedSampleCatalogTest {
         }
     }
 
+    /**
+     * The highlighted levels [sample]'s demonstrated paragraph shows at [band]:
+     * the paragraph whose colours cover the most distinct levels, ties keeping
+     * the earlier — the rule `app`'s `guideParagraph` applies (issue #277).
+     */
+    private fun demonstratedLevels(sample: Sample, band: CefrLevel): List<MasteryLevel> {
+        val lemmas = LemmaLookup { surface, _ -> sample.forms[normaliseSurface(surface)] }
+        return sample.paragraphs
+            .map { paragraph -> levelsIn(sample, paragraph, band, lemmas) }
+            .maxByOrNull { levels -> levels.distinct().size }
+            .orEmpty()
+    }
+
+    private fun levelsIn(sample: Sample, paragraph: String, band: CefrLevel, lemmas: LemmaLookup): List<MasteryLevel> =
+        SEGMENTER.words(paragraph, sample.language)
+            .map { span ->
+                sample.colourMap(band)[wordKeyOf(span.surface, sample.language, lemmas).key] ?: MasteryLevel.KNOWN
+            }
+            .filter(MasteryLevel::highlighted)
+
     private fun committedCatalogue(): SampleCatalogContent {
         val bytes = requireNotNull(javaClass.getResourceAsStream("/samples/catalogue.json")) {
             "the committed sample catalogue must be on the core classpath"
@@ -101,5 +159,17 @@ class CommittedSampleCatalogTest {
     private companion object {
         /** The reading languages this build ships a sample for, in the catalogue's order. */
         val LANGUAGES: List<String> = listOf("de", "en", "es", "fr", "it", "ja", "pt", "tr")
+
+        /** The bands the guide's level screen must have something to recolour at (issue #324). */
+        val SPREAD_BANDS: List<CefrLevel> = listOf(CefrLevel.A1, CefrLevel.A2, CefrLevel.B1, CefrLevel.B2)
+
+        /** The fewest coloured words the demonstrated paragraph keeps from A1 to B2. */
+        const val MIN_COLOURED_WORDS: Int = 3
+
+        /** The fewest distinct highlighted levels those words span. */
+        const val MIN_HIGHLIGHTED_LEVELS: Int = 2
+
+        /** The reader's own production segmenter, so a paragraph is split as the page splits it. */
+        val SEGMENTER: IcuTextSegmenter = IcuTextSegmenter()
     }
 }

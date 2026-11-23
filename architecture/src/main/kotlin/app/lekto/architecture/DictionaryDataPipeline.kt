@@ -29,6 +29,14 @@ object DictionaryDataPipeline {
     val PREPARATION: Set<String> = setOf("prepare", "frequencies")
 
     /**
+     * The validation job that rebuilds the app's sample catalogue from the run's
+     * published bytes (issue #324). It carries no data-release asset: samples ship
+     * with the app, and its coverage gate only refuses a text the guide cannot
+     * demonstrate.
+     */
+    const val SAMPLE_VALIDATION: String = "sample"
+
+    /**
      * True when the assembly job publishes the manifest only after the bytes it
      * names: the release is created as a draft, the manifest is attached last, and
      * only then does `gh release edit` make it latest.
@@ -61,6 +69,21 @@ object DictionaryDataPipeline {
 
     /** True when the reusable workflow can only run because the data repository called it. */
     fun isReusableOnly(workflow: String): Boolean = TRIGGERS.none { trigger -> trigger in workflow }
+
+    /**
+     * True when the workflow rebuilds the app's sample catalogue from the snapshot
+     * it published, runs the stage's coverage gate and uploads the result (issue
+     * #324): every flag the stage needs is present, the bytes are the ones just
+     * released, and the catalogue reaches the review that commits it.
+     */
+    fun rebuildsSampleCatalogue(workflow: String): Boolean {
+        val body = WorkflowJobs.job(workflow, SAMPLE_VALIDATION) ?: return false
+        return "--sample-source-dir" in body &&
+            "--sample-artifacts" in body &&
+            "--sample-manifest" in body &&
+            "gh release download" in body &&
+            "name: sample-catalogue" in body
+    }
 
     private val TRIGGERS = listOf("\n  push:", "\n  pull_request:", "\n  schedule:", "\n  workflow_dispatch:")
 }

@@ -632,13 +632,14 @@ workflows, then against the real tree.
 The dictionary-data lane (issue #306) is a workflow whose failure is a monthly
 snapshot, so it is held by the same guard. `DictionaryDataPipelineTest` in
 `architecture` proves the reader first — the manifest-published-last rule, the
-build-from-produced-files rule, and the reusable-only trigger each against
-hand-built workflows — then asserts the real tree: the four layer jobs, their preparation
-jobs and dependencies, the CLI stage each runs, the three-snapshot retention, the caller
-that holds only the triggers, the absence of the retired application lane, and the
-one movable address the app follows. `tools/dictionaries`' `LanguageManifestAssemblyTest`
-proves the same contract at the code it drives, so neither the YAML nor the CLI
-can drift alone.
+build-from-produced-files rule, the reusable-only trigger, and the sample job that
+rebuilds the app's catalogue from the published bytes (issue #324) each against
+hand-built workflows — then asserts the real tree: the four layer jobs, their
+preparation and validation jobs and dependencies, the CLI stage each runs, the
+three-snapshot retention, the caller that holds only the triggers, the absence of
+the retired application lane, and the one movable address the app follows.
+`tools/dictionaries`' `LanguageManifestAssemblyTest` proves the same contract at
+the code it drives, so neither the YAML nor the CLI can drift alone.
 
 `VaultStore` is the first seam to use the pattern: `testkit` holds
 `VaultStoreContract` and the `InMemoryVaultStore` fake, `core/commonTest` runs the

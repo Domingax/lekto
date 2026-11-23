@@ -137,6 +137,56 @@ class DictionaryDataPipelineTest :
             }
         }
 
+        test("the run rebuilds the app's sample catalogue and enforces its coverage") {
+            val complete = """
+                jobs:
+                  sample:
+                    needs: [prepare, assemble]
+                    steps:
+                      - run: gh release download dictionary-20261109 --pattern "*.sqlite.gz"
+                      - run: dictionaries --sample-source-dir samples --sample-artifacts assets --sample-manifest assets/manifest.json --sample-output catalogue.json
+                      - uses: actions/upload-artifact@v7
+                        with:
+                          name: sample-catalogue
+            """.trimIndent()
+            val syntheticOnly = """
+                jobs:
+                  sample:
+                    needs: [prepare, assemble]
+                    steps:
+                      - run: dictionaries --sample-source-dir samples --sample-artifacts assets --sample-manifest assets/manifest.json
+            """.trimIndent()
+            val noStage = """
+                jobs:
+                  sample:
+                    needs: [prepare, assemble]
+                    steps:
+                      - run: gh release download dictionary-20261109
+                      - uses: actions/upload-artifact@v7
+                        with:
+                          name: sample-catalogue
+            """.trimIndent()
+
+            DictionaryDataPipeline.rebuildsSampleCatalogue(complete) shouldBe true
+            withClue("a catalogue from a synthetic fixture is not the snapshot the app installs") {
+                DictionaryDataPipeline.rebuildsSampleCatalogue(syntheticOnly) shouldBe false
+            }
+            withClue("without the stage's flags the coverage gate never runs") {
+                DictionaryDataPipeline.rebuildsSampleCatalogue(noStage) shouldBe false
+            }
+
+            val root = RepositoryScanner.repositoryRoot()
+            val workflow = File(root, DictionaryDataPipeline.REUSABLE).readText()
+
+            withClue("the sample validation job is missing, so a text can regress the guide unnoticed") {
+                DictionaryDataPipeline.rebuildsSampleCatalogue(workflow) shouldBe true
+            }
+            withClue("the sample is built from the snapshot this run published") {
+                WorkflowJobs.needs(workflow, DictionaryDataPipeline.SAMPLE_VALIDATION) shouldBe
+                    setOf("prepare", "assemble")
+            }
+        }
+
         test("each layer runs the CLI stage it owns") {
             val root = RepositoryScanner.repositoryRoot()
             val workflow = File(root, DictionaryDataPipeline.REUSABLE).readText()

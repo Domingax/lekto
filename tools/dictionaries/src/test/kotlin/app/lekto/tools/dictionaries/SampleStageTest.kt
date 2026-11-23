@@ -35,22 +35,50 @@ class SampleStageTest {
         val sample = catalogue.samples.single()
         assertEquals(CEFR_BANDS, sample.colourMaps.keys.toList())
         assertEquals(setOf("fr", "es"), sample.glossaries.keys)
-        assertEquals(setOf("boat", "calm", "rock", "wait"), sample.glossaries.getValue("fr").entries.keys)
+        assertEquals(
+            setOf("basket", "boat", "calm", "rock", "rope", "wait"),
+            sample.glossaries.getValue("fr").entries.keys,
+        )
         assertEquals("KNOWN", sample.colourMaps.getValue("C2").getValue("boat"))
         assertEquals("UNKNOWN", sample.colourMaps.getValue("A1").getValue("rock"))
+        assertEquals("UNKNOWN", sample.colourMaps.getValue("A1").getValue("basket"))
         assertEquals(mapOf("rocks" to "rock", "waited" to "wait"), sample.forms)
         assertEquals(
             mapOf(
                 "a" to "A1",
+                "and" to "A1",
+                "basket" to "C2",
                 "boat" to "B1",
                 "calm" to "A2",
                 "near" to "A1",
                 "rock" to "C1",
+                "rope" to "C1",
                 "the" to "A1",
                 "wait" to "B2",
             ),
             sample.difficulty,
         )
+    }
+
+    @Test
+    fun `a sample whose best paragraph misses the levels is refused`() {
+        writeSource(paragraph = "The sea.")
+        writeArtefacts()
+        val manifest = writeManifest()
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            runSample(
+                CliOptions.Sample(
+                    directory.resolve("samples"),
+                    directory.resolve("artifacts"),
+                    manifest,
+                    directory.resolve("catalogue.json"),
+                ),
+            )
+        }
+
+        assertTrue("A1" in error.message.orEmpty())
+        assertTrue("UNKNOWN" in error.message.orEmpty())
     }
 
     @Test
@@ -121,12 +149,12 @@ class SampleStageTest {
         }
     }
 
-    private fun writeSource(): Path {
+    private fun writeSource(paragraph: String = DEFAULT_PARAGRAPH): Path {
         val sources = directory.resolve("samples").also(Files::createDirectories)
         Files.writeString(
             sources.resolve("en.json"),
             """
-            {"language":"en","title":"A Test Sample","paragraphs":["A calm boat waited near the rocks."]}
+            {"language":"en","title":"A Test Sample","paragraphs":["$paragraph"]}
             """.trimIndent(),
         )
         return sources
@@ -148,35 +176,44 @@ class SampleStageTest {
         SqlitePackWriter.write(pack("es"), artifacts.resolve("lekto-dictionary-en-es.sqlite"))
     }
 
-    private fun pack(translation: String): PackContent = PackContent(
-        provenance = PROVENANCE,
-        stats = PackStats(1, 0, 1, 1, 7, 7, 7, 7, 7),
-        entries = listOf("a", "boat", "calm", "near", "rock", "the", "wait").map { lemma ->
-            PackEntry(
-                lemma = lemma,
-                language = "en",
-                partOfSpeech = "noun",
-                senses = listOf(PackSense("The $lemma meaning.", listOf("$translation-$lemma"))),
-            )
-        },
-        forms = listOf(PackForm("waited", "en", "wait"), PackForm("rocks", "en", "rock")),
-    )
+    private fun pack(translation: String): PackContent {
+        val lemmas = listOf("a", "and", "basket", "boat", "calm", "near", "rock", "rope", "sea", "the", "wait")
+        return PackContent(
+            provenance = PROVENANCE,
+            stats = PackStats(1, 0, 1, 1, 11, 11, 2, 11, 11),
+            entries = lemmas.map { lemma ->
+                PackEntry(
+                    lemma = lemma,
+                    language = "en",
+                    partOfSpeech = "noun",
+                    senses = listOf(PackSense("The $lemma meaning.", listOf("$translation-$lemma"))),
+                )
+            },
+            forms = listOf(PackForm("waited", "en", "wait"), PackForm("rocks", "en", "rock")),
+        )
+    }
 
     private companion object {
+        const val DEFAULT_PARAGRAPH: String = "A calm boat waited near the rocks, a rope and a basket."
+
         val PROVENANCE = PackProvenance("test://fixture", "0".repeat(64), "2026-11-11")
 
         val DIFFICULTY = DifficultyContent(
             provenance = PROVENANCE,
             calibration = DifficultyCalibration(listOf(1, 2, 3, 4, 5, 6), "test", "test"),
-            stats = DifficultyStats(7, 7, 7),
+            stats = DifficultyStats(11, 11, 11),
             rows = listOf(
                 DifficultyRow("a", "en", "A1"),
+                DifficultyRow("and", "en", "A1"),
                 DifficultyRow("the", "en", "A1"),
                 DifficultyRow("near", "en", "A1"),
+                DifficultyRow("sea", "en", "A1"),
                 DifficultyRow("calm", "en", "A2"),
                 DifficultyRow("boat", "en", "B1"),
                 DifficultyRow("wait", "en", "B2"),
                 DifficultyRow("rock", "en", "C1"),
+                DifficultyRow("rope", "en", "C1"),
+                DifficultyRow("basket", "en", "C2"),
             ),
         )
     }

@@ -238,7 +238,8 @@ internal fun runPublish(options: CliOptions.Publish) {
  *
  * A language the manifest offers no difficulty table or no dictionary for is
  * refused, because the guide must not show a colour it cannot compute or a tap it
- * cannot answer. The catalogue is deterministic and carries no timestamp.
+ * cannot answer. The catalogue is deterministic and carries no timestamp; every
+ * sample is held to the guide's coverage bars (issue #324) before it is written.
  */
 internal fun runSample(options: CliOptions.Sample) {
     val manifest = languageManifestJson.decodeFromString<LanguageManifest>(
@@ -252,6 +253,7 @@ internal fun runSample(options: CliOptions.Sample) {
     val artifacts = artifactsByName(options.artifactsDir)
     val samples = sources.map { source -> sampleFor(source, manifest, artifacts, options.artifactsDir) }
         .sortedBy(SampleContent::language)
+    samples.forEach(::requireSampleCoverage)
     val catalogue = SampleCatalogueDocument(SampleFormat.VERSION, samples)
     val json = catalogue.canonicalJson()
     options.output.toAbsolutePath().parent?.let(Files::createDirectories)
