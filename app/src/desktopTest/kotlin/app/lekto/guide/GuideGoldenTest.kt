@@ -74,10 +74,10 @@ import kotlin.test.Test
  * download. The words, the levels and the meanings are the semantics suites'
  * contract; the layout, the colour ramp and the spacing are this file's.
  *
- * The page and tap beats scroll on a 640 dp phone, so the planche folds them: the
- * block is drawn shorter than the screen's `PAGE_HEIGHT` so the four notes and
- * `Continue` stay in the one frame. The level screen fits without scrolling, so its
- * planche draws every band and the filled action.
+ * The page, tap and level beats fit one 640 dp phone without scrolling: the page
+ * planche draws the four notes centred between the paragraph and the action, and
+ * the level planche draws every band, the flexible preview and the action anchored
+ * at the foot.
  *
  * Record with `./gradlew :app:recordRoborazziDesktop`; verify with
  * `./gradlew :app:verifyRoborazziDesktop`.
@@ -158,13 +158,6 @@ private val LEVEL_PROGRESS = GuideProgress(GuideStage.LEVEL.position, back = tru
 /** The arrival is the fifth mark: the shelf the guide hands over to, with no way back into the guide. */
 private val ARRIVAL_PROGRESS = GuideProgress(GUIDE_STEPS, back = false)
 
-/**
- * The level preview's block height: the compact card's page, three lines, above
- * the six bands. It mirrors the level screen's compacted card, so the planche
- * records the screen that fits a 640 dp phone rather than a taller one.
- */
-private val PREVIEW_BLOCK_HEIGHT = 56.dp
-
 /** The block's own inset: the reader's reading margin inside the guide's frame. */
 private val PAGE_INSET = 24.dp
 
@@ -235,7 +228,8 @@ private fun GuideBarPreview(progress: GuideProgress) {
 
 /**
  * Screen 1: the question, the roster with one row selected, the running download
- * with its size and `Stop`, the footnote, and the `Continue` the answer reveals.
+ * with its size and `Stop`, and the `Continue` the answer reveals. The footnote is
+ * gone: its promise lives in the intro line.
  */
 @Composable
 private fun ColumnScope.LanguagePreview() {
@@ -250,8 +244,7 @@ private fun ColumnScope.LanguagePreview() {
             }
         }
         DownloadLine(Modifier.padding(top = LektoSpacing.BetweenRows))
-        Footnote()
-        ContinueButton()
+        ContinueButton(Modifier.padding(top = LektoSpacing.BetweenRows))
     }
 }
 
@@ -292,41 +285,26 @@ private fun DownloadLine(modifier: Modifier = Modifier) {
     }
 }
 
-/** The line under the list: other languages can be added later. */
+/** The filled `Continue` the language answer reveals: the wide button every beat ends with. */
 @Composable
-private fun Footnote() {
-    Column(Modifier.padding(vertical = LektoSpacing.InsidePanel)) {
-        Bar(MaterialTheme.colorScheme.onSurfaceVariant, 176.dp, 9.dp)
-    }
-}
-
-/** The filled `Continue` the language answer reveals, at the trailing edge. */
-@Composable
-private fun ContinueButton() {
+private fun ContinueButton(modifier: Modifier = Modifier) {
     val theme = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth()) {
-        Spacer(Modifier.weight(1f))
-        Box(
-            Modifier
-                .width(96.dp)
-                .height(40.dp)
-                .background(theme.primary, LektoRadii.Control),
-            contentAlignment = Alignment.Center,
-        ) { Bar(theme.onPrimary, 44.dp, 11.dp) }
-    }
+    Box(
+        modifier.fillMaxWidth().height(40.dp).background(theme.primary, LektoRadii.Control),
+        contentAlignment = Alignment.Center,
+    ) { Bar(theme.onPrimary, 44.dp, 11.dp) }
 }
 
-/** Screen 2: the embedded block, coloured at A1, and the four notes under it. No download card. */
+/** Screen 2: the embedded block, coloured at A1, and the four notes centred between it and the action. */
 @Composable
 private fun ColumnScope.PagePreview() {
     Column(Modifier.fillMaxWidth().weight(1f).padding(horizontal = LektoSpacing.ScreenEdge)) {
         Heading(188.dp, 148.dp, 118.dp)
-        PageBlock(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.InsidePanel), lines = 9)
-        NoteRows(Modifier.padding(top = LektoSpacing.BetweenRows))
-        Row(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel)) {
-            Spacer(Modifier.weight(1f))
-            Bar(MaterialTheme.colorScheme.onBackground, 54.dp, 11.dp)
-        }
+        PageBlock(Modifier.fillMaxWidth().padding(top = LektoSpacing.InsidePanel), lines = 9)
+        Spacer(Modifier.weight(1f))
+        NoteRows(Modifier.padding(vertical = LektoSpacing.BetweenRows))
+        Spacer(Modifier.weight(1f))
+        ContinueButton()
     }
 }
 
@@ -598,33 +576,33 @@ private fun SheetDivider() {
     )
 }
 
-/** Screen 4: the same block in its compact preview card, the six bands with A1 chosen, and `Start reading`. */
+/** Screen 4: the same block in the flexible preview card, the six bands with A1 chosen, and `Start reading` at the foot. */
 @Composable
 private fun ColumnScope.LevelPreview() {
     Column(
         Modifier.fillMaxWidth().weight(1f).clipToBounds().padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         Heading(176.dp, 128.dp, 108.dp)
-        PreviewCard()
+        PreviewCard(Modifier.fillMaxWidth().weight(1f).padding(top = LektoSpacing.BetweenRows))
         BandList()
         StartReadingButton()
     }
 }
 
-/** The preview card: the embedded page at A1, with no label of its own. */
+/** The preview card: the embedded page at A1, taking whatever the bands and the action leave. */
 @Composable
-private fun PreviewCard() {
+private fun PreviewCard(modifier: Modifier = Modifier) {
     val theme = MaterialTheme.colorScheme
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows),
+        modifier = modifier,
         shape = LektoRadii.Surface,
         color = theme.background,
         border = BorderStroke(HAIRLINE_THICKNESS, theme.outline),
     ) {
         Column(Modifier.padding(LektoSpacing.BetweenRelatedLines)) {
             PageBlock(
-                Modifier.fillMaxWidth().height(PREVIEW_BLOCK_HEIGHT),
-                lines = 3,
+                Modifier.fillMaxWidth().weight(1f),
+                lines = 5,
                 lineWidth = PREVIEW_LINE_WIDTH,
             )
         }
@@ -674,14 +652,14 @@ private fun BandRowPreview(selected: Boolean) {
     }
 }
 
-/** The filled `Start reading` the level screen keeps inside the one frame. */
+/** The filled `Start reading`, anchored at the very bottom as every beat's way forward is. */
 @Composable
 private fun StartReadingButton() {
     val theme = MaterialTheme.colorScheme
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(top = LektoSpacing.InsidePanel, bottom = LektoSpacing.BetweenRelatedLines)
+            .padding(top = LektoSpacing.InsidePanel)
             .height(40.dp)
             .background(theme.primary, LektoRadii.Control),
         contentAlignment = Alignment.Center,
