@@ -25,12 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -122,9 +119,6 @@ private val ROW_LABEL_BAR = LineBar(height = 9.dp, share = 0.22f)
 private val CHIP_LABEL_BAR = LineBar(height = 9.dp, share = 0.45f)
 private val PAGE_LINE_BAR = LineBar(height = 10.dp, share = 0.94f)
 
-/** The dotted rule's dash and gap, and the room it keeps under its line (issue #281). */
-private val RULE_BELOW_LINE = 2.dp
-
 /** The page's lines, with a shorter one where a paragraph ends. */
 private val PAGE_LINE_SHARES = listOf(
     0.96f, 0.92f, 0.95f, 0.9f, 0.93f, 0.6f,
@@ -181,51 +175,22 @@ private fun ChromeBand() {
  * The book's page as bars: the reading margin on each side and the paragraph
  * rhythm. The page keeps its full pagination; the panel only clips the visible
  * part, as the reader does.
- *
- * Each line is a first run's: every word unknown, so the bar takes that level's
- * colour and hangs the page's own 1 dp dotted rule under it — never the solid
- * underline the reader used to draw (issues #281, docs/design.md §2.2). A known
- * word would be ink bars and no rule at all.
  */
 @Composable
-private fun ColumnScope.PageLines(horizontalInset: Dp = LektoSpacing.ScreenEdge) {
+private fun ColumnScope.PageLines() {
     val theme = MaterialTheme.colorScheme
-    val wordInk = MasteryPalette.of(theme).unknown
     Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxWidth()
             .clipToBounds()
-            .padding(horizontal = horizontalInset, vertical = LektoSpacing.InsidePanel),
+            .padding(horizontal = LektoSpacing.ScreenEdge, vertical = LektoSpacing.InsidePanel),
         verticalArrangement = Arrangement.spacedBy(LektoSpacing.BetweenRelatedLines),
     ) {
         PAGE_LINE_SHARES.forEach { share ->
-            Column(verticalArrangement = Arrangement.spacedBy(RULE_BELOW_LINE)) {
-                Line(wordInk, PAGE_LINE_BAR.copy(share = share))
-                DottedRule(wordInk, share)
-            }
+            Line(theme.onBackground, PAGE_LINE_BAR.copy(share = share))
         }
     }
-}
-
-/** The rule under a highlighted word: the page's own thickness, dash and gap, drawn where the page draws it. */
-@Composable
-private fun DottedRule(colour: Color, share: Float) {
-    val density = LocalDensity.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth(share)
-            .height(RULE_THICKNESS)
-            .drawBehind {
-                drawLine(
-                    color = colour,
-                    start = Offset(0f, size.height / 2f),
-                    end = Offset(size.width, size.height / 2f),
-                    strokeWidth = size.height,
-                    pathEffect = dottedRuleEffect(density),
-                )
-            },
-    )
 }
 
 /**
@@ -336,11 +301,9 @@ private fun Chip(width: Dp, selected: Boolean) {
 /**
  * The desktop reader's frame (issue #199; docs/design.md §6): the same page and
  * bands as the phone, with the reserved context column beside them — parted by a
- * 1 dp rule and filled with the surface tone. The page's text column is capped at
- * 34 em and centred, so the extra width of the wide window is margin (issue #281,
- * docs/design.md §3). The column carries the **Chapters** heading and the book's
- * hierarchy, the current row in ink and the others in the body ink, exactly where
- * the live list puts them.
+ * 1 dp rule and filled with the surface tone. The column carries the **Chapters**
+ * heading and the book's hierarchy, the current row in ink and the others in the
+ * body ink, exactly where the live list puts them.
  */
 @Composable
 private fun ContextColumnPreview() {
@@ -352,21 +315,12 @@ private fun ContextColumnPreview() {
     ) {
         Column(Modifier.weight(1f)) {
             ChromeBand()
-            PageLines(horizontalInset = measureInset())
+            PageLines()
             PageBarBand()
         }
         ContextColumn()
     }
 }
-
-/** The margin a centred 34 em column leaves on the desktop page (issue #281). */
-private fun measureInset(): Dp {
-    val page = WIDE_WINDOW_BREAKPOINT - WIDE_COLUMN_WIDTH
-    return ((page - (MAX_MEASURE_EM * DEFAULT_READING_SIZE).dp) / 2).coerceAtLeast(0.dp)
-}
-
-/** The default reading size, the em the planche measures its measure in. */
-private const val DEFAULT_READING_SIZE = 18f
 
 /** The reserved column: a hairline rule, the surface tone, and the chapter list it shows when idle. */
 @Composable

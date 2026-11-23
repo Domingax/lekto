@@ -30,11 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -42,8 +39,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.lekto.core.MasteryLevel
 import app.lekto.reader.MasteryPalette
-import app.lekto.reader.RULE_THICKNESS
-import app.lekto.reader.dottedRuleEffect
 import app.lekto.reader.readerColorOr
 import app.lekto.reader.selectionHighlight
 import app.lekto.theme.Dark
@@ -72,7 +67,7 @@ import kotlin.test.Test
  * frame the field-feedback passes built — the back chevron at the head of the bar,
  * the step marks and `Skip`; the language question's selected row, its running
  * download with `Stop` and the `Continue` it reveals; the embedded page block's
- * coloured word bars over their dotted rules, with no reader chrome and no download
+ * coloured word bars, with no reader chrome and no download
  * card; the real sheet raised at its cap over the washed word; the same block above
  * the six bands, A1 washed and ruled as the standing choice and `Start reading`
  * inside the one screen; and the arrival's sample row, level line and installed
@@ -337,8 +332,8 @@ private fun ColumnScope.PagePreview() {
 
 /**
  * The embedded page block: the sample's first paragraph as word bars, the coloured
- * ones carrying their level's hue and the reader's own 1 dp dotted rule (issue
- * #281). It has no reader chrome: no page bar, no **Aa**, no page turns.
+ * ones carrying their level's hue and the reader's underline. It has no reader
+ * chrome: no page bar, no **Aa**, no page turns.
  */
 @Composable
 private fun PageBlock(
@@ -392,7 +387,7 @@ private fun PageLine(widths: List<Dp>, line: Int, washedWord: Int?) {
     }
 }
 
-/** One word: its bar and, when it is highlighted, the dotted rule under it. */
+/** One word: its bar, washed when it is the one being looked up. */
 @Composable
 private fun WordBar(width: Dp, level: MasteryLevel?, washed: Boolean) {
     val theme = MaterialTheme.colorScheme
@@ -402,44 +397,10 @@ private fun WordBar(width: Dp, level: MasteryLevel?, washed: Boolean) {
             Modifier
                 .background(selectionHighlight(theme.onBackground), LektoRadii.Control)
                 .padding(2.dp),
-        ) { WordBarColumn(width, colour, level != null) }
+        ) { Bar(colour, width, 10.dp) }
     } else {
-        WordBarColumn(width, colour, level != null)
-    }
-}
-
-/** A word's bar and its rule slot, so every word on a line shares one baseline. */
-@Composable
-private fun WordBarColumn(width: Dp, colour: Color, ruled: Boolean) {
-    Column {
         Bar(colour, width, 10.dp)
-        Spacer(Modifier.height(2.dp))
-        if (ruled) {
-            DottedRule(colour, width)
-        } else {
-            Spacer(Modifier.width(width).height(1.dp))
-        }
     }
-}
-
-/** The 1 dp dotted rule under a highlighted word, drawn with the reader's own stroke (issue #281). */
-@Composable
-private fun DottedRule(colour: Color, width: Dp) {
-    val density = LocalDensity.current
-    Box(
-        Modifier
-            .width(width)
-            .height(RULE_THICKNESS)
-            .drawBehind {
-                drawLine(
-                    color = colour,
-                    start = Offset(0f, size.height / 2f),
-                    end = Offset(size.width, size.height / 2f),
-                    strokeWidth = size.height,
-                    pathEffect = dottedRuleEffect(density),
-                )
-            },
-    )
 }
 
 /**

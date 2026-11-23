@@ -5,22 +5,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.lekto.core.reading.ReadingFace
 import app.lekto.core.reading.ReadingPreferences
-
-/**
- * The widest a page's text column may be, in ems of the body's size
- * (docs/design.md §3, issue #281): 34 em is about 68 characters at 18 sp, inside
- * the 45–75 band a learner reads comfortably. It is held in `em` rather than dp so
- * the cap follows the size control and the platform's font scale, where a fixed
- * width would not.
- */
-internal const val MAX_MEASURE_EM: Float = 34f
 
 /**
  * The reader's typography: a serif body and a heading style, built from a
@@ -98,18 +88,3 @@ data class ReaderStyles(
         }
     }
 }
-
-/**
- * The margin that centres the page's text column when [MAX_MEASURE_EM] caps it,
- * and the reading margin when it does not: the preference stays a minimum and the
- * cap a maximum, so neither overrides the other (docs/design.md §3, issue #281).
- */
-internal fun ReaderStyles.pageInset(pageWidth: Dp, density: Density): Dp {
-    val measure = with(density) { (body.fontSize * MAX_MEASURE_EM).toDp() }
-    val column = minOf(pageWidth - horizontalMargin * 2, measure).coerceAtLeast(0.dp)
-    return ((pageWidth - column) / 2).coerceAtLeast(0.dp)
-}
-
-/** The width the paginator measures, in pixels: the capped, centred column the page renders. */
-internal fun ReaderStyles.contentWidthPx(pageWidth: Dp, density: Density): Int =
-    with(density) { (pageWidth - pageInset(pageWidth, density) * 2).roundToPx() }.coerceAtLeast(0)
