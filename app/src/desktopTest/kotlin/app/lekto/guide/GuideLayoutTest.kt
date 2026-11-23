@@ -41,6 +41,10 @@ import kotlin.test.assertTrue
 /** Half a pixel of tolerance for the rounding a layout does at the screen's edge. */
 private const val FIT_SLACK = 0.5f
 
+/** The two screen heights the preview's flexibility is measured between. */
+private const val PHONE_HEIGHT = 640f
+private const val TALL_PHONE_HEIGHT = 800f
+
 /**
  * The guide at the sizes the ticket names (issue #277): a 320 dp phone, a 360 dp
  * phone and a 700 × 500 desktop window. Each screen keeps its title, its `Skip`
@@ -72,16 +76,43 @@ class GuideLayoutTest {
     fun theLevelScreenFitsANarrowPhoneWithoutScrolling() = theLevelScreenFits(width = 320f, height = 640f)
 
     @Test
-    fun thePageBlockTakesTheFlexibleHeightAndTheActionSitsUnderTheNotes() = thePageRhythm(width = 360f, height = 640f)
+    fun thePageNotesSitEvenlyBetweenTheTextAndTheAction() = theNotesRhythm(width = 360f, height = 640f)
 
     @Test
-    fun theNarrowPhonePageBlockTakesTheFlexibleHeight() = thePageRhythm(width = 320f, height = 640f)
+    fun theNarrowPhonePageNotesSitEvenlyBetweenTheTextAndTheAction() = theNotesRhythm(width = 320f, height = 640f)
 
     @Test
     fun theLevelScreenBreathesWithoutScrolling() = theLevelRhythm(width = 360f, height = 640f)
 
     @Test
     fun theNarrowPhoneLevelScreenBreathesWithoutScrolling() = theLevelRhythm(width = 320f, height = 640f)
+
+    @Test
+    fun theLevelPreviewTakesWhateverTheScreenLeaves() {
+        val phone = levelPreviewHeight(width = 360f, height = 640f)
+        val tall = levelPreviewHeight(width = 360f, height = 800f)
+
+        assertEquals(
+            TALL_PHONE_HEIGHT - PHONE_HEIGHT,
+            tall - phone,
+            FIT_SLACK,
+            "the preview takes the extra screen height",
+        )
+    }
+
+    @Test
+    fun theLevelScreensActionAnchorsWhereEveryBeatAnchorsItsWayForward() {
+        var pageBottom = 0f
+        var levelBottom = 0f
+        screen(width = 360f, height = 640f, { PageStage(sample) }) {
+            pageBottom = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot.bottom
+        }
+        screen(width = 360f, height = 640f, { LevelStage(sample) }) {
+            levelBottom = onNodeWithTag(GUIDE_START_READING_TAG).fetchSemanticsNode().boundsInRoot.bottom
+        }
+
+        assertEquals(pageBottom, levelBottom, FIT_SLACK, "the level's action shares the bottom bar")
+    }
 
     @Test
     fun theArrivalSitsTheDownloadLineInsideTheShelfFrame() = theArrival(frameWidth = 360f, height = 640f)
@@ -114,46 +145,56 @@ class GuideLayoutTest {
     }
 
     /**
-     * The page beat's rhythm (issue #277's third review): the block takes the
-     * flexible middle and is taller than the four notes under it, the notes sit one
-     * row unit under it and the way forward one panel unit under the notes, all of
-     * it inside the screen without a scroll.
+     * The page beat's rhythm (issue #277's fifth review): the notes are no longer
+     * pressed against the action after a tall empty page block. The notes column
+     * sits in the middle between the page's text and the way forward, so the gap
+     * above the notes and the gap below them match within one spacing unit, and the
+     * action still anchors the screen.
      */
-    private fun thePageRhythm(width: Float, height: Float) {
+    private fun theNotesRhythm(width: Float, height: Float) {
         screen(width, height, { PageStage(sample) }) {
             val block = onNodeWithTag(GUIDE_PAGE_TAG).fetchSemanticsNode().boundsInRoot
             val notes = onNodeWithTag(GUIDE_NOTES_TAG).fetchSemanticsNode().boundsInRoot
             val action = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot
+            val above = notes.top - block.bottom
+            val below = action.top - notes.bottom
 
-            assertTrue(block.height > notes.height, "the page is the star: $block / $notes")
-            assertEquals(
-                LektoSpacing.BetweenRows.value,
-                notes.top - block.bottom,
-                FIT_SLACK,
-                "the notes stay compact",
-            )
+            assertTrue(above > 0f, "the text keeps its air: $block / $notes")
             // The filled button carries Material's touch inset inside its node, so
-            // the layout gap is at least the panel unit the screen asks for.
+            // its measured gap can exceed the layout gap by that inset; one scale
+            // unit absorbs it.
+            assertEquals(
+                above,
+                below,
+                LektoSpacing.BetweenRelatedLines.value + FIT_SLACK,
+                "the notes sit evenly between the text and the action: $above / $below",
+            )
             assertTrue(
-                action.top - notes.bottom >= LektoSpacing.InsidePanel.value - FIT_SLACK,
-                "one panel under the notes: $notes / $action",
+                below >= LektoSpacing.BetweenBlocks.value - FIT_SLACK,
+                "the notes are not glued to the action: $notes / $action",
             )
             assertTrue(action.bottom <= height + FIT_SLACK, "the action anchors the screen: $action")
         }
     }
 
     /**
-     * The level screen's rhythm (issue #277's third review): the preview, the six
-     * bands and the action are separated by units of the scale, and the action still
-     * ends inside a 640 dp screen — compact and breathing are not enemies.
+     * The level screen's rhythm (issue #277's third and fifth reviews): the preview,
+     * the six bands and the action are separated by units of the scale, the action
+     * anchors the very bottom like every other beat's way forward, and the whole
+     * screen still fits a phone without scrolling.
      */
     private fun theLevelRhythm(width: Float, height: Float) {
         screen(width, height, { LevelStage(sample) }) {
             val preview = onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).fetchSemanticsNode().boundsInRoot
+            val title = onNodeWithTag(GUIDE_TITLE_TAG).fetchSemanticsNode().boundsInRoot
             val bands = onNodeWithTag(guideBandTag(CefrLevel.A1)).fetchSemanticsNode().boundsInRoot
             val lastBand = onNodeWithTag(guideBandTag(CefrLevel.C2)).fetchSemanticsNode().boundsInRoot
             val action = onNodeWithTag(GUIDE_START_READING_TAG).fetchSemanticsNode().boundsInRoot
 
+            assertTrue(
+                preview.top - title.bottom >= LektoSpacing.InsidePanel.value - FIT_SLACK,
+                "the preview keeps a panel unit under the heading: $title / $preview",
+            )
             assertEquals(LektoSpacing.BetweenRows.value, bands.top - preview.bottom, FIT_SLACK, "the bands breathe")
             // The filled button carries Material's touch inset inside its node, so the
             // layout gap is at least the panel unit the screen asks for.
@@ -162,10 +203,19 @@ class GuideLayoutTest {
                 "the action is a panel unit under the bands: $lastBand / $action",
             )
             assertTrue(
-                action.bottom + LektoSpacing.InsideLabelPair.value <= height + FIT_SLACK,
-                "the action keeps its foot off the edge: $action",
+                height - action.bottom <= LektoSpacing.InsideLabelPair.value + FIT_SLACK,
+                "the action anchors the very bottom: $action",
             )
         }
+    }
+
+    /** The level preview's height on one screen size, so the flexible middle can be compared. */
+    private fun levelPreviewHeight(width: Float, height: Float): Float {
+        var previewHeight = 0f
+        screen(width, height, { LevelStage(sample) }) {
+            previewHeight = onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).fetchSemanticsNode().boundsInRoot.height
+        }
+        return previewHeight
     }
 
     /**
@@ -231,8 +281,8 @@ class GuideLayoutTest {
             onNodeWithTag(GUIDE_SKIP_TAG).assertIsDisplayed()
         }
         screen(width, height, { LevelStage(sample) }) {
-            onNodeWithTag(guideBandTag(CefrLevel.C2)).performScrollTo().assertIsDisplayed()
-            onNodeWithTag(GUIDE_START_READING_TAG).performScrollTo().assertIsDisplayed()
+            onNodeWithTag(guideBandTag(CefrLevel.C2)).assertIsDisplayed()
+            onNodeWithTag(GUIDE_START_READING_TAG).assertIsDisplayed()
         }
         screen(width, height, { ArrivalStage() }) {
             onNodeWithText("A Guide Sample").performScrollTo().assertIsDisplayed()

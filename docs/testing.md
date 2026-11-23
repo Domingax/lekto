@@ -1254,9 +1254,10 @@ drives the same path end to end over the fake fetch seams and checks the
 full-width `Continue` that is shown but disabled until a row is chosen, the two
 beats and their notes, the embedded block's tap
 hit-testing, the sheet on the tapped word with no install door, the save's state
-line, the six bands with A1 chosen from entry, the filled `Start reading` action,
-the back chevron at the head of the bar after screen 1, a horizontal swipe that
-goes back and never advances (and does nothing on the question), `Skip` on every
+line, the six bands with A1 chosen from entry, the filled `Start reading` action
+anchored at the very bottom, the back chevron at the head of the bar after screen 1,
+a left-to-right swipe that goes back while a leftward one does nothing (and the
+question ignores both), `Skip` on every
 screen, the download card on screen 1 only with
 its three actions, and the arrival's sample row and download line — with the five
 screens'

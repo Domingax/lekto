@@ -167,7 +167,7 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun aSwipeOnALaterScreenGoesBackAndNeverAdvances() {
+    fun aLeftwardSwipeOnALaterScreenDoesNothing() {
         var backed = 0
         var continued = 0
         render(
@@ -177,7 +177,7 @@ class GuideScreenSemanticsTest {
 
         compose.onRoot().performTouchInput { swipeLeft() }
 
-        assertEquals("a swipe is the back gesture", 1, backed)
+        assertEquals("a leftward swipe is not the back gesture", 0, backed)
         assertEquals("a swipe never advances the guide", 0, continued)
     }
 
@@ -191,7 +191,7 @@ class GuideScreenSemanticsTest {
 
         compose.onRoot().performTouchInput { swipeRight() }
 
-        assertEquals("both directions are the one back gesture", 1, backed)
+        assertEquals("a rightward swipe is the chevron's gesture", 1, backed)
     }
 
     @Test
@@ -205,8 +205,9 @@ class GuideScreenSemanticsTest {
         )
 
         compose.onRoot().performTouchInput { swipeLeft() }
+        compose.onRoot().performTouchInput { swipeRight() }
 
-        assertEquals("there is no previous screen on the question", 0, backed)
+        assertEquals("there is no previous screen on the question, in either direction", 0, backed)
         assertEquals("a swipe never advances the guide", 0, continued)
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsNotEnabled()
     }
@@ -259,10 +260,19 @@ class GuideScreenSemanticsTest {
     fun theFirstBeatShowsTheParagraphWithNoColourAndNoNotes() {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
 
-        compose.onNodeWithText("Here is a page of your book.").assertIsDisplayed()
-        compose.onNodeWithText("Nothing is coloured yet. Look.").assertIsDisplayed()
+        compose.onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
+        compose.onNodeWithText("Here is a page as you are used to reading it").assertIsDisplayed()
         compose.onNodeWithTag(GUIDE_NOTES_TAG).assertDoesNotExist()
         compose.onNodeWithText("fisherman", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun theQuestionCarriesTheOwnersIntroAndNoFootnote() {
+        render(GuideUiState(stage = GuideStage.LANGUAGE), sample = null)
+
+        compose.onNodeWithText("We prepare the app around your target language. You can add more later.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("You can add other languages later in Settings.").assertDoesNotExist()
     }
 
     @Test
@@ -286,11 +296,24 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun theColouredBeatKeepsItsHeadingAndDropsTheSecondLine() {
+    fun theColouredBeatAddsItsOneLineUnderTheHeading() {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
 
         compose.onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        compose.onNodeWithText("Lekto colours words according to how well you know your target language.")
+            .assertIsDisplayed()
         compose.onNodeWithText("Four words on this page, four levels.").assertDoesNotExist()
+    }
+
+    @Test
+    fun theTapScreenAsksTheWordAndPromisesTheVocabulary() {
+        render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
+
+        compose.onNodeWithText("Tap a word: discover its meaning").assertIsDisplayed()
+        compose.onNodeWithText("Learn and grow your vocabulary").assertIsDisplayed()
+        compose.onNodeWithText(
+            "Choosing a level saves the word. Level 4 has no colour: it is the normal text.",
+        ).assertDoesNotExist()
     }
 
     @Test
@@ -332,6 +355,44 @@ class GuideScreenSemanticsTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun aTapOutsideTheSheetDismissesItAndSavesNothing() {
+        val lookupOpen = mutableStateOf(true)
+        var saved: MasteryLevel? = null
+        compose.setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme {
+                    GuideScreen(
+                        state = GuideUiState(
+                            stage = GuideStage.TAP,
+                            sample = sample,
+                            plain = false,
+                            lookupOpen = lookupOpen.value,
+                            tapped = note("calm"),
+                        ),
+                        languages = sampleRosterLanguages(),
+                        document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter),
+                        notes = guideNotes(sample, GUIDE_DEFAULT_BAND, segmenter, "fr"),
+                        translationLanguage = "fr",
+                        actions = GuideActions(
+                            onDismissLookup = { lookupOpen.value = false },
+                            onSaveWord = { level -> saved = level },
+                        ),
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(Offset(width / 2f, 1f)) }
+
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        assertNull("a tap outside the sheet is not a save", saved)
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
     }
 
@@ -468,12 +529,12 @@ class GuideScreenSemanticsTest {
         compose.onNodeWithTag(GUIDE_LEVEL_PREVIEW_TAG).assertIsDisplayed()
         compose.onNodeWithText("What is your level in English?").assertIsDisplayed()
         CefrLevel.entries.forEach { level ->
-            compose.onNodeWithTag(guideBandTag(level)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag(guideBandTag(level)).assertIsDisplayed()
             compose.onNodeWithText(texts.bandName(level)).assertExists()
             compose.onNodeWithText(texts.bandLine(level)).assertExists()
         }
 
-        compose.onNodeWithTag(guideBandTag(CefrLevel.C1)).performScrollTo().performClick()
+        compose.onNodeWithTag(guideBandTag(CefrLevel.C1)).performClick()
 
         assertEquals(CefrLevel.C1, chosen)
     }

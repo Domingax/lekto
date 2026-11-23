@@ -24,8 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -68,6 +66,7 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
+import app.lekto.ui.DismissScrim
 import app.lekto.ui.TextAction
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ChevronLeft
@@ -131,14 +130,6 @@ private val NoteGap: Dp = LektoSpacing.BetweenRows
  */
 private val ActionGap: Dp = LektoSpacing.InsidePanel
 
-/**
- * The height the level screen's preview card gives the page. Compact on purpose: the
- * six bands and the action are the screen's job, and the card only has to show the
- * colours the chosen band paints (it replaced a taller card that pushed the action
- * off a 640 dp phone).
- */
-private val PREVIEW_HEIGHT = 56.dp
-
 /** The test tag on one language row, so a test can choose exactly one. */
 internal fun guideLanguageRowTag(language: String): String = "guide-language-$language"
 
@@ -201,10 +192,12 @@ private class GuideBeat(
  *
  * The arrangement is the guide's, not the reader's: the progress marks, the back
  * chevron and `Skip` share one bar, each screen's title is the guide's own, and the
- * page takes the flexible middle of its beat so the notes and the way forward sit
- * under it without a dead zone. The download card appears on the language question
- * and on the arrival only. On desktop the arrow keys page the screens and `Escape`
- * is `Skip` (installed by the composition root).
+ * one filled action anchors the foot of every beat. The page takes the flexible
+ * height on its plain beat; on the coloured one the four notes take the space
+ * between the text and the action evenly, and on the level screen the preview takes
+ * it. The download card appears on the language question and on the arrival only.
+ * On desktop the arrow keys page the screens and `Escape` is `Skip` (installed by
+ * the composition root).
  */
 @Suppress("LongParameterList") // The state, its roster, the page, the notes, the download and the actions.
 @Composable
@@ -220,13 +213,16 @@ fun GuideScreen(
 ) {
     Box(modifier.fillMaxSize()) {
         val beat = GuideBeat(state, document, notes, download, actions)
-        val swipeBack = rememberUpdatedState<(PageSwipe) -> Unit> { actions.onBack() }
+        val swipeBack = rememberUpdatedState<(PageSwipe) -> Unit> { swipe ->
+            if (swipe == PageSwipe.PREVIOUS) actions.onBack()
+        }
         Column(
             Modifier
                 .fillMaxSize()
-                // A horizontal swipe is the back gesture, exactly like the chevron, and
-                // never a way forward (the owner's fourth review). The question has no
-                // previous step, so there it does nothing.
+                // A left-to-right swipe is the back gesture, exactly like the chevron,
+                // and never a way forward (the owner's fourth and fifth reviews): the
+                // other direction is inert, and the question has no previous step, so
+                // there it does nothing.
                 .readerSwipeInput(enabled = state.stage != GuideStage.LANGUAGE, onSwipe = swipeBack),
         ) {
             GuideBar(state.stage, actions.onBack, actions.onSkip)
@@ -238,6 +234,9 @@ fun GuideScreen(
             }
         }
         if (state.stage == GuideStage.TAP && state.lookupOpen) {
+            // The reader's own outside-tap seam: behind the sheet, over the page, so
+            // a tap that is not on the sheet closes it and reaches nothing else.
+            DismissScrim(onDismiss = actions.onDismissLookup)
             TapSheet(beat, state.tapped, translationLanguage)
         }
     }
@@ -343,16 +342,11 @@ private fun ColumnScope.LanguageQuestion(beat: GuideBeat, languages: List<Offere
             ),
             modifier = Modifier.padding(top = LektoSpacing.BetweenRows),
         )
-        Text(
-            text = texts[TextKey.GUIDE_LANGUAGE_FOOTNOTE],
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = LektoSpacing.InsidePanel),
-        )
         Button(
             onClick = beat.actions.onContinue,
             enabled = selected != null,
-            modifier = Modifier.fillMaxWidth().handCursor().testTag(GUIDE_CONTINUE_TAG),
+            modifier = Modifier.fillMaxWidth().padding(top = LektoSpacing.BetweenRows).handCursor()
+                .testTag(GUIDE_CONTINUE_TAG),
         ) {
             Text(texts[TextKey.GUIDE_CONTINUE])
         }
@@ -422,30 +416,37 @@ private fun InkRule(selected: Boolean) {
  * Screen 2: the page in two beats. The first shows the paragraph with no colour at
  * all and promises no gesture; the second paints the same paragraph from the
  * sample's own map and explains four of its words, one per level, under it. The
- * page is the beat's flexible middle: it takes every dp the heading, the notes and
- * the way forward leave, so the block is the star and the action sits at the foot
- * of the screen instead of leaving a dead zone above it. The download card is not
- * here: it lives on the question and on the arrival.
+ * coloured beat's notes sit in the middle between the text and the way forward
+ * (the owner's fifth review): the page block keeps the flexible weight on the plain
+ * beat, and on the coloured one two equal spacers take that weight so the notes
+ * breathe as far from the text as from the action instead of hanging off a tall
+ * empty block. The download card is not here: it lives on the question and on the
+ * arrival.
  */
 @Composable
 private fun ColumnScope.PageBeat(beat: GuideBeat) {
     val state = beat.state
     val texts = LocalAppTexts.current
     val title = if (state.plain) TextKey.GUIDE_PAGE_PLAIN_TITLE else TextKey.GUIDE_PAGE_COLOURED_TITLE
-    val intro = if (state.plain) texts[TextKey.GUIDE_PAGE_PLAIN_INTRO] else null
+    val intro = texts[
+        if (state.plain) TextKey.GUIDE_PAGE_PLAIN_INTRO else TextKey.GUIDE_PAGE_COLOURED_INTRO,
+    ]
+    val explains = !state.plain
     Column(
         Modifier.fillMaxWidth().weight(1f)
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(texts[title], intro)
         beat.document?.let { page ->
-            GuidePageBlock(page, Modifier.fillMaxWidth().weight(1f).padding(top = HeadingBlockGap))
+            val pageModifier = if (explains) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().weight(1f)
+            GuidePageBlock(page, pageModifier.padding(top = HeadingBlockGap))
         }
-        if (!state.plain) GuideNotes(beat.notes, Modifier.padding(top = NoteGap))
-        GuideContinue(
-            beat.actions.onContinue,
-            Modifier.padding(top = ActionGap),
-        )
+        if (explains) {
+            Spacer(Modifier.weight(1f))
+            GuideNotes(beat.notes, Modifier.padding(vertical = NoteGap))
+            Spacer(Modifier.weight(1f))
+        }
+        GuideContinue(beat.actions.onContinue)
     }
 }
 
@@ -482,12 +483,6 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
                 onWordTap = beat.actions.onTapWord,
             )
         }
-        Text(
-            text = texts[TextKey.GUIDE_TAP_FOOTNOTE],
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = NoteGap),
-        )
         if (!state.lookupOpen) {
             GuideContinue(
                 beat.actions.onContinue,
@@ -537,11 +532,13 @@ private fun savedEntry(note: GuideNote, level: MasteryLevel): VocabularyEntry = 
 /**
  * Screen 4: the same page above the six CEFR bands, one line each. Choosing a band
  * writes the **Reader level** through the Languages surface's own action and
- * repaints the page; the filled action finishes the guide onto the shelf. The
- * rhythm is the guide's: a panel unit under the heading, a row unit between the
- * preview and the bands, and a row unit under the action, so nothing is glued and
- * the screen still fits a 320 dp phone without scrolling. The download card is not
- * here either.
+ * repaints the page; the filled action anchors the very bottom and finishes the
+ * guide onto the shelf, the same button in the same place as every other beat's way
+ * forward. The preview takes whatever the heading, the six bands and the bottom bar
+ * leave (the owner's fifth review), so a taller screen shows more of the sample's
+ * coloured words — the point of a screen that recolours on every choice. The bands
+ * stay compact, so the screen still fits a 320 dp phone without scrolling. The
+ * download card is not here either.
  */
 @Composable
 private fun ColumnScope.LevelBeat(beat: GuideBeat) {
@@ -552,38 +549,37 @@ private fun ColumnScope.LevelBeat(beat: GuideBeat) {
         AppMessage.of(TextKey.GUIDE_LEVEL_TITLE, language?.let(texts::languageName).orEmpty()),
     )
     Column(
-        Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
+        Modifier.fillMaxWidth().weight(1f)
             .padding(horizontal = LektoSpacing.ScreenEdge),
     ) {
         GuideHeading(title, texts[TextKey.GUIDE_LEVEL_INTRO])
-        PreviewCard(beat.document)
+        PreviewCard(beat.document, Modifier.fillMaxWidth().weight(1f).padding(top = NoteGap))
         BandList(state.chosenBand, beat.actions.onChooseBand)
-        Button(
+        GuideFilledAction(
+            label = texts[TextKey.GUIDE_START_READING],
+            tag = GUIDE_START_READING_TAG,
             onClick = beat.actions.onFinish,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = ActionGap, bottom = LektoSpacing.BetweenRelatedLines)
-                .handCursor()
-                .testTag(GUIDE_START_READING_TAG),
-        ) {
-            Text(texts[TextKey.GUIDE_START_READING])
-        }
+            modifier = Modifier.padding(top = ActionGap),
+        )
     }
 }
 
-/** The level screen's card: the embedded page at the band being chosen, compacted to fit one screen. */
+/**
+ * The level screen's card: the embedded page at the band being chosen. Its height is
+ * the flexible middle the caller gives it; the block is clipped by the card, so a
+ * taller card shows more of the paragraph and more of its coloured words.
+ */
 @Composable
-private fun PreviewCard(document: ReaderDocument?) {
+private fun PreviewCard(document: ReaderDocument?, modifier: Modifier = Modifier) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = NoteGap)
-            .testTag(GUIDE_LEVEL_PREVIEW_TAG),
+        modifier = modifier.testTag(GUIDE_LEVEL_PREVIEW_TAG),
         shape = LektoRadii.Surface,
         color = MaterialTheme.colorScheme.background,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(Modifier.padding(LektoSpacing.BetweenRelatedLines)) {
             document?.let { page ->
-                GuidePageBlock(page, Modifier.fillMaxWidth().height(PREVIEW_HEIGHT))
+                GuidePageBlock(page, Modifier.fillMaxWidth().weight(1f))
             }
         }
     }
@@ -720,11 +716,26 @@ private fun GuideHeading(title: String, intro: String?, topPadding: Dp = LektoSp
 /** The screen's one way forward: a real, filled, full-width button, centred under the content. */
 @Composable
 private fun GuideContinue(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    GuideFilledAction(
+        label = LocalAppTexts.current[TextKey.GUIDE_CONTINUE],
+        tag = GUIDE_CONTINUE_TAG,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The filled action every beat ends with: `Continue` on the question and the page
+ * beats, `Start reading` on the level beat. One composable so the button, its
+ * width and its place in the bottom bar cannot drift between screens.
+ */
+@Composable
+private fun GuideFilledAction(label: String, tag: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().handCursor().testTag(GUIDE_CONTINUE_TAG),
+        modifier = modifier.fillMaxWidth().handCursor().testTag(tag),
     ) {
-        Text(LocalAppTexts.current[TextKey.GUIDE_CONTINUE])
+        Text(label)
     }
 }
 

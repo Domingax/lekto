@@ -1,7 +1,7 @@
 package app.lekto.guide
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +40,10 @@ import app.lekto.reader.wordTapOf
  * the word under it; a tap that misses every word does nothing. The guide decides
  * which tapped words the sample can answer, so a tap on an unglossed word is as
  * inert as a tap on empty space (issue #277's feedback, item 8).
+ *
+ * The block wraps its paragraph and clips what a caller's height cuts off: a beat
+ * that gives it no weight shows the whole text, while the level screen's preview
+ * gives it the card's height and so shows as much of the page as the card allows.
  */
 @Composable
 internal fun GuidePageBlock(
@@ -67,7 +71,6 @@ internal fun GuidePageBlock(
     Box(
         modifier
             .clipToBounds()
-            .fillMaxSize()
             .testTag(GUIDE_PAGE_TAG)
             .readerTapInput(tap)
             .padding(horizontal = styles.horizontalMargin),
@@ -75,7 +78,7 @@ internal fun GuidePageBlock(
         Text(
             text = tokens.text,
             style = styles.body,
-            modifier = Modifier.fillMaxSize().testTag(GUIDE_PAGE_TEXT_TAG),
+            modifier = Modifier.fillMaxWidth().testTag(GUIDE_PAGE_TEXT_TAG),
             onTextLayout = { result -> layout = result },
         )
     }

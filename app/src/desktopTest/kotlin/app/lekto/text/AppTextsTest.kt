@@ -13,6 +13,7 @@ import kotlin.test.assertTrue
  * outcome reads in the chosen language, and a message survives storage so a kept
  * sync outcome still reads after a restart.
  */
+@Suppress("TooManyFunctions") // One case per text contract; the suite is the tables' completeness guard.
 class AppTextsTest {
 
     @Test
@@ -48,13 +49,28 @@ class AppTextsTest {
     @Test
     fun `the guide's language question states the owner's wording in both languages`() {
         assertEquals(
-            "Lekto colours words according to how well you know the language you want to read.",
+            "We prepare the app around your target language. You can add more later.",
             appTextsFor("en")[TextKey.GUIDE_LANGUAGE_INTRO],
         )
         assertEquals(
-            "Lekto colore les mots à partir de votre niveau de maîtrise de la langue que vous souhaitez apprendre.",
+            "Nous préparons l'application en fonction de votre langue cible. " +
+                "Vous pourrez en ajouter d'autres plus tard.",
             appTextsFor("fr")[TextKey.GUIDE_LANGUAGE_INTRO],
         )
+    }
+
+    /**
+     * The fifth field pass removed both of the guide's footnotes: the language
+     * question folded its promise into the intro line, and the tap screen's receipt
+     * in the sheet already states what choosing a level does. A key left behind
+     * would be dead text.
+     */
+    @Test
+    fun `the guide's removed footnotes keep no key or text`() {
+        val names = TextKey.entries.map { it.name }
+
+        assertTrue("GUIDE_LANGUAGE_FOOTNOTE" !in names, "the language footnote's promise moved into the intro")
+        assertTrue("GUIDE_TAP_FOOTNOTE" !in names, "the sheet's receipt states the save")
     }
 
     @Test
