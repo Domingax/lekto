@@ -257,7 +257,7 @@ class GuideScreenSemanticsTest {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
 
         onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
-        onNodeWithText("Here is a page as you are used to reading it").assertIsDisplayed()
+        onNodeWithText("Here is a page as you are used to reading it.").assertIsDisplayed()
         onNodeWithTag(GUIDE_NOTES_TAG).assertDoesNotExist()
         onNodeWithText("fisherman", substring = true).assertIsDisplayed()
     }
@@ -276,7 +276,7 @@ class GuideScreenSemanticsTest {
     fun theSecondBeatNamesFourNotesWithTheirLevelAndMeaning() = runComposeUiTest {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
 
-        onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        onNodeWithText("The more you know, the less colour").assertIsDisplayed()
         onNodeWithTag(GUIDE_NOTES_TAG).assertIsDisplayed()
         listOf(
             MasteryLevel.UNKNOWN to "Unknown",
@@ -296,7 +296,7 @@ class GuideScreenSemanticsTest {
     fun theColouredBeatAddsItsOneLineUnderTheHeading() = runComposeUiTest {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
 
-        onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        onNodeWithText("The more you know, the less colour").assertIsDisplayed()
         onNodeWithText("Lekto colours words according to how well you know your target language.")
             .assertIsDisplayed()
         onNodeWithText("Four words on this page, four levels.").assertDoesNotExist()
@@ -307,7 +307,7 @@ class GuideScreenSemanticsTest {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
         onNodeWithText("Tap a word: discover its meaning").assertIsDisplayed()
-        onNodeWithText("Learn and grow your vocabulary").assertIsDisplayed()
+        onNodeWithText("Learn and grow your vocabulary.").assertIsDisplayed()
         // The sheet's own receipt states the save, so the guide's explainer is gone.
         onNodeWithText("Choosing a level saves the word. Level 4 has no colour: it is the normal text.")
             .assertDoesNotExist()

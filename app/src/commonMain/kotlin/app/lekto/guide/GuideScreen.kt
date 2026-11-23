@@ -161,7 +161,7 @@ data class GuideActions(
     val onRetryDownload: () -> Unit = {},
     val onResumeDownload: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
-    val onSpeakWord: () -> Unit = {},
+    val onSpeakWord: (String, String?) -> Unit = { _, _ -> },
 )
 
 /**
@@ -506,7 +506,9 @@ private fun BoxScope.TapSheet(beat: GuideBeat, note: GuideNote?, translationLang
         term = note.surface,
         shortcuts = shortcuts,
         actions = WordLookupActions(onOpenShortcut = {}, onDismiss = beat.actions.onDismissLookup),
-        pronunciation = Pronunciation(onSpeak = beat.actions.onSpeakWord),
+        pronunciation = Pronunciation(
+            onSpeak = { beat.actions.onSpeakWord(note.surface, note.key.language) },
+        ),
         vocabulary = VocabularyPanel(
             entry = beat.state.savedLevel?.takeIf { beat.state.savedKey == note.key }?.let { level ->
                 savedEntry(note, level)

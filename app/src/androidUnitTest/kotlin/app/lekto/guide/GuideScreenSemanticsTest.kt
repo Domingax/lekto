@@ -261,7 +261,7 @@ class GuideScreenSemanticsTest {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true))
 
         compose.onNodeWithText("Lekto rethinks the way you discover a new language").assertIsDisplayed()
-        compose.onNodeWithText("Here is a page as you are used to reading it").assertIsDisplayed()
+        compose.onNodeWithText("Here is a page as you are used to reading it.").assertIsDisplayed()
         compose.onNodeWithTag(GUIDE_NOTES_TAG).assertDoesNotExist()
         compose.onNodeWithText("fisherman", substring = true).assertIsDisplayed()
     }
@@ -279,7 +279,7 @@ class GuideScreenSemanticsTest {
     fun theSecondBeatNamesFourNotesWithTheirLevelAndMeaning() {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
 
-        compose.onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        compose.onNodeWithText("The more you know, the less colour").assertIsDisplayed()
         compose.onNodeWithTag(GUIDE_NOTES_TAG).assertIsDisplayed()
         listOf(
             MasteryLevel.UNKNOWN to "Unknown",
@@ -299,7 +299,7 @@ class GuideScreenSemanticsTest {
     fun theColouredBeatAddsItsOneLineUnderTheHeading() {
         render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
 
-        compose.onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+        compose.onNodeWithText("The more you know, the less colour").assertIsDisplayed()
         compose.onNodeWithText("Lekto colours words according to how well you know your target language.")
             .assertIsDisplayed()
         compose.onNodeWithText("Four words on this page, four levels.").assertDoesNotExist()
@@ -310,7 +310,7 @@ class GuideScreenSemanticsTest {
         render(GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false))
 
         compose.onNodeWithText("Tap a word: discover its meaning").assertIsDisplayed()
-        compose.onNodeWithText("Learn and grow your vocabulary").assertIsDisplayed()
+        compose.onNodeWithText("Learn and grow your vocabulary.").assertIsDisplayed()
         compose.onNodeWithText(
             "Choosing a level saves the word. Level 4 has no colour: it is the normal text.",
         ).assertDoesNotExist()

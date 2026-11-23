@@ -1,5 +1,6 @@
 package app.lekto.text
 
+import app.lekto.core.CefrLevel
 import app.lekto.core.llm.LlmConnectionResult
 import app.lekto.core.secret.SecretStore
 import kotlin.test.Test
@@ -57,6 +58,47 @@ class AppTextsTest {
                 "Vous pourrez en ajouter d'autres plus tard.",
             appTextsFor("fr")[TextKey.GUIDE_LANGUAGE_INTRO],
         )
+    }
+
+    /**
+     * The owner's punctuation rule for the guide (issue #277's sixth review): a
+     * main title carries no trailing period — the two questions keep their question
+     * mark — and every sub-line under one carries a period. Both tables answer to
+     * the rule, so a new line cannot reintroduce the inconsistency.
+     */
+    @Test
+    fun `the guide's titles carry no period and its sub-lines do`() {
+        val titles = listOf(
+            TextKey.GUIDE_LANGUAGE_TITLE,
+            TextKey.GUIDE_PAGE_PLAIN_TITLE,
+            TextKey.GUIDE_PAGE_COLOURED_TITLE,
+            TextKey.GUIDE_TAP_TITLE,
+            TextKey.GUIDE_LEVEL_TITLE,
+        )
+        val subLines = listOf(
+            TextKey.GUIDE_LANGUAGE_INTRO,
+            TextKey.GUIDE_PAGE_PLAIN_INTRO,
+            TextKey.GUIDE_PAGE_COLOURED_INTRO,
+            TextKey.GUIDE_TAP_INTRO,
+            TextKey.GUIDE_LEVEL_INTRO,
+            TextKey.GUIDE_LEVEL_NOT_SET,
+        )
+
+        listOf("en", "fr").forEach { language ->
+            val texts = appTextsFor(language)
+            titles.forEach { key ->
+                assertTrue(!texts[key].endsWith("."), "$language title $key carries a trailing period")
+            }
+            subLines.forEach { key ->
+                assertTrue(texts[key].endsWith("."), "$language sub-line $key has no trailing period")
+            }
+            CefrLevel.entries.forEach { level ->
+                assertTrue(
+                    texts.bandLine(level).endsWith("."),
+                    "$language band line for $level has no trailing period",
+                )
+            }
+        }
     }
 
     /**

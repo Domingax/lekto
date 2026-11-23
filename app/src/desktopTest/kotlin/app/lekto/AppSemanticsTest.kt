@@ -1655,10 +1655,7 @@ class AppSemanticsTest {
             )
         }
 
-        onNodeWithTag(guideLanguageRowTag("en")).performClick()
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        openGuideToTheTapScreen()
         tapGuideWord("fisherman")
         onNodeWithTag(PRONOUNCE_TAG).performClick()
 
@@ -1666,6 +1663,71 @@ class AppSemanticsTest {
         val (text, language) = pronouncer.utterances.single()
         assertEquals("fisherman", text)
         assertEquals("en", language)
+    }
+
+    @Test
+    fun theGuidesSpeakerPronouncesTheWordThatWasTapped() = runComposeUiTest {
+        val pronouncer = FakePronouncer()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                    pronouncer = pronouncer,
+                ),
+            )
+        }
+
+        openGuideToTheTapScreen()
+        tapGuideWord("calm")
+        onNodeWithText("→ calme", substring = true).assertExists()
+        onNodeWithTag(PRONOUNCE_TAG).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
+        assertEquals(
+            listOf<Pair<String, String?>>("calm" to "en"),
+            pronouncer.utterances,
+            "the sheet speaks the word it shows, never the demonstrated one",
+        )
+    }
+
+    @Test
+    fun savingAnotherWordWritesThatWordToTheVocabulary() = runComposeUiTest {
+        val vocabulary = inMemoryVocabulary()
+        setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(),
+                    guide = InMemoryGuideProgressStore(),
+                    vocabulary = vocabulary,
+                    readerLevels = InMemoryReaderLevels(),
+                ),
+            )
+        }
+
+        openGuideToTheTapScreen()
+        tapGuideWord("calm")
+        onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.entryFor(WordKey("en", "calm")) != null
+        }
+        assertEquals(MasteryLevel.FAMILIAR, vocabulary.entryFor(WordKey("en", "calm"))?.mastery)
+        assertNull(
+            vocabulary.entryFor(WordKey("en", "fisherman")),
+            "the demonstrated word was never tapped, so it was never saved",
+        )
+        onNodeWithText("Saved · Familiar").assertIsDisplayed()
+
+        onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
+
+        waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.entryFor(WordKey("en", "calm"))?.mastery == MasteryLevel.LEARNED
+        }
+        assertEquals(1, vocabulary.all().size, "a level change follows the word the sheet shows")
+        onNodeWithText("Saved · Learned").assertIsDisplayed()
     }
 
     @Test
@@ -2153,6 +2215,19 @@ private fun ComposeUiTest.tapWord(surface: String) {
             ),
         )
     }
+}
+
+/**
+ * Answers the language question and walks the page's two beats to the tap screen,
+ * where a word can be tapped (issue #277's sixth review).
+ */
+@OptIn(ExperimentalTestApi::class)
+private fun ComposeUiTest.openGuideToTheTapScreen() {
+    onNodeWithTag(guideLanguageRowTag("en")).performClick()
+    onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+    onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+    onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+    waitForIdle()
 }
 
 /**

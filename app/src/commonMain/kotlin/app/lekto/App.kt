@@ -849,7 +849,10 @@ private fun GuideDestination(
                 onRetryDownload = { download?.retry() },
                 onResumeDownload = { download?.resume() },
                 onOpenSettings = {},
-                onSpeakWord = { notes.firstOrNull()?.let { note -> speak(note.surface, note.key.language) } },
+                // The sheet speaks the word it shows: it hands over that word's
+                // surface and language, so the demonstrated note is never spoken in
+                // another word's place (issue #277's sixth review).
+                onSpeakWord = speak,
             ),
         )
     }

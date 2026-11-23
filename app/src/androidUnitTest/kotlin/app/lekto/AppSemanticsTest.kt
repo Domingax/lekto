@@ -1604,6 +1604,77 @@ class AppSemanticsTest {
     }
 
     @Test
+    fun theGuidesSpeakerPronouncesTheWordThatWasTapped() {
+        val pronouncer = FakePronouncer()
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(calmFirstGuideSample()),
+                    guide = InMemoryGuideProgressStore(),
+                    pronouncer = pronouncer,
+                ),
+            )
+        }
+
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.tapAGuideWord()
+        compose.onNodeWithText("→ calme", substring = true).assertExists()
+        compose.onNodeWithTag(PRONOUNCE_TAG).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { pronouncer.utterances.isNotEmpty() }
+        assertEquals(
+            "the sheet speaks the word it shows, never the demonstrated one",
+            listOf("calm" to "en"),
+            pronouncer.utterances,
+        )
+    }
+
+    @Test
+    fun savingAnotherWordWritesThatWordToTheVocabulary() {
+        val vocabulary = inMemoryVocabulary()
+        compose.setContent {
+            App(
+                environment(
+                    InMemoryLibrary(),
+                    samples = guideSamples(calmFirstGuideSample()),
+                    guide = InMemoryGuideProgressStore(),
+                    vocabulary = vocabulary,
+                    readerLevels = InMemoryReaderLevels(),
+                ),
+            )
+        }
+
+        compose.onNodeWithTag(guideLanguageRowTag("en")).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.tapAGuideWord()
+        compose.onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.entryFor(WordKey("en", "calm")) != null
+        }
+        assertEquals(MasteryLevel.FAMILIAR, vocabulary.entryFor(WordKey("en", "calm"))?.mastery)
+        assertNull(
+            "the demonstrated word was never tapped, so it was never saved",
+            vocabulary.entryFor(WordKey("en", "fisherman")),
+        )
+        compose.onNodeWithText("Saved · Familiar").assertIsDisplayed()
+
+        compose.onNodeWithTag(masteryTag(MasteryLevel.LEARNED)).performClick()
+
+        compose.waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
+            vocabulary.entryFor(WordKey("en", "calm"))?.mastery == MasteryLevel.LEARNED
+        }
+        assertEquals("a level change follows the word the sheet shows", 1, vocabulary.all().size)
+        compose.onNodeWithText("Saved · Learned").assertIsDisplayed()
+    }
+
+    @Test
     fun aReaderWhoSawTheGuideOpensOnTheShell() {
         compose.setContent {
             App(
@@ -1893,6 +1964,25 @@ private fun guideSamples(sample: Sample = guideSample()): SampleLibrary = Sample
     derived = DerivedAssetStore(InMemoryVaultFileSystem()),
     dismissed = InMemorySampleDismissedStore(),
 )
+
+/**
+ * The guide's fixture with the tapped word leading the line (Robolectric's text
+ * reach stops at a line's first word), while "fisherman" stays the demonstrated
+ * note the tap must never speak or save.
+ */
+private fun calmFirstGuideSample(): Sample = guideSample().let { fixture ->
+    fixture.copy(
+        paragraphs = listOf("calm old fisherman rowed the boat"),
+        colourMaps = CefrLevel.entries.associateWith {
+            mapOf(
+                "calm" to MasteryLevel.FAMILIAR,
+                "old" to MasteryLevel.RECOGNIZED,
+                "fisherman" to MasteryLevel.UNKNOWN,
+                "row" to MasteryLevel.LEARNED,
+            )
+        },
+    )
+}
 
 /** An **in-memory catalog** offering English, so the Languages surface lists something. */
 private fun languageCatalog(): LanguageCatalog =

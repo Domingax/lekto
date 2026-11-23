@@ -361,12 +361,12 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
         "Nous préparons l'application en fonction de votre langue cible. " +
         "Vous pourrez en ajouter d'autres plus tard.",
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Lekto revoit votre façon de découvrir une nouvelle langue",
-    TextKey.GUIDE_PAGE_PLAIN_INTRO to "Voici une page comme vous avez l'habitude de la lire",
-    TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur.",
+    TextKey.GUIDE_PAGE_PLAIN_INTRO to "Voici une page comme vous avez l'habitude de la lire.",
+    TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur",
     TextKey.GUIDE_PAGE_COLOURED_INTRO to
         "Lekto colore les mots à partir de votre niveau de maîtrise de votre langue cible.",
     TextKey.GUIDE_TAP_TITLE to "Touchez un mot : découvrez sa signification",
-    TextKey.GUIDE_TAP_INTRO to "Apprenez et enrichissez votre vocabulaire",
+    TextKey.GUIDE_TAP_INTRO to "Apprenez et enrichissez votre vocabulaire.",
     TextKey.GUIDE_LEVEL_TITLE to "Quel est votre niveau en {0} ?",
     TextKey.GUIDE_LEVEL_INTRO to "Il colore vos livres. Changez-le : la page change.",
     TextKey.GUIDE_START_READING to "Commencer à lire",
@@ -391,12 +391,12 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_BAND_B2 to "Avancé",
     TextKey.GUIDE_BAND_C1 to "Autonome",
     TextKey.GUIDE_BAND_C2 to "Maîtrise",
-    TextKey.GUIDE_BAND_A1_LINE to "phrases simples",
-    TextKey.GUIDE_BAND_A2_LINE to "textes courts",
-    TextKey.GUIDE_BAND_B1_LINE to "un roman",
-    TextKey.GUIDE_BAND_B2_LINE to "la presse",
-    TextKey.GUIDE_BAND_C1_LINE to "la littérature",
-    TextKey.GUIDE_BAND_C2_LINE to "tout",
+    TextKey.GUIDE_BAND_A1_LINE to "phrases simples.",
+    TextKey.GUIDE_BAND_A2_LINE to "textes courts.",
+    TextKey.GUIDE_BAND_B1_LINE to "un roman.",
+    TextKey.GUIDE_BAND_B2_LINE to "la presse.",
+    TextKey.GUIDE_BAND_C1_LINE to "la littérature.",
+    TextKey.GUIDE_BAND_C2_LINE to "tout.",
 )
 
 private val FrenchLanguageNames: Map<String, String> = mapOf(
