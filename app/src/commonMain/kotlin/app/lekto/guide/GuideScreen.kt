@@ -220,13 +220,16 @@ fun GuideScreen(
 ) {
     Box(modifier.fillMaxSize()) {
         val beat = GuideBeat(state, document, notes, download, actions)
-        val swipeBack = rememberUpdatedState<(PageSwipe) -> Unit> { actions.onBack() }
+        val swipeBack = rememberUpdatedState<(PageSwipe) -> Unit> { swipe ->
+            if (swipe == PageSwipe.PREVIOUS) actions.onBack()
+        }
         Column(
             Modifier
                 .fillMaxSize()
-                // A horizontal swipe is the back gesture, exactly like the chevron, and
-                // never a way forward (the owner's fourth review). The question has no
-                // previous step, so there it does nothing.
+                // A left-to-right swipe is the back gesture, exactly like the chevron,
+                // and never a way forward (the owner's fourth and fifth reviews): the
+                // other direction is inert, and the question has no previous step, so
+                // there it does nothing.
                 .readerSwipeInput(enabled = state.stage != GuideStage.LANGUAGE, onSwipe = swipeBack),
         ) {
             GuideBar(state.stage, actions.onBack, actions.onSkip)

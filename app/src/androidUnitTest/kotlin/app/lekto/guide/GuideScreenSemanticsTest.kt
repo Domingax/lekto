@@ -167,7 +167,7 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
-    fun aSwipeOnALaterScreenGoesBackAndNeverAdvances() {
+    fun aLeftwardSwipeOnALaterScreenDoesNothing() {
         var backed = 0
         var continued = 0
         render(
@@ -177,7 +177,7 @@ class GuideScreenSemanticsTest {
 
         compose.onRoot().performTouchInput { swipeLeft() }
 
-        assertEquals("a swipe is the back gesture", 1, backed)
+        assertEquals("a leftward swipe is not the back gesture", 0, backed)
         assertEquals("a swipe never advances the guide", 0, continued)
     }
 
@@ -191,7 +191,7 @@ class GuideScreenSemanticsTest {
 
         compose.onRoot().performTouchInput { swipeRight() }
 
-        assertEquals("both directions are the one back gesture", 1, backed)
+        assertEquals("a rightward swipe is the chevron's gesture", 1, backed)
     }
 
     @Test
@@ -205,8 +205,9 @@ class GuideScreenSemanticsTest {
         )
 
         compose.onRoot().performTouchInput { swipeLeft() }
+        compose.onRoot().performTouchInput { swipeRight() }
 
-        assertEquals("there is no previous screen on the question", 0, backed)
+        assertEquals("there is no previous screen on the question, in either direction", 0, backed)
         assertEquals("a swipe never advances the guide", 0, continued)
         compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsNotEnabled()
     }
