@@ -55,10 +55,10 @@ class AppearanceScreenSemanticsTest {
     fun `each paper is shown by what it looks like on Android`() {
         compose.setContent { Appearance(AppTheme.SYSTEM) }
 
-        compose.onNodeWithText("Follows the device setting").assertIsDisplayed()
-        compose.onNodeWithText("Warm paper, black ink").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Warm night, light ink").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Rag paper").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Follows the device setting.").assertIsDisplayed()
+        compose.onNodeWithText("Warm paper, black ink.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Warm night, light ink.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Rag paper.").performScrollTo().assertIsDisplayed()
     }
 
     @Test

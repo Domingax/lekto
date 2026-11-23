@@ -180,13 +180,13 @@ internal val EnglishTable: Map<TextKey, String> = mapOf(
     TextKey.CONNECTION to "Connection",
     TextKey.APP_LANGUAGE_DESCRIPTION to "The language Lekto uses for its own texts.",
     TextKey.THEME_SYSTEM to "System",
-    TextKey.THEME_SYSTEM_DESCRIPTION to "Follows the device setting",
+    TextKey.THEME_SYSTEM_DESCRIPTION to "Follows the device setting.",
     TextKey.THEME_LIGHT to "Light",
-    TextKey.THEME_LIGHT_DESCRIPTION to "Warm paper, black ink",
+    TextKey.THEME_LIGHT_DESCRIPTION to "Warm paper, black ink.",
     TextKey.THEME_DARK to "Dark",
-    TextKey.THEME_DARK_DESCRIPTION to "Warm night, light ink",
+    TextKey.THEME_DARK_DESCRIPTION to "Warm night, light ink.",
     TextKey.THEME_SEPIA to "Sepia",
-    TextKey.THEME_SEPIA_DESCRIPTION to "Rag paper",
+    TextKey.THEME_SEPIA_DESCRIPTION to "Rag paper.",
 
     // Sync.
     TextKey.SYNC_FOLDER_WARNING to

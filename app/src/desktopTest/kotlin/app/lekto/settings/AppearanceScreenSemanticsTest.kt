@@ -49,10 +49,10 @@ class AppearanceScreenSemanticsTest {
     fun eachPaperIsShownByWhatItLooksLike() = runComposeUiTest {
         appearance(AppTheme.SYSTEM)
 
-        onNodeWithText("Follows the device setting").assertIsDisplayed()
-        onNodeWithText("Warm paper, black ink").assertIsDisplayed()
-        onNodeWithText("Warm night, light ink").assertIsDisplayed()
-        onNodeWithText("Rag paper").assertIsDisplayed()
+        onNodeWithText("Follows the device setting.").assertIsDisplayed()
+        onNodeWithText("Warm paper, black ink.").assertIsDisplayed()
+        onNodeWithText("Warm night, light ink.").assertIsDisplayed()
+        onNodeWithText("Rag paper.").assertIsDisplayed()
     }
 
     @Test

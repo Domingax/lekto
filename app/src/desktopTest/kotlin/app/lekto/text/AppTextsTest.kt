@@ -3,6 +3,7 @@ package app.lekto.text
 import app.lekto.core.CefrLevel
 import app.lekto.core.llm.LlmConnectionResult
 import app.lekto.core.secret.SecretStore
+import app.lekto.core.theme.AppTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -96,6 +97,28 @@ class AppTextsTest {
                 assertTrue(
                     texts.bandLine(level).endsWith("."),
                     "$language band line for $level has no trailing period",
+                )
+            }
+        }
+    }
+
+    /**
+     * The same owner's punctuation rule reaches Appearance's theme rows (issue
+     * #325): the theme name is the row's title, so it stays bare, and its
+     * description is the muted sub-line under it, so it carries a period.
+     */
+    @Test
+    fun `the appearance theme names carry no period and their descriptions carry one`() {
+        listOf("en", "fr").forEach { language ->
+            val texts = appTextsFor(language)
+            AppTheme.entries.forEach { theme ->
+                assertTrue(
+                    !texts.themeName(theme).endsWith("."),
+                    "$language theme name for $theme carries a trailing period",
+                )
+                assertTrue(
+                    texts.themeDescription(theme).endsWith("."),
+                    "$language theme description for $theme has no trailing period",
                 )
             }
         }
