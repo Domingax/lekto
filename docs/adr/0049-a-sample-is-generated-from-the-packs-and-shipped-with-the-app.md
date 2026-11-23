@@ -102,3 +102,25 @@ a word from the sample records the sample identity `sample:<language>` in the en
 An explicit replay from Settings ▸ Application may re-run the materialisation —
 the answer replaces the device's sample, so the shelf follows the demonstration and
 there is still exactly one sample at any moment.
+
+## Update — the authored text is held to the guide's coverage bars
+
+The guide demonstrates one paragraph per band and recolours that same page on every
+choice, so the text must carry the colours the screen promises. The sample stage now
+refuses a catalogue whose demonstrated paragraph misses the bars (issue #324): at
+**A1** one word at every highlighted level (0–3), so the coloured beat's four notes
+always exist, and from A1 to **B2** at least three coloured words spanning two
+levels, so the level screen never collapses to a lone word. C1 and C2 are exempt: a
+reader at that level knows the text, and the thin colour says so. The demonstrated
+paragraph is the one the guide would pick — the one covering the most distinct
+levels, ties keeping the earlier — and the rule is restated in `tools/dictionaries`
+and in `core`'s committed-catalogue suite because neither module may depend on the
+other (ADR-0013).
+
+The texts are authored to that spread rather than the mechanism being widened: the
+composition stays the real **Difficulty table**'s output, and the maps are
+recomposed over the new texts. Every highlighted word keeps its glossary entry in
+every published translation language, so the guide's sheet still answers every
+colour. The reusable dictionary-data workflow runs the same stage over each
+snapshot it publishes and uploads the catalogue for the review that commits it; the
+committed bytes are the app's copy and the `core/jvmTest` suite pins the same bars.

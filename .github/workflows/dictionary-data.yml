@@ -6,13 +6,15 @@
 # manual dispatch) live there, and this file never runs on a push or a pull
 # request in the application, so the pipeline cannot block application CI.
 #
-# Four layers, one per ADR-0046:
+# Four layers, one per ADR-0046, and one validation job (issue #324):
 #   1. extract     one job per Reading language: download its edition, stream it
 #                  once, upload the form index and one content file per pair
 #   2. pair        one job per pair: one content file and the shared index -> one pack
 #   3. difficulty  one job per language: the shared index and its frequency list -> one table
 #   4. assemble    one job: keep what succeeded, apply the 2,000-lemma floor,
 #                  compress, publish the assets and *then* the movable manifest
+#   5. sample      rebuild the app's sample catalogue from the snapshot just
+#                  published; the stage refuses a text that misses its bars
 #
 # A failed language or pair is absent from the manifest; the other artefacts still
 # publish. Every run publishes a complete snapshot from that run's own bytes: no
@@ -450,3 +452,62 @@ jobs:
                   gh release delete "$old" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
                 fi
               done
+
+  # Layer five, validation: the app's authored sample texts are rebuilt from the
+  # bytes this run published (issue #324). The sample stage refuses a language
+  # whose demonstrated paragraph misses the guide's coverage bars, so a text that
+  # can no longer show four notes at A1, or three coloured words over two levels
+  # from A1 to B2, fails here; the catalogue is uploaded for the reviewer to
+  # commit beside the text change. Samples ship with the app, never with this
+  # data release, so this job cannot alter what was just published.
+  sample:
+    needs: [prepare, assemble]
+    if: ${{ needs.assemble.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.APP_REPOSITORY }}
+          ref: ${{ inputs.app-ref }}
+          path: app
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the CLI
+        working-directory: app
+        run: ./gradlew --no-daemon :tools:dictionaries:installDist
+
+      # The published release is the snapshot the app installs, so the sample is
+      # checked against the same bytes rather than a workflow-only intermediate.
+      - name: Fetch the published snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="dictionary-${{ needs.prepare.outputs.date }}"
+          mkdir -p "$RUNNER_TEMP/assets"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+            --pattern "*.sqlite.gz" --pattern "manifest.json" \
+            --dir "$RUNNER_TEMP/assets" --clobber
+          for sqlite in "$RUNNER_TEMP"/assets/*.sqlite.gz; do
+            gunzip "$sqlite"
+          done
+
+      - name: Build the sample catalogue and enforce its coverage
+        working-directory: app
+        run: |
+          tools/dictionaries/build/install/dictionaries/bin/dictionaries \
+            --sample-source-dir tools/dictionaries/samples \
+            --sample-artifacts "$RUNNER_TEMP/assets" \
+            --sample-manifest "$RUNNER_TEMP/assets/manifest.json" \
+            --sample-output "$RUNNER_TEMP/catalogue.json"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sample-catalogue
+          path: ${{ runner.temp }}/catalogue.json
+          if-no-files-found: error
+          retention-days: 3

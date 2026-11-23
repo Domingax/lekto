@@ -256,7 +256,8 @@ so it never slows a change, and it runs the app's launch smoke test
 `tools/dictionaries` builds and publishes by the reusable dictionary-data
 workflow, which the data repository calls (issues #17, #306); it never blocks
 application CI. Its fast unit tests still run in `check`, and the architecture
-suite pins the workflow's four layers and its data-repository split.
+suite pins the workflow's four layers, its sample validation and its
+data-repository split.
 
 ## Alert triage
 
@@ -584,9 +585,16 @@ records the surface forms whose key differs from the spelling, so the guide's pa
 can key a tap before any pack is installed. A language the manifest offers no
 difficulty table or no dictionary for is refused: the guide must not show a colour
 it cannot compute or a tap it cannot answer. The build fails if a glossary misses a
-word the sample highlights. The catalogue is a **Derived asset** shipped in the app
+word the sample highlights, and it refuses a sample whose demonstrated paragraph
+misses the guide's coverage bars (issue #324): at A1 one word at every highlighted
+**Mastery level**, and from A1 to B2 at least three coloured words over two
+levels. The paragraph is the one the guide would show — the one covering the most
+distinct levels, ties keeping the earlier — so the check names the same page the
+screen does. The catalogue is a **Derived asset** shipped in the app
 under `core/src/commonMain/resources/samples/catalogue.json`; regenerate it when
-the table or any published pack changes, in the same commit. The desktop client
+the table or any published pack changes, in the same commit. The data workflow's
+`sample` job runs the same stage over each snapshot it publishes, so a future text
+cannot silently regress the bars (issue #324). The desktop client
 reads it through `ShippedSampleCatalogue` in `core/jvmSharedMain`; an Android app's
 classloader does not see a library's Kotlin resources, so `app/build.gradle.kts`
 packages the same directory with `assets.srcDir` and the Android client reads those
@@ -665,6 +673,11 @@ difficulty language. Each layer is then a job matrix:
    frequency list and write one table;
 4. **assemble** — read what succeeded, apply the 2,000-lemma entry floor,
    compress, publish the release's assets, and only then its `manifest.json`.
+
+A **sample** job then rebuilds the app's sample catalogue from the snapshot the
+run published and refuses it when a language's maps miss the guide's coverage
+bars (issue #324); it uploads the catalogue for the review that commits it, and
+never changes the data release.
 
 A failed language loses its own pairs; a failed or thin pair is absent from the
 manifest while its siblings publish. Every run publishes a complete snapshot from

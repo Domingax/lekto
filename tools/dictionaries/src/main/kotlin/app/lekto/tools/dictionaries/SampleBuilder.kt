@@ -118,7 +118,7 @@ internal fun sampleWordForms(
 
 /** Every word token's normalised surface, in reading order, with duplicates kept. */
 private fun sampleSurfaces(language: String, paragraphs: List<String>): List<String> =
-    paragraphs.flatMap { paragraph -> words(paragraph, language) }.map(::normaliseSurface)
+    paragraphs.flatMap { paragraph -> sampleWords(paragraph, language) }.map(::normaliseSurface)
 
 /**
  * The words of [text] in [language], segmented exactly as the reader's
@@ -126,7 +126,7 @@ private fun sampleSurfaces(language: String, paragraphs: List<String>): List<Str
  * spans it tags as separators. The tool depends on no Lekto module, so the rule is
  * restated here (ADR-0013); a CJK sample's keys must match the page's taps.
  */
-private fun words(text: String, language: String): List<String> {
+internal fun sampleWords(text: String, language: String): List<String> {
     if (text.isEmpty()) return emptyList()
     val iterator = BreakIterator.getWordInstance(Locale.forLanguageTag(language))
     iterator.setText(text)

@@ -7,14 +7,16 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "Der Mann ist alt. Sein Haus ist klein. Der Fluss ist kalt. Der Himmel ist blau. Im Keller ist eine Tasche. Der Mond ist groß. Auf dem Stuhl sitzt eine Katze. Im Tal ist ein Haus.",
-        "Der Zucker ist weiß. Auf dem Balkon steht ein Stuhl. Die Kartoffel ist groß. Die Schlange ist klein. Die Schokolade ist gut. Die Decke ist warm. Der Tiger ist stark. Es regnet."
+        "Der Mann wohnt in einem kleinen Haus am Fluss. Am Morgen ist der Himmel blau und der Fluss kalt. Der Mond ist noch groß über dem Tal, und auf dem Stuhl sitzt eine Katze. Im Keller ist eine Tasche mit Kartoffeln, Butter und Reis. Auf dem Balkon liegt eine warme Decke. Die Schokolade ist gut. Im Garten schläft eine Schlange. Es regnet.",
+        "Am Abend ist es kalt. Der Zucker ist weiß, und die Katze sitzt auf dem Stuhl. Der Mond steht über dem Tal."
       ],
       "difficulty": {
-        "alt": "A1",
+        "abend": "A1",
+        "am": "A1",
         "auf": "A1",
         "balkon": "C1",
         "blau": "A1",
+        "butter": "C2",
         "decke": "B2",
         "der": "A1",
         "die": "A1",
@@ -22,46 +24,64 @@
         "eine": "A1",
         "es": "A1",
         "fluss": "A2",
+        "garten": "A1",
         "groß": "A1",
         "gut": "A1",
         "haus": "A1",
         "himmel": "A1",
         "im": "A1",
+        "in": "A1",
         "kalt": "A1",
         "kartoffel": "C1",
         "katze": "A2",
         "keller": "A2",
         "klein": "A1",
+        "liegen": "A1",
         "mann": "A1",
+        "mit": "A1",
         "mond": "B1",
+        "morgen": "A1",
+        "noch": "A1",
         "regnen": "C2",
+        "reis": "C2",
+        "schlafen": "A1",
         "schlange": "C1",
         "schokolade": "C1",
         "sein": "A1",
         "sitzen": "A1",
-        "stark": "A1",
         "stehen": "A1",
         "stuhl": "B1",
         "tal": "B1",
         "tasche": "A2",
-        "tiger": "C2",
+        "und": "A1",
         "warm": "A1",
         "weiß": "A1",
-        "zucker": "B1"
+        "wohnen": "A1",
+        "zucker": "B1",
+        "über": "A1"
       },
       "forms": {
         "dem": "der",
+        "einem": "ein",
         "ist": "sein",
+        "kartoffeln": "kartoffel",
+        "kleinen": "klein",
+        "liegt": "liegen",
         "regnet": "regnen",
+        "schläft": "schlafen",
         "sitzt": "sitzen",
-        "steht": "stehen"
+        "steht": "stehen",
+        "warme": "warm",
+        "wohnt": "wohnen"
       },
       "colourMaps": {
         "A1": {
-          "alt": "KNOWN",
+          "abend": "KNOWN",
+          "am": "KNOWN",
           "auf": "KNOWN",
           "balkon": "UNKNOWN",
           "blau": "KNOWN",
+          "butter": "UNKNOWN",
           "decke": "RECOGNIZED",
           "der": "KNOWN",
           "die": "KNOWN",
@@ -69,38 +89,49 @@
           "eine": "KNOWN",
           "es": "KNOWN",
           "fluss": "LEARNED",
+          "garten": "KNOWN",
           "groß": "KNOWN",
           "gut": "KNOWN",
           "haus": "KNOWN",
           "himmel": "KNOWN",
           "im": "KNOWN",
+          "in": "KNOWN",
           "kalt": "KNOWN",
           "kartoffel": "UNKNOWN",
           "katze": "LEARNED",
           "keller": "LEARNED",
           "klein": "KNOWN",
+          "liegen": "KNOWN",
           "mann": "KNOWN",
+          "mit": "KNOWN",
           "mond": "FAMILIAR",
+          "morgen": "KNOWN",
+          "noch": "KNOWN",
           "regnen": "UNKNOWN",
+          "reis": "UNKNOWN",
+          "schlafen": "KNOWN",
           "schlange": "UNKNOWN",
           "schokolade": "UNKNOWN",
           "sein": "KNOWN",
           "sitzen": "KNOWN",
-          "stark": "KNOWN",
           "stehen": "KNOWN",
           "stuhl": "FAMILIAR",
           "tal": "FAMILIAR",
           "tasche": "LEARNED",
-          "tiger": "UNKNOWN",
+          "und": "KNOWN",
           "warm": "KNOWN",
           "weiß": "KNOWN",
-          "zucker": "FAMILIAR"
+          "wohnen": "KNOWN",
+          "zucker": "FAMILIAR",
+          "über": "KNOWN"
         },
         "A2": {
-          "alt": "KNOWN",
+          "abend": "KNOWN",
+          "am": "KNOWN",
           "auf": "KNOWN",
           "balkon": "RECOGNIZED",
           "blau": "KNOWN",
+          "butter": "UNKNOWN",
           "decke": "FAMILIAR",
           "der": "KNOWN",
           "die": "KNOWN",
@@ -108,38 +139,49 @@
           "eine": "KNOWN",
           "es": "KNOWN",
           "fluss": "KNOWN",
+          "garten": "KNOWN",
           "groß": "KNOWN",
           "gut": "KNOWN",
           "haus": "KNOWN",
           "himmel": "KNOWN",
           "im": "KNOWN",
+          "in": "KNOWN",
           "kalt": "KNOWN",
           "kartoffel": "RECOGNIZED",
           "katze": "KNOWN",
           "keller": "KNOWN",
           "klein": "KNOWN",
+          "liegen": "KNOWN",
           "mann": "KNOWN",
+          "mit": "KNOWN",
           "mond": "LEARNED",
+          "morgen": "KNOWN",
+          "noch": "KNOWN",
           "regnen": "UNKNOWN",
+          "reis": "UNKNOWN",
+          "schlafen": "KNOWN",
           "schlange": "RECOGNIZED",
           "schokolade": "RECOGNIZED",
           "sein": "KNOWN",
           "sitzen": "KNOWN",
-          "stark": "KNOWN",
           "stehen": "KNOWN",
           "stuhl": "LEARNED",
           "tal": "LEARNED",
           "tasche": "KNOWN",
-          "tiger": "UNKNOWN",
+          "und": "KNOWN",
           "warm": "KNOWN",
           "weiß": "KNOWN",
-          "zucker": "LEARNED"
+          "wohnen": "KNOWN",
+          "zucker": "LEARNED",
+          "über": "KNOWN"
         },
         "B1": {
-          "alt": "KNOWN",
+          "abend": "KNOWN",
+          "am": "KNOWN",
           "auf": "KNOWN",
           "balkon": "FAMILIAR",
           "blau": "KNOWN",
+          "butter": "RECOGNIZED",
           "decke": "LEARNED",
           "der": "KNOWN",
           "die": "KNOWN",
@@ -147,38 +189,49 @@
           "eine": "KNOWN",
           "es": "KNOWN",
           "fluss": "KNOWN",
+          "garten": "KNOWN",
           "groß": "KNOWN",
           "gut": "KNOWN",
           "haus": "KNOWN",
           "himmel": "KNOWN",
           "im": "KNOWN",
+          "in": "KNOWN",
           "kalt": "KNOWN",
           "kartoffel": "FAMILIAR",
           "katze": "KNOWN",
           "keller": "KNOWN",
           "klein": "KNOWN",
+          "liegen": "KNOWN",
           "mann": "KNOWN",
+          "mit": "KNOWN",
           "mond": "KNOWN",
+          "morgen": "KNOWN",
+          "noch": "KNOWN",
           "regnen": "RECOGNIZED",
+          "reis": "RECOGNIZED",
+          "schlafen": "KNOWN",
           "schlange": "FAMILIAR",
           "schokolade": "FAMILIAR",
           "sein": "KNOWN",
           "sitzen": "KNOWN",
-          "stark": "KNOWN",
           "stehen": "KNOWN",
           "stuhl": "KNOWN",
           "tal": "KNOWN",
           "tasche": "KNOWN",
-          "tiger": "RECOGNIZED",
+          "und": "KNOWN",
           "warm": "KNOWN",
           "weiß": "KNOWN",
-          "zucker": "KNOWN"
+          "wohnen": "KNOWN",
+          "zucker": "KNOWN",
+          "über": "KNOWN"
         },
         "B2": {
-          "alt": "KNOWN",
+          "abend": "KNOWN",
+          "am": "KNOWN",
           "auf": "KNOWN",
           "balkon": "LEARNED",
           "blau": "KNOWN",
+          "butter": "FAMILIAR",
           "decke": "KNOWN",
           "der": "KNOWN",
           "die": "KNOWN",
@@ -186,38 +239,49 @@
           "eine": "KNOWN",
           "es": "KNOWN",
           "fluss": "KNOWN",
+          "garten": "KNOWN",
           "groß": "KNOWN",
           "gut": "KNOWN",
           "haus": "KNOWN",
           "himmel": "KNOWN",
           "im": "KNOWN",
+          "in": "KNOWN",
           "kalt": "KNOWN",
           "kartoffel": "LEARNED",
           "katze": "KNOWN",
           "keller": "KNOWN",
           "klein": "KNOWN",
+          "liegen": "KNOWN",
           "mann": "KNOWN",
+          "mit": "KNOWN",
           "mond": "KNOWN",
+          "morgen": "KNOWN",
+          "noch": "KNOWN",
           "regnen": "FAMILIAR",
+          "reis": "FAMILIAR",
+          "schlafen": "KNOWN",
           "schlange": "LEARNED",
           "schokolade": "LEARNED",
           "sein": "KNOWN",
           "sitzen": "KNOWN",
-          "stark": "KNOWN",
           "stehen": "KNOWN",
           "stuhl": "KNOWN",
           "tal": "KNOWN",
           "tasche": "KNOWN",
-          "tiger": "FAMILIAR",
+          "und": "KNOWN",
           "warm": "KNOWN",
           "weiß": "KNOWN",
-          "zucker": "KNOWN"
+          "wohnen": "KNOWN",
+          "zucker": "KNOWN",
+          "über": "KNOWN"
         },
         "C1": {
-          "alt": "KNOWN",
+          "abend": "KNOWN",
+          "am": "KNOWN",
           "auf": "KNOWN",
           "balkon": "KNOWN",
           "blau": "KNOWN",
+          "butter": "LEARNED",
           "decke": "KNOWN",
           "der": "KNOWN",
           "die": "KNOWN",
@@ -225,38 +289,49 @@
           "eine": "KNOWN",
           "es": "KNOWN",
           "fluss": "KNOWN",
+          "garten": "KNOWN",
           "groß": "KNOWN",
           "gut": "KNOWN",
           "haus": "KNOWN",
           "himmel": "KNOWN",
           "im": "KNOWN",
+          "in": "KNOWN",
           "kalt": "KNOWN",
           "kartoffel": "KNOWN",
           "katze": "KNOWN",
           "keller": "KNOWN",
           "klein": "KNOWN",
+          "liegen": "KNOWN",
           "mann": "KNOWN",
+          "mit": "KNOWN",
           "mond": "KNOWN",
+          "morgen": "KNOWN",
+          "noch": "KNOWN",
           "regnen": "LEARNED",
+          "reis": "LEARNED",
+          "schlafen": "KNOWN",
           "schlange": "KNOWN",
           "schokolade": "KNOWN",
           "sein": "KNOWN",
           "sitzen": "KNOWN",
-          "stark": "KNOWN",
           "stehen": "KNOWN",
           "stuhl": "KNOWN",
           "tal": "KNOWN",
           "tasche": "KNOWN",
-          "tiger": "LEARNED",
+          "und": "KNOWN",
           "warm": "KNOWN",
           "weiß": "KNOWN",
-          "zucker": "KNOWN"
+          "wohnen": "KNOWN",
+          "zucker": "KNOWN",
+          "über": "KNOWN"
         },
         "C2": {
-          "alt": "KNOWN",
+          "abend": "KNOWN",
+          "am": "KNOWN",
           "auf": "KNOWN",
           "balkon": "KNOWN",
           "blau": "KNOWN",
+          "butter": "KNOWN",
           "decke": "KNOWN",
           "der": "KNOWN",
           "die": "KNOWN",
@@ -264,32 +339,41 @@
           "eine": "KNOWN",
           "es": "KNOWN",
           "fluss": "KNOWN",
+          "garten": "KNOWN",
           "groß": "KNOWN",
           "gut": "KNOWN",
           "haus": "KNOWN",
           "himmel": "KNOWN",
           "im": "KNOWN",
+          "in": "KNOWN",
           "kalt": "KNOWN",
           "kartoffel": "KNOWN",
           "katze": "KNOWN",
           "keller": "KNOWN",
           "klein": "KNOWN",
+          "liegen": "KNOWN",
           "mann": "KNOWN",
+          "mit": "KNOWN",
           "mond": "KNOWN",
+          "morgen": "KNOWN",
+          "noch": "KNOWN",
           "regnen": "KNOWN",
+          "reis": "KNOWN",
+          "schlafen": "KNOWN",
           "schlange": "KNOWN",
           "schokolade": "KNOWN",
           "sein": "KNOWN",
           "sitzen": "KNOWN",
-          "stark": "KNOWN",
           "stehen": "KNOWN",
           "stuhl": "KNOWN",
           "tal": "KNOWN",
           "tasche": "KNOWN",
-          "tiger": "KNOWN",
+          "und": "KNOWN",
           "warm": "KNOWN",
           "weiß": "KNOWN",
-          "zucker": "KNOWN"
+          "wohnen": "KNOWN",
+          "zucker": "KNOWN",
+          "über": "KNOWN"
         }
       },
       "glossaries": {
@@ -307,6 +391,21 @@
                       "balcony",
                       "balloons",
                       "boobs"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "butter"
                     ]
                   }
                 ]
@@ -424,6 +523,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "rice"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -503,21 +617,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "tiger"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -547,6 +646,22 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "balcón"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "manteca",
+                      "mantequilla"
                     ]
                   }
                 ]
@@ -664,6 +779,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "arroz"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -742,21 +872,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "tigre"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -786,6 +901,21 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "balcon"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "beurre"
                     ]
                   }
                 ]
@@ -904,6 +1034,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "riz"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -982,21 +1127,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "tigre"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -1026,6 +1156,22 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "balcone"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "burro",
+                      "butirro"
                     ]
                   }
                 ]
@@ -1141,6 +1287,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "riso"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -1219,21 +1380,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "tigre"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -1263,6 +1409,23 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "バルコニー"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "牛酪",
+                      "バター / バタ",
+                      "ボートル"
                     ]
                   }
                 ]
@@ -1379,6 +1542,23 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "稲",
+                      "米穀",
+                      "米"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -1455,22 +1635,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "タイガー",
-                      "虎 トラ )"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -1502,6 +1666,21 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "발코니"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "버터"
                     ]
                   }
                 ]
@@ -1613,6 +1792,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "쌀"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -1688,22 +1882,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "호랑이",
-                      "범"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -1735,6 +1913,21 @@
                       "sacada",
                       "terraço",
                       "varanda"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "manteiga"
                     ]
                   }
                 ]
@@ -1845,6 +2038,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "arroz"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -1921,21 +2129,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "tigre"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -1965,6 +2158,21 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "balkon"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "tereyağı"
                     ]
                   }
                 ]
@@ -2080,6 +2288,22 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "pirinç",
+                      "pilav"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -2156,21 +2380,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "kaplan"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -2200,6 +2409,23 @@
                     "definition": "Teil eines Gebäudes, der als Plattform ins Freie hinausragt und von halbhohem Mauerwerk oder Ähnlichem umrandet ist",
                     "translations": [
                       "陽臺 / 阳台"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "butter": [
+              {
+                "lemma": "butter",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ˈbʊtɐ]",
+                "senses": [
+                  {
+                    "definition": "aus Milch (vor allem Kuhmilch) gewonnenes weißes bis gelbliches, streichfähiges Speisefett bestehend aus mindestens 80 % Milchfett und höchstens 16 % Wasser, dem weitere Inhaltsstoffe (zum Beispiel: Kochsalz, amtlich zugelassene [pflanzliche] Farbstoffe) zugesetzt sein können, und das besonders als Brotaufstrich verwendet wird",
+                    "translations": [
+                      "黃油 / 黄油",
+                      "牛油",
+                      "酥油"
                     ]
                   }
                 ]
@@ -2308,6 +2534,21 @@
                 ]
               }
             ],
+            "reis": [
+              {
+                "lemma": "reis",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʁaɪ̯s]",
+                "senses": [
+                  {
+                    "definition": "Gras, das bis 30 Halme mit rispigen Blütenständen bildet, die je 80 bis 100 einblütige Ährchen tragen",
+                    "translations": [
+                      "米"
+                    ]
+                  }
+                ]
+              }
+            ],
             "schlange": [
               {
                 "lemma": "schlange",
@@ -2383,21 +2624,6 @@
                 ]
               }
             ],
-            "tiger": [
-              {
-                "lemma": "tiger",
-                "partOfSpeech": "noun",
-                "pronunciation": "[ˈtiːɡɐ]",
-                "senses": [
-                  {
-                    "definition": "(in Asien beheimatetes, zu den Großkatzen zählendes) sehr kräftiges, solitär lebendes Raubtier , dessen charakteristisches Fell, je nach Unterart, blass rötlich gelb bis rotbraun (Kopf- und Rumpfunterseite sowie Beininnenseite jedoch weiß) gefärbt ist und schwarzbraune bis schwarze Querstreifen aufweist",
-                    "translations": [
-                      "老虎"
-                    ]
-                  }
-                ]
-              }
-            ],
             "zucker": [
               {
                 "lemma": "zucker",
@@ -2424,7 +2650,7 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "The old fisherman rowed his small boat across the calm water. He had left the harbour before dawn, when the sky was still dark and the air was cold. A gentle wind pushed the boat forward, and the far lights of the village slowly vanished behind him.",
+        "The old fisherman rowed his small boat across the calm water. He had left the harbour before dawn, when the sky was still dark. He could see his breath in the cold air. A gentle wind pushed the boat forward, and the lights of the village slowly vanished behind the cliffs.",
         "He cast his net near a line of rocks and waited. The sea was quiet, and the only sound was the slow breath of the waves against the wood. After a while, the net grew heavy. He lifted it in with careful hands, afraid that the rope might break.",
         "Inside the net was a single silver fish, bright as a coin. The fisherman looked at it for a long moment. Then he opened his hands and let it fall back into the deep water. Some things are worth more than a full basket, he thought, and rowed home."
       ],
@@ -2449,15 +2675,16 @@
         "breath": "B1",
         "bright": "A2",
         "calm": "A2",
+        "can": "A1",
         "careful": "A2",
         "cast": "A2",
+        "cliff": "C1",
         "coin": "B1",
         "cold": "A1",
         "dark": "A1",
         "dawn": "C1",
         "deep": "A1",
         "fall": "A1",
-        "far": "A1",
         "fish": "A1",
         "fisherman": null,
         "for": "A1",
@@ -2470,7 +2697,6 @@
         "have": "A1",
         "he": "A1",
         "heavy": "A1",
-        "him": "A1",
         "his": "A1",
         "home": "A1",
         "in": "A1",
@@ -2499,6 +2725,7 @@
         "rope": "C2",
         "row": "A2",
         "sea": "A1",
+        "see": "A1",
         "silver": "A2",
         "single": "A1",
         "sky": "A2",
@@ -2527,6 +2754,8 @@
         "worth": "A1"
       },
       "forms": {
+        "cliffs": "cliff",
+        "could": "can",
         "grew": "grow",
         "had": "have",
         "hands": "hand",
@@ -2566,15 +2795,16 @@
           "breath": "FAMILIAR",
           "bright": "LEARNED",
           "calm": "LEARNED",
+          "can": "KNOWN",
           "careful": "LEARNED",
           "cast": "LEARNED",
+          "cliff": "UNKNOWN",
           "coin": "FAMILIAR",
           "cold": "KNOWN",
           "dark": "KNOWN",
           "dawn": "UNKNOWN",
           "deep": "KNOWN",
           "fall": "KNOWN",
-          "far": "KNOWN",
           "fish": "KNOWN",
           "fisherman": "UNKNOWN",
           "for": "KNOWN",
@@ -2587,7 +2817,6 @@
           "have": "KNOWN",
           "he": "KNOWN",
           "heavy": "KNOWN",
-          "him": "KNOWN",
           "his": "KNOWN",
           "home": "KNOWN",
           "in": "KNOWN",
@@ -2616,6 +2845,7 @@
           "rope": "UNKNOWN",
           "row": "LEARNED",
           "sea": "KNOWN",
+          "see": "KNOWN",
           "silver": "LEARNED",
           "single": "KNOWN",
           "sky": "LEARNED",
@@ -2664,15 +2894,16 @@
           "breath": "LEARNED",
           "bright": "KNOWN",
           "calm": "KNOWN",
+          "can": "KNOWN",
           "careful": "KNOWN",
           "cast": "KNOWN",
+          "cliff": "RECOGNIZED",
           "coin": "LEARNED",
           "cold": "KNOWN",
           "dark": "KNOWN",
           "dawn": "RECOGNIZED",
           "deep": "KNOWN",
           "fall": "KNOWN",
-          "far": "KNOWN",
           "fish": "KNOWN",
           "fisherman": "UNKNOWN",
           "for": "KNOWN",
@@ -2685,7 +2916,6 @@
           "have": "KNOWN",
           "he": "KNOWN",
           "heavy": "KNOWN",
-          "him": "KNOWN",
           "his": "KNOWN",
           "home": "KNOWN",
           "in": "KNOWN",
@@ -2714,6 +2944,7 @@
           "rope": "UNKNOWN",
           "row": "KNOWN",
           "sea": "KNOWN",
+          "see": "KNOWN",
           "silver": "KNOWN",
           "single": "KNOWN",
           "sky": "KNOWN",
@@ -2762,15 +2993,16 @@
           "breath": "KNOWN",
           "bright": "KNOWN",
           "calm": "KNOWN",
+          "can": "KNOWN",
           "careful": "KNOWN",
           "cast": "KNOWN",
+          "cliff": "FAMILIAR",
           "coin": "KNOWN",
           "cold": "KNOWN",
           "dark": "KNOWN",
           "dawn": "FAMILIAR",
           "deep": "KNOWN",
           "fall": "KNOWN",
-          "far": "KNOWN",
           "fish": "KNOWN",
           "fisherman": "UNKNOWN",
           "for": "KNOWN",
@@ -2783,7 +3015,6 @@
           "have": "KNOWN",
           "he": "KNOWN",
           "heavy": "KNOWN",
-          "him": "KNOWN",
           "his": "KNOWN",
           "home": "KNOWN",
           "in": "KNOWN",
@@ -2812,6 +3043,7 @@
           "rope": "RECOGNIZED",
           "row": "KNOWN",
           "sea": "KNOWN",
+          "see": "KNOWN",
           "silver": "KNOWN",
           "single": "KNOWN",
           "sky": "KNOWN",
@@ -2860,15 +3092,16 @@
           "breath": "KNOWN",
           "bright": "KNOWN",
           "calm": "KNOWN",
+          "can": "KNOWN",
           "careful": "KNOWN",
           "cast": "KNOWN",
+          "cliff": "LEARNED",
           "coin": "KNOWN",
           "cold": "KNOWN",
           "dark": "KNOWN",
           "dawn": "LEARNED",
           "deep": "KNOWN",
           "fall": "KNOWN",
-          "far": "KNOWN",
           "fish": "KNOWN",
           "fisherman": "UNKNOWN",
           "for": "KNOWN",
@@ -2881,7 +3114,6 @@
           "have": "KNOWN",
           "he": "KNOWN",
           "heavy": "KNOWN",
-          "him": "KNOWN",
           "his": "KNOWN",
           "home": "KNOWN",
           "in": "KNOWN",
@@ -2910,6 +3142,7 @@
           "rope": "FAMILIAR",
           "row": "KNOWN",
           "sea": "KNOWN",
+          "see": "KNOWN",
           "silver": "KNOWN",
           "single": "KNOWN",
           "sky": "KNOWN",
@@ -2958,15 +3191,16 @@
           "breath": "KNOWN",
           "bright": "KNOWN",
           "calm": "KNOWN",
+          "can": "KNOWN",
           "careful": "KNOWN",
           "cast": "KNOWN",
+          "cliff": "KNOWN",
           "coin": "KNOWN",
           "cold": "KNOWN",
           "dark": "KNOWN",
           "dawn": "KNOWN",
           "deep": "KNOWN",
           "fall": "KNOWN",
-          "far": "KNOWN",
           "fish": "KNOWN",
           "fisherman": "UNKNOWN",
           "for": "KNOWN",
@@ -2979,7 +3213,6 @@
           "have": "KNOWN",
           "he": "KNOWN",
           "heavy": "KNOWN",
-          "him": "KNOWN",
           "his": "KNOWN",
           "home": "KNOWN",
           "in": "KNOWN",
@@ -3008,6 +3241,7 @@
           "rope": "LEARNED",
           "row": "KNOWN",
           "sea": "KNOWN",
+          "see": "KNOWN",
           "silver": "KNOWN",
           "single": "KNOWN",
           "sky": "KNOWN",
@@ -3056,15 +3290,16 @@
           "breath": "KNOWN",
           "bright": "KNOWN",
           "calm": "KNOWN",
+          "can": "KNOWN",
           "careful": "KNOWN",
           "cast": "KNOWN",
+          "cliff": "KNOWN",
           "coin": "KNOWN",
           "cold": "KNOWN",
           "dark": "KNOWN",
           "dawn": "KNOWN",
           "deep": "KNOWN",
           "fall": "KNOWN",
-          "far": "KNOWN",
           "fish": "KNOWN",
           "fisherman": "UNKNOWN",
           "for": "KNOWN",
@@ -3077,7 +3312,6 @@
           "have": "KNOWN",
           "he": "KNOWN",
           "heavy": "KNOWN",
-          "him": "KNOWN",
           "his": "KNOWN",
           "home": "KNOWN",
           "in": "KNOWN",
@@ -3106,6 +3340,7 @@
           "rope": "KNOWN",
           "row": "KNOWN",
           "sea": "KNOWN",
+          "see": "KNOWN",
           "silver": "KNOWN",
           "single": "KNOWN",
           "sky": "KNOWN",
@@ -3289,6 +3524,22 @@
                       "werfen",
                       "wegwerfen",
                       "hinwerfen"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "Klippe",
+                      "Felsen"
                     ]
                   }
                 ]
@@ -3838,6 +4089,23 @@
                 ]
               }
             ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "acantilado",
+                      "precipicio",
+                      "risco"
+                    ]
+                  }
+                ]
+              }
+            ],
             "coin": [
               {
                 "lemma": "coin",
@@ -4376,6 +4644,21 @@
                 ]
               }
             ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "falaise"
+                    ]
+                  }
+                ]
+              }
+            ],
             "coin": [
               {
                 "lemma": "coin",
@@ -4884,6 +5167,23 @@
                       "gettare",
                       "posare",
                       "lanciare"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "rupe",
+                      "scogliera",
+                      "costone"
                     ]
                   }
                 ]
@@ -5419,6 +5719,21 @@
                 ]
               }
             ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "崖"
+                    ]
+                  }
+                ]
+              }
+            ],
             "coin": [
               {
                 "lemma": "coin",
@@ -5863,6 +6178,22 @@
                     "definition": "An act of throwing.",
                     "translations": [
                       "깁스"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "절벽",
+                      "벼랑"
                     ]
                   }
                 ]
@@ -6314,6 +6645,22 @@
                       "arremessar",
                       "tacar",
                       "lançar"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "penhasco",
+                      "falésia"
                     ]
                   }
                 ]
@@ -6845,6 +7192,23 @@
                 ]
               }
             ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "uçurum",
+                      "yar",
+                      "falez"
+                    ]
+                  }
+                ]
+              }
+            ],
             "coin": [
               {
                 "lemma": "coin",
@@ -7320,6 +7684,22 @@
                 ]
               }
             ],
+            "cliff": [
+              {
+                "lemma": "cliff",
+                "partOfSpeech": "noun",
+                "pronunciation": "/klɪf/",
+                "senses": [
+                  {
+                    "definition": "A vertical (or nearly vertical) rock face.",
+                    "translations": [
+                      "峭壁",
+                      "懸崖 /悬崖"
+                    ]
+                  }
+                ]
+              }
+            ],
             "coin": [
               {
                 "lemma": "coin",
@@ -7662,8 +8042,8 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "El hombre es viejo. Su barco es pequeño. El mar está tranquilo. El cielo está azul. En la colina hay un castillo. El jardín está cerca. El viento está frío. El pájaro es azul.",
-        "El océano está lejos. En la caja hay un libro y una maleta. Por la noche hay una tormenta. Después de la lluvia, el hombre está bien. Vuelve a casa."
+        "El hombre es viejo. Su barco es pequeño. El mar está tranquilo. El cielo está azul. En la colina hay un castillo. En el jardín hay un conejo. El viento está frío. El pájaro es azul. El océano está lejos. En la caja hay una maleta.",
+        "Por la noche hay una tormenta. Después de la lluvia, el hombre está bien. Vuelve a casa."
       ],
       "difficulty": {
         "a": "A1",
@@ -7673,9 +8053,9 @@
         "caja": "A1",
         "casa": "A1",
         "castillo": "A2",
-        "cerca": "A1",
         "cielo": "A1",
         "colina": "C1",
+        "conejo": "C2",
         "de": "A1",
         "después": "A1",
         "el": "A1",
@@ -7687,7 +8067,6 @@
         "jardín": "A2",
         "la": "A1",
         "lejos": "A1",
-        "libro": "A1",
         "lluvia": "A2",
         "maleta": "C2",
         "mar": "A1",
@@ -7703,8 +8082,7 @@
         "un": "A1",
         "viejo": "A1",
         "viento": "A2",
-        "volver": "A1",
-        "y": "A1"
+        "volver": "A1"
       },
       "forms": {
         "es": "ser",
@@ -7721,9 +8099,9 @@
           "caja": "KNOWN",
           "casa": "KNOWN",
           "castillo": "LEARNED",
-          "cerca": "KNOWN",
           "cielo": "KNOWN",
           "colina": "UNKNOWN",
+          "conejo": "UNKNOWN",
           "de": "KNOWN",
           "después": "KNOWN",
           "el": "KNOWN",
@@ -7735,7 +8113,6 @@
           "jardín": "LEARNED",
           "la": "KNOWN",
           "lejos": "KNOWN",
-          "libro": "KNOWN",
           "lluvia": "LEARNED",
           "maleta": "UNKNOWN",
           "mar": "KNOWN",
@@ -7751,8 +8128,7 @@
           "un": "KNOWN",
           "viejo": "KNOWN",
           "viento": "LEARNED",
-          "volver": "KNOWN",
-          "y": "KNOWN"
+          "volver": "KNOWN"
         },
         "A2": {
           "a": "KNOWN",
@@ -7762,9 +8138,9 @@
           "caja": "KNOWN",
           "casa": "KNOWN",
           "castillo": "KNOWN",
-          "cerca": "KNOWN",
           "cielo": "KNOWN",
           "colina": "RECOGNIZED",
+          "conejo": "UNKNOWN",
           "de": "KNOWN",
           "después": "KNOWN",
           "el": "KNOWN",
@@ -7776,7 +8152,6 @@
           "jardín": "KNOWN",
           "la": "KNOWN",
           "lejos": "KNOWN",
-          "libro": "KNOWN",
           "lluvia": "KNOWN",
           "maleta": "UNKNOWN",
           "mar": "KNOWN",
@@ -7792,8 +8167,7 @@
           "un": "KNOWN",
           "viejo": "KNOWN",
           "viento": "KNOWN",
-          "volver": "KNOWN",
-          "y": "KNOWN"
+          "volver": "KNOWN"
         },
         "B1": {
           "a": "KNOWN",
@@ -7803,9 +8177,9 @@
           "caja": "KNOWN",
           "casa": "KNOWN",
           "castillo": "KNOWN",
-          "cerca": "KNOWN",
           "cielo": "KNOWN",
           "colina": "FAMILIAR",
+          "conejo": "RECOGNIZED",
           "de": "KNOWN",
           "después": "KNOWN",
           "el": "KNOWN",
@@ -7817,7 +8191,6 @@
           "jardín": "KNOWN",
           "la": "KNOWN",
           "lejos": "KNOWN",
-          "libro": "KNOWN",
           "lluvia": "KNOWN",
           "maleta": "RECOGNIZED",
           "mar": "KNOWN",
@@ -7833,8 +8206,7 @@
           "un": "KNOWN",
           "viejo": "KNOWN",
           "viento": "KNOWN",
-          "volver": "KNOWN",
-          "y": "KNOWN"
+          "volver": "KNOWN"
         },
         "B2": {
           "a": "KNOWN",
@@ -7844,9 +8216,9 @@
           "caja": "KNOWN",
           "casa": "KNOWN",
           "castillo": "KNOWN",
-          "cerca": "KNOWN",
           "cielo": "KNOWN",
           "colina": "LEARNED",
+          "conejo": "FAMILIAR",
           "de": "KNOWN",
           "después": "KNOWN",
           "el": "KNOWN",
@@ -7858,7 +8230,6 @@
           "jardín": "KNOWN",
           "la": "KNOWN",
           "lejos": "KNOWN",
-          "libro": "KNOWN",
           "lluvia": "KNOWN",
           "maleta": "FAMILIAR",
           "mar": "KNOWN",
@@ -7874,8 +8245,7 @@
           "un": "KNOWN",
           "viejo": "KNOWN",
           "viento": "KNOWN",
-          "volver": "KNOWN",
-          "y": "KNOWN"
+          "volver": "KNOWN"
         },
         "C1": {
           "a": "KNOWN",
@@ -7885,9 +8255,9 @@
           "caja": "KNOWN",
           "casa": "KNOWN",
           "castillo": "KNOWN",
-          "cerca": "KNOWN",
           "cielo": "KNOWN",
           "colina": "KNOWN",
+          "conejo": "LEARNED",
           "de": "KNOWN",
           "después": "KNOWN",
           "el": "KNOWN",
@@ -7899,7 +8269,6 @@
           "jardín": "KNOWN",
           "la": "KNOWN",
           "lejos": "KNOWN",
-          "libro": "KNOWN",
           "lluvia": "KNOWN",
           "maleta": "LEARNED",
           "mar": "KNOWN",
@@ -7915,8 +8284,7 @@
           "un": "KNOWN",
           "viejo": "KNOWN",
           "viento": "KNOWN",
-          "volver": "KNOWN",
-          "y": "KNOWN"
+          "volver": "KNOWN"
         },
         "C2": {
           "a": "KNOWN",
@@ -7926,9 +8294,9 @@
           "caja": "KNOWN",
           "casa": "KNOWN",
           "castillo": "KNOWN",
-          "cerca": "KNOWN",
           "cielo": "KNOWN",
           "colina": "KNOWN",
+          "conejo": "KNOWN",
           "de": "KNOWN",
           "después": "KNOWN",
           "el": "KNOWN",
@@ -7940,7 +8308,6 @@
           "jardín": "KNOWN",
           "la": "KNOWN",
           "lejos": "KNOWN",
-          "libro": "KNOWN",
           "lluvia": "KNOWN",
           "maleta": "KNOWN",
           "mar": "KNOWN",
@@ -7956,8 +8323,7 @@
           "un": "KNOWN",
           "viejo": "KNOWN",
           "viento": "KNOWN",
-          "volver": "KNOWN",
-          "y": "KNOWN"
+          "volver": "KNOWN"
         }
       },
       "glossaries": {
@@ -8016,6 +8382,21 @@
                     "definition": "Elevación orográfica del terreno inferior a una montaña.",
                     "translations": [
                       "Hügel"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "conejo": [
+              {
+                "lemma": "conejo",
+                "partOfSpeech": "noun",
+                "pronunciation": "[koˈnexo]",
+                "senses": [
+                  {
+                    "definition": "(Leporidae) Cualquiera de unas dos docenas de especies de pequeños mamíferos lagomorfos, de pelo tupido, orejas erguidas tan largas como la cabeza, un rabo muy corto, patas delanteras cortas y traseras muy largas, que le permiten desplazarse con brincos. Habita en madrigueras que cava en la tierra y es muy prolífico. Se lo cría como animal de compañía, y para aprovechar su carne, su cuero y su pelo.",
+                    "translations": [
+                      "Kaninchen"
                     ]
                   }
                 ]
@@ -8216,6 +8597,23 @@
                     "definition": "Elevación orográfica del terreno inferior a una montaña.",
                     "translations": [
                       "hill"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "conejo": [
+              {
+                "lemma": "conejo",
+                "partOfSpeech": "noun",
+                "pronunciation": "[koˈnexo]",
+                "senses": [
+                  {
+                    "definition": "(Leporidae) Cualquiera de unas dos docenas de especies de pequeños mamíferos lagomorfos, de pelo tupido, orejas erguidas tan largas como la cabeza, un rabo muy corto, patas delanteras cortas y traseras muy largas, que le permiten desplazarse con brincos. Habita en madrigueras que cava en la tierra y es muy prolífico. Se lo cría como animal de compañía, y para aprovechar su carne, su cuero y su pelo.",
+                    "translations": [
+                      "bunny",
+                      "rabbit",
+                      "coney"
                     ]
                   }
                 ]
@@ -8427,6 +8825,21 @@
                 ]
               }
             ],
+            "conejo": [
+              {
+                "lemma": "conejo",
+                "partOfSpeech": "noun",
+                "pronunciation": "[koˈnexo]",
+                "senses": [
+                  {
+                    "definition": "(Leporidae) Cualquiera de unas dos docenas de especies de pequeños mamíferos lagomorfos, de pelo tupido, orejas erguidas tan largas como la cabeza, un rabo muy corto, patas delanteras cortas y traseras muy largas, que le permiten desplazarse con brincos. Habita en madrigueras que cava en la tierra y es muy prolífico. Se lo cría como animal de compañía, y para aprovechar su carne, su cuero y su pelo.",
+                    "translations": [
+                      "lapin"
+                    ]
+                  }
+                ]
+              }
+            ],
             "frío": [
               {
                 "lemma": "frío",
@@ -8617,6 +9030,21 @@
                     "definition": "Elevación orográfica del terreno inferior a una montaña.",
                     "translations": [
                       "collina"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "conejo": [
+              {
+                "lemma": "conejo",
+                "partOfSpeech": "noun",
+                "pronunciation": "[koˈnexo]",
+                "senses": [
+                  {
+                    "definition": "(Leporidae) Cualquiera de unas dos docenas de especies de pequeños mamíferos lagomorfos, de pelo tupido, orejas erguidas tan largas como la cabeza, un rabo muy corto, patas delanteras cortas y traseras muy largas, que le permiten desplazarse con brincos. Habita en madrigueras que cava en la tierra y es muy prolífico. Se lo cría como animal de compañía, y para aprovechar su carne, su cuero y su pelo.",
+                    "translations": [
+                      "coniglio"
                     ]
                   }
                 ]
@@ -8813,6 +9241,22 @@
                     "definition": "Sustancia nutriente que se encuentra en la bilis de muchos animales, actúa como neurotransmisor y se usa para sintetizar componentes de las membranas celulares del cuerpo.",
                     "translations": [
                       "コリン"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "conejo": [
+              {
+                "lemma": "conejo",
+                "partOfSpeech": "noun",
+                "pronunciation": "[koˈnexo]",
+                "senses": [
+                  {
+                    "definition": "(Leporidae) Cualquiera de unas dos docenas de especies de pequeños mamíferos lagomorfos, de pelo tupido, orejas erguidas tan largas como la cabeza, un rabo muy corto, patas delanteras cortas y traseras muy largas, que le permiten desplazarse con brincos. Habita en madrigueras que cava en la tierra y es muy prolífico. Se lo cría como animal de compañía, y para aprovechar su carne, su cuero y su pelo.",
+                    "translations": [
+                      "兎",
+                      "ウサギ"
                     ]
                   }
                 ]
@@ -9015,6 +9459,21 @@
                 ]
               }
             ],
+            "conejo": [
+              {
+                "lemma": "conejo",
+                "partOfSpeech": "noun",
+                "pronunciation": "[koˈnexo]",
+                "senses": [
+                  {
+                    "definition": "(Leporidae) Cualquiera de unas dos docenas de especies de pequeños mamíferos lagomorfos, de pelo tupido, orejas erguidas tan largas como la cabeza, un rabo muy corto, patas delanteras cortas y traseras muy largas, que le permiten desplazarse con brincos. Habita en madrigueras que cava en la tierra y es muy prolífico. Se lo cría como animal de compañía, y para aprovechar su carne, su cuero y su pelo.",
+                    "translations": [
+                      "coelho"
+                    ]
+                  }
+                ]
+              }
+            ],
             "frío": [
               {
                 "lemma": "frío",
@@ -9161,12 +9620,14 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "Le capitaine est vieux. Son bateau est petit. La mer est calme. Le ciel est gris. Sur la colline, il y a un château. La forêt est proche. Le vent est froid. Le poisson est beau.",
-        "Dans la boîte, il y a un fromage et une bouteille. Le soir, il y a un orage. Après la tempête, le capitaine est content. Il rentre à la maison."
+        "Le capitaine est vieux. Son bateau est petit. La mer est calme. Le ciel est gris. Sur la colline, il y a un château. La forêt est proche. Le vent est froid. Le poisson est beau. Le soir, il y a une lampe dans la maison. Une tempête arrive sur la mer, et un orage arrive au loin.",
+        "Dans la boîte, il y a un fromage et une bouteille. Après la tempête, le capitaine est content. Il rentre à la maison."
       ],
       "difficulty": {
         "a": "A1",
         "après": "A1",
+        "arriver": "A1",
+        "au": "A1",
         "bateau": "A2",
         "beau": "A1",
         "bouteille": "A2",
@@ -9186,7 +9647,9 @@
         "gris": "B1",
         "il": "A1",
         "la": "A1",
+        "lampe": "C1",
         "le": "A1",
+        "loin": "A1",
         "maison": "A1",
         "mer": "A1",
         "orage": "C2",
@@ -9206,12 +9669,15 @@
         "à": "A1"
       },
       "forms": {
+        "arrive": "arriver",
         "rentre": "rentrer"
       },
       "colourMaps": {
         "A1": {
           "a": "KNOWN",
           "après": "KNOWN",
+          "arriver": "KNOWN",
+          "au": "KNOWN",
           "bateau": "LEARNED",
           "beau": "KNOWN",
           "bouteille": "LEARNED",
@@ -9231,7 +9697,9 @@
           "gris": "FAMILIAR",
           "il": "KNOWN",
           "la": "KNOWN",
+          "lampe": "UNKNOWN",
           "le": "KNOWN",
+          "loin": "KNOWN",
           "maison": "KNOWN",
           "mer": "KNOWN",
           "orage": "UNKNOWN",
@@ -9253,6 +9721,8 @@
         "A2": {
           "a": "KNOWN",
           "après": "KNOWN",
+          "arriver": "KNOWN",
+          "au": "KNOWN",
           "bateau": "KNOWN",
           "beau": "KNOWN",
           "bouteille": "KNOWN",
@@ -9272,7 +9742,9 @@
           "gris": "LEARNED",
           "il": "KNOWN",
           "la": "KNOWN",
+          "lampe": "RECOGNIZED",
           "le": "KNOWN",
+          "loin": "KNOWN",
           "maison": "KNOWN",
           "mer": "KNOWN",
           "orage": "UNKNOWN",
@@ -9294,6 +9766,8 @@
         "B1": {
           "a": "KNOWN",
           "après": "KNOWN",
+          "arriver": "KNOWN",
+          "au": "KNOWN",
           "bateau": "KNOWN",
           "beau": "KNOWN",
           "bouteille": "KNOWN",
@@ -9313,7 +9787,9 @@
           "gris": "KNOWN",
           "il": "KNOWN",
           "la": "KNOWN",
+          "lampe": "FAMILIAR",
           "le": "KNOWN",
+          "loin": "KNOWN",
           "maison": "KNOWN",
           "mer": "KNOWN",
           "orage": "RECOGNIZED",
@@ -9335,6 +9811,8 @@
         "B2": {
           "a": "KNOWN",
           "après": "KNOWN",
+          "arriver": "KNOWN",
+          "au": "KNOWN",
           "bateau": "KNOWN",
           "beau": "KNOWN",
           "bouteille": "KNOWN",
@@ -9354,7 +9832,9 @@
           "gris": "KNOWN",
           "il": "KNOWN",
           "la": "KNOWN",
+          "lampe": "LEARNED",
           "le": "KNOWN",
+          "loin": "KNOWN",
           "maison": "KNOWN",
           "mer": "KNOWN",
           "orage": "FAMILIAR",
@@ -9376,6 +9856,8 @@
         "C1": {
           "a": "KNOWN",
           "après": "KNOWN",
+          "arriver": "KNOWN",
+          "au": "KNOWN",
           "bateau": "KNOWN",
           "beau": "KNOWN",
           "bouteille": "KNOWN",
@@ -9395,7 +9877,9 @@
           "gris": "KNOWN",
           "il": "KNOWN",
           "la": "KNOWN",
+          "lampe": "KNOWN",
           "le": "KNOWN",
+          "loin": "KNOWN",
           "maison": "KNOWN",
           "mer": "KNOWN",
           "orage": "LEARNED",
@@ -9417,6 +9901,8 @@
         "C2": {
           "a": "KNOWN",
           "après": "KNOWN",
+          "arriver": "KNOWN",
+          "au": "KNOWN",
           "bateau": "KNOWN",
           "beau": "KNOWN",
           "bouteille": "KNOWN",
@@ -9436,7 +9922,9 @@
           "gris": "KNOWN",
           "il": "KNOWN",
           "la": "KNOWN",
+          "lampe": "KNOWN",
           "le": "KNOWN",
+          "loin": "KNOWN",
           "maison": "KNOWN",
           "mer": "KNOWN",
           "orage": "KNOWN",
@@ -9582,6 +10070,21 @@
                     "definition": "De couleur grise, entre le blanc et le noir.",
                     "translations": [
                       "grau"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "Lampe"
                     ]
                   }
                 ]
@@ -9775,6 +10278,21 @@
                     "translations": [
                       "gray",
                       "grey"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "lamp"
                     ]
                   }
                 ]
@@ -9974,6 +10492,21 @@
                 ]
               }
             ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "lámpara"
+                    ]
+                  }
+                ]
+              }
+            ],
             "orage": [
               {
                 "lemma": "orage",
@@ -10161,6 +10694,21 @@
                     "translations": [
                       "bigio",
                       "grigio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "lampada"
                     ]
                   }
                 ]
@@ -10358,6 +10906,23 @@
                 ]
               }
             ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "ランプ",
+                      "明かり",
+                      "灯"
+                    ]
+                  }
+                ]
+              }
+            ],
             "orage": [
               {
                 "lemma": "orage",
@@ -10541,6 +11106,22 @@
                 ]
               }
             ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "램프",
+                      "전등"
+                    ]
+                  }
+                ]
+              }
+            ],
             "orage": [
               {
                 "lemma": "orage",
@@ -10714,6 +11295,21 @@
                       "cinza",
                       "cinzento",
                       "pardo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "lâmpada"
                     ]
                   }
                 ]
@@ -10893,6 +11489,21 @@
                     "translations": [
                       "gri",
                       "boz"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "lamba"
                     ]
                   }
                 ]
@@ -11085,6 +11696,21 @@
                 ]
               }
             ],
+            "lampe": [
+              {
+                "lemma": "lampe",
+                "partOfSpeech": "noun",
+                "pronunciation": "\\lɑ̃p\\",
+                "senses": [
+                  {
+                    "definition": "Ustensile fixe ou mobile qui sert à l’éclairage, rempli d’un liquide combustible et muni d’une mèche. La flamme peut être protégée d’un verre et le corps comprend le réservoir, le manche ou le pied.",
+                    "translations": [
+                      "灯"
+                    ]
+                  }
+                ]
+              }
+            ],
             "orage": [
               {
                 "lemma": "orage",
@@ -11142,8 +11768,8 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "Il padre è vecchio. La sua barca è piccola. Il mare è bello. Il cielo è blu. Sulla montagna vedo un castello. Il giardino è vicino. In autunno il tempo è grigio. Il cane è bianco.",
-        "Il mare è grande. Nella scatola vedo un libro e un fiore. Di notte vedo un temporale. Al tramonto il cielo è bello. Dopo il temporale, il padre è felice. Torna a casa."
+        "Il padre è vecchio. La sua barca è piccola. Il mare è bello. Il cielo è blu. Sulla montagna vedo un castello. Il giardino è vicino. In autunno il tempo è grigio. La domenica il padre suona la chitarra. Al tramonto il cielo è rosso. Il cane è bianco.",
+        "Il mare è grande. Nella scatola vedo un libro e un fiore. Di notte vedo un temporale. Dopo il temporale, il padre è felice. Torna a casa."
       ],
       "difficulty": {
         "a": "A1",
@@ -11156,8 +11782,10 @@
         "cane": "A1",
         "casa": "A1",
         "castello": "A2",
+        "chitarra": "C1",
         "cielo": "A1",
         "di": "A1",
+        "domenica": "A1",
         "dopo": "A1",
         "e": "A1",
         "essere": "A1",
@@ -11176,9 +11804,11 @@
         "notte": "A1",
         "padre": "A1",
         "piccola": "A1",
+        "rosso": "A1",
         "scatola": "B1",
         "sua": "A1",
         "sulla": "A1",
+        "suonare": "A1",
         "tempo": "A1",
         "temporale": "B1",
         "tornare": "A1",
@@ -11190,6 +11820,7 @@
       },
       "forms": {
         "nella": "nel",
+        "suona": "suonare",
         "torna": "tornare",
         "è": "essere"
       },
@@ -11205,8 +11836,10 @@
           "cane": "KNOWN",
           "casa": "KNOWN",
           "castello": "LEARNED",
+          "chitarra": "UNKNOWN",
           "cielo": "KNOWN",
           "di": "KNOWN",
+          "domenica": "KNOWN",
           "dopo": "KNOWN",
           "e": "KNOWN",
           "essere": "KNOWN",
@@ -11225,9 +11858,11 @@
           "notte": "KNOWN",
           "padre": "KNOWN",
           "piccola": "KNOWN",
+          "rosso": "KNOWN",
           "scatola": "FAMILIAR",
           "sua": "KNOWN",
           "sulla": "KNOWN",
+          "suonare": "KNOWN",
           "tempo": "KNOWN",
           "temporale": "FAMILIAR",
           "tornare": "KNOWN",
@@ -11248,8 +11883,10 @@
           "cane": "KNOWN",
           "casa": "KNOWN",
           "castello": "KNOWN",
+          "chitarra": "RECOGNIZED",
           "cielo": "KNOWN",
           "di": "KNOWN",
+          "domenica": "KNOWN",
           "dopo": "KNOWN",
           "e": "KNOWN",
           "essere": "KNOWN",
@@ -11268,9 +11905,11 @@
           "notte": "KNOWN",
           "padre": "KNOWN",
           "piccola": "KNOWN",
+          "rosso": "KNOWN",
           "scatola": "LEARNED",
           "sua": "KNOWN",
           "sulla": "KNOWN",
+          "suonare": "KNOWN",
           "tempo": "KNOWN",
           "temporale": "LEARNED",
           "tornare": "KNOWN",
@@ -11291,8 +11930,10 @@
           "cane": "KNOWN",
           "casa": "KNOWN",
           "castello": "KNOWN",
+          "chitarra": "FAMILIAR",
           "cielo": "KNOWN",
           "di": "KNOWN",
+          "domenica": "KNOWN",
           "dopo": "KNOWN",
           "e": "KNOWN",
           "essere": "KNOWN",
@@ -11311,9 +11952,11 @@
           "notte": "KNOWN",
           "padre": "KNOWN",
           "piccola": "KNOWN",
+          "rosso": "KNOWN",
           "scatola": "KNOWN",
           "sua": "KNOWN",
           "sulla": "KNOWN",
+          "suonare": "KNOWN",
           "tempo": "KNOWN",
           "temporale": "KNOWN",
           "tornare": "KNOWN",
@@ -11334,8 +11977,10 @@
           "cane": "KNOWN",
           "casa": "KNOWN",
           "castello": "KNOWN",
+          "chitarra": "LEARNED",
           "cielo": "KNOWN",
           "di": "KNOWN",
+          "domenica": "KNOWN",
           "dopo": "KNOWN",
           "e": "KNOWN",
           "essere": "KNOWN",
@@ -11354,9 +11999,11 @@
           "notte": "KNOWN",
           "padre": "KNOWN",
           "piccola": "KNOWN",
+          "rosso": "KNOWN",
           "scatola": "KNOWN",
           "sua": "KNOWN",
           "sulla": "KNOWN",
+          "suonare": "KNOWN",
           "tempo": "KNOWN",
           "temporale": "KNOWN",
           "tornare": "KNOWN",
@@ -11377,8 +12024,10 @@
           "cane": "KNOWN",
           "casa": "KNOWN",
           "castello": "KNOWN",
+          "chitarra": "KNOWN",
           "cielo": "KNOWN",
           "di": "KNOWN",
+          "domenica": "KNOWN",
           "dopo": "KNOWN",
           "e": "KNOWN",
           "essere": "KNOWN",
@@ -11397,9 +12046,11 @@
           "notte": "KNOWN",
           "padre": "KNOWN",
           "piccola": "KNOWN",
+          "rosso": "KNOWN",
           "scatola": "KNOWN",
           "sua": "KNOWN",
           "sulla": "KNOWN",
+          "suonare": "KNOWN",
           "tempo": "KNOWN",
           "temporale": "KNOWN",
           "tornare": "KNOWN",
@@ -11420,8 +12071,10 @@
           "cane": "KNOWN",
           "casa": "KNOWN",
           "castello": "KNOWN",
+          "chitarra": "KNOWN",
           "cielo": "KNOWN",
           "di": "KNOWN",
+          "domenica": "KNOWN",
           "dopo": "KNOWN",
           "e": "KNOWN",
           "essere": "KNOWN",
@@ -11440,9 +12093,11 @@
           "notte": "KNOWN",
           "padre": "KNOWN",
           "piccola": "KNOWN",
+          "rosso": "KNOWN",
           "scatola": "KNOWN",
           "sua": "KNOWN",
           "sulla": "KNOWN",
+          "suonare": "KNOWN",
           "tempo": "KNOWN",
           "temporale": "KNOWN",
           "tornare": "KNOWN",
@@ -11528,6 +12183,21 @@
                       "Burg",
                       "Festung",
                       "Schloß"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "chitarra": [
+              {
+                "lemma": "chitarra",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kiˈtarra/",
+                "senses": [
+                  {
+                    "definition": "strumento musicale a corde molto usato negli accompagnamenti di musica popolare moderna, nato in Spagna nel 1500, formato da una cassa armonica a fondo piatto a forma di otto con un foro circolare al centro, un manico fornito all'estremità di spine rotanti a cui s'attaccano sei o sette corde da suonare a pizzico, una serie di barre trasversali in metallo per tenere le corde ferme ed un piccolo ponte d'appoggio per queste ultime",
+                    "translations": [
+                      "Gitarre"
                     ]
                   }
                 ]
@@ -11754,6 +12424,21 @@
                       "castle",
                       "chastel",
                       "forecastle"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "chitarra": [
+              {
+                "lemma": "chitarra",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kiˈtarra/",
+                "senses": [
+                  {
+                    "definition": "strumento musicale a corde molto usato negli accompagnamenti di musica popolare moderna, nato in Spagna nel 1500, formato da una cassa armonica a fondo piatto a forma di otto con un foro circolare al centro, un manico fornito all'estremità di spine rotanti a cui s'attaccano sei o sette corde da suonare a pizzico, una serie di barre trasversali in metallo per tenere le corde ferme ed un piccolo ponte d'appoggio per queste ultime",
+                    "translations": [
+                      "guitar"
                     ]
                   }
                 ]
@@ -11990,6 +12675,21 @@
                 ]
               }
             ],
+            "chitarra": [
+              {
+                "lemma": "chitarra",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kiˈtarra/",
+                "senses": [
+                  {
+                    "definition": "strumento musicale a corde molto usato negli accompagnamenti di musica popolare moderna, nato in Spagna nel 1500, formato da una cassa armonica a fondo piatto a forma di otto con un foro circolare al centro, un manico fornito all'estremità di spine rotanti a cui s'attaccano sei o sette corde da suonare a pizzico, una serie di barre trasversali in metallo per tenere le corde ferme ed un piccolo ponte d'appoggio per queste ultime",
+                    "translations": [
+                      "guitarra"
+                    ]
+                  }
+                ]
+              }
+            ],
             "fiore": [
               {
                 "lemma": "fiore",
@@ -12205,6 +12905,21 @@
                     "definition": "costruzione difensiva consistente in un edificio fortificato, circondato da mura, in cui è presente almeno una torre principale chiamata mastio",
                     "translations": [
                       "château"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "chitarra": [
+              {
+                "lemma": "chitarra",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kiˈtarra/",
+                "senses": [
+                  {
+                    "definition": "strumento musicale a corde molto usato negli accompagnamenti di musica popolare moderna, nato in Spagna nel 1500, formato da una cassa armonica a fondo piatto a forma di otto con un foro circolare al centro, un manico fornito all'estremità di spine rotanti a cui s'attaccano sei o sette corde da suonare a pizzico, una serie di barre trasversali in metallo per tenere le corde ferme ed un piccolo ponte d'appoggio per queste ultime",
+                    "translations": [
+                      "guitare"
                     ]
                   }
                 ]
@@ -12431,6 +13146,21 @@
                 ]
               }
             ],
+            "chitarra": [
+              {
+                "lemma": "chitarra",
+                "partOfSpeech": "noun",
+                "pronunciation": "/kiˈtarra/",
+                "senses": [
+                  {
+                    "definition": "strumento musicale a corde molto usato negli accompagnamenti di musica popolare moderna, nato in Spagna nel 1500, formato da una cassa armonica a fondo piatto a forma di otto con un foro circolare al centro, un manico fornito all'estremità di spine rotanti a cui s'attaccano sei o sette corde da suonare a pizzico, una serie di barre trasversali in metallo per tenere le corde ferme ed un piccolo ponte d'appoggio per queste ultime",
+                    "translations": [
+                      "guitarra"
+                    ]
+                  }
+                ]
+              }
+            ],
             "fiore": [
               {
                 "lemma": "fiore",
@@ -12584,7 +13314,8 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "男が家にいる。家は小さい。海は大きい。山がある。犬がいる。本と水がある。塩と橋がある。机とペンがある。そらが見える。トマトがある。夜、雨が来る。男は元気だ。家に帰る。"
+        "男が家にいる。家は小さい。海は大きい。山がある。犬がいる。本と水がある。塩と橋がある。机とペンがある。そらが見える。冷蔵庫にジュースがある。机の上にトマトがある。夜、雨が来る。男は元気だ。家に帰る。",
+        "男は本を読む。水を飲む。夜、雨が来る。男は元気だ。"
       ],
       "difficulty": {
         "あま": "A1",
@@ -12597,12 +13328,18 @@
         "ちいさい": "A1",
         "と": "A1",
         "に": "A1",
+        "の": "A1",
         "は": "A1",
         "みず": "A1",
+        "よむ": "A1",
         "よる": "A1",
+        "を": "A1",
+        "ジュース": "C1",
         "トマト": "C2",
         "ペン": "B2",
+        "上": "A1",
         "元気": "A1",
+        "冷蔵庫": "C2",
         "塩": "A2",
         "大きい": "A1",
         "家": "A1",
@@ -12614,7 +13351,8 @@
         "男": "A1",
         "見える": "A1",
         "雨": "A1",
-        "静謐": "A1"
+        "静謐": "A1",
+        "飲む": "A1"
       },
       "forms": {
         "だ": "静謐",
@@ -12623,7 +13361,8 @@
         "帰る": "かえる",
         "水": "みず",
         "海": "あま",
-        "犬": "いぬ"
+        "犬": "いぬ",
+        "読む": "よむ"
       },
       "colourMaps": {
         "A1": {
@@ -12637,12 +13376,18 @@
           "ちいさい": "KNOWN",
           "と": "KNOWN",
           "に": "KNOWN",
+          "の": "KNOWN",
           "は": "KNOWN",
           "みず": "KNOWN",
+          "よむ": "KNOWN",
           "よる": "KNOWN",
+          "を": "KNOWN",
+          "ジュース": "UNKNOWN",
           "トマト": "UNKNOWN",
           "ペン": "RECOGNIZED",
+          "上": "KNOWN",
           "元気": "KNOWN",
+          "冷蔵庫": "UNKNOWN",
           "塩": "LEARNED",
           "大きい": "KNOWN",
           "家": "KNOWN",
@@ -12654,7 +13399,8 @@
           "男": "KNOWN",
           "見える": "KNOWN",
           "雨": "KNOWN",
-          "静謐": "KNOWN"
+          "静謐": "KNOWN",
+          "飲む": "KNOWN"
         },
         "A2": {
           "あま": "KNOWN",
@@ -12667,12 +13413,18 @@
           "ちいさい": "KNOWN",
           "と": "KNOWN",
           "に": "KNOWN",
+          "の": "KNOWN",
           "は": "KNOWN",
           "みず": "KNOWN",
+          "よむ": "KNOWN",
           "よる": "KNOWN",
+          "を": "KNOWN",
+          "ジュース": "RECOGNIZED",
           "トマト": "UNKNOWN",
           "ペン": "FAMILIAR",
+          "上": "KNOWN",
           "元気": "KNOWN",
+          "冷蔵庫": "UNKNOWN",
           "塩": "KNOWN",
           "大きい": "KNOWN",
           "家": "KNOWN",
@@ -12684,7 +13436,8 @@
           "男": "KNOWN",
           "見える": "KNOWN",
           "雨": "KNOWN",
-          "静謐": "KNOWN"
+          "静謐": "KNOWN",
+          "飲む": "KNOWN"
         },
         "B1": {
           "あま": "KNOWN",
@@ -12697,12 +13450,18 @@
           "ちいさい": "KNOWN",
           "と": "KNOWN",
           "に": "KNOWN",
+          "の": "KNOWN",
           "は": "KNOWN",
           "みず": "KNOWN",
+          "よむ": "KNOWN",
           "よる": "KNOWN",
+          "を": "KNOWN",
+          "ジュース": "FAMILIAR",
           "トマト": "RECOGNIZED",
           "ペン": "LEARNED",
+          "上": "KNOWN",
           "元気": "KNOWN",
+          "冷蔵庫": "RECOGNIZED",
           "塩": "KNOWN",
           "大きい": "KNOWN",
           "家": "KNOWN",
@@ -12714,7 +13473,8 @@
           "男": "KNOWN",
           "見える": "KNOWN",
           "雨": "KNOWN",
-          "静謐": "KNOWN"
+          "静謐": "KNOWN",
+          "飲む": "KNOWN"
         },
         "B2": {
           "あま": "KNOWN",
@@ -12727,12 +13487,18 @@
           "ちいさい": "KNOWN",
           "と": "KNOWN",
           "に": "KNOWN",
+          "の": "KNOWN",
           "は": "KNOWN",
           "みず": "KNOWN",
+          "よむ": "KNOWN",
           "よる": "KNOWN",
+          "を": "KNOWN",
+          "ジュース": "LEARNED",
           "トマト": "FAMILIAR",
           "ペン": "KNOWN",
+          "上": "KNOWN",
           "元気": "KNOWN",
+          "冷蔵庫": "FAMILIAR",
           "塩": "KNOWN",
           "大きい": "KNOWN",
           "家": "KNOWN",
@@ -12744,7 +13510,8 @@
           "男": "KNOWN",
           "見える": "KNOWN",
           "雨": "KNOWN",
-          "静謐": "KNOWN"
+          "静謐": "KNOWN",
+          "飲む": "KNOWN"
         },
         "C1": {
           "あま": "KNOWN",
@@ -12757,12 +13524,18 @@
           "ちいさい": "KNOWN",
           "と": "KNOWN",
           "に": "KNOWN",
+          "の": "KNOWN",
           "は": "KNOWN",
           "みず": "KNOWN",
+          "よむ": "KNOWN",
           "よる": "KNOWN",
+          "を": "KNOWN",
+          "ジュース": "KNOWN",
           "トマト": "LEARNED",
           "ペン": "KNOWN",
+          "上": "KNOWN",
           "元気": "KNOWN",
+          "冷蔵庫": "LEARNED",
           "塩": "KNOWN",
           "大きい": "KNOWN",
           "家": "KNOWN",
@@ -12774,7 +13547,8 @@
           "男": "KNOWN",
           "見える": "KNOWN",
           "雨": "KNOWN",
-          "静謐": "KNOWN"
+          "静謐": "KNOWN",
+          "飲む": "KNOWN"
         },
         "C2": {
           "あま": "KNOWN",
@@ -12787,12 +13561,18 @@
           "ちいさい": "KNOWN",
           "と": "KNOWN",
           "に": "KNOWN",
+          "の": "KNOWN",
           "は": "KNOWN",
           "みず": "KNOWN",
+          "よむ": "KNOWN",
           "よる": "KNOWN",
+          "を": "KNOWN",
+          "ジュース": "KNOWN",
           "トマト": "KNOWN",
           "ペン": "KNOWN",
+          "上": "KNOWN",
           "元気": "KNOWN",
+          "冷蔵庫": "KNOWN",
           "塩": "KNOWN",
           "大きい": "KNOWN",
           "家": "KNOWN",
@@ -12804,7 +13584,8 @@
           "男": "KNOWN",
           "見える": "KNOWN",
           "雨": "KNOWN",
-          "静謐": "KNOWN"
+          "静謐": "KNOWN",
+          "飲む": "KNOWN"
         }
       },
       "glossaries": {
@@ -12820,6 +13601,20 @@
                     "translations": [
                       "Luft",
                       "Himmel"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "Saft"
                     ]
                   }
                 ]
@@ -12850,6 +13645,21 @@
                     "translations": [
                       "Kugelschreiber",
                       "Füllfederhalter"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "Kühlschrank",
+                      "Kühlraum"
                     ]
                   }
                 ]
@@ -12917,6 +13727,20 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "juice"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -12941,6 +13765,20 @@
                     "translations": [
                       "pen",
                       "quill"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "refrigerator"
                     ]
                   }
                 ]
@@ -13008,6 +13846,21 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "jugo",
+                      "zumo"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13031,6 +13884,22 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "bolígrafo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "frigorífico",
+                      "heladera",
+                      "nevera"
                     ]
                   }
                 ]
@@ -13100,6 +13969,20 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "jus"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13123,6 +14006,20 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "stylo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "réfrigérateur"
                     ]
                   }
                 ]
@@ -13189,6 +14086,21 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "succo",
+                      "spremuta"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13212,6 +14124,20 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "penna"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "frigorifero"
                     ]
                   }
                 ]
@@ -13277,6 +14203,22 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "즙",
+                      "汁",
+                      "주스"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13300,6 +14242,20 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "펜"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "냉장고"
                     ]
                   }
                 ]
@@ -13368,6 +14324,21 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "sumo",
+                      "suco"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13392,6 +14363,21 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "caneta"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "refrigerador",
+                      "geladeira"
                     ]
                   }
                 ]
@@ -13458,6 +14444,20 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "meyve suyu"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13481,6 +14481,20 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "kalem"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "buzdolabı"
                     ]
                   }
                 ]
@@ -13548,6 +14562,22 @@
                 ]
               }
             ],
+            "ジュース": [
+              {
+                "lemma": "ジュース",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "果汁または野菜や果物から搾り取った汁で作られた飲料。",
+                    "translations": [
+                      "汁",
+                      "果汁",
+                      "菜汁"
+                    ]
+                  }
+                ]
+              }
+            ],
             "トマト": [
               {
                 "lemma": "トマト",
@@ -13573,6 +14603,20 @@
                     "definition": "［原義・本義・狭義］文房具の一種。墨やインクを付けて、文字・記号・図画・絵などを書くための、先端を尖らせた筆記用具。全て硬筆筆記用具。",
                     "translations": [
                       "笔"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "冷蔵庫": [
+              {
+                "lemma": "冷蔵庫",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "低温で、食品等を保管することを目的とした器具。過去には、氷を充填することにより、その目的を果たすものもあったが、現在では、ほぼ電力を利用するもののみとなっており、電気冷蔵庫と同義である。一般には、0℃以上でものを凍らせないものを言い、0℃以下にするものを冷凍庫と言う。",
+                    "translations": [
+                      "冰箱"
                     ]
                   }
                 ]
@@ -13634,8 +14678,8 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "O homem é velho. O seu barco é pequeno. O mar está belo. O céu está azul. Na montanha vejo um templo. O jardim está perto. O vento está frio. O cão é branco.",
-        "O mar é grande. A batata é boa. Na caixa vejo um livro e uma flor. À noite vejo um furacão. Depois do furacão, o homem está bem. Volta para casa."
+        "O homem é velho. O seu barco é pequeno. O mar está belo. O céu está azul. Na montanha vejo um templo. O jardim está perto. O vento está frio. O cão é branco. À noite vejo um furacão. Na cozinha, a batata está na geladeira.",
+        "O mar é grande. Na caixa vejo um livro e uma flor. Depois do furacão, o homem está bem. Volta para casa."
       ],
       "difficulty": {
         "a": "A1",
@@ -13644,10 +14688,10 @@
         "batata": "C2",
         "belo": "A1",
         "bem": "A1",
-        "boa": "A1",
         "branco": "A1",
         "caixa": "A1",
         "casa": "A1",
+        "cozinha": "A2",
         "cão": "B1",
         "céu": "A1",
         "depois": "A1",
@@ -13657,6 +14701,7 @@
         "flor": "A2",
         "frio": "A1",
         "furacão": "C1",
+        "geladeira": "C2",
         "grande": "A1",
         "homem": "A1",
         "jardim": "A1",
@@ -13693,10 +14738,10 @@
           "batata": "UNKNOWN",
           "belo": "KNOWN",
           "bem": "KNOWN",
-          "boa": "KNOWN",
           "branco": "KNOWN",
           "caixa": "KNOWN",
           "casa": "KNOWN",
+          "cozinha": "LEARNED",
           "cão": "FAMILIAR",
           "céu": "KNOWN",
           "depois": "KNOWN",
@@ -13706,6 +14751,7 @@
           "flor": "LEARNED",
           "frio": "KNOWN",
           "furacão": "UNKNOWN",
+          "geladeira": "UNKNOWN",
           "grande": "KNOWN",
           "homem": "KNOWN",
           "jardim": "KNOWN",
@@ -13736,10 +14782,10 @@
           "batata": "UNKNOWN",
           "belo": "KNOWN",
           "bem": "KNOWN",
-          "boa": "KNOWN",
           "branco": "KNOWN",
           "caixa": "KNOWN",
           "casa": "KNOWN",
+          "cozinha": "KNOWN",
           "cão": "LEARNED",
           "céu": "KNOWN",
           "depois": "KNOWN",
@@ -13749,6 +14795,7 @@
           "flor": "KNOWN",
           "frio": "KNOWN",
           "furacão": "RECOGNIZED",
+          "geladeira": "UNKNOWN",
           "grande": "KNOWN",
           "homem": "KNOWN",
           "jardim": "KNOWN",
@@ -13779,10 +14826,10 @@
           "batata": "RECOGNIZED",
           "belo": "KNOWN",
           "bem": "KNOWN",
-          "boa": "KNOWN",
           "branco": "KNOWN",
           "caixa": "KNOWN",
           "casa": "KNOWN",
+          "cozinha": "KNOWN",
           "cão": "KNOWN",
           "céu": "KNOWN",
           "depois": "KNOWN",
@@ -13792,6 +14839,7 @@
           "flor": "KNOWN",
           "frio": "KNOWN",
           "furacão": "FAMILIAR",
+          "geladeira": "RECOGNIZED",
           "grande": "KNOWN",
           "homem": "KNOWN",
           "jardim": "KNOWN",
@@ -13822,10 +14870,10 @@
           "batata": "FAMILIAR",
           "belo": "KNOWN",
           "bem": "KNOWN",
-          "boa": "KNOWN",
           "branco": "KNOWN",
           "caixa": "KNOWN",
           "casa": "KNOWN",
+          "cozinha": "KNOWN",
           "cão": "KNOWN",
           "céu": "KNOWN",
           "depois": "KNOWN",
@@ -13835,6 +14883,7 @@
           "flor": "KNOWN",
           "frio": "KNOWN",
           "furacão": "LEARNED",
+          "geladeira": "FAMILIAR",
           "grande": "KNOWN",
           "homem": "KNOWN",
           "jardim": "KNOWN",
@@ -13865,10 +14914,10 @@
           "batata": "LEARNED",
           "belo": "KNOWN",
           "bem": "KNOWN",
-          "boa": "KNOWN",
           "branco": "KNOWN",
           "caixa": "KNOWN",
           "casa": "KNOWN",
+          "cozinha": "KNOWN",
           "cão": "KNOWN",
           "céu": "KNOWN",
           "depois": "KNOWN",
@@ -13878,6 +14927,7 @@
           "flor": "KNOWN",
           "frio": "KNOWN",
           "furacão": "KNOWN",
+          "geladeira": "LEARNED",
           "grande": "KNOWN",
           "homem": "KNOWN",
           "jardim": "KNOWN",
@@ -13908,10 +14958,10 @@
           "batata": "KNOWN",
           "belo": "KNOWN",
           "bem": "KNOWN",
-          "boa": "KNOWN",
           "branco": "KNOWN",
           "caixa": "KNOWN",
           "casa": "KNOWN",
+          "cozinha": "KNOWN",
           "cão": "KNOWN",
           "céu": "KNOWN",
           "depois": "KNOWN",
@@ -13921,6 +14971,7 @@
           "flor": "KNOWN",
           "frio": "KNOWN",
           "furacão": "KNOWN",
+          "geladeira": "KNOWN",
           "grande": "KNOWN",
           "homem": "KNOWN",
           "jardim": "KNOWN",
@@ -13979,6 +15030,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "Küche"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14021,6 +15087,21 @@
                     "translations": [
                       "Orkan",
                       "Hurrikan"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "Kühlschrank"
                     ]
                   }
                 ]
@@ -14106,6 +15187,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "kitchen"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14149,6 +15245,22 @@
                       "hurricane",
                       "tropical cyclone",
                       "cyclonic storm"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "fridge",
+                      "refrigerator"
                     ]
                   }
                 ]
@@ -14235,6 +15347,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "cocina"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14279,6 +15406,21 @@
                       "huracán",
                       "ciclón tropical",
                       "ciclón"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "nevera"
                     ]
                   }
                 ]
@@ -14364,6 +15506,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "cuisine"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14406,6 +15563,21 @@
                     "translations": [
                       "ouragan",
                       "cyclone"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "réfrigérateur"
                     ]
                   }
                 ]
@@ -14490,6 +15662,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "cucina"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14531,6 +15718,21 @@
                     "translations": [
                       "uragano",
                       "uracano"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "frigorifero"
                     ]
                   }
                 ]
@@ -14618,6 +15820,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "台所"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14658,6 +15875,21 @@
                     "definition": "sistema de baixa pressão que ocorre geralmente nas regiões tropicais com ventos que circulam na forma de espiral, em alta velocidade, causando calamidade quando atinge regiões habitadas",
                     "translations": [
                       "台風"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "冷蔵庫"
                     ]
                   }
                 ]
@@ -14742,6 +15974,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "부엌"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14785,6 +16032,21 @@
                     "translations": [
                       "태(폭)풍",
                       "싹쓸 바람,"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "냉장고"
                     ]
                   }
                 ]
@@ -14870,6 +16132,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "mutfak"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -14912,6 +16189,21 @@
                     "definition": "sistema de baixa pressão que ocorre geralmente nas regiões tropicais com ventos que circulam na forma de espiral, em alta velocidade, causando calamidade quando atinge regiões habitadas",
                     "translations": [
                       "kasirga"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "buzdolabı"
                     ]
                   }
                 ]
@@ -14998,6 +16290,21 @@
                 ]
               }
             ],
+            "cozinha": [
+              {
+                "lemma": "cozinha",
+                "partOfSpeech": "noun",
+                "pronunciation": "/ku.ˈzi.ɲɐ/",
+                "senses": [
+                  {
+                    "definition": "compartimento onde se preparam os alimentos",
+                    "translations": [
+                      "厨房"
+                    ]
+                  }
+                ]
+              }
+            ],
             "cão": [
               {
                 "lemma": "cão",
@@ -15040,6 +16347,21 @@
                     "translations": [
                       "熱帶氣旋",
                       "颶風"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "geladeira": [
+              {
+                "lemma": "geladeira",
+                "partOfSpeech": "noun",
+                "pronunciation": "[ʒelaˈdeːɾa], plural: [ʒelaˈdeːɾaʃ]",
+                "senses": [
+                  {
+                    "definition": "eletrodoméstico usado para manter alimentos frescos por refrigeração",
+                    "translations": [
+                      "电冰箱"
                     ]
                   }
                 ]
@@ -15101,8 +16423,8 @@
       "author": "Lekto",
       "attribution": "Text: original, dedicated to the public domain (CC0 1.0). Meanings: Wiktionary data under CC BY-SA 4.0, extracted from the Lekto dictionary packs.",
       "paragraphs": [
-        "Adam yaşlı. Onun evi küçük. Deniz iyi. Gök mavi. Dağda bir kale var. Bahçe yakın. Hava soğuk. Köpek beyaz.",
-        "Deniz büyük. Bir kitap ve bir elma var. Bir portakal var. Bir ayna var. Bir limon var. Gece bir fırtına var. Fırtınadan sonra adam iyi. Eve gider."
+        "Yaşlı adamın küçük bir evi var. Ev denize yakın. Gök mavi, hava soğuk. Dağda bir kale var, bahçe yakın. Gece bir fırtına çıkar. Mutfakta bir buzdolabı var. Masada bir portakal, bir ayna ve bir limon var. Köpek beyaz.",
+        "Deniz büyük. Bir kitap ve bir elma var. Bir fırtına var. Fırtınadan sonra adam iyi. Eve gider."
       ],
       "difficulty": {
         "adam": "A1",
@@ -15110,6 +16432,7 @@
         "bahçe": "A1",
         "beyaz": "A1",
         "bir": "A1",
+        "buzdolabı": "C1",
         "büyük": "A1",
         "dağ": "A1",
         "deniz": "A1",
@@ -15126,22 +16449,28 @@
         "köpek": "A1",
         "küçük": "A1",
         "limon": "C2",
+        "masa": "A1",
         "mavi": "A1",
-        "onun": "A1",
+        "mutfak": "A2",
         "portakal": "B2",
         "sonra": "A1",
         "soğuk": "A1",
         "var": "A1",
         "ve": "A1",
         "yakın": "A1",
-        "yaşlı": "A1"
+        "yaşlı": "A1",
+        "çıkar": "A1"
       },
       "forms": {
+        "adamın": "adam",
         "dağda": "dağ",
+        "denize": "deniz",
         "eve": "ev",
         "evi": "ev",
         "fırtınadan": "fırtına",
-        "gider": "gitmek"
+        "gider": "gitmek",
+        "masada": "masa",
+        "mutfakta": "mutfak"
       },
       "colourMaps": {
         "A1": {
@@ -15150,6 +16479,7 @@
           "bahçe": "KNOWN",
           "beyaz": "KNOWN",
           "bir": "KNOWN",
+          "buzdolabı": "UNKNOWN",
           "büyük": "KNOWN",
           "dağ": "KNOWN",
           "deniz": "KNOWN",
@@ -15166,15 +16496,17 @@
           "köpek": "KNOWN",
           "küçük": "KNOWN",
           "limon": "UNKNOWN",
+          "masa": "KNOWN",
           "mavi": "KNOWN",
-          "onun": "KNOWN",
+          "mutfak": "LEARNED",
           "portakal": "RECOGNIZED",
           "sonra": "KNOWN",
           "soğuk": "KNOWN",
           "var": "KNOWN",
           "ve": "KNOWN",
           "yakın": "KNOWN",
-          "yaşlı": "KNOWN"
+          "yaşlı": "KNOWN",
+          "çıkar": "KNOWN"
         },
         "A2": {
           "adam": "KNOWN",
@@ -15182,6 +16514,7 @@
           "bahçe": "KNOWN",
           "beyaz": "KNOWN",
           "bir": "KNOWN",
+          "buzdolabı": "RECOGNIZED",
           "büyük": "KNOWN",
           "dağ": "KNOWN",
           "deniz": "KNOWN",
@@ -15198,15 +16531,17 @@
           "köpek": "KNOWN",
           "küçük": "KNOWN",
           "limon": "UNKNOWN",
+          "masa": "KNOWN",
           "mavi": "KNOWN",
-          "onun": "KNOWN",
+          "mutfak": "KNOWN",
           "portakal": "FAMILIAR",
           "sonra": "KNOWN",
           "soğuk": "KNOWN",
           "var": "KNOWN",
           "ve": "KNOWN",
           "yakın": "KNOWN",
-          "yaşlı": "KNOWN"
+          "yaşlı": "KNOWN",
+          "çıkar": "KNOWN"
         },
         "B1": {
           "adam": "KNOWN",
@@ -15214,6 +16549,7 @@
           "bahçe": "KNOWN",
           "beyaz": "KNOWN",
           "bir": "KNOWN",
+          "buzdolabı": "FAMILIAR",
           "büyük": "KNOWN",
           "dağ": "KNOWN",
           "deniz": "KNOWN",
@@ -15230,15 +16566,17 @@
           "köpek": "KNOWN",
           "küçük": "KNOWN",
           "limon": "RECOGNIZED",
+          "masa": "KNOWN",
           "mavi": "KNOWN",
-          "onun": "KNOWN",
+          "mutfak": "KNOWN",
           "portakal": "LEARNED",
           "sonra": "KNOWN",
           "soğuk": "KNOWN",
           "var": "KNOWN",
           "ve": "KNOWN",
           "yakın": "KNOWN",
-          "yaşlı": "KNOWN"
+          "yaşlı": "KNOWN",
+          "çıkar": "KNOWN"
         },
         "B2": {
           "adam": "KNOWN",
@@ -15246,6 +16584,7 @@
           "bahçe": "KNOWN",
           "beyaz": "KNOWN",
           "bir": "KNOWN",
+          "buzdolabı": "LEARNED",
           "büyük": "KNOWN",
           "dağ": "KNOWN",
           "deniz": "KNOWN",
@@ -15262,15 +16601,17 @@
           "köpek": "KNOWN",
           "küçük": "KNOWN",
           "limon": "FAMILIAR",
+          "masa": "KNOWN",
           "mavi": "KNOWN",
-          "onun": "KNOWN",
+          "mutfak": "KNOWN",
           "portakal": "KNOWN",
           "sonra": "KNOWN",
           "soğuk": "KNOWN",
           "var": "KNOWN",
           "ve": "KNOWN",
           "yakın": "KNOWN",
-          "yaşlı": "KNOWN"
+          "yaşlı": "KNOWN",
+          "çıkar": "KNOWN"
         },
         "C1": {
           "adam": "KNOWN",
@@ -15278,6 +16619,7 @@
           "bahçe": "KNOWN",
           "beyaz": "KNOWN",
           "bir": "KNOWN",
+          "buzdolabı": "KNOWN",
           "büyük": "KNOWN",
           "dağ": "KNOWN",
           "deniz": "KNOWN",
@@ -15294,15 +16636,17 @@
           "köpek": "KNOWN",
           "küçük": "KNOWN",
           "limon": "LEARNED",
+          "masa": "KNOWN",
           "mavi": "KNOWN",
-          "onun": "KNOWN",
+          "mutfak": "KNOWN",
           "portakal": "KNOWN",
           "sonra": "KNOWN",
           "soğuk": "KNOWN",
           "var": "KNOWN",
           "ve": "KNOWN",
           "yakın": "KNOWN",
-          "yaşlı": "KNOWN"
+          "yaşlı": "KNOWN",
+          "çıkar": "KNOWN"
         },
         "C2": {
           "adam": "KNOWN",
@@ -15310,6 +16654,7 @@
           "bahçe": "KNOWN",
           "beyaz": "KNOWN",
           "bir": "KNOWN",
+          "buzdolabı": "KNOWN",
           "büyük": "KNOWN",
           "dağ": "KNOWN",
           "deniz": "KNOWN",
@@ -15326,15 +16671,17 @@
           "köpek": "KNOWN",
           "küçük": "KNOWN",
           "limon": "KNOWN",
+          "masa": "KNOWN",
           "mavi": "KNOWN",
-          "onun": "KNOWN",
+          "mutfak": "KNOWN",
           "portakal": "KNOWN",
           "sonra": "KNOWN",
           "soğuk": "KNOWN",
           "var": "KNOWN",
           "ve": "KNOWN",
           "yakın": "KNOWN",
-          "yaşlı": "KNOWN"
+          "yaşlı": "KNOWN",
+          "çıkar": "KNOWN"
         }
       },
       "glossaries": {
@@ -15350,6 +16697,20 @@
                     "definition": "iyi bir durumda, yolunda",
                     "translations": [
                       "Spiegel"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "buzdolabı": [
+              {
+                "lemma": "buzdolabı",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "yiyecek, içecek vb.ni soğuk olarak saklamaya yarayan, motorla çalışan dolap, soğutucu",
+                    "translations": [
+                      "Kühlschrank"
                     ]
                   }
                 ]
@@ -15415,6 +16776,21 @@
                 ]
               }
             ],
+            "mutfak": [
+              {
+                "lemma": "mutfak",
+                "partOfSpeech": "noun",
+                "pronunciation": "/mut.ˈfak/",
+                "senses": [
+                  {
+                    "definition": "Yemek pişirilen yer; aş damı, aşhane, ocaklık",
+                    "translations": [
+                      "Küche"
+                    ]
+                  }
+                ]
+              }
+            ],
             "portakal": [
               {
                 "lemma": "portakal",
@@ -15446,6 +16822,21 @@
                     "translations": [
                       "mirror",
                       "perfekt"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "buzdolabı": [
+              {
+                "lemma": "buzdolabı",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "yiyecek, içecek vb.ni soğuk olarak saklamaya yarayan, motorla çalışan dolap, soğutucu",
+                    "translations": [
+                      "refrigerator",
+                      "fridge"
                     ]
                   }
                 ]
@@ -15510,6 +16901,21 @@
                 ]
               }
             ],
+            "mutfak": [
+              {
+                "lemma": "mutfak",
+                "partOfSpeech": "noun",
+                "pronunciation": "/mut.ˈfak/",
+                "senses": [
+                  {
+                    "definition": "Yemek pişirilen yer; aş damı, aşhane, ocaklık",
+                    "translations": [
+                      "kitchen"
+                    ]
+                  }
+                ]
+              }
+            ],
             "portakal": [
               {
                 "lemma": "portakal",
@@ -15539,6 +16945,21 @@
                     "definition": "iyi bir durumda, yolunda",
                     "translations": [
                       "espejo"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "buzdolabı": [
+              {
+                "lemma": "buzdolabı",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "yiyecek, içecek vb.ni soğuk olarak saklamaya yarayan, motorla çalışan dolap, soğutucu",
+                    "translations": [
+                      "refrigerador",
+                      "frigorífico"
                     ]
                   }
                 ]
@@ -15604,6 +17025,21 @@
                 ]
               }
             ],
+            "mutfak": [
+              {
+                "lemma": "mutfak",
+                "partOfSpeech": "noun",
+                "pronunciation": "/mut.ˈfak/",
+                "senses": [
+                  {
+                    "definition": "Yemek pişirilen yer; aş damı, aşhane, ocaklık",
+                    "translations": [
+                      "cocina"
+                    ]
+                  }
+                ]
+              }
+            ],
             "portakal": [
               {
                 "lemma": "portakal",
@@ -15634,6 +17070,22 @@
                     "translations": [
                       "glace",
                       "miroir"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "buzdolabı": [
+              {
+                "lemma": "buzdolabı",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "yiyecek, içecek vb.ni soğuk olarak saklamaya yarayan, motorla çalışan dolap, soğutucu",
+                    "translations": [
+                      "frigidaire",
+                      "réfrigérateur",
+                      "frigo"
                     ]
                   }
                 ]
@@ -15698,6 +17150,21 @@
                 ]
               }
             ],
+            "mutfak": [
+              {
+                "lemma": "mutfak",
+                "partOfSpeech": "noun",
+                "pronunciation": "/mut.ˈfak/",
+                "senses": [
+                  {
+                    "definition": "Yemek pişirilen yer; aş damı, aşhane, ocaklık",
+                    "translations": [
+                      "cuisine"
+                    ]
+                  }
+                ]
+              }
+            ],
             "portakal": [
               {
                 "lemma": "portakal",
@@ -15727,6 +17194,20 @@
                     "definition": "iyi bir durumda, yolunda",
                     "translations": [
                       "specchio"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "buzdolabı": [
+              {
+                "lemma": "buzdolabı",
+                "partOfSpeech": "noun",
+                "senses": [
+                  {
+                    "definition": "yiyecek, içecek vb.ni soğuk olarak saklamaya yarayan, motorla çalışan dolap, soğutucu",
+                    "translations": [
+                      "frigorifero"
                     ]
                   }
                 ]
@@ -15787,6 +17268,21 @@
                     "definition": "Turunçgillerden, 3-5 metre yüksekliğinde, kışın yapraklarını dökmeyen, beyaz çiçekli bir ağaç (Citrus limonum).",
                     "translations": [
                       "limone"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "mutfak": [
+              {
+                "lemma": "mutfak",
+                "partOfSpeech": "noun",
+                "pronunciation": "/mut.ˈfak/",
+                "senses": [
+                  {
+                    "definition": "Yemek pişirilen yer; aş damı, aşhane, ocaklık",
+                    "translations": [
+                      "cucina"
                     ]
                   }
                 ]
