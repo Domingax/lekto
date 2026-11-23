@@ -118,17 +118,15 @@ Every **Word token** is coloured by its **Mastery level**, on a five-point scale
 
 | Level | Meaning | Shown as |
 | ----- | ------- | -------- |
-| 0 | Unknown | Highlighted, with a dotted rule |
-| 1 | Recognized | Highlighted, with a dotted rule |
-| 2 | Familiar | Highlighted, with a dotted rule |
-| 3 | Learned | Highlighted, with a dotted rule |
+| 0 | Unknown | Highlighted |
+| 1 | Recognized | Highlighted |
+| 2 | Familiar | Highlighted |
+| 3 | Learned | Highlighted |
 | 4 | Known | Normal text, no highlight |
 
-Levels 0–3 are highlighted so unfamiliar words stand out: the word is coloured and
-carries a **1 dp dotted rule** under it in the same colour. The rule repeats the
-level's colour, so the level survives on the page without the letters having to
-carry it. Level 4 is invisible: a word you know sits in the text like any other. As
-you save words and raise their levels, the page slowly clears.
+Levels 0–3 are highlighted so unfamiliar words stand out. Level 4 is invisible:
+a word you know sits in the text like any other. As you save words and raise their
+levels, the page slowly clears.
 
 ## Your reader level
 

@@ -12,8 +12,8 @@ on-device store that holds everything you author or import. You do not need to
 sign in, and nothing is uploaded anywhere.
 
 It then asks one question: **Which language would you like to read first?** Choose a
-language — the row stays selected and a **Continue** button appears — then
-**Continue** opens a short **Sample** of it in the reader: first with no colour,
+language — the row stays selected and the **Continue** button below becomes
+available — then **Continue** opens a short **Sample** of it in the reader: first with no colour,
 then the same page coloured by a level, with a few words explained under it. Under
 the language list, a card names the word-difficulty table and offline dictionary
 that choice downloads in the background, with **Stop** while it runs, **Resume**
