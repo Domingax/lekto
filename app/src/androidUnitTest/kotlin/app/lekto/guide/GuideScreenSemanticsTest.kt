@@ -359,6 +359,44 @@ class GuideScreenSemanticsTest {
     }
 
     @Test
+    fun aTapOutsideTheSheetDismissesItAndSavesNothing() {
+        val lookupOpen = mutableStateOf(true)
+        var saved: MasteryLevel? = null
+        compose.setContent {
+            CompositionLocalProvider(LocalAppTexts provides texts) {
+                LektoTheme {
+                    GuideScreen(
+                        state = GuideUiState(
+                            stage = GuideStage.TAP,
+                            sample = sample,
+                            plain = false,
+                            lookupOpen = lookupOpen.value,
+                            tapped = note("calm"),
+                        ),
+                        languages = sampleRosterLanguages(),
+                        document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter),
+                        notes = guideNotes(sample, GUIDE_DEFAULT_BAND, segmenter, "fr"),
+                        translationLanguage = "fr",
+                        actions = GuideActions(
+                            onDismissLookup = { lookupOpen.value = false },
+                            onSaveWord = { level -> saved = level },
+                        ),
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(Offset(width / 2f, 8f)) }
+
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertDoesNotExist()
+        assertNull("a tap outside the sheet is not a save", saved)
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
+    }
+
+    @Test
     fun aTapOnAWordAsksForThatWord() {
         var tapped: app.lekto.reader.WordTap? = null
         render(

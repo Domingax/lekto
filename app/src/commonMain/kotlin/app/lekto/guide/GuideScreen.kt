@@ -66,6 +66,7 @@ import app.lekto.text.TextKey
 import app.lekto.theme.LektoRadii
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.contentColorOn
+import app.lekto.ui.DismissScrim
 import app.lekto.ui.TextAction
 import app.lekto.ui.handCursor
 import app.lekto.ui.icons.ChevronLeft
@@ -231,6 +232,9 @@ fun GuideScreen(
             }
         }
         if (state.stage == GuideStage.TAP && state.lookupOpen) {
+            // The reader's own outside-tap seam: behind the sheet, over the page, so
+            // a tap that is not on the sheet closes it and reaches nothing else.
+            DismissScrim(onDismiss = actions.onDismissLookup)
             TapSheet(beat, state.tapped, translationLanguage)
         }
     }
