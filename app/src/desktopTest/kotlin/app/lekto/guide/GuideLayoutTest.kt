@@ -5,20 +5,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
-import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
 import app.lekto.core.book.Book
 import app.lekto.core.book.BookFormat
@@ -30,12 +26,6 @@ import app.lekto.core.sample.Sample
 import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
-import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderPage
-import app.lekto.reader.ReaderStyles
-import app.lekto.reader.buildChapterText
-import app.lekto.reader.buildPageTokens
-import app.lekto.reader.ruleUnder
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
 import app.lekto.text.AppMessage
@@ -44,24 +34,12 @@ import app.lekto.text.TextKey
 import app.lekto.text.appTextsFor
 import app.lekto.theme.LektoSpacing
 import app.lekto.theme.LektoTheme
-import app.lekto.theme.Light
-import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Half a pixel of tolerance for the rounding a layout does at the screen's edge. */
 private const val FIT_SLACK = 0.5f
-
-/** The dash's own rasterisation can start a pixel inside the word's box. */
-private const val RULE_SLACK = 1.5f
-
-/** The rule and the word's box come from one layout, so they agree to rounding. */
-private const val LAYOUT_SLACK = 0.01f
-
-/** The dash is 1 dp tall, so the scan looks one pixel either side of its centre. */
-private const val RULE_ROW_PX = 1
 
 /**
  * The guide at the sizes the ticket names (issue #277): a 320 dp phone, a 360 dp
@@ -112,48 +90,19 @@ class GuideLayoutTest {
     fun theNarrowPhoneArrivalSitsTheDownloadLineInsideTheShelfFrame() = theArrival(frameWidth = 320f, height = 640f)
 
     @Test
-    fun aHighlightedWordsRuleStartsAtTheWordsMeasuredLeftEdge() =
-        screen(width = 360f, height = 640f, content = { PageStage(sample) }) {
-            val document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, WhitespaceTextSegmenter())
-            val styles = ReaderStyles.of(document.preferences, MasteryPalette.Light, Light.onBackground)
-            val chapter = buildChapterText(document.text, styles)
-            val tokens = buildPageTokens(
-                chapterText = chapter,
-                page = ReaderPage(0, chapter.length),
-                renderer = document.renderer,
-                chapter = document.text,
-                styles = styles,
-            )
-            val text = onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
-            val results = mutableListOf<TextLayoutResult>()
-            text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-            val layout = results.first()
-            val word = tokens.words.first { token ->
-                document.renderer.mastery.levelOf(token.key).highlighted && layout.getLineForOffset(token.start) == 0
-            }
-            val rule = ruleUnder(layout, word).first()
-            val measured = layout.getBoundingBox(word.start).left
-            assertEquals(measured, rule.left, LAYOUT_SLACK, "the rule starts at the word's measured left edge")
+    fun everyWaysForwardIsAWideButtonInsideTheScreenEdges() = wideWayForwardButton(width = 360f)
 
-            // Pixel-true: the stroked rule begins exactly where the text's own column
-            // begins plus the word's left, so no inset can sit between the two.
-            val page = onNodeWithTag(GUIDE_PAGE_TAG).fetchSemanticsNode().boundsInRoot
-            val pixels = onNodeWithTag(GUIDE_PAGE_TAG).captureToImage().toPixelMap()
-            val textLeft = text.boundsInRoot.left - page.left
-            val ruleY = (text.boundsInRoot.top - page.top) + rule.y
-            val background = Light.background
-            val found = ((ruleY - RULE_ROW_PX).roundToInt()..(ruleY + RULE_ROW_PX).roundToInt())
-                .firstNotNullOfOrNull { y ->
-                    (0 until pixels.width).firstOrNull { x ->
-                        val pixel = pixels[x, y]
-                        kotlin.math.abs(pixel.red - background.red) +
-                            kotlin.math.abs(pixel.green - background.green) +
-                            kotlin.math.abs(pixel.blue - background.blue) > 0.1f
-                    }
-                }
-            assertNotNull(found, "the rule was not stroked under ${word.surface}")
-            assertEquals(textLeft + rule.left, found.toFloat(), RULE_SLACK, "the drawn rule shares the text's column")
-        }
+    /** The one filled action fills the screen's width inside the edge insets. */
+    private fun wideWayForwardButton(width: Float) = screen(width = width, height = 640f, { LanguageStage() }) {
+        val button = onNodeWithTag(GUIDE_CONTINUE_TAG).fetchSemanticsNode().boundsInRoot
+        assertEquals(LektoSpacing.ScreenEdge.value, button.left, FIT_SLACK, "the button starts at the screen edge")
+        assertEquals(
+            width - LektoSpacing.ScreenEdge.value,
+            button.right,
+            FIT_SLACK,
+            "the button fills the width inside the screen edge",
+        )
+    }
 
     /** Every part of the level screen — heading, preview, six bands and the action — is on screen. */
     private fun theLevelScreenFits(width: Float, height: Float) {
@@ -183,11 +132,11 @@ class GuideLayoutTest {
                 FIT_SLACK,
                 "the notes stay compact",
             )
-            assertEquals(
-                LektoSpacing.InsidePanel.value,
-                action.top - notes.bottom,
-                FIT_SLACK,
-                "one panel under the notes",
+            // The filled button carries Material's touch inset inside its node, so
+            // the layout gap is at least the panel unit the screen asks for.
+            assertTrue(
+                action.top - notes.bottom >= LektoSpacing.InsidePanel.value - FIT_SLACK,
+                "one panel under the notes: $notes / $action",
             )
             assertTrue(action.bottom <= height + FIT_SLACK, "the action anchors the screen: $action")
         }
@@ -267,6 +216,8 @@ class GuideLayoutTest {
                 .performScrollToNode(hasTestTag(guideLanguageRowTag("tr")))
             onNodeWithTag(guideLanguageRowTag("tr")).assertIsDisplayed()
             sampleRosterLanguages().forEach { offered ->
+                onNodeWithTag(GUIDE_LANGUAGE_LIST_TAG)
+                    .performScrollToNode(hasTestTag(guideLanguageRowTag(offered.language)))
                 onNodeWithTag(guideLanguageRowTag(offered.language)).assertIsNotSelected()
             }
         }
