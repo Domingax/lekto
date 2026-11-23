@@ -272,7 +272,7 @@ class GuideLayoutTest {
             }
         }
         screen(width, height, { PageStage(sample) }) {
-            onNodeWithText("The more you know, the less colour.").assertIsDisplayed()
+            onNodeWithText("The more you know, the less colour").assertIsDisplayed()
             onNodeWithTag(GUIDE_NOTES_TAG).assertIsDisplayed()
             onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed()
         }
