@@ -385,7 +385,7 @@ class GuideScreenSemanticsTest {
 
         onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
         // The page's first line is above the raised sheet: a tap there is outside.
-        onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(Offset(width / 2f, 8f)) }
+        onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(Offset(width / 2f, 1f)) }
 
         waitForIdle()
 

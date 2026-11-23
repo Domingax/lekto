@@ -359,7 +359,7 @@ private val FrenchTable: Map<TextKey, String> = mapOf(
     TextKey.GUIDE_LANGUAGE_TITLE to "Quelle langue voulez-vous lire en premier ?",
     TextKey.GUIDE_LANGUAGE_INTRO to
         "Nous préparons l'application en fonction de votre langue cible. " +
-            "Vous pourrez en ajouter d'autres plus tard.",
+        "Vous pourrez en ajouter d'autres plus tard.",
     TextKey.GUIDE_PAGE_PLAIN_TITLE to "Lekto revoit votre façon de découvrir une nouvelle langue",
     TextKey.GUIDE_PAGE_PLAIN_INTRO to "Voici une page comme vous avez l'habitude de la lire",
     TextKey.GUIDE_PAGE_COLOURED_TITLE to "Plus vous savez, moins il y a de couleur.",

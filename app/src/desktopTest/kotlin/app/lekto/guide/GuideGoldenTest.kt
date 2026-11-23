@@ -576,7 +576,7 @@ private fun SheetDivider() {
     )
 }
 
-/** Screen 4: the same block in the flexible preview card, the six bands with A1 chosen, and `Start reading` at the foot. */
+/** Screen 4: the same block in the flexible preview card, the six bands, and `Start reading` at the foot. */
 @Composable
 private fun ColumnScope.LevelPreview() {
     Column(

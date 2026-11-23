@@ -13,6 +13,7 @@ import kotlin.test.assertTrue
  * outcome reads in the chosen language, and a message survives storage so a kept
  * sync outcome still reads after a restart.
  */
+@Suppress("TooManyFunctions") // One case per text contract; the suite is the tables' completeness guard.
 class AppTextsTest {
 
     @Test

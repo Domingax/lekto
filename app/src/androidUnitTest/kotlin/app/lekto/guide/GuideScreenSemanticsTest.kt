@@ -387,7 +387,7 @@ class GuideScreenSemanticsTest {
         }
 
         compose.onNodeWithTag(LOOKUP_PANEL_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(Offset(width / 2f, 8f)) }
+        compose.onNodeWithTag(GUIDE_PAGE_TAG).performTouchInput { click(Offset(width / 2f, 1f)) }
 
         compose.waitForIdle()
 

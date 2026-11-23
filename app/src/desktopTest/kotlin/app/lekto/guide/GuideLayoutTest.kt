@@ -41,6 +41,10 @@ import kotlin.test.assertTrue
 /** Half a pixel of tolerance for the rounding a layout does at the screen's edge. */
 private const val FIT_SLACK = 0.5f
 
+/** The two screen heights the preview's flexibility is measured between. */
+private const val PHONE_HEIGHT = 640f
+private const val TALL_PHONE_HEIGHT = 800f
+
 /**
  * The guide at the sizes the ticket names (issue #277): a 320 dp phone, a 360 dp
  * phone and a 700 × 500 desktop window. Each screen keeps its title, its `Skip`
@@ -88,7 +92,12 @@ class GuideLayoutTest {
         val phone = levelPreviewHeight(width = 360f, height = 640f)
         val tall = levelPreviewHeight(width = 360f, height = 800f)
 
-        assertEquals(160f, tall - phone, FIT_SLACK, "the preview takes the extra screen height")
+        assertEquals(
+            TALL_PHONE_HEIGHT - PHONE_HEIGHT,
+            tall - phone,
+            FIT_SLACK,
+            "the preview takes the extra screen height",
+        )
     }
 
     @Test
