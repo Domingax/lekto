@@ -79,13 +79,10 @@ between the paper and normal text, so this ramp is the tightest of the three.
 the yellow was 1.5:1, the orange and green 2.3:1 — and that is a defect, not a style. Level 4 carries
 no colour because "known" is normal text, and the absence is the reward.
 
-Colouring is applied to the **letters**, with a **1 dp dotted rule** drawn under each highlighted
-word in that word's level's colour. The rule keeps its hue, so the page reads as a book rather than
-a wall of links, and it is the non-colour cue for a reader who cannot read the hue — weight is not a
-reliable one for low vision. It is drawn by the page from the text layout the page already keeps for
-hit-testing, not carried by the text as a `TextDecoration`: Compose renders only a solid underline,
-and a per-word annotation is a layout cost the reader has already paid once (issue #251). A known
-word carries neither the colour nor the rule. A **background wash** behind the word was prototyped
+Colouring is applied to the **letters**, with the **single underline** the reader already renders
+for every highlighted level. The underline is what carries "this is a word you are learning" to a
+reader who cannot read the hue; a different shape per level would need a custom `TextDecoration`
+renderer Compose does not offer. A **background wash** behind the word was prototyped
 (`traitements.png`) and rejected: it turns a page into an annotated workbook after three hundred
 pages. It remains the documented fallback if the four levels ever prove too close in hue — both
 ramps live in one file, so switching is a local change.
@@ -142,13 +139,6 @@ The scale actually used, and nothing else:
 | Value under a row title | sans | 12 sp | normal |
 | Field label, group label | sans | 11 sp | normal, muted |
 | Navigation label | sans | 11 sp | medium when current |
-
-The reading column is capped at **34 em** — about 68 characters at 18 sp, inside the 45–75 band a
-learner reads comfortably — and a wider window turns the extra width into margin, so the column
-stays centred. The cap is held in **em**, not dp, so it follows the size control and the platform's
-font scale. The reader's margin is a minimum and the cap a maximum: neither overrides the other, and
-the paginator measures the capped column, so page breaks and the **Reading progress** are the same
-whatever the window's width.
 
 ## 4. Shape, elevation and spacing
 
@@ -375,10 +365,7 @@ the next page, rightward for the previous. The page has no tap zones: a tap on a
 lookup, and a tap anywhere else does nothing, so reaching for the text never turns a page by
 accident. The bands never hide; there is no "just the content" mode. A chevron disabled at a
 bound stays visible but faded, and the next chevron stays live on the last page, where it raises
-the end of the book. A long press on a word selects a phrase (§7.3). The page's text column is
-capped at 34 em (§3) and centred, the extra width of a wide window becoming margin; the
-paginator measures that column, so the window's width never moves a page break or the
-**Reading progress**.
+the end of the book. A long press on a word selects a phrase (§7.3).
 
 The position reads the current chapter's
 title above the **Reading progress** — `XI` over `46%` — so it uses the same words as the chapter
@@ -616,13 +603,13 @@ The first frame is **the guide** when the device has not seen it and the **Vault
 
 The guide is a **first session**, not front matter: four screens the reader walks, then the arrival on the shelf. It is built from the surfaces the product already has — the reader's own page and the reader's own lookup sheet — not from drawings of them, so the demonstration cannot drift the first time either changes. The sample is the build's one **Sample book** (ADR-0005, ADR-0049): a **Derived asset**, never a **Vault** record.
 
-1. **The language.** `Which language would you like to read first?` over one row per language of the embedded roster — its code in the muted ink, its name in the body size, a `chevron-right` — with **no preselection** and no spinner. The list is the roster itself, never a network read, so it is complete on the first frame with no connection; it scrolls at 320 dp, and a line underneath says other languages can be added later in Settings. A row tap *selects*: the chosen row carries an ink rule and a wash, a `Continue` appears, and the choice starts the background download on the spot, announced under the list with its published size and a `Stop` (`Resume` after a stop, `Retry` after a failure). `Continue` materialises that language's sample through the **Sample book** seam.
-2. **The page, in two beats.** The sample's best paragraph for the band in an embedded page block — the one whose coloured words cover the most distinct **Mastery level**s, so the page can show one word per level — the reader's own word layer, dotted rules and retained layout, inside the guide's frame and without the reader's page turns, **Aa** panel or chapter chrome — with **no colour at all** first — `Nothing is coloured yet. Look.` — then the same paragraph painted from the sample's own band map at **A1**, so the demonstration carries the most colour: `The more you know, the less colour.` Four notes follow, one per highlighted **Mastery level**: the level's chip and number, the word, the level's name and the sample's meaning in the reader's **Translation language**. A level the sample's paragraph does not colour has no note rather than an invented one. This screen promises no gesture; the notes carry the chips as labels, so nothing invites a tap it cannot answer. No download card sits on this screen.
-3. **The tap.** The reader's **real** lookup sheet, raised over the same page only when the reader taps a word the sample's glossary answers — the demonstrated word carries the selection wash as the natural target, but any glossed word answers and a tap on empty space does nothing. Its meanings come from the sample's glossary, so it answers before any **Dictionary pack** is installed. The header carries the word, its part of speech, its pronunciation and the sentence it was tapped in; the footer is the same `Not saved` / `Saved · <level>` line the reader has. One tap on a level saves that word to the real **Vocabulary** and recolours it on the page at once; level 4 reads as normal ink with no rule. Closing the sheet writes nothing.
+1. **The language.** `Which language would you like to read first?` over one row per language of the embedded roster — its code in the muted ink, its name in the body size, a `chevron-right` — with **no preselection** and no spinner. The list is the roster itself, never a network read, so it is complete on the first frame with no connection; it scrolls at 320 dp, and a line underneath says other languages can be added later in Settings. A row tap *selects*: the chosen row carries an ink rule and a wash, and the screen's one way forward is a filled, full-width button, centred and disabled until that choice, which starts the background download on the spot, announced under the list with its published size and a `Stop` (`Resume` after a stop, `Retry` after a failure). `Continue` materialises that language's sample through the **Sample book** seam.
+2. **The page, in two beats.** The sample's best paragraph for the band in an embedded page block — the one whose coloured words cover the most distinct **Mastery level**s, so the page can show one word per level — the reader's own word layer, underline and retained layout, inside the guide's frame and without the reader's page turns, **Aa** panel or chapter chrome — with **no colour at all** first — `Nothing is coloured yet. Look.` — then the same paragraph painted from the sample's own band map at **A1**, so the demonstration carries the most colour: `The more you know, the less colour.` Four notes follow, one per highlighted **Mastery level**: the level's chip and number, the word, the level's name and the sample's meaning in the reader's **Translation language**. A level the sample's paragraph does not colour has no note rather than an invented one. This screen promises no gesture; the notes carry the chips as labels, so nothing invites a tap it cannot answer. No download card sits on this screen.
+3. **The tap.** The reader's **real** lookup sheet, raised over the same page only when the reader taps a word the sample's glossary answers — the demonstrated word carries the selection wash as the natural target, but any glossed word answers and a tap on empty space does nothing. Its meanings come from the sample's glossary, so it answers before any **Dictionary pack** is installed. The header carries the word, its part of speech, its pronunciation and the sentence it was tapped in; the footer is the same `Not saved` / `Saved · <level>` line the reader has. One tap on a level saves that word to the real **Vocabulary** and recolours it on the page at once; level 4 reads as normal ink with no highlight. Closing the sheet writes nothing.
 4. **Your reading level.** The same embedded page above the six CEFR bands, each with its one line — *Beginner — simple sentences*, … *Mastery — everything* — and the chosen one washed with an ink rule. It is the **only** screen that carries the band, and it carries it as the reader's **Reader level**. **A1 is the standing choice from entry**: the page colours at A1, so the selected treatment tells the truth, and `Start reading` writes A1 through the **Languages** surface's own action unless the reader tapped another band, which then becomes the selected and written one. The preview, the bands and the action fit one phone screen without scrolling. `Skip` still writes nothing.
 5. **The arrival.** The shell's own shelf, with the sample as its first row and the **Sample** mark, the first-run sentence above it, and the download's state in one line under the shelf — `Installed`, `Stopped` with `Resume`, or why it could not arrive: the connection line with `Retry` when the fetch failed, the format the app does not understand when the handshake was refused, or the language the manifest does not publish, the last two without an action the reader cannot change. Until a **Reader level** exists, the shelf carries `Your reading level is not set yet. Settings ▸ Languages.`; the line goes the moment the level does, from this guide, the Languages surface or a sync.
 
-**`Skip` sits on every screen**, at the trailing edge of the step bar, and it does not merely close: it lands on the shelf, records the guide as completed, leaves the sample coloured at the default band and the level undeclared. Every screen after the first carries a back chevron at the head of that bar; on Android the system Back is still `Skip`, on desktop `Escape` is, and the two arrow keys page both directions. The guide opens **once**: a device that has not completed it and whose vault holds no book gets the five screens; a device that has completed it, or that already has a book, gets the `Guide` row in Settings ▸ Application. The document records completion only, so an unfinished guide starts over on the next launch. The Settings row replays from the language question, and the answer replaces the device's sample so the shelf follows the demonstration.
+**`Skip` sits on every screen**, at the trailing edge of the step bar, and it does not merely close: it lands on the shelf, records the guide as completed, leaves the sample coloured at the default band and the level undeclared. Every screen after the first carries a back chevron at the head of that bar, and a horizontal swipe or the left arrow does the same; a swipe never advances, and the question — with no previous step — ignores it. On Android the system Back is still `Skip`, on desktop `Escape` is, and the two arrow keys page both directions. The guide opens **once**: a device that has not completed it and whose vault holds no book gets the five screens; a device that has completed it, or that already has a book, gets the `Guide` row in Settings ▸ Application. The document records completion only, so an unfinished guide starts over on the next launch. The Settings row replays from the language question, and the answer replaces the device's sample so the shelf follows the demonstration.
 
 A build whose roster carries **one** language asks nothing: it opens on the page, and the tap screen names the language it reads. The download never gates the demonstration: every screen reads the sample's own colour maps and glossary, so the page, the tap and the band work before, during and after the bytes land. The colours arrive without a transition — there is no motion to reduce — and nothing is lost when the gesture is absent: the selected word is a static wash, not a pulse.
 
@@ -658,7 +645,7 @@ the page behind it.
 
 - **4.5:1** for any coloured word (§2.2), measured per theme, and **1.25:1** between any two
   coloured levels — a page puts any two words side by side, not only the neighbours of the scale.
-- A **non-colour indicator** for every highlighted level: the 1 dp dotted rule the page draws under the word in the level's colour (#281), beside the colour itself.
+- A **non-colour indicator** for every highlighted level: the underline.
 - A **pale tint** behind a highlighted word on the daylight papers is the second cue; on Dark the
   lifted hues stand alone. The tint is tonal, not a pattern — a per-level pattern is the separate
   issue WCAG 1.4.1 asks for.

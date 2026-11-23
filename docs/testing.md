@@ -287,19 +287,13 @@ search surface, each row's 44 × 60 language vignette in its real hue, the 3 dp
 rule and the hairline that parts two rows — on four books across three languages.
 Its geometry comes from the screen's own constants and its rule from the screen's
 own composable; only the words are bars, because glyphs would not verify. The
-reader adds `reader-<paper>.png` per paper (issue #209): the page's lines as a
-first run — every word unknown, each line hanging the page's 1 dp dotted rule
-(issue #281) — the 48 dp top band with
+reader adds `reader-<paper>.png` per paper (issue #209): the 48 dp top band with
 its back arrow, title and **Aa** icon, the 64 dp bottom band with the two
 chevrons that turn the page, and the position, and one
 `reader-text-panel-light.png` of the **Aa** panel open — its square corners, its
 hairline and its printed-form rows of chip frames, each unselected chip on the
 paper behind it, with the page and the bottom band pushed up rather than covered
-and the page clipped rather than repaginated. The rule's geometry is
-`ReaderRulesTest`'s — the dots' spacing under every highlighted word — and the
-page's measure is `ReaderMeasureTest`'s — the 34 em column — both in
-`app/desktopTest`, so the drawn rule and the column are pinned as behaviour, not
-only as pixels. The lookup sheet adds one
+and the page clipped rather than repaginated. The lookup sheet adds one
 `word-lookup-<paper>.png` per paper and one `word-lookup-offline-light.png`
 (issue #210): the sheet raised over a page at the 60 % cap, square at its top
 edge like the **Aa** panel, its drag handle, its inset hairlines, the word and
@@ -1256,11 +1250,14 @@ improve — a refused format handshake and a language the manifest does not publ
 reported as themselves with no action. `AppSemanticsTest` on both lanes
 drives the same path end to end over the fake fetch seams and checks the
 **Languages** surface reports both artefacts installed afterwards. The screens are
-`GuideScreenSemanticsTest` on both lanes — the roster with no preselection and its
-select-then-Continue, the two beats and their notes, the embedded block's tap
+`GuideScreenSemanticsTest` on both lanes — the roster with no preselection and a
+full-width `Continue` that is shown but disabled until a row is chosen, the two
+beats and their notes, the embedded block's tap
 hit-testing, the sheet on the tapped word with no install door, the save's state
-line, the six bands with A1 chosen from entry, the back chevron at the head of the
-bar after screen 1, `Skip` on every screen, the download card on screen 1 only with
+line, the six bands with A1 chosen from entry, the filled `Start reading` action,
+the back chevron at the head of the bar after screen 1, a horizontal swipe that
+goes back and never advances (and does nothing on the question), `Skip` on every
+screen, the download card on screen 1 only with
 its three actions, and the arrival's sample row and download line — with the five
 screens'
 frames in the `guide-<screen>-<paper>.png` planche goldens. The once-only gate is

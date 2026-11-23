@@ -903,8 +903,7 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary)) }
 
         openBook()
-        // A word the last page shows, found in the text: the page it opens on is a
-        // position, and the capped column moved it (issue #281).
+        // A word the last page shows, found in the text rather than at a page position.
         tapWord("the")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) {
@@ -973,8 +972,8 @@ class AppSemanticsTest {
         setContent { App(environment(library, vocabulary = vocabulary, lemmas = lemmas)) }
 
         openBook()
-        // The word is found in the text, not at a page position: the page's column
-        // is capped, so which word opens a page moves with the measure (issue #281).
+        // The word is found in the text, not at a page position, so a page break
+        // cannot move the tap away from it.
         tapWord("On")
         onNodeWithTag(masteryTag(MasteryLevel.FAMILIAR)).performClick()
         waitUntil(timeoutMillis = AWAIT_DISPATCHED_WORK_MILLIS) { vocabulary.all().isNotEmpty() }
@@ -2127,8 +2126,8 @@ private fun ComposeUiTest.typeSearch(query: String) {
 
 /**
  * Clicks [surface] where the page draws it, read from the text's own layout: a
- * page break or a measure change moves a word, so its position is not a fixture
- * (issue #281). The first occurrence on the page is the one clicked.
+ * page break moves a word, so its position is not a fixture. The first
+ * occurrence on the page is the one clicked.
  */
 @OptIn(ExperimentalTestApi::class)
 @Suppress("MagicNumber") // A few points into the word, so the click lands on its glyphs.

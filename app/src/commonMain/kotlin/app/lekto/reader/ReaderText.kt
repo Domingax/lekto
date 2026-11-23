@@ -2,7 +2,6 @@ package app.lekto.reader
 
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
-import app.lekto.core.text.BlockKind
 import app.lekto.core.text.Chapter
 import app.lekto.core.text.LemmaLookup
 import app.lekto.core.text.TextBlock
@@ -79,22 +78,6 @@ internal fun ReaderText.markerRanges(): List<IntRange> {
         block.listMarker
             .takeIf { marker -> marker.isNotEmpty() }
             ?.let { marker -> starts[index] until starts[index] + marker.length }
-    }
-}
-
-/**
- * The character ranges the chapter's headings occupy, in the rendered text. The
- * word layer skips them: a heading is the book's structure, not vocabulary, so it
- * keeps its size and weight and carries neither a mastery colour nor a rule.
- */
-internal fun ReaderText.headingRanges(): List<IntRange> {
-    val starts = blocks.blockOffsets()
-    return blocks.mapIndexedNotNull { index, block ->
-        if (block.kind == BlockKind.HEADING) {
-            starts[index] until starts[index] + block.text.length
-        } else {
-            null
-        }
     }
 }
 

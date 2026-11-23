@@ -55,13 +55,12 @@ fun buildReaderTokens(
     val builder = AnnotatedString.Builder()
     val blockStarts = appendBlocks(builder, chapter, styles, ImageLayout(0.sp, 0.sp))
     val markers = chapter.markerRanges()
-    val headings = chapter.headingRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
     chapter.blocks.forEachIndexed { index, block ->
         tokenise(block.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
             val word = token.shifted(blockStarts[index])
-            if (markers.covers(word.start) || headings.covers(word.start)) return@forEach
+            if (markers.isMarker(word.start)) return@forEach
             words += word
             writer.write(word, renderer.mastery.levelOf(word.key))
         }
@@ -111,19 +110,18 @@ fun buildPageTokens(
     val slice = chapterText.subSequence(page.start, page.end)
     val builder = AnnotatedString.Builder(slice)
     val markers = chapter.markerRanges()
-    val headings = chapter.headingRanges()
     val words = mutableListOf<WordToken>()
     val writer = WordWriter(builder, styles, selected)
     tokenise(slice.text, chapter.language, renderer.segmenter, renderer.lemmas).words.forEach { token ->
-        if (markers.covers(page.start + token.start) || headings.covers(page.start + token.start)) return@forEach
+        if (markers.isMarker(page.start + token.start)) return@forEach
         words += token
         writer.write(token, renderer.mastery.levelOf(token.key))
     }
     return ReaderTokens(builder.toAnnotatedString(), words)
 }
 
-/** Whether [offset] falls inside one of these character ranges: a list marker or a heading, never a word. */
-private fun List<IntRange>.covers(offset: Int): Boolean = any { range -> offset in range }
+/** Whether [offset] falls inside a list marker: a bullet or a rank is drawn, but is never a word. */
+private fun List<IntRange>.isMarker(offset: Int): Boolean = any { range -> offset in range }
 
 /** Appends each block, its block-level style and its runs' inline styles; returns each block's start offset. */
 private fun appendBlocks(
@@ -221,16 +219,16 @@ private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): 
 }
 
 /**
- * Paints one word's mastery: its colour and, while it is being selected, its
- * wash. Highlighted words (levels 0–3) get a colour span; a known word (level 4)
- * gets neither, so it reads as normal text. A word inside the [selected] range is
- * additionally washed with [selectionHighlight], so a tapped word — or every word
- * of a selected phrase — stays visible behind the open lookup panel.
+ * Paints one word's mastery: its colour, its underline and, while it is being
+ * selected, its wash. Highlighted words (levels 0–3) get a colour span and an
+ * underline; a known word (level 4) gets neither, so it reads as normal text. A
+ * word inside the [selected] range is additionally washed with
+ * [selectionHighlight], so a tapped word — or every word of a selected phrase —
+ * stays visible behind the open lookup panel.
  *
- * The word carries **no underline and no link**: the page draws its 1 dp dotted
- * rule from the layout it keeps for hit-testing (issue #281), and a link per word
- * is ~55 ms of text layout on Android, paid on every page turn, so the page
- * hit-tests the tap instead ([readerSurfaceTap], ADR-0007).
+ * The word carries **no link**: a link per word is ~55 ms of text layout on
+ * Android, paid on every page turn, so the page hit-tests the tap instead
+ * ([readerSurfaceTap], ADR-0007).
  */
 private class WordWriter(
     private val builder: AnnotatedString.Builder,
@@ -239,10 +237,11 @@ private class WordWriter(
 ) {
     fun write(word: WordToken, level: MasteryLevel) {
         val colour = level.readerColorOr(styles.body.color, styles.mastery)
+        val decoration = level.readerDecoration()
         val washed = selected != null && word.start >= selected.first && word.end <= selected.last
         val background = if (washed) selectionHighlight(styles.body.color) else Color.Unspecified
         builder.addStyle(
-            SpanStyle(color = colour, background = background),
+            SpanStyle(color = colour, textDecoration = decoration, background = background),
             word.start,
             word.end,
         )

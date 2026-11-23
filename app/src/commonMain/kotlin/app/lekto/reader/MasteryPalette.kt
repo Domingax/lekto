@@ -2,6 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.theme.isDarkPaper
 import app.lekto.theme.Sepia as SepiaScheme
@@ -95,3 +96,12 @@ fun MasteryLevel.readerColor(ramp: MasteryRamp): Color = when (this) {
  */
 fun MasteryLevel.readerColorOr(normal: Color, ramp: MasteryRamp): Color =
     readerColor(ramp).takeIf { colour -> colour != Color.Unspecified } ?: normal
+
+/**
+ * The non-colour indicator for [this] level, for colour-blind readers (UX spec
+ * §Accessibility). Compose's [TextDecoration] offers only none/underline/
+ * line-through, so the spike uses a single underline: highlighted words carry
+ * one, known words do not. A distinct shape per level needs a custom
+ * `TextDecoration` renderer and is recorded as follow-up in the spike report.
+ */
+fun MasteryLevel.readerDecoration(): TextDecoration = if (highlighted) TextDecoration.Underline else TextDecoration.None

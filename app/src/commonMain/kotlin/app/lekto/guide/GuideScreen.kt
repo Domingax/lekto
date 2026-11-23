@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,9 +57,11 @@ import app.lekto.dictionary.VocabularyPanel
 import app.lekto.dictionary.WordLookupActions
 import app.lekto.dictionary.WordLookupPanel
 import app.lekto.reader.MasteryPalette
+import app.lekto.reader.PageSwipe
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.WordTap
 import app.lekto.reader.readerColor
+import app.lekto.reader.readerSwipeInput
 import app.lekto.text.AppMessage
 import app.lekto.text.LocalAppTexts
 import app.lekto.text.TextKey
@@ -190,7 +193,7 @@ private class GuideBeat(
  * page. The screens are render-only; [GuideController] owns the flow.
  *
  * The page is the guide's embedded [GuidePageBlock] — the reader's own word layer,
- * dotted rules and retained layout, inside the guide's frame and without the
+ * underline and retained layout, inside the guide's frame and without the
  * reader's chrome, page turns or **Aa** panel — and the sheet is the reader's own
  * [WordLookupPanel] fed from the sample's glossary, so neither a drawing nor a
  * second implementation can drift from what the product actually shows. The
@@ -217,7 +220,15 @@ fun GuideScreen(
 ) {
     Box(modifier.fillMaxSize()) {
         val beat = GuideBeat(state, document, notes, download, actions)
-        Column(Modifier.fillMaxSize()) {
+        val swipeBack = rememberUpdatedState<(PageSwipe) -> Unit> { actions.onBack() }
+        Column(
+            Modifier
+                .fillMaxSize()
+                // A horizontal swipe is the back gesture, exactly like the chevron, and
+                // never a way forward (the owner's fourth review). The question has no
+                // previous step, so there it does nothing.
+                .readerSwipeInput(enabled = state.stage != GuideStage.LANGUAGE, onSwipe = swipeBack),
+        ) {
             GuideBar(state.stage, actions.onBack, actions.onSkip)
             when (state.stage) {
                 GuideStage.LANGUAGE -> LanguageQuestion(beat, languages)
@@ -302,8 +313,9 @@ private fun SkipAction(onSkip: () -> Unit) {
 /**
  * Screen 1: the language question. One row per offered language — its code and its
  * name — and no preselection. A row tap selects it and starts the background
- * download, the card names their combined size and offers `Stop`, and `Continue`
- * appears once a language is chosen. The list is the roster the caller resolved, so
+ * download, the card names their combined size and offers `Stop`, and the filled
+ * `Continue` is present from entry, disabled until a language is chosen. The list
+ * is the roster the caller resolved, so
  * it reads no manifest and shows no spinner; eight rows scroll at 320 dp. A build
  * that ships one sample never reaches this screen.
  */
@@ -337,13 +349,12 @@ private fun ColumnScope.LanguageQuestion(beat: GuideBeat, languages: List<Offere
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = LektoSpacing.InsidePanel),
         )
-        if (selected != null) {
-            Button(
-                onClick = beat.actions.onContinue,
-                modifier = Modifier.align(Alignment.End).handCursor().testTag(GUIDE_CONTINUE_TAG),
-            ) {
-                Text(texts[TextKey.GUIDE_CONTINUE])
-            }
+        Button(
+            onClick = beat.actions.onContinue,
+            enabled = selected != null,
+            modifier = Modifier.fillMaxWidth().handCursor().testTag(GUIDE_CONTINUE_TAG),
+        ) {
+            Text(texts[TextKey.GUIDE_CONTINUE])
         }
     }
 }
@@ -433,7 +444,7 @@ private fun ColumnScope.PageBeat(beat: GuideBeat) {
         if (!state.plain) GuideNotes(beat.notes, Modifier.padding(top = NoteGap))
         GuideContinue(
             beat.actions.onContinue,
-            Modifier.padding(top = ActionGap).align(Alignment.End),
+            Modifier.padding(top = ActionGap),
         )
     }
 }
@@ -480,7 +491,7 @@ private fun ColumnScope.TapBeat(beat: GuideBeat) {
         if (!state.lookupOpen) {
             GuideContinue(
                 beat.actions.onContinue,
-                Modifier.padding(top = ActionGap).align(Alignment.End),
+                Modifier.padding(top = ActionGap),
             )
         }
     }
@@ -706,11 +717,14 @@ private fun GuideHeading(title: String, intro: String?, topPadding: Dp = LektoSp
     }
 }
 
-/** The page's quiet way forward, aligned to the trailing edge as the mockups draw it. */
+/** The screen's one way forward: a real, filled, full-width button, centred under the content. */
 @Composable
 private fun GuideContinue(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    TextAction(onClick = onClick, modifier = modifier.testTag(GUIDE_CONTINUE_TAG)) {
-        Text(LocalAppTexts.current[TextKey.GUIDE_CONTINUE], style = MaterialTheme.typography.bodyLarge)
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().handCursor().testTag(GUIDE_CONTINUE_TAG),
+    ) {
+        Text(LocalAppTexts.current[TextKey.GUIDE_CONTINUE])
     }
 }
 

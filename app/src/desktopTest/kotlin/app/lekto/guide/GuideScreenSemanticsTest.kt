@@ -8,14 +8,19 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
@@ -34,12 +39,6 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
-import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderPage
-import app.lekto.reader.ReaderStyles
-import app.lekto.reader.buildChapterText
-import app.lekto.reader.buildPageTokens
-import app.lekto.reader.ruleUnder
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
 import app.lekto.testkit.testOfferedArtifact
@@ -78,11 +77,28 @@ class GuideScreenSemanticsTest {
         SampleRoster.LANGUAGES.forEach { language ->
             onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsDisplayed()
         }
-        // No row carries a selection and no Continue is offered: the question has no default answer.
+        // No row carries a selection, so the way forward is shown but cannot be taken yet.
         SampleRoster.LANGUAGES.forEach { language ->
             onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsNotSelected()
         }
-        onNodeWithTag(GUIDE_CONTINUE_TAG).assertDoesNotExist()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed().assertIsNotEnabled()
+    }
+
+    @Test
+    fun theContinueButtonIsDisabledUntilALanguageIsChosen() = runComposeUiTest {
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE),
+            sample = null,
+            actions = GuideActions(onContinue = { continued++ }),
+        )
+
+        // A disabled button is announced as such and does nothing, rather than
+        // vanishing: the screen always shows its one way forward.
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+
+        assertEquals(0, continued)
     }
 
     @Test
@@ -113,9 +129,80 @@ class GuideScreenSemanticsTest {
             onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsNotSelected()
         }
 
-        onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsEnabled().performClick()
 
         assertEquals(1, continued)
+    }
+
+    @Test
+    fun thePageAndTapScreensAlwaysOfferAWayForward() = runComposeUiTest {
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true),
+            actions = GuideActions(onContinue = { continued++ }),
+        )
+
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed().assertIsEnabled().performClick()
+
+        assertEquals(1, continued)
+    }
+
+    @Test
+    fun theLevelScreensStartReadingIsTheSameFilledAction() = runComposeUiTest {
+        var finished = 0
+        render(
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false),
+            actions = GuideActions(onFinish = { finished++ }),
+        )
+
+        onNodeWithTag(GUIDE_START_READING_TAG).assertIsDisplayed().assertIsEnabled().performClick()
+
+        assertEquals(1, finished)
+    }
+
+    @Test
+    fun aSwipeOnALaterScreenGoesBackAndNeverAdvances() = runComposeUiTest {
+        var backed = 0
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false),
+            actions = GuideActions(onBack = { backed++ }, onContinue = { continued++ }),
+        )
+
+        onRoot().performTouchInput { swipeLeft() }
+
+        assertEquals(1, backed, "a swipe is the back gesture")
+        assertEquals(0, continued, "a swipe never advances the guide")
+    }
+
+    @Test
+    fun aRightwardSwipeOnALaterScreenAlsoGoesBack() = runComposeUiTest {
+        var backed = 0
+        render(
+            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false),
+            actions = GuideActions(onBack = { backed++ }),
+        )
+
+        onRoot().performTouchInput { swipeRight() }
+
+        assertEquals(1, backed, "both directions are the one back gesture")
+    }
+
+    @Test
+    fun aSwipeOnTheLanguageScreenChangesNothing() = runComposeUiTest {
+        var backed = 0
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE),
+            sample = null,
+            actions = GuideActions(onBack = { backed++ }, onContinue = { continued++ }),
+        )
+
+        onRoot().performTouchInput { swipeLeft() }
+
+        assertEquals(0, backed, "there is no previous screen on the question")
+        assertEquals(0, continued, "a swipe never advances the guide")
+        onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsNotEnabled()
     }
 
     @Test
@@ -355,40 +442,6 @@ class GuideScreenSemanticsTest {
             waitForIdle()
             onNodeWithTag(GUIDE_PAGE_TAG).assertIsDisplayed()
             onNodeWithTag(app.lekto.reader.READER_PAGE_TAG).assertDoesNotExist()
-        }
-    }
-
-    @Test
-    fun aHighlightedWordsRuleStartsAtItsWordsMeasuredLeftEdge() = runComposeUiTest {
-        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
-
-        val document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter)
-        val text = onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
-        val results = mutableListOf<TextLayoutResult>()
-        text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-        val layout = results.first()
-        val styles = ReaderStyles.of(document.preferences, MasteryPalette.Light)
-        val chapter = buildChapterText(document.text, styles)
-        val tokens = buildPageTokens(
-            chapterText = chapter,
-            page = ReaderPage(0, chapter.length),
-            renderer = document.renderer,
-            chapter = document.text,
-            styles = styles,
-        )
-        val highlighted = tokens.words.filter { word ->
-            document.renderer.mastery.levelOf(word.key).highlighted
-        }
-
-        assertTrue(highlighted.isNotEmpty(), "the demonstrated paragraph colours at least one word")
-        highlighted.forEach { word ->
-            val rule = ruleUnder(layout, word).first()
-            assertEquals(
-                layout.getBoundingBox(word.start).left,
-                rule.left,
-                RULE_TOLERANCE,
-                "the rule under ${word.surface} starts at the word's measured left edge",
-            )
         }
     }
 
@@ -712,9 +765,6 @@ class GuideScreenSemanticsTest {
         state = ReadingState.UNREAD,
     )
 }
-
-/** The layout reports the rule and the word's box from one source, so they agree to rounding. */
-private const val RULE_TOLERANCE = 0.01f
 
 /** The guide inside the test's text and theme providers, so a stage can be swapped without re-setting content. */
 @androidx.compose.runtime.Composable

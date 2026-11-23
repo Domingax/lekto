@@ -7,15 +7,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.core.CefrLevel
 import app.lekto.core.MasteryLevel
@@ -33,12 +38,6 @@ import app.lekto.dictionary.LOOKUP_PANEL_TAG
 import app.lekto.dictionary.masteryTag
 import app.lekto.library.LibraryScreen
 import app.lekto.library.LibraryUiState
-import app.lekto.reader.MasteryPalette
-import app.lekto.reader.ReaderPage
-import app.lekto.reader.ReaderStyles
-import app.lekto.reader.buildChapterText
-import app.lekto.reader.buildPageTokens
-import app.lekto.reader.ruleUnder
 import app.lekto.testkit.WhitespaceTextSegmenter
 import app.lekto.testkit.guideSample
 import app.lekto.testkit.testOfferedArtifact
@@ -90,7 +89,22 @@ class GuideScreenSemanticsTest {
             compose.onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithTag(guideLanguageRowTag(language)).assertIsNotSelected()
         }
-        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed().assertIsNotEnabled()
+    }
+
+    @Test
+    fun theContinueButtonIsDisabledUntilALanguageIsChosen() {
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE),
+            sample = null,
+            actions = GuideActions(onContinue = { continued++ }),
+        )
+
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+
+        assertEquals(0, continued)
     }
 
     @Test
@@ -121,9 +135,80 @@ class GuideScreenSemanticsTest {
             compose.onNodeWithTag(guideLanguageRowTag(language)).performScrollTo().assertIsNotSelected()
         }
 
-        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsEnabled().performClick()
 
         assertEquals(1, continued)
+    }
+
+    @Test
+    fun thePageAndTapScreensAlwaysOfferAWayForward() {
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = true),
+            actions = GuideActions(onContinue = { continued++ }),
+        )
+
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsDisplayed().assertIsEnabled().performClick()
+
+        assertEquals(1, continued)
+    }
+
+    @Test
+    fun theLevelScreensStartReadingIsTheSameFilledAction() {
+        var finished = 0
+        render(
+            GuideUiState(stage = GuideStage.LEVEL, sample = sample, plain = false),
+            actions = GuideActions(onFinish = { finished++ }),
+        )
+
+        compose.onNodeWithTag(GUIDE_START_READING_TAG).assertIsDisplayed().assertIsEnabled().performClick()
+
+        assertEquals(1, finished)
+    }
+
+    @Test
+    fun aSwipeOnALaterScreenGoesBackAndNeverAdvances() {
+        var backed = 0
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false),
+            actions = GuideActions(onBack = { backed++ }, onContinue = { continued++ }),
+        )
+
+        compose.onRoot().performTouchInput { swipeLeft() }
+
+        assertEquals("a swipe is the back gesture", 1, backed)
+        assertEquals("a swipe never advances the guide", 0, continued)
+    }
+
+    @Test
+    fun aRightwardSwipeOnALaterScreenAlsoGoesBack() {
+        var backed = 0
+        render(
+            GuideUiState(stage = GuideStage.TAP, sample = sample, plain = false),
+            actions = GuideActions(onBack = { backed++ }),
+        )
+
+        compose.onRoot().performTouchInput { swipeRight() }
+
+        assertEquals("both directions are the one back gesture", 1, backed)
+    }
+
+    @Test
+    fun aSwipeOnTheLanguageScreenChangesNothing() {
+        var backed = 0
+        var continued = 0
+        render(
+            GuideUiState(stage = GuideStage.LANGUAGE),
+            sample = null,
+            actions = GuideActions(onBack = { backed++ }, onContinue = { continued++ }),
+        )
+
+        compose.onRoot().performTouchInput { swipeLeft() }
+
+        assertEquals("there is no previous screen on the question", 0, backed)
+        assertEquals("a swipe never advances the guide", 0, continued)
+        compose.onNodeWithTag(GUIDE_CONTINUE_TAG).assertIsNotEnabled()
     }
 
     @Test
@@ -369,40 +454,6 @@ class GuideScreenSemanticsTest {
             compose.waitForIdle()
             compose.onNodeWithTag(GUIDE_PAGE_TAG).assertIsDisplayed()
             compose.onNodeWithTag(app.lekto.reader.READER_PAGE_TAG).assertDoesNotExist()
-        }
-    }
-
-    @Test
-    fun aHighlightedWordsRuleStartsAtItsWordsMeasuredLeftEdge() {
-        render(GuideUiState(stage = GuideStage.PAGE, sample = sample, plain = false))
-
-        val document = guideDocument(sample, GUIDE_DEFAULT_BAND, plain = false, segmenter)
-        val text = compose.onNodeWithTag(GUIDE_PAGE_TEXT_TAG).fetchSemanticsNode()
-        val results = mutableListOf<TextLayoutResult>()
-        text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
-        val layout = results.first()
-        val styles = ReaderStyles.of(document.preferences, MasteryPalette.Light)
-        val chapter = buildChapterText(document.text, styles)
-        val tokens = buildPageTokens(
-            chapterText = chapter,
-            page = ReaderPage(0, chapter.length),
-            renderer = document.renderer,
-            chapter = document.text,
-            styles = styles,
-        )
-        val highlighted = tokens.words.filter { word ->
-            document.renderer.mastery.levelOf(word.key).highlighted
-        }
-
-        assertTrue("the demonstrated paragraph colours at least one word", highlighted.isNotEmpty())
-        highlighted.forEach { word ->
-            val rule = ruleUnder(layout, word).first()
-            assertEquals(
-                "the rule under ${word.surface} starts at the word's measured left edge",
-                layout.getBoundingBox(word.start).left,
-                rule.left,
-                0.01f,
-            )
         }
     }
 

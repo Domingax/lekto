@@ -5,6 +5,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
@@ -20,7 +21,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -102,14 +102,11 @@ class ReaderTextTest {
     }
 
     @Test
-    fun noWordCarriesASolidUnderlineBecauseThePageDrawsTheRule() {
-        // The page draws a 1 dp dotted rule from its layout instead of a
-        // TextDecoration, so no span carries the solid underline Compose offers
-        // (issues #251, #281).
+    fun highlightedWordsAreUnderlinedAndKnownWordsAreNot() {
         val tokens = buildReaderTokens(chapter, renderer, styles)
 
-        assertNull(styleOf(tokens, "lantern").textDecoration, "a highlighted word takes no span decoration")
-        assertNull(styleOf(tokens, "the").textDecoration, "a known word takes no span decoration either")
+        assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
+        assertEquals(TextDecoration.None, styleOf(tokens, "the").textDecoration)
     }
 
     @Test
@@ -168,9 +165,9 @@ class ReaderTextTest {
     }
 
     @Test
-    fun aHeadingIsInkOnlyAndCarriesNoWords() {
-        // The heading's words are the book's structure, not vocabulary: they keep
-        // the heading's size and weight and never take a mastery colour (issue #281).
+    fun aHeadingKeepsItsStyleAndCarriesTheWordLayer() {
+        // A heading is the book's structure and keeps its size and weight, but its
+        // words are words: they carry the same mastery spans as any paragraph's.
         val heading = ReaderText(
             title = "Chapter",
             language = "en",
@@ -182,20 +179,20 @@ class ReaderTextTest {
 
         val tokens = buildReaderTokens(heading, renderer, styles)
 
-        assertEquals(listOf("waits"), tokens.words.map { word -> word.surface })
+        assertEquals(listOf("The", "lantern", "waits"), tokens.words.map { word -> word.surface })
         val headingEnd = "The lantern".length
         val headingStyle = tokens.text.spanStyles.single { span -> span.start == 0 && span.end == headingEnd }.item
         assertEquals(styles.heading.fontSize, headingStyle.fontSize)
         assertTrue(
-            tokens.text.spanStyles.none { span ->
+            tokens.text.spanStyles.any { span ->
                 span.start < headingEnd && span.item.color == styles.mastery.unknown
             },
-            "no mastery span may cover a heading: ${tokens.text.spanStyles}",
+            "the heading's words take a mastery span: ${tokens.text.spanStyles}",
         )
     }
 
     @Test
-    fun aPageOverAHeadingCarriesNoMasterySpan() {
+    fun aPageOverAHeadingCarriesTheHeadingWordsMastery() {
         val heading = ReaderText(
             title = "Chapter",
             language = "en",
@@ -209,13 +206,13 @@ class ReaderTextTest {
 
         val tokens = buildPageTokens(chapterText, page, renderer, heading, styles)
 
-        assertEquals(listOf("waits"), tokens.words.map { word -> word.surface })
+        assertEquals(listOf("The", "lantern", "waits"), tokens.words.map { word -> word.surface })
         val headingEnd = "The lantern".length
         assertTrue(
-            tokens.text.spanStyles.none { span ->
+            tokens.text.spanStyles.any { span ->
                 span.start < headingEnd && span.item.color == styles.mastery.unknown
             },
-            "a page's heading must stay ink only: ${tokens.text.spanStyles}",
+            "a page's heading words take their mastery span: ${tokens.text.spanStyles}",
         )
     }
 
@@ -255,7 +252,7 @@ class ReaderTextTest {
 
         assertEquals("the lantern glows", tokens.text.text)
         assertEquals(listOf("the", "lantern", "glows"), tokens.words.map { word -> word.surface })
-        assertNull(styleOf(tokens, "lantern").textDecoration, "the page draws the rule, not a span")
+        assertEquals(TextDecoration.Underline, styleOf(tokens, "lantern").textDecoration)
         assertTrue(
             tokens.text.getLinkAnnotations(0, tokens.text.length).isEmpty(),
             "a page carries no per-word links: the tap hit-tests the words instead (ADR-0007)",

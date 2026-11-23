@@ -1,7 +1,8 @@
 package app.lekto.guide
 
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,24 +18,21 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextLayoutResult
 import app.lekto.reader.MasteryPalette
-import app.lekto.reader.PageRulesSurface
 import app.lekto.reader.ReaderDocument
 import app.lekto.reader.ReaderPage
 import app.lekto.reader.ReaderStyles
 import app.lekto.reader.WordTap
 import app.lekto.reader.buildChapterText
 import app.lekto.reader.buildPageTokens
-import app.lekto.reader.pageInset
 import app.lekto.reader.readerTapInput
-import app.lekto.reader.rememberPageRules
 import app.lekto.reader.wordAt
 import app.lekto.reader.wordTapOf
 
 /**
  * The guide's embedded page (issue #277's feedback): the sample's first paragraph
- * drawn with the reader's own word layer — [buildPageTokens], the dotted rules from
- * the retained [TextLayoutResult], the same capped measure — inside the guide's own
- * frame. It carries none of the reader's chrome: no page turns, no **Aa** panel, no
+ * drawn with the reader's own word layer — [buildPageTokens] and its mastery
+ * spans, set in the same reading margin — inside the guide's own frame. It
+ * carries none of the reader's chrome: no page turns, no **Aa** panel, no
  * chapter bar, no page counter, and no trap at the end of the text, so the guide
  * cannot leave the reader in a book they did not open.
  *
@@ -60,28 +58,25 @@ internal fun GuidePageBlock(
         buildPageTokens(chapterText, page, document.renderer, document.text, styles, selectedRange)
     }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val rules = rememberPageRules(layout, tokens, document, styles)
-    BoxWithConstraints(modifier.clipToBounds()) {
-        val inset = styles.pageInset(maxWidth, LocalDensity.current)
-        val marginPx = with(LocalDensity.current) { inset.roundToPx() }
-        val tap = rememberUpdatedState<(Offset) -> Unit> { position ->
-            wordAt(position, marginPx, tokens.words, layout)?.let { word ->
-                onWordTap(wordTapOf(word, pageStart = 0, chapterText = chapterText.text))
-            }
+    val marginPx = with(LocalDensity.current) { styles.horizontalMargin.roundToPx() }
+    val tap = rememberUpdatedState<(Offset) -> Unit> { position ->
+        wordAt(position, marginPx, tokens.words, layout)?.let { word ->
+            onWordTap(wordTapOf(word, pageStart = 0, chapterText = chapterText.text))
         }
-        // The guide's page draws the text and its rules through the reader's own
-        // surface, so the two share one coordinate space (issue #277).
-        PageRulesSurface(
-            rules = rules,
-            horizontalInset = inset,
-            modifier = Modifier.testTag(GUIDE_PAGE_TAG).readerTapInput(tap),
-        ) {
-            Text(
-                text = tokens.text,
-                style = styles.body,
-                modifier = Modifier.fillMaxSize().testTag(GUIDE_PAGE_TEXT_TAG),
-                onTextLayout = { result -> layout = result },
-            )
-        }
+    }
+    Box(
+        modifier
+            .clipToBounds()
+            .fillMaxSize()
+            .testTag(GUIDE_PAGE_TAG)
+            .readerTapInput(tap)
+            .padding(horizontal = styles.horizontalMargin),
+    ) {
+        Text(
+            text = tokens.text,
+            style = styles.body,
+            modifier = Modifier.fillMaxSize().testTag(GUIDE_PAGE_TEXT_TAG),
+            onTextLayout = { result -> layout = result },
+        )
     }
 }
