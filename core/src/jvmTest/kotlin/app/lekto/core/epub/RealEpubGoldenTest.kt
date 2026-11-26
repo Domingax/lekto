@@ -24,7 +24,7 @@ class RealEpubGoldenTest :
 
             book.title shouldBe "The Yellow Wallpaper"
             book.language shouldBe "en"
-            book.blocks.size shouldBe 288
+            book.blocks.size shouldBe 289
         }
 
         test("the real book extracts to the pinned text") {

@@ -173,20 +173,7 @@ private fun appendBlock(
         return
     }
     builder.append(block.text)
-    if (block.kind == BlockKind.HEADING) {
-        builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockStart + block.text.length)
-        // The body is justified, but a heading is not: a title that wraps keeps
-        // its ragged end, as a printed book's heading does.
-        builder.addStyle(
-            ParagraphStyle(textAlign = styles.heading.textAlign),
-            blockStart,
-            blockStart + block.text.length,
-        )
-    }
-    if (block.kind == BlockKind.LIST_ITEM) {
-        builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockStart + block.text.length)
-    }
-    appendKindStyle(builder, block, blockStart)
+    appendKindStyle(builder, block, blockStart, styles)
     var runStart = blockStart
     block.runs.forEach { run ->
         val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
@@ -195,20 +182,52 @@ private fun appendBlock(
     }
 }
 
-/**
- * A table row is held to the start edge — justification would stretch its cells
- * apart — and a caption is set apart from the rows: italic and centred (#264).
- * Other kinds keep the body style.
- */
-private fun appendKindStyle(builder: AnnotatedString.Builder, block: TextBlock, blockStart: Int) {
-    val end = blockStart + block.text.length
+/** Appends the paragraph and span styles a block's kind adds beyond the body. */
+private fun appendKindStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    styles: ReaderStyles,
+) {
+    val blockEnd = blockStart + block.text.length
     when (block.kind) {
-        BlockKind.TABLE_ROW -> builder.addStyle(ParagraphStyle(textAlign = TextAlign.Start), blockStart, end)
-
-        BlockKind.CAPTION -> {
-            builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), blockStart, end)
-            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Center), blockStart, end)
+        BlockKind.HEADING -> {
+            builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockEnd)
+            // The body is justified, but a heading is not: a title that wraps keeps
+            // its ragged end, as a printed book's heading does.
+            builder.addStyle(ParagraphStyle(textAlign = styles.heading.textAlign), blockStart, blockEnd)
         }
+
+        BlockKind.LIST_ITEM -> builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockEnd)
+
+        // The author's own ornament, centred on a line of its own.
+        BlockKind.SCENE_BREAK -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Center),
+            blockStart,
+            blockEnd,
+        )
+
+        // A caption is set apart from the rows: italic and centred (#264).
+        BlockKind.CAPTION -> {
+            builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), blockStart, blockEnd)
+            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Center), blockStart, blockEnd)
+        }
+
+        // Preformatted text keeps the source's line breaks, so it is drawn
+        // monospace from the start edge: justifying it would stretch each line
+        // across the measure and destroy the shape it was written in.
+        BlockKind.PREFORMATTED -> {
+            builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace), blockStart, blockEnd)
+            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Start), blockStart, blockEnd)
+        }
+
+        // A row is held to the start edge: justification would stretch its
+        // cells apart, and the row already reads as one line (#264).
+        BlockKind.TABLE_ROW -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Start),
+            blockStart,
+            blockEnd,
+        )
 
         else -> Unit
     }

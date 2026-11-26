@@ -47,6 +47,12 @@ enum class BlockKind {
 
     /** A `<caption>`: the table's own label, set apart from its rows (issue #264). */
     CAPTION,
+
+    /** A `<pre>`: whitespace kept verbatim, so its line breaks and indentation survive. */
+    PREFORMATTED,
+
+    /** An `<hr>`: the author's own scene break, carried as [SCENE_BREAK_TEXT]. */
+    SCENE_BREAK,
 }
 
 /**
@@ -66,12 +72,15 @@ data class ImageRef(val name: String, val ratio: Float, val alt: String = "")
  *
  * A hard line break inside the source (`<br>`) is an `\n` in a run, not a block
  * of its own: the blank line between blocks stays the paragraph separator, so a
- * line break never doubles the spacing and never repeats a list marker.
+ * line break never doubles the spacing and never repeats a list marker. A
+ * [BlockKind.PREFORMATTED] block is the exception: every whitespace character
+ * its source holds is kept, so its line breaks and indentation are the text.
  *
  * A [BlockKind.LIST_ITEM] carries its [listMarker] as the text of its first run,
  * so [text] is exactly what the reader draws and counts — **Reading progress**
  * and chapter offsets read the same characters. [listDepth] is the item's level in
- * a nested list, `0` at the top.
+ * a nested list, `0` at the top, and [quoteDepth] is how many block quotes enclose
+ * it, `0` outside one (issue #265).
  */
 @Serializable
 data class TextBlock(
@@ -81,8 +90,13 @@ data class TextBlock(
     val listMarker: String = "",
     val listDepth: Int = 0,
     val image: ImageRef? = null,
+    /** 0 outside a quote, 1 in a blockquote, 2 nested, … (issue #265). */
+    val quoteDepth: Int = 0,
 ) {
-    /** The block's runs concatenated, whitespace already normalised by the parser. */
+    /**
+     * The block's runs concatenated. Whitespace is normalised by the parser
+     * except in a [BlockKind.PREFORMATTED] block, which keeps it verbatim.
+     */
     val text: String get() = runs.joinToString(separator = "") { run -> run.text }
 
     /**
@@ -182,3 +196,6 @@ const val BLOCK_SEPARATOR: String = "\n\n"
  * case a picture (issue #263).
  */
 const val IMAGE_PLACEHOLDER: String = "\uFFFC"
+
+/** The ornament a scene-break block carries as its text, so it keeps a length. */
+const val SCENE_BREAK_TEXT: String = "· · ·"
