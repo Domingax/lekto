@@ -13,6 +13,22 @@ cut. When Lekto cannot draw one — a format it does not read, or a file that is
 missing — it shows the book's own description of the picture instead, and the same
 description is what a screen reader announces.
 
+## Shapes in a book
+
+A **Book** may set some of its text apart from ordinary paragraphs:
+
+- a table is shown one row per line, with the cells of a row separated by `·`, so
+  a row still reads across;
+- a quotation is indented from the margin, and one nested inside it further still;
+- a definition keeps its term in bold, followed by an em dash and its meaning;
+- preformatted text — code or poetry — is set in monospace, and every line break
+  and indentation the book gives it is kept;
+- a horizontal rule appears as a centred `· · ·`;
+- superscript and subscript text, and small print, are set smaller than the body.
+
+These shapes belong to the book, not to your **Reading preference**: the face,
+size, leading and margins you choose still set the book's ordinary text.
+
 ## Moving through a book
 
 Turn pages with a horizontal swipe — leftward for the next page, rightward for the
