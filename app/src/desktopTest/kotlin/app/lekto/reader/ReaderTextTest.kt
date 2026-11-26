@@ -2,6 +2,7 @@ package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
@@ -13,6 +14,7 @@ import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.SCENE_BREAK_TEXT
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
@@ -475,6 +477,65 @@ class ReaderTextTest {
             tokens.words.none { word -> word.surface == "•" },
             "a marker is never a word: ${tokens.words.map { it.surface }}",
         )
+    }
+
+    @Test
+    fun aSceneBreakIsACentredOrnament() {
+        val broken = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("before"))),
+                TextBlock(BlockKind.SCENE_BREAK, listOf(TextRun(SCENE_BREAK_TEXT))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("after"))),
+            ),
+        )
+
+        val chapterText = buildChapterText(broken, styles)
+
+        assertEquals("before\n\n· · ·\n\nafter", chapterText.text)
+        val start = "before\n\n".length
+        val breakStyle = chapterText.paragraphStyles.single { range -> range.start == start }.item
+        assertEquals(TextAlign.Center, breakStyle.textAlign)
+    }
+
+    @Test
+    fun preformattedTextKeepsItsLinesAndRendersMonospaceFromTheStartEdge() {
+        val code = "def main():\n    return 0"
+        val preformatted = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("code follows"))),
+                TextBlock(BlockKind.PREFORMATTED, listOf(TextRun(code))),
+            ),
+        )
+
+        val chapterText = buildChapterText(preformatted, styles)
+
+        assertEquals("code follows\n\n$code", chapterText.text)
+        val start = "code follows\n\n".length
+        val codeSpan = chapterText.spanStyles.single { span -> span.start == start }.item
+        assertEquals(FontFamily.Monospace, codeSpan.fontFamily)
+        val codeParagraph = chapterText.paragraphStyles.single { range -> range.start == start }.item
+        assertEquals(TextAlign.Start, codeParagraph.textAlign)
+    }
+
+    @Test
+    fun aChapterWithPreformattedTextAndASceneBreakKeepsTheProgressDenominator() {
+        val text = StructuredText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("before"))),
+                TextBlock(BlockKind.SCENE_BREAK, listOf(TextRun(SCENE_BREAK_TEXT))),
+                TextBlock(BlockKind.PREFORMATTED, listOf(TextRun("one\n    two"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("after"))),
+            ),
+        )
+        val chapterWithStructure = ReaderText(text.title.orEmpty(), text.language, text.blocks)
+
+        assertEquals(text.renderedLength(), buildChapterText(chapterWithStructure, styles).length)
     }
 
     @Test

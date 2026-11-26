@@ -4,6 +4,7 @@ import app.lekto.core.text.BlockKind
 import app.lekto.core.text.IMAGE_PLACEHOLDER
 import app.lekto.core.text.ImageRef
 import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.SCENE_BREAK_TEXT
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import org.jsoup.Jsoup
@@ -33,10 +34,13 @@ internal data class XhtmlDocument(
  * and containers (`div`, `blockquote`, `table`, …) are descended into so their
  * child blocks keep their place in the reading order.
  *
- * Three pieces of structure the walk keeps rather than flattens: a `<br>` is an
+ * Pieces of structure the walk keeps rather than flattens: a `<br>` is an
  * `\n` inside its block (the author's own line break, not a new paragraph), a
  * `ul`/`ol` is walked as a list so every item keeps its marker, its rank and its
- * depth, and an `<img>` becomes a [BlockKind.IMAGE] block of its own.
+ * depth, an `<img>` becomes a [BlockKind.IMAGE] block of its own, a `<pre>`
+ * becomes a [BlockKind.PREFORMATTED] block that keeps its whitespace verbatim,
+ * and an `<hr>` becomes a [BlockKind.SCENE_BREAK] block carrying
+ * [SCENE_BREAK_TEXT] so it is never dropped.
  */
 @Suppress("TooManyFunctions") // The walk, its inline pass and its helpers are one parser.
 internal object XhtmlBlocks {
@@ -84,6 +88,12 @@ internal object XhtmlBlocks {
                 tag in SKIPPED -> Unit
 
                 tag == IMAGE_TAG -> collectImage(element)
+
+                // A scene break is the author's own punctuation of the text.
+                tag == "hr" -> collectSceneBreak(element)
+
+                // A preformatted block keeps every whitespace character it holds.
+                tag == "pre" -> collectPreformatted(element)
 
                 // A list is walked as a whole, so its items keep their marker, their
                 // rank and their depth; a bare `<li>` (invalid markup) still gets one.
@@ -155,6 +165,36 @@ internal object XhtmlBlocks {
                 runsOf(element, blocks.size)
                     .takeIf { runs -> runs.isNotEmpty() }
                     ?.let { runs -> blocks += TextBlock(BlockKind.PARAGRAPH, runs) }
+            }
+        }
+
+        /**
+         * An `<hr>` turned into a [BlockKind.SCENE_BREAK] block. It carries
+         * [SCENE_BREAK_TEXT] rather than no run at all, so the block has a length
+         * and **Reading progress** and chapter offsets stay coherent.
+         */
+        private fun collectSceneBreak(element: Element) {
+            blocks += TextBlock(
+                kind = BlockKind.SCENE_BREAK,
+                runs = listOf(TextRun(SCENE_BREAK_TEXT)),
+                quoteDepth = element.quoteDepth(),
+            )
+        }
+
+        /**
+         * A `<pre>` turned into a [BlockKind.PREFORMATTED] block whose whitespace is
+         * kept verbatim: no run is collapsed and nothing is trimmed. Inline styles
+         * still apply and `<br>` is still a line break.
+         *
+         * The HTML parser drops the one newline that follows the start tag (the
+         * spec's `<pre>` rule), so the walk must not drop a second one.
+         */
+        private fun collectPreformatted(element: Element) {
+            val characters = mutableListOf<StyledChar>()
+            collectInline(element, emptySet(), characters, blocks.size, flattenBlocks = true)
+            val runs = toVerbatimRuns(characters)
+            if (runs.isNotEmpty()) {
+                blocks += TextBlock(BlockKind.PREFORMATTED, runs, quoteDepth = element.quoteDepth())
             }
         }
 
@@ -368,6 +408,18 @@ internal object XhtmlBlocks {
         return withoutTrailingBreaks(withoutTrailingSpace(runs))
     }
 
+    /**
+     * Groups [characters] into runs of one style, keeping every one of them: no
+     * whitespace is collapsed and no end is trimmed. It is the shape a
+     * `<pre>` needs, where indentation and line breaks are the text itself
+     * (issue #266).
+     */
+    private fun toVerbatimRuns(characters: List<StyledChar>): List<TextRun> {
+        val runs = mutableListOf<TextRun>()
+        for (character in characters) append(runs, character.value.toString(), character.styles)
+        return runs
+    }
+
     /** Drops the spaces at the end of the block, so a break does not keep one. */
     private fun trimTrailingSpace(runs: MutableList<TextRun>) {
         val last = runs.lastOrNull() ?: return
@@ -424,12 +476,18 @@ internal object XhtmlBlocks {
     private val Element.wrapsBlocks: Boolean
         get() = children().any { child -> child.isBlockTag || child.normalName() in LIST_TAGS }
 
+    /**
+     * How many `<blockquote>` elements enclose this one: the depth a block inside
+     * a quote carries, `0` outside one (issue #265).
+     */
+    private fun Element.quoteDepth(): Int = parents().count { parent -> parent.normalName() == "blockquote" }
+
     /** Whether the element holds an image anywhere below it, so it must be split around one. */
     private val Element.holdsImage: Boolean
         get() = getElementsByTag(IMAGE_TAG).isNotEmpty()
 
     private val Element.isBlockTag: Boolean
-        get() = normalName() in BLOCKS || normalName() in CONTAINERS
+        get() = normalName() in BLOCKS || normalName() in CONTAINERS || normalName() == "pre"
 
     /** Elements descended into so their child blocks keep the reading order. */
     private val CONTAINERS = setOf(
@@ -442,7 +500,7 @@ internal object XhtmlBlocks {
 
     /** Leaf blocks: one [TextBlock] each. */
     private val BLOCKS = setOf(
-        "p", "li", "dt", "dd", "pre", "figcaption", "td", "th",
+        "p", "li", "dt", "dd", "figcaption", "td", "th",
         "h1", "h2", "h3", "h4", "h5", "h6",
     )
 
