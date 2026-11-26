@@ -312,6 +312,37 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aTableRowIsHeldToTheStartEdgeWhileTheBodyIsJustified() {
+        // Stretching a row to the margin would move its cells apart, so a row
+        // keeps its ragged end (issue #264).
+        val table = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(TextBlock(BlockKind.TABLE_ROW, listOf(TextRun("Day · Load")))),
+        )
+
+        val chapterText = buildChapterText(table, styles)
+
+        assertEquals(TextAlign.Start, chapterText.paragraphStyles.single().item.textAlign)
+        assertEquals(TextAlign.Justify, styles.body.textAlign)
+    }
+
+    @Test
+    fun aCaptionIsItalicAndCentred() {
+        val caption = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(TextBlock(BlockKind.CAPTION, listOf(TextRun("Weekly plan")))),
+        )
+
+        val chapterText = buildChapterText(caption, styles)
+
+        val captionSpan = chapterText.spanStyles.single()
+        assertEquals(FontStyle.Italic, captionSpan.item.fontStyle)
+        assertEquals(TextAlign.Center, chapterText.paragraphStyles.single().item.textAlign)
+    }
+
+    @Test
     fun theChapterTextHasNoWordLayer() {
         val chapterText = buildChapterText(chapter, styles)
 

@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
@@ -185,11 +186,31 @@ private fun appendBlock(
     if (block.kind == BlockKind.LIST_ITEM) {
         builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockStart + block.text.length)
     }
+    appendKindStyle(builder, block, blockStart)
     var runStart = blockStart
     block.runs.forEach { run ->
         val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
         if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
         runStart += run.text.length
+    }
+}
+
+/**
+ * A table row is held to the start edge — justification would stretch its cells
+ * apart — and a caption is set apart from the rows: italic and centred (#264).
+ * Other kinds keep the body style.
+ */
+private fun appendKindStyle(builder: AnnotatedString.Builder, block: TextBlock, blockStart: Int) {
+    val end = blockStart + block.text.length
+    when (block.kind) {
+        BlockKind.TABLE_ROW -> builder.addStyle(ParagraphStyle(textAlign = TextAlign.Start), blockStart, end)
+
+        BlockKind.CAPTION -> {
+            builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), blockStart, end)
+            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Center), blockStart, end)
+        }
+
+        else -> Unit
     }
 }
 
