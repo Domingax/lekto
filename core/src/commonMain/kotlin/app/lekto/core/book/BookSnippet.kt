@@ -24,12 +24,12 @@ fun List<TextBlock>.paragraphAt(offset: Int): TextBlock? {
     var start = 0
     for (block in this) {
         val end = start + block.text.length
-        if (block.isProse() && block.text.isNotBlank() && end >= offset) return block
+        if (block.canNameResumeSnippet() && block.text.isNotBlank() && end >= offset) return block
         start = end + BLOCK_SEPARATOR.length
     }
     return null
 }
 
 /** Whether a block's words can stand as the **Resume snippet**. */
-private fun TextBlock.isProse(): Boolean =
+private fun TextBlock.canNameResumeSnippet(): Boolean =
     kind == BlockKind.PARAGRAPH || kind == BlockKind.QUOTE || kind == BlockKind.DEFINITION

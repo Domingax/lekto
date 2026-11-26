@@ -173,25 +173,15 @@ private fun appendBlock(
         return
     }
     builder.append(block.text)
-    appendKindStyle(builder, block, blockStart, styles)
+    val blockEnd = blockStart + block.text.length
+    styles.appendInlineBlockStyle(builder, block, blockStart, blockEnd)
+    styles.appendParagraphStyle(builder, block, blockStart, blockEnd)
     var runStart = blockStart
     block.runs.forEach { run ->
         val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
         if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
         runStart += run.text.length
     }
-}
-
-/** Appends the paragraph and span styles a block's kind adds beyond the body. */
-private fun appendKindStyle(
-    builder: AnnotatedString.Builder,
-    block: TextBlock,
-    blockStart: Int,
-    styles: ReaderStyles,
-) {
-    val blockEnd = blockStart + block.text.length
-    styles.appendInlineBlockStyle(builder, block, blockStart, blockEnd)
-    styles.appendParagraphStyle(builder, block, blockStart, blockEnd)
 }
 
 /** Adds the span style a whole block carries: a heading's type or preformatted text's face. */
@@ -226,52 +216,42 @@ private fun ReaderStyles.appendParagraphStyle(
     blockEnd: Int,
 ) {
     val quoteIndent = quoteTextIndent(block.quoteDepth)
-    when (block.kind) {
-        BlockKind.HEADING -> builder.addStyle(
-            // The body is justified, but a heading is not: a title that wraps keeps
-            // its ragged end, as a printed book's heading does.
-            ParagraphStyle(textAlign = heading.textAlign, textIndent = quoteIndent),
-            blockStart,
-            blockEnd,
-        )
-
-        BlockKind.LIST_ITEM -> builder.addStyle(listParagraphOf(block), blockStart, blockEnd)
-
-        // The author's own ornament, centred on a line of its own.
-        BlockKind.SCENE_BREAK -> builder.addStyle(
-            ParagraphStyle(textAlign = TextAlign.Center, textIndent = quoteIndent),
-            blockStart,
-            blockEnd,
-        )
-
-        // A caption is set apart from the rows: italic and centred (#264).
-        BlockKind.CAPTION -> builder.addStyle(
-            ParagraphStyle(textAlign = TextAlign.Center, textIndent = quoteIndent),
-            blockStart,
-            blockEnd,
-        )
-
-        // Preformatted text keeps the source's line breaks, so it is drawn from
-        // the start edge: justifying it would stretch each line across the
-        // measure and destroy the shape it was written in.
-        BlockKind.PREFORMATTED -> builder.addStyle(
-            ParagraphStyle(textAlign = TextAlign.Start, textIndent = quoteIndent),
-            blockStart,
-            blockEnd,
-        )
-
-        // A row is held to the start edge: justification would stretch its
-        // cells apart, and the row already reads as one line (#264).
-        BlockKind.TABLE_ROW -> builder.addStyle(
-            ParagraphStyle(textAlign = TextAlign.Start, textIndent = quoteIndent),
-            blockStart,
-            blockEnd,
-        )
-
-        else -> if (quoteIndent != null) {
-            builder.addStyle(ParagraphStyle(textIndent = quoteIndent), blockStart, blockEnd)
-        }
+    if (block.kind == BlockKind.LIST_ITEM) {
+        builder.addStyle(listParagraphOf(block), blockStart, blockEnd)
+        return
     }
+    val textAlign = textAlignOf(block)
+    when {
+        textAlign != null -> builder.addStyle(
+            ParagraphStyle(textAlign = textAlign, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
+        quoteIndent != null -> builder.addStyle(ParagraphStyle(textIndent = quoteIndent), blockStart, blockEnd)
+    }
+}
+
+/**
+ * The alignment a block's kind asks for, or `null` when it keeps the body's
+ * justification: a heading keeps its own edge, an ornament and a caption are
+ * centred, and preformatted text and a table row are held to the start edge.
+ */
+private fun ReaderStyles.textAlignOf(block: TextBlock): TextAlign? = when (block.kind) {
+    // The body is justified, but a heading is not: a title that wraps keeps its
+    // ragged end, as a printed book's heading does.
+    BlockKind.HEADING -> heading.textAlign
+
+    // The author's own ornament and a table's caption sit on a line of their own.
+    BlockKind.SCENE_BREAK, BlockKind.CAPTION -> TextAlign.Center
+
+    // Preformatted text keeps the source's line breaks, so it is drawn from the
+    // start edge: justifying it would stretch each line across the measure and
+    // destroy the shape it was written in. A row is held there too, because
+    // justification would stretch its cells apart (#264, #266).
+    BlockKind.PREFORMATTED, BlockKind.TABLE_ROW -> TextAlign.Start
+
+    else -> null
 }
 
 /**

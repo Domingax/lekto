@@ -264,6 +264,19 @@ class XhtmlBlocksTest {
     }
 
     @Test
+    fun aPreformattedBlockInsideAListItemKeepsItsLineBreaksAndIndentation() {
+        // A list item flattens the blocks it wraps, so a `<pre>` inside one must
+        // still keep every space and newline verbatim (issue #266).
+        val block = XhtmlBlocks.of(
+            "<html><body><ul><li><p>Run:</p><pre>def f():\n    return 0</pre></li></ul></body></html>"
+                .toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.LIST_ITEM
+        block.text shouldBe "• Run:\n\ndef f():\n    return 0"
+    }
+
+    @Test
     fun aSceneBreakKeepsTheAuthorsOrnament() {
         val blocks = XhtmlBlocks.of(
             "<html><body><p>before</p><hr/><p>after</p></body></html>".toByteArray(),
@@ -387,7 +400,29 @@ class XhtmlBlocksTest {
             """.trimIndent().toByteArray(),
         ).single()
 
-        row.text shouldBe "Day · 5×5\n\nsquat"
+        row.text shouldBe "Day · 5×5\nsquat"
+    }
+
+    @Test
+    fun aRowKeepsAnEmptyCellSoItsColumnsStayAligned() {
+        // Dropping an empty cell would shift every column after it (#264).
+        val row = XhtmlBlocks.of(
+            "<html><body><table><tr><td>a</td><td></td><td>c</td></tr></table></body></html>".toByteArray(),
+        ).single()
+
+        row.text shouldBe "a ·  · c"
+    }
+
+    @Test
+    fun aCellWithNestedPreformattedTextKeepsItsSingleLineBreaks() {
+        // A cell never carries a blank line — that is the block separator — but a
+        // nested `<pre>`'s own single breaks and indentation survive (#264, #266).
+        val row = XhtmlBlocks.of(
+            "<html><body><table><tr><td><p>run:</p><pre>one\n    two</pre></td><td>left</td></tr></table></body></html>"
+                .toByteArray(),
+        ).single()
+
+        row.text shouldBe "run:\none\n    two · left"
     }
 
     @Test
@@ -494,6 +529,34 @@ class XhtmlBlocksTest {
         block.text shouldBe "colour — the property of light\na hue"
         block.runs.first() shouldBe TextRun("colour", setOf(InlineStyle.STRONG))
         block.runs.drop(1).none { run -> InlineStyle.STRONG in run.styles } shouldBe true
+    }
+
+    @Test
+    fun aDefinitionListWrappedInDivsKeepsThePairingAcrossTheWrappers() {
+        // A real `<dl>` may wrap its items in `<div>`s; the term and its
+        // definition are still one pair (#265).
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl><div><dt>colour</dt></div><div><dd>the property of light</dd></div></dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.DEFINITION
+        block.text shouldBe "colour — the property of light"
+    }
+
+    @Test
+    fun eachOrphanDefinitionBeforeATermIsItsOwnBlock() {
+        // Two `<dd>`s before any term are two unrelated definitions, not one
+        // block joined by a line break (#265).
+        val blocks = XhtmlBlocks.of(
+            "<html><body><dl><dd>a</dd><dd>b</dd></dl></body></html>".toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.DEFINITION, BlockKind.DEFINITION)
+        blocks.map { block -> block.text } shouldContainExactly listOf("a", "b")
     }
 
     @Test

@@ -48,8 +48,9 @@ data class ReaderStyles(
      */
     val listIndent: TextUnit,
     /**
-     * One quote level's indent, scaled from the body's size. A quoted paragraph
-     * sits one step in from the margin, a nested quote another (issue #265).
+     * One quote level's indent, scaled from the body's size and wider than a
+     * list step. A quoted paragraph sits one step in from the margin, a nested
+     * quote another (issue #265).
      */
     val quoteIndent: TextUnit,
 ) {
@@ -64,8 +65,8 @@ data class ReaderStyles(
         /** A list level's indent, in body-line units: room for a bullet or a rank and a space. */
         private const val LIST_INDENT_RATIO: Float = 1.5f
 
-        /** One quote level's indent, in body-line units: the same step as a list level. */
-        private const val QUOTE_INDENT_RATIO: Float = 1.5f
+        /** One quote level's indent, in body-line units: wider than a list step, so a quote reads as set in. */
+        private const val QUOTE_INDENT_RATIO: Float = 2f
 
         /** [preferences] rendered as the styles the page and its pagination measure. */
         fun of(preferences: ReadingPreferences, mastery: MasteryRamp, ink: Color = DefaultInk): ReaderStyles {
