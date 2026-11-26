@@ -65,6 +65,16 @@ class ReaderStylesTest {
     }
 
     @Test
+    fun theQuoteIndentScalesWithTheSizeLikeAListStep() {
+        val default = ReaderStyles.of(ReadingPreferences.DEFAULT, mastery = MasteryPalette.Light)
+        val larger = ReaderStyles.of(ReadingPreferences(size = 36f), mastery = MasteryPalette.Light)
+
+        assertEquals((18f * 1.5f).sp, default.quoteIndent)
+        assertEquals(default.listIndent, default.quoteIndent, "a quote uses the same step as a list level")
+        assertEquals((36f * 1.5f).sp, larger.quoteIndent, "the quote indent follows the size control")
+    }
+
+    @Test
     fun theMarginFollowsThePreference() {
         val narrow = ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.NARROW), mastery = MasteryPalette.Light)
         val wide = ReaderStyles.of(ReadingPreferences(margin = ReadingMargin.WIDE), mastery = MasteryPalette.Light)

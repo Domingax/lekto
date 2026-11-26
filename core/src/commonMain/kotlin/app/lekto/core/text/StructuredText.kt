@@ -38,6 +38,12 @@ enum class BlockKind {
     /** A block that is one image, from a `<figure>`, a `<div>` or a paragraph of its own. */
     IMAGE,
 
+    /** A paragraph inside a `<blockquote>`; its [TextBlock.quoteDepth] says how deep. */
+    QUOTE,
+
+    /** One `<dt>` term and its `<dd>` definitions, as one block (issue #265). */
+    DEFINITION,
+
     /**
      * One `<tr>` of a table, its cells' text joined by a visible separator. A
      * row is one block, so the row/column relation stays visible without a new
