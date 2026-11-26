@@ -122,13 +122,15 @@ internal class BookTextCache(private val derived: DerivedAssetStore) {
          * The shape of [CachedText] this build writes and accepts; anything else
          * is a miss. Version 2 is ADR-0041's (a TXT carries the chapter list
          * inferred from its text); version 3 kept hard line breaks and list
-         * markers; version 4 added the image blocks. A text cached by an older
-         * version is re-parsed.
+         * markers; version 4 added the image blocks; version 5 keeps block quotes
+         * and their depth, definition pairs, table rows and captions, preformatted
+         * whitespace, scene breaks, and the superscript, subscript and small runs
+         * (#264–#267). A text cached by an older version is re-parsed.
          *
          * [CachedChapters] carries the same version: a chapter start is an
          * offset into that text, so a text shape that shifts an offset must
          * invalidate the index with it.
          */
-        const val FORMAT_VERSION = 4
+        const val FORMAT_VERSION = 5
     }
 }

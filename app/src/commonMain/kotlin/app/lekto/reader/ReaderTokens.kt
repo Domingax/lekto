@@ -9,6 +9,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.sp
 import app.lekto.core.MasteryLevel
@@ -170,18 +171,33 @@ private fun appendBlock(
         return
     }
     builder.append(block.text)
-    if (block.kind == BlockKind.HEADING) {
-        builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockStart + block.text.length)
-        // The body is justified, but a heading is not: a title that wraps keeps
-        // its ragged end, as a printed book's heading does.
-        builder.addStyle(
-            ParagraphStyle(textAlign = styles.heading.textAlign),
+    val blockEnd = blockStart + block.text.length
+    when (block.kind) {
+        BlockKind.HEADING -> {
+            builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockEnd)
+            // The body is justified, but a heading is not: a title that wraps keeps
+            // its ragged end, as a printed book's heading does.
+            builder.addStyle(ParagraphStyle(textAlign = styles.heading.textAlign), blockStart, blockEnd)
+        }
+
+        BlockKind.LIST_ITEM -> builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockEnd)
+
+        // The author's own ornament, centred on a line of its own.
+        BlockKind.SCENE_BREAK -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Center),
             blockStart,
-            blockStart + block.text.length,
+            blockEnd,
         )
-    }
-    if (block.kind == BlockKind.LIST_ITEM) {
-        builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockStart + block.text.length)
+
+        // Preformatted text keeps the source's line breaks, so it is drawn
+        // monospace from the start edge: justifying it would stretch each line
+        // across the measure and destroy the shape it was written in.
+        BlockKind.PREFORMATTED -> {
+            builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace), blockStart, blockEnd)
+            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Start), blockStart, blockEnd)
+        }
+
+        else -> Unit
     }
     var runStart = blockStart
     block.runs.forEach { run ->

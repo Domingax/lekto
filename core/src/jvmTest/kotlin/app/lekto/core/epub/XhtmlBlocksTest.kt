@@ -1,6 +1,8 @@
 package app.lekto.core.epub
 
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.SCENE_BREAK_TEXT
 import app.lekto.core.text.TextBlock
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -14,9 +16,10 @@ import kotlin.test.Test
  * The HTML parser cannot know it closes, so it leaves the `<a>` open and the
  * rest of the chapter lands inside it. The walk must still read that chapter.
  *
- * Two pieces of structure the walk keeps rather than flattens: a `<br>` is a
- * hard line break inside its block, and a `ul`/`ol` keeps each item's marker,
- * rank and depth.
+ * Pieces of structure the walk keeps rather than flattens: a `<br>` is a hard
+ * line break inside its block, a `ul`/`ol` keeps each item's marker, rank and
+ * depth, a `<pre>` keeps its whitespace verbatim, and an `<hr>` becomes a
+ * scene-break block instead of disappearing.
  */
 class XhtmlBlocksTest {
 
@@ -215,6 +218,71 @@ class XhtmlBlocksTest {
         block.listMarker shouldBe "1. "
         block.text.take(block.listMarker.length) shouldBe block.listMarker
         block.markerRange shouldBe (0 until block.listMarker.length)
+    }
+
+    @Test
+    fun aPreformattedBlockKeepsItsLineBreaksAndIndentation() {
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>def main():\n    return 0</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.PREFORMATTED
+        block.text shouldBe "def main():\n    return 0"
+    }
+
+    @Test
+    fun aPreformattedBlockDropsOnlyTheNewlineTheHtmlSpecDrops() {
+        // The spec ignores exactly one newline after the start tag, so a second
+        // one is content: the pretty-printer's blank first line goes, a real one stays.
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>\n\nkept blank line</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.text shouldBe "\nkept blank line"
+    }
+
+    @Test
+    fun aPreformattedBlockKeepsItsBlankLinesAndTrailingWhitespace() {
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>one\n\ntwo  \n</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.text shouldBe "one\n\ntwo  \n"
+    }
+
+    @Test
+    fun aPreformattedBlocksInlineStylesAndBreaksSurvive() {
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>plain <em>soft</em><br/>next</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.PREFORMATTED
+        block.text shouldBe "plain soft\nnext"
+        block.runs.single { run -> run.text == "soft" }.styles shouldBe setOf(InlineStyle.EMPHASIS)
+    }
+
+    @Test
+    fun aSceneBreakKeepsTheAuthorsOrnament() {
+        val blocks = XhtmlBlocks.of(
+            "<html><body><p>before</p><hr/><p>after</p></body></html>".toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(
+            BlockKind.PARAGRAPH,
+            BlockKind.SCENE_BREAK,
+            BlockKind.PARAGRAPH,
+        )
+        blocks.map { block -> block.text } shouldContainExactly listOf("before", SCENE_BREAK_TEXT, "after")
+        SCENE_BREAK_TEXT shouldBe "· · ·"
+    }
+
+    @Test
+    fun aSceneBreakInsideAQuoteTakesItsDepth() {
+        val blocks = XhtmlBlocks.of(
+            "<html><body><blockquote><p>quoted</p><hr/></blockquote></body></html>".toByteArray(),
+        )
+
+        blocks.single { block -> block.kind == BlockKind.SCENE_BREAK }.quoteDepth shouldBe 1
     }
 
     @Test
