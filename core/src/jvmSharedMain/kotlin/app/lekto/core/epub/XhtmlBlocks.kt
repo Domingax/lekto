@@ -39,8 +39,11 @@ internal data class XhtmlDocument(
  * `ul`/`ol` is walked as a list so every item keeps its marker, its rank and its
  * depth, an `<img>` becomes a [BlockKind.IMAGE] block of its own, a `<pre>`
  * becomes a [BlockKind.PREFORMATTED] block that keeps its whitespace verbatim,
- * and an `<hr>` becomes a [BlockKind.SCENE_BREAK] block carrying
- * [SCENE_BREAK_TEXT] so it is never dropped.
+ * an `<hr>` becomes a [BlockKind.SCENE_BREAK] block carrying
+ * [SCENE_BREAK_TEXT] so it is never dropped, a paragraph inside a
+ * `<blockquote>` becomes a [BlockKind.QUOTE] carrying its quote depth, and a
+ * `<dl>` keeps each term beside its definitions as one [BlockKind.DEFINITION]
+ * block (issue #265).
  */
 @Suppress("TooManyFunctions") // The walk, its inline pass and its helpers are one parser.
 internal object XhtmlBlocks {
@@ -95,6 +98,9 @@ internal object XhtmlBlocks {
                 // A preformatted block keeps every whitespace character it holds.
                 tag == "pre" -> collectPreformatted(element)
 
+                // A definition list keeps each term beside its definition.
+                tag == "dl" -> collectDefinitionList(element)
+
                 // A list is walked as a whole, so its items keep their marker, their
                 // rank and their depth; a bare `<li>` (invalid markup) still gets one.
                 tag in LIST_TAGS -> collectList(element, depth = (list?.depth ?: -1) + 1)
@@ -116,7 +122,7 @@ internal object XhtmlBlocks {
         private fun collectLeaf(tag: String, element: Element) {
             runsOf(element, blocks.size)
                 .takeIf { runs -> runs.isNotEmpty() }
-                ?.let { runs -> blocks += block(tag, runs) }
+                ?.let { runs -> blocks += block(element, runs, headingLevelOf(tag)) }
         }
 
         /**
@@ -129,7 +135,7 @@ internal object XhtmlBlocks {
             fun flush() {
                 val runs = toRuns(characters)
                 characters.clear()
-                if (runs.isNotEmpty()) blocks += block(tag, runs)
+                if (runs.isNotEmpty()) blocks += block(element, runs, headingLevelOf(tag))
             }
 
             for (node in element.childNodes()) {
@@ -164,7 +170,7 @@ internal object XhtmlBlocks {
             } else {
                 runsOf(element, blocks.size)
                     .takeIf { runs -> runs.isNotEmpty() }
-                    ?.let { runs -> blocks += TextBlock(BlockKind.PARAGRAPH, runs) }
+                    ?.let { runs -> blocks += block(element, runs) }
             }
         }
 
@@ -196,6 +202,69 @@ internal object XhtmlBlocks {
             if (runs.isNotEmpty()) {
                 blocks += TextBlock(BlockKind.PREFORMATTED, runs, quoteDepth = element.quoteDepth())
             }
+        }
+
+        /**
+         * A `<dl>` turned into one [BlockKind.DEFINITION] block per term: the term
+         * in strong, then its definitions, so a term and its meaning stay one
+         * unit (issue #265). A definition before any term, or a term with no
+         * definition, is still emitted — an incomplete pair is better than a
+         * dropped word.
+         *
+         * `dt`/`dd` content is flattened, so a definition wrapping `<p>` keeps
+         * every word, and a nested `dl` is read as part of its definition.
+         */
+        private fun collectDefinitionList(list: Element) {
+            var term: List<TextRun>? = null
+            val definitions = mutableListOf<List<TextRun>>()
+
+            fun flush() {
+                val runs = definitionRuns(term, definitions)
+                if (runs.isNotEmpty()) blocks += TextBlock(BlockKind.DEFINITION, runs, quoteDepth = list.quoteDepth())
+                term = null
+                definitions.clear()
+            }
+
+            for (child in list.children()) {
+                when (child.normalName()) {
+                    "dt" -> {
+                        flush()
+                        child.recordAnchors(blocks.size)
+                        term = runsOf(child, blocks.size, flattenBlocks = true).takeIf { runs -> runs.isNotEmpty() }
+                    }
+
+                    "dd" -> {
+                        child.recordAnchors(blocks.size)
+                        definitions += runsOf(child, blocks.size, flattenBlocks = true)
+                    }
+
+                    else -> {
+                        flush()
+                        collectBlock(child, list = null)
+                    }
+                }
+            }
+            flush()
+        }
+
+        /**
+         * One definition block's runs: the term in strong, then `" — "` and each
+         * definition, definitions kept apart by a hard line break. A missing term
+         * or missing definition leaves the half that exists.
+         */
+        private fun definitionRuns(term: List<TextRun>?, definitions: List<List<TextRun>>): List<TextRun> {
+            val present = definitions.filter { runs -> runs.isNotEmpty() }
+            if (term == null && present.isEmpty()) return emptyList()
+            val runs = mutableListOf<TextRun>()
+            term?.forEach { run -> runs += TextRun(run.text, run.styles + InlineStyle.STRONG) }
+            if (present.isNotEmpty()) {
+                if (term != null) runs += TextRun(DEFINITION_SEPARATOR)
+                present.forEachIndexed { index, definition ->
+                    if (index > 0) runs += TextRun(LINE_BREAK.toString())
+                    runs += definition
+                }
+            }
+            return runs
         }
 
         /**
@@ -243,6 +312,7 @@ internal object XhtmlBlocks {
                     runs = if (keepsOwnMarker) runs else listOf(TextRun(marker)) + runs,
                     listMarker = if (keepsOwnMarker) "" else marker,
                     listDepth = list.depth,
+                    quoteDepth = item.quoteDepth(),
                 )
             }
             item.children()
@@ -281,10 +351,11 @@ internal object XhtmlBlocks {
                         kind = BlockKind.IMAGE,
                         runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
                         image = ImageRef(name = imageAssetName(image.path), ratio = image.size.ratio, alt = alt),
+                        quoteDepth = element.quoteDepth(),
                     )
                 }
 
-                alt.isNotEmpty() -> blocks += TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(alt)))
+                alt.isNotEmpty() -> blocks += block(element, listOf(TextRun(alt)))
             }
         }
 
@@ -457,10 +528,23 @@ internal object XhtmlBlocks {
         }
     }
 
-    private fun block(tag: String, runs: List<TextRun>): TextBlock = when {
-        tag in HEADINGS -> TextBlock(BlockKind.HEADING, runs, headingLevel = tag.substring(1).toInt())
-        else -> TextBlock(BlockKind.PARAGRAPH, runs)
+    /**
+     * The block a leaf element contributes: a heading keeps its level, a
+     * paragraph inside a quote becomes a [BlockKind.QUOTE], and every block
+     * carries the quote depth its element sits at (issue #265).
+     */
+    private fun block(element: Element, runs: List<TextRun>, headingLevel: Int = 0): TextBlock {
+        val depth = element.quoteDepth()
+        val kind = when {
+            headingLevel > 0 -> BlockKind.HEADING
+            depth > 0 -> BlockKind.QUOTE
+            else -> BlockKind.PARAGRAPH
+        }
+        return TextBlock(kind, runs, headingLevel = headingLevel, quoteDepth = depth)
     }
+
+    /** A heading tag's level, or `0` for a tag that is not a heading. */
+    private fun headingLevelOf(tag: String): Int = if (tag in HEADINGS) tag.substring(1).toInt() else 0
 
     private fun styleOf(tag: String): Set<InlineStyle> = when (tag) {
         "em", "i" -> setOf(InlineStyle.EMPHASIS)
@@ -522,6 +606,9 @@ internal object XhtmlBlocks {
 
     /** What a `<br>` leaves in a block: a hard line break, never a block boundary. */
     private const val LINE_BREAK = '\n'
+
+    /** Between a definition's term and its meaning: a space, an em dash, a space. */
+    private const val DEFINITION_SEPARATOR = " \u2014 "
 
     private data class StyledChar(
         val value: Char,

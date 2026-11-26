@@ -332,4 +332,114 @@ class XhtmlBlocksTest {
         blocks.single().listMarker shouldBe ""
         blocks.single().markerRange.isEmpty() shouldBe true
     }
+
+    @Test
+    fun aParagraphInAQuoteBecomesAQuoteBlockWithItsDepth() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <p>before</p>
+              <blockquote><p>quoted</p></blockquote>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.PARAGRAPH, BlockKind.QUOTE)
+        blocks.map { block -> block.text } shouldContainExactly listOf("before", "quoted")
+        blocks.map { block -> block.quoteDepth } shouldContainExactly listOf(0, 1)
+    }
+
+    @Test
+    fun aLooseParagraphInsideAQuoteBecomesAQuoteBlock() {
+        val block = XhtmlBlocks.of(
+            "<html><body><blockquote><span>loose words</span></blockquote></body></html>".toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.QUOTE
+        block.quoteDepth shouldBe 1
+        block.text shouldBe "loose words"
+    }
+
+    @Test
+    fun aHeadingAndAListItemInsideAQuoteKeepTheirKindAndTakeTheDepth() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <blockquote>
+                <h2>A quoted title</h2>
+                <ul><li>a quoted item</li></ul>
+              </blockquote>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.HEADING, BlockKind.LIST_ITEM)
+        blocks.map { block -> block.headingLevel } shouldContainExactly listOf(2, 0)
+        blocks.map { block -> block.quoteDepth } shouldContainExactly listOf(1, 1)
+        blocks.map { block -> block.text } shouldContainExactly listOf("A quoted title", "• a quoted item")
+    }
+
+    @Test
+    fun nestedQuotesDeepenTheDepth() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <blockquote><p>outer</p><blockquote><p>inner</p></blockquote></blockquote>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.text } shouldContainExactly listOf("outer", "inner")
+        blocks.map { block -> block.quoteDepth } shouldContainExactly listOf(1, 2)
+        blocks.forEach { block -> block.kind shouldBe BlockKind.QUOTE }
+    }
+
+    @Test
+    fun aDefinitionListPairsEachTermWithItsDefinitions() {
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl>
+                <dt>colour</dt>
+                <dd>the property of light</dd>
+                <dd>a hue</dd>
+              </dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.DEFINITION
+        block.text shouldBe "colour — the property of light\na hue"
+        block.runs.first() shouldBe TextRun("colour", setOf(InlineStyle.STRONG))
+        block.runs.drop(1).none { run -> InlineStyle.STRONG in run.styles } shouldBe true
+    }
+
+    @Test
+    fun aDefinitionWithoutATermAndATermWithoutADefinitionAreStillVisible() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl><dd>an orphan definition</dd><dt>a lonely term</dt></dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.DEFINITION, BlockKind.DEFINITION)
+        blocks.map { block -> block.text } shouldContainExactly listOf("an orphan definition", "a lonely term")
+        blocks.first().runs.none { run -> InlineStyle.STRONG in run.styles } shouldBe true
+        blocks.last().runs.single().styles shouldBe setOf(InlineStyle.STRONG)
+    }
+
+    @Test
+    fun aDefinitionWrappingParagraphsKeepsEveryWord() {
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl><dt>term</dt><dd><p>first line</p><p>second line</p></dd></dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.text shouldBe "term — first line\n\nsecond line"
+    }
 }

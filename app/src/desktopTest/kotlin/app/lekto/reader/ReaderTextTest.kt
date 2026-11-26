@@ -579,6 +579,89 @@ class ReaderTextTest {
         assertEquals(0f, indent?.firstLine?.value)
         assertEquals(styles.listIndent, indent?.restLine)
     }
+
+    @Test
+    fun aQuoteIndentsBothEdgesByItsDepth() {
+        val quoted = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.QUOTE, listOf(TextRun("quoted")), quoteDepth = 1),
+                TextBlock(BlockKind.QUOTE, listOf(TextRun("nested")), quoteDepth = 2),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("body"))),
+            ),
+        )
+
+        val chapterText = buildChapterText(quoted, styles)
+        val indents = chapterText.paragraphStyles.map { range -> range.item.textIndent }
+
+        assertEquals(styles.quoteIndent, indents[0]?.firstLine)
+        assertEquals(styles.quoteIndent, indents[0]?.restLine)
+        assertEquals(styles.quoteIndent.value * 2, indents[1]?.firstLine?.value)
+        assertEquals(styles.quoteIndent.value * 2, indents[1]?.restLine?.value)
+        assertEquals(2, chapterText.paragraphStyles.size, "the body keeps the body style")
+    }
+
+    @Test
+    fun aQuotedListItemAddsTheQuoteIndentToItsHangingIndent() {
+        val quotedItem = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.LIST_ITEM,
+                    listOf(TextRun("• "), TextRun("quoted item")),
+                    listMarker = "• ",
+                    quoteDepth = 1,
+                ),
+            ),
+        )
+
+        val chapterText = buildChapterText(quotedItem, styles)
+        val indent = chapterText.paragraphStyles.single().item.textIndent
+
+        assertEquals(styles.quoteIndent, indent?.firstLine)
+        assertEquals(styles.listIndent.value + styles.quoteIndent.value, indent?.restLine?.value)
+    }
+
+    @Test
+    fun aHeadingInAQuoteKeepsItsStyleAndTakesTheIndent() {
+        val heading = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("Quoted title")), headingLevel = 2, quoteDepth = 1),
+            ),
+        )
+
+        val chapterText = buildChapterText(heading, styles)
+        val span = chapterText.spanStyles.single { range -> range.start == 0 }.item
+        val paragraph = chapterText.paragraphStyles.single().item
+
+        assertEquals(styles.heading.fontSize, span.fontSize)
+        assertEquals(TextAlign.Start, paragraph.textAlign)
+        assertEquals(styles.quoteIndent, paragraph.textIndent?.firstLine)
+    }
+
+    @Test
+    fun aDefinitionPairKeepsTheBodyStyle() {
+        val definition = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.DEFINITION,
+                    listOf(TextRun("colour", setOf(InlineStyle.STRONG)), TextRun(" — the property of light")),
+                ),
+            ),
+        )
+
+        val chapterText = buildChapterText(definition, styles)
+
+        assertEquals("colour — the property of light", chapterText.text)
+        assertTrue(chapterText.paragraphStyles.isEmpty(), "a definition pair needs no paragraph style")
+        assertEquals(FontWeight.Bold, chapterText.spanStyles.single().item.fontWeight)
+    }
 }
 
 /** The span style applied to [surface]'s range. */

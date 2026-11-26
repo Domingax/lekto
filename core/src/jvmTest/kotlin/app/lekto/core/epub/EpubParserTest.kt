@@ -59,7 +59,7 @@ class EpubParserTest :
                 BlockKind.HEADING,
                 BlockKind.PARAGRAPH,
                 BlockKind.PARAGRAPH,
-                BlockKind.PARAGRAPH,
+                BlockKind.QUOTE,
                 BlockKind.LIST_ITEM,
                 BlockKind.LIST_ITEM,
                 BlockKind.PARAGRAPH,

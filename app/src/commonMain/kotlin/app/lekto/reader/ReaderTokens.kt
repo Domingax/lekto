@@ -174,33 +174,8 @@ private fun appendBlock(
     }
     builder.append(block.text)
     val blockEnd = blockStart + block.text.length
-    when (block.kind) {
-        BlockKind.HEADING -> {
-            builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockEnd)
-            // The body is justified, but a heading is not: a title that wraps keeps
-            // its ragged end, as a printed book's heading does.
-            builder.addStyle(ParagraphStyle(textAlign = styles.heading.textAlign), blockStart, blockEnd)
-        }
-
-        BlockKind.LIST_ITEM -> builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockEnd)
-
-        // The author's own ornament, centred on a line of its own.
-        BlockKind.SCENE_BREAK -> builder.addStyle(
-            ParagraphStyle(textAlign = TextAlign.Center),
-            blockStart,
-            blockEnd,
-        )
-
-        // Preformatted text keeps the source's line breaks, so it is drawn
-        // monospace from the start edge: justifying it would stretch each line
-        // across the measure and destroy the shape it was written in.
-        BlockKind.PREFORMATTED -> {
-            builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace), blockStart, blockEnd)
-            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Start), blockStart, blockEnd)
-        }
-
-        else -> Unit
-    }
+    styles.appendInlineBlockStyle(builder, block, blockStart, blockEnd)
+    styles.appendParagraphStyle(builder, block, blockStart, blockEnd)
     var runStart = blockStart
     block.runs.forEach { run ->
         val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
@@ -209,17 +184,94 @@ private fun appendBlock(
     }
 }
 
+/** Adds the span style a whole block carries: a heading's type or preformatted text's face. */
+private fun ReaderStyles.appendInlineBlockStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    blockEnd: Int,
+) {
+    when (block.kind) {
+        BlockKind.HEADING -> builder.addStyle(heading.asSpanStyle(), blockStart, blockEnd)
+
+        BlockKind.PREFORMATTED ->
+            builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace), blockStart, blockEnd)
+
+        else -> Unit
+    }
+}
+
+/**
+ * Adds a block's paragraph-level style: its alignment and the indent its kind and
+ * quote depth ask for. A quote moves its lines one step per level; a definition
+ * keeps the body style, since its strong term and em dash are the whole mark.
+ */
+private fun ReaderStyles.appendParagraphStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    blockEnd: Int,
+) {
+    val quoteIndent = quoteTextIndent(block.quoteDepth)
+    when (block.kind) {
+        BlockKind.HEADING -> builder.addStyle(
+            // The body is justified, but a heading is not: a title that wraps keeps
+            // its ragged end, as a printed book's heading does.
+            ParagraphStyle(textAlign = heading.textAlign, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
+        BlockKind.LIST_ITEM -> builder.addStyle(listParagraphOf(block), blockStart, blockEnd)
+
+        // The author's own ornament, centred on a line of its own.
+        BlockKind.SCENE_BREAK -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Center, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
+        // Preformatted text keeps the source's line breaks, so it is drawn from
+        // the start edge: justifying it would stretch each line across the
+        // measure and destroy the shape it was written in.
+        BlockKind.PREFORMATTED -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Start, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
+        else -> if (quoteIndent != null) {
+            builder.addStyle(ParagraphStyle(textIndent = quoteIndent), blockStart, blockEnd)
+        }
+    }
+}
+
 /**
  * A list item's hanging indent: its marker starts at its level's indent, and the
  * lines it wraps to align one step further in, so the text of a multi-line item
- * lines up under the first word rather than under the bullet.
+ * lines up under the first word rather than under the bullet. An item inside a
+ * quote carries that quote's indent on both edges too (issue #265).
  */
-private fun ReaderStyles.listParagraphOf(depth: Int): ParagraphStyle = ParagraphStyle(
-    textIndent = TextIndent(
-        firstLine = listIndent * depth.toFloat(),
-        restLine = listIndent * (depth + 1).toFloat(),
-    ),
-)
+private fun ReaderStyles.listParagraphOf(block: TextBlock): ParagraphStyle {
+    val quote = quoteIndent.value * block.quoteDepth
+    return ParagraphStyle(
+        textIndent = TextIndent(
+            firstLine = (listIndent.value * block.listDepth + quote).sp,
+            restLine = (listIndent.value * (block.listDepth + 1) + quote).sp,
+        ),
+    )
+}
+
+/** A quoted block's indent: one step per quote level, or `null` outside a quote. */
+private fun ReaderStyles.quoteTextIndent(depth: Int): TextIndent? = if (depth == 0) {
+    null
+} else {
+    val step = quoteIndent * depth.toFloat()
+    TextIndent(
+        firstLine = step,
+        restLine = step,
+    )
+}
 
 /** A superscript or subscript's size, as a share of the body's. */
 private const val SUPERSCRIPT_RATIO: Float = 0.75f
