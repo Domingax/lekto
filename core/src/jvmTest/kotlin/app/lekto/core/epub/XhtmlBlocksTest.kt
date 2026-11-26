@@ -1,7 +1,9 @@
 package app.lekto.core.epub
 
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.InlineStyle
 import app.lekto.core.text.TextBlock
+import app.lekto.core.text.TextRun
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
@@ -215,6 +217,41 @@ class XhtmlBlocksTest {
         block.listMarker shouldBe "1. "
         block.text.take(block.listMarker.length) shouldBe block.listMarker
         block.markerRange shouldBe (0 until block.listMarker.length)
+    }
+
+    @Test
+    fun superscriptSubscriptAndSmallCarryTheirInlineStyle() {
+        // A footnote marker, an exponent and a formula read flat without their
+        // styles: `<sup>`/`<sub>`/`<small>` are the common inline tags for them.
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <p>H<sub>2</sub>O, 2<sup>nd</sup> and <small>fine print</small>.</p>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.text shouldBe "H2O, 2nd and fine print."
+        block.runs shouldContainExactly listOf(
+            TextRun("H"),
+            TextRun("2", setOf(InlineStyle.SUBSCRIPT)),
+            TextRun("O, 2"),
+            TextRun("nd", setOf(InlineStyle.SUPERSCRIPT)),
+            TextRun(" and "),
+            TextRun("fine print", setOf(InlineStyle.SMALL)),
+            TextRun("."),
+        )
+    }
+
+    @Test
+    fun aSmallSuperscriptKeepsBothStyles() {
+        val run = XhtmlBlocks.of(
+            """
+            <html><body><p><small>note<sup>1</sup></small></p></body></html>
+            """.trimIndent().toByteArray(),
+        ).single().runs.last()
+
+        run shouldBe TextRun("1", setOf(InlineStyle.SMALL, InlineStyle.SUPERSCRIPT))
     }
 
     @Test

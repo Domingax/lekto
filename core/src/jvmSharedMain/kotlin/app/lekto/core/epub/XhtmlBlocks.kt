@@ -414,6 +414,9 @@ internal object XhtmlBlocks {
         "em", "i" -> setOf(InlineStyle.EMPHASIS)
         "strong", "b" -> setOf(InlineStyle.STRONG)
         "code", "kbd", "samp", "tt" -> setOf(InlineStyle.CODE)
+        "sup" -> setOf(InlineStyle.SUPERSCRIPT)
+        "sub" -> setOf(InlineStyle.SUBSCRIPT)
+        "small" -> setOf(InlineStyle.SMALL)
         else -> emptySet()
     }
 
