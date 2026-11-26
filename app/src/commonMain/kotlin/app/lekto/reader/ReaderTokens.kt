@@ -9,8 +9,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.BLOCK_SEPARATOR
@@ -201,7 +203,7 @@ private fun appendBlock(
     }
     var runStart = blockStart
     block.runs.forEach { run ->
-        val runStyle = run.styles.toSpanStyle()
+        val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
         if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
         runStart += run.text.length
     }
@@ -219,19 +221,40 @@ private fun ReaderStyles.listParagraphOf(depth: Int): ParagraphStyle = Paragraph
     ),
 )
 
+/** A superscript or subscript's size, as a share of the body's. */
+private const val SUPERSCRIPT_RATIO: Float = 0.75f
+
+/** Small print's size, as a share of the body's. */
+private const val SMALL_RATIO: Float = 0.85f
+
 /** The emphasis a run carries, as a span the reader renders. */
-private fun Set<InlineStyle>.toSpanStyle(): SpanStyle = buildSpanStyle(
-    italic = InlineStyle.EMPHASIS in this,
-    bold = InlineStyle.STRONG in this,
-    monospace = InlineStyle.CODE in this,
+private fun Set<InlineStyle>.toSpanStyle(bodySize: TextUnit): SpanStyle = SpanStyle(
+    fontStyle = if (InlineStyle.EMPHASIS in this) FontStyle.Italic else null,
+    fontWeight = if (InlineStyle.STRONG in this) FontWeight.Bold else null,
+    fontFamily = if (InlineStyle.CODE in this) FontFamily.Monospace else null,
+    fontSize = fontSizeOf(bodySize),
+    baselineShift = baselineShift(),
 )
 
-private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): SpanStyle {
-    var style = SpanStyle()
-    if (italic) style = style.copy(fontStyle = FontStyle.Italic)
-    if (bold) style = style.copy(fontWeight = FontWeight.Bold)
-    if (monospace) style = style.copy(fontFamily = FontFamily.Monospace)
-    return style
+/**
+ * The baseline a run sits on: a superscript or a subscript moves it, and a run
+ * that is both takes the superscript — an overlap no book means literally.
+ */
+private fun Set<InlineStyle>.baselineShift(): BaselineShift? = when {
+    InlineStyle.SUPERSCRIPT in this -> BaselineShift.Superscript
+    InlineStyle.SUBSCRIPT in this -> BaselineShift.Subscript
+    else -> null
+}
+
+/**
+ * The size a run renders at: superscript and subscript at [SUPERSCRIPT_RATIO]
+ * of the body, small print at [SMALL_RATIO]. A small superscript keeps the
+ * smaller ratio, so the two never multiply into unreadable type.
+ */
+private fun Set<InlineStyle>.fontSizeOf(bodySize: TextUnit): TextUnit = when {
+    InlineStyle.SUPERSCRIPT in this || InlineStyle.SUBSCRIPT in this -> bodySize * SUPERSCRIPT_RATIO
+    InlineStyle.SMALL in this -> bodySize * SMALL_RATIO
+    else -> TextUnit.Unspecified
 }
 
 /**

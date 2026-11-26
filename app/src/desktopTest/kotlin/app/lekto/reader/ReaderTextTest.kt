@@ -5,8 +5,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.sp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
@@ -23,6 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -31,7 +34,7 @@ import kotlin.test.assertTrue
  * property of the [androidx.compose.ui.text.AnnotatedString], and asserting it
  * here is exact and fast. The rendered screen has its own semantics test.
  */
-@Suppress("TooManyFunctions") // One layer, one test per property; splitting the class hides the layer's surface.
+@Suppress("TooManyFunctions", "LargeClass") // One layer, one test per property.
 class ReaderTextTest {
 
     private val renderer = ReaderRenderer(
@@ -51,6 +54,31 @@ class ReaderTextTest {
         title = "Chapter",
         language = "en",
         blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lantern glows")))),
+    )
+
+    /**
+     * A 20sp body, whose superscript/subscript ratio (0.75) and small ratio
+     * (0.85) land on whole points: 15sp and 17sp.
+     */
+    private val twentyPointStyles = ReaderStyles.of(ReadingPreferences(size = 20f), mastery = MasteryPalette.Light)
+
+    /** One paragraph carrying a superscript word, a subscript one and a small one. */
+    private val raisedAndLoweredChapter = ReaderText(
+        title = "Chapter",
+        language = "en",
+        blocks = listOf(
+            TextBlock(
+                BlockKind.PARAGRAPH,
+                listOf(
+                    TextRun("x "),
+                    TextRun("up", setOf(InlineStyle.SUPERSCRIPT)),
+                    TextRun(" "),
+                    TextRun("down", setOf(InlineStyle.SUBSCRIPT)),
+                    TextRun(" "),
+                    TextRun("small", setOf(InlineStyle.SMALL)),
+                ),
+            ),
+        ),
     )
 
     @Test
@@ -147,6 +175,54 @@ class ReaderTextTest {
         assertEquals("plain loud and soft", tokens.text.text)
         assertEquals(FontWeight.Bold, styleOf(tokens, "loud").fontWeight)
         assertEquals(FontStyle.Italic, styleOf(tokens, "soft").fontStyle)
+    }
+
+    @Test
+    fun superscriptSubscriptAndSmallRenderSmallerAndShifted() {
+        val tokens = buildReaderTokens(raisedAndLoweredChapter, renderer, twentyPointStyles)
+
+        assertEquals(BaselineShift.Superscript, styleOf(tokens, "up").baselineShift)
+        assertEquals(15.sp, styleOf(tokens, "up").fontSize)
+        assertEquals(BaselineShift.Subscript, styleOf(tokens, "down").baselineShift)
+        assertEquals(15.sp, styleOf(tokens, "down").fontSize)
+        assertEquals(17.sp, styleOf(tokens, "small").fontSize)
+        assertNull(styleOf(tokens, "small").baselineShift, "small print keeps the baseline")
+    }
+
+    @Test
+    fun aSmallSuperscriptTakesTheSuperscriptSize() {
+        val smallSuper = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.PARAGRAPH,
+                    listOf(TextRun("note "), TextRun("1", setOf(InlineStyle.SMALL, InlineStyle.SUPERSCRIPT))),
+                ),
+            ),
+        )
+
+        val tokens = buildReaderTokens(smallSuper, renderer, twentyPointStyles)
+
+        assertEquals(BaselineShift.Superscript, styleOf(tokens, "1").baselineShift)
+        assertEquals(15.sp, styleOf(tokens, "1").fontSize, "sup wins over small when a run is both")
+    }
+
+    @Test
+    fun aPageSliceKeepsTheInlineShiftThatMeasurementSaw() {
+        // buildChapterText and buildPageTokens share the run style, so a page's
+        // words are the size pagination measured (issue #267).
+        val chapterText = buildChapterText(raisedAndLoweredChapter, twentyPointStyles)
+        val page = ReaderPage(0, chapterText.length)
+        val upStart = chapterText.text.indexOf("up")
+        val upEnd = upStart + "up".length
+
+        val measured = chapterText.spanStyles.first { span -> span.start == upStart && span.end == upEnd }
+        val tokens = buildPageTokens(chapterText, page, renderer, raisedAndLoweredChapter, twentyPointStyles)
+
+        assertEquals(15.sp, measured.item.fontSize)
+        assertEquals(measured.item.fontSize, styleOf(tokens, "up").fontSize)
+        assertEquals(measured.item.baselineShift, styleOf(tokens, "up").baselineShift)
     }
 
     @Test

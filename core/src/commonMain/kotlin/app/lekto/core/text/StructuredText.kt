@@ -13,6 +13,15 @@ enum class InlineStyle {
 
     /** `<code>` / `<kbd>` / `<samp>` — code. */
     CODE,
+
+    /** `<sup>` — superscript, e.g. a footnote marker or an exponent. */
+    SUPERSCRIPT,
+
+    /** `<sub>` — subscript, e.g. a chemical formula's index. */
+    SUBSCRIPT,
+
+    /** `<small>` — small print, e.g. a licence or a parenthetical. */
+    SMALL,
 }
 
 /** A run of text that shares a single set of [InlineStyle]s. */
