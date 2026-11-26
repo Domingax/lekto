@@ -38,6 +38,16 @@ enum class BlockKind {
     /** A block that is one image, from a `<figure>`, a `<div>` or a paragraph of its own. */
     IMAGE,
 
+    /**
+     * One `<tr>` of a table, its cells' text joined by a visible separator. A
+     * row is one block, so the row/column relation stays visible without a new
+     * layout pass; a row may still split across a page (issue #264).
+     */
+    TABLE_ROW,
+
+    /** A `<caption>`: the table's own label, set apart from its rows (issue #264). */
+    CAPTION,
+
     /** A `<pre>`: whitespace kept verbatim, so its line breaks and indentation survive. */
     PREFORMATTED,
 

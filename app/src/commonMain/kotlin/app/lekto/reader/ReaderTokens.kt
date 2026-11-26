@@ -173,6 +173,22 @@ private fun appendBlock(
         return
     }
     builder.append(block.text)
+    appendKindStyle(builder, block, blockStart, styles)
+    var runStart = blockStart
+    block.runs.forEach { run ->
+        val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
+        if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
+        runStart += run.text.length
+    }
+}
+
+/** Appends the paragraph and span styles a block's kind adds beyond the body. */
+private fun appendKindStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    styles: ReaderStyles,
+) {
     val blockEnd = blockStart + block.text.length
     when (block.kind) {
         BlockKind.HEADING -> {
@@ -191,6 +207,12 @@ private fun appendBlock(
             blockEnd,
         )
 
+        // A caption is set apart from the rows: italic and centred (#264).
+        BlockKind.CAPTION -> {
+            builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), blockStart, blockEnd)
+            builder.addStyle(ParagraphStyle(textAlign = TextAlign.Center), blockStart, blockEnd)
+        }
+
         // Preformatted text keeps the source's line breaks, so it is drawn
         // monospace from the start edge: justifying it would stretch each line
         // across the measure and destroy the shape it was written in.
@@ -199,13 +221,15 @@ private fun appendBlock(
             builder.addStyle(ParagraphStyle(textAlign = TextAlign.Start), blockStart, blockEnd)
         }
 
+        // A row is held to the start edge: justification would stretch its
+        // cells apart, and the row already reads as one line (#264).
+        BlockKind.TABLE_ROW -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Start),
+            blockStart,
+            blockEnd,
+        )
+
         else -> Unit
-    }
-    var runStart = blockStart
-    block.runs.forEach { run ->
-        val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
-        if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
-        runStart += run.text.length
     }
 }
 
