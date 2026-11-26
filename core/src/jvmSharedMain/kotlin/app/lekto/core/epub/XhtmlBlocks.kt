@@ -37,13 +37,13 @@ internal data class XhtmlDocument(
  * Pieces of structure the walk keeps rather than flattens: a `<br>` is an
  * `\n` inside its block (the author's own line break, not a new paragraph), a
  * `ul`/`ol` is walked as a list so every item keeps its marker, its rank and its
- * depth, an `<img>` becomes a [BlockKind.IMAGE] block of its own, a `<pre>`
- * becomes a [BlockKind.PREFORMATTED] block that keeps its whitespace verbatim,
- * an `<hr>` becomes a [BlockKind.SCENE_BREAK] block carrying
- * [SCENE_BREAK_TEXT] so it is never dropped, a paragraph inside a
- * `<blockquote>` becomes a [BlockKind.QUOTE] carrying its quote depth, and a
- * `<dl>` keeps each term beside its definitions as one [BlockKind.DEFINITION]
- * block (issue #265).
+ * depth, an `<img>` becomes a [BlockKind.IMAGE] block of its own, a `<table>` is
+ * one block per row with its cells joined, a `<pre>` becomes a
+ * [BlockKind.PREFORMATTED] block that keeps its whitespace verbatim, an `<hr>`
+ * becomes a [BlockKind.SCENE_BREAK] block carrying [SCENE_BREAK_TEXT] so it is
+ * never dropped, a paragraph inside a `<blockquote>` becomes a
+ * [BlockKind.QUOTE] carrying its quote depth, and a `<dl>` keeps each term beside
+ * its definitions as one [BlockKind.DEFINITION] block (issues #264, #265).
  */
 @Suppress("TooManyFunctions") // The walk, its inline pass and its helpers are one parser.
 internal object XhtmlBlocks {
@@ -107,6 +107,10 @@ internal object XhtmlBlocks {
 
                 tag == "li" -> collectItem(element, list ?: ListContext(ordered = false, depth = 0, ordinal = 1))
 
+                // A table is walked as a whole, so a row keeps its cells on one
+                // line instead of every cell becoming its own paragraph (#264).
+                tag == "table" -> collectTable(element)
+
                 tag in CONTAINERS -> descend(element)
 
                 // A paragraph, a heading or a cell that holds a picture is split
@@ -122,7 +126,7 @@ internal object XhtmlBlocks {
         private fun collectLeaf(tag: String, element: Element) {
             runsOf(element, blocks.size)
                 .takeIf { runs -> runs.isNotEmpty() }
-                ?.let { runs -> blocks += block(element, runs, headingLevelOf(tag)) }
+                ?.let { runs -> blocks += block(element, runs, tag) }
         }
 
         /**
@@ -135,7 +139,7 @@ internal object XhtmlBlocks {
             fun flush() {
                 val runs = toRuns(characters)
                 characters.clear()
-                if (runs.isNotEmpty()) blocks += block(element, runs, headingLevelOf(tag))
+                if (runs.isNotEmpty()) blocks += block(element, runs, tag)
             }
 
             for (node in element.childNodes()) {
@@ -318,6 +322,67 @@ internal object XhtmlBlocks {
             item.children()
                 .filter { child -> child.normalName() in LIST_TAGS }
                 .forEach { child -> collectList(child, depth = list.depth + 1) }
+        }
+
+        /**
+         * Walks a `<table>`: a caption keeps its own [BlockKind.CAPTION] block,
+         * and each row becomes one [BlockKind.TABLE_ROW] block whose cells are
+         * joined by [CELL_SEPARATOR], so the row/column relation stays visible
+         * without a layout pass (issue #264).
+         */
+        private fun collectTable(table: Element) {
+            for (child in table.children()) {
+                when (child.normalName()) {
+                    "caption" -> {
+                        child.recordAnchors(blocks.size)
+                        collectLeaf("caption", child)
+                    }
+
+                    in ROW_GROUPS -> child.children()
+                        .filter { row -> row.normalName() == "tr" }
+                        .forEach { row -> collectRow(row) }
+
+                    "tr" -> collectRow(child)
+
+                    else -> collectLoose(child)
+                }
+            }
+        }
+
+        /**
+         * One table row: its non-empty cells' runs, each joined to the next by a
+         * plain [CELL_SEPARATOR] run. A header cell's runs carry
+         * [InlineStyle.STRONG], so the row's shape reads at a glance; a row with
+         * no words emits no block.
+         */
+        private fun collectRow(row: Element) {
+            row.recordAnchors(blocks.size)
+            val cells = row.children()
+                .filter { cell -> cell.normalName() in CELL_TAGS }
+                .map { cell -> cellRuns(cell, header = cell.normalName() == "th") }
+                .filter { runs -> runs.isNotEmpty() }
+            if (cells.isEmpty()) return
+
+            val runs = mutableListOf<TextRun>()
+            cells.forEachIndexed { index, cell ->
+                if (index > 0) runs += TextRun(CELL_SEPARATOR)
+                runs += cell
+            }
+            blocks += TextBlock(BlockKind.TABLE_ROW, runs, quoteDepth = row.quoteDepth())
+        }
+
+        /**
+         * One cell's runs, read flat so a cell wrapping `<p>` keeps its words. A
+         * header cell bolds every run it holds.
+         */
+        private fun cellRuns(cell: Element, header: Boolean): List<TextRun> {
+            cell.recordAnchors(blocks.size)
+            val runs = runsOf(cell, blocks.size, flattenBlocks = true)
+            return if (header) {
+                runs.map { run -> run.copy(styles = run.styles + InlineStyle.STRONG) }
+            } else {
+                runs
+            }
         }
 
         /** The marker a list item starts with: a bullet, or its rank and a period. */
@@ -529,22 +594,21 @@ internal object XhtmlBlocks {
     }
 
     /**
-     * The block a leaf element contributes: a heading keeps its level, a
-     * paragraph inside a quote becomes a [BlockKind.QUOTE], and every block
-     * carries the quote depth its element sits at (issue #265).
+     * The block a leaf element contributes: a heading keeps its level, a caption
+     * keeps its kind, a paragraph inside a quote becomes a [BlockKind.QUOTE], and
+     * every block carries the quote depth its element sits at (issues #264, #265).
      */
-    private fun block(element: Element, runs: List<TextRun>, headingLevel: Int = 0): TextBlock {
+    private fun block(element: Element, runs: List<TextRun>, tag: String = ""): TextBlock {
         val depth = element.quoteDepth()
         val kind = when {
-            headingLevel > 0 -> BlockKind.HEADING
+            tag in HEADINGS -> BlockKind.HEADING
+            tag == "caption" -> BlockKind.CAPTION
             depth > 0 -> BlockKind.QUOTE
             else -> BlockKind.PARAGRAPH
         }
+        val headingLevel = if (tag in HEADINGS) tag.substring(1).toInt() else 0
         return TextBlock(kind, runs, headingLevel = headingLevel, quoteDepth = depth)
     }
-
-    /** A heading tag's level, or `0` for a tag that is not a heading. */
-    private fun headingLevelOf(tag: String): Int = if (tag in HEADINGS) tag.substring(1).toInt() else 0
 
     private fun styleOf(tag: String): Set<InlineStyle> = when (tag) {
         "em", "i" -> setOf(InlineStyle.EMPHASIS)
@@ -587,6 +651,15 @@ internal object XhtmlBlocks {
         "p", "li", "dt", "dd", "figcaption", "td", "th",
         "h1", "h2", "h3", "h4", "h5", "h6",
     )
+
+    /** The cells a table row carries, in the order they are joined. */
+    private val CELL_TAGS = setOf("td", "th")
+
+    /** The groups a table wraps its rows in; a `<tr>` may also sit directly in the table. */
+    private val ROW_GROUPS = setOf("thead", "tbody", "tfoot")
+
+    /** What separates a row's cells: a middle dot, so the row reads as one line. */
+    private const val CELL_SEPARATOR = " · "
 
     private val HEADINGS = setOf("h1", "h2", "h3", "h4", "h5", "h6")
 

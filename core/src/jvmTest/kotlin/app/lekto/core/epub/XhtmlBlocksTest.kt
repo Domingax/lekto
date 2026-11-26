@@ -22,6 +22,7 @@ import kotlin.test.Test
  * depth, a `<pre>` keeps its whitespace verbatim, and an `<hr>` becomes a
  * scene-break block instead of disappearing.
  */
+@Suppress("LargeClass") // The parser's whole structural walk is one suite.
 class XhtmlBlocksTest {
 
     @Test
@@ -319,6 +320,87 @@ class XhtmlBlocksTest {
         ).single().runs.last()
 
         run shouldBe TextRun("1", setOf(InlineStyle.SMALL, InlineStyle.SUPERSCRIPT))
+    }
+
+    @Test
+    fun aTableKeepsOneBlockPerRowWithItsCellsJoined() {
+        // A caption and each row stay whole: the cells sit on one line, so the
+        // row/column relation is visible without a layout pass (issue #264).
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table>
+                <caption>Weekly plan</caption>
+                <thead><tr><th>Day</th><th>Load</th></tr></thead>
+                <tbody>
+                  <tr><td>Monday</td><td>Squat</td></tr>
+                  <tr><td>Tuesday</td><td>Rest</td></tr>
+                </tbody>
+              </table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.text } shouldContainExactly listOf(
+            "Weekly plan",
+            "Day · Load",
+            "Monday · Squat",
+            "Tuesday · Rest",
+        )
+        blocks.map { block -> block.kind } shouldContainExactly listOf(
+            BlockKind.CAPTION,
+            BlockKind.TABLE_ROW,
+            BlockKind.TABLE_ROW,
+            BlockKind.TABLE_ROW,
+        )
+    }
+
+    @Test
+    fun aHeaderCellIsStrongAndTheCellSeparatorIsPlain() {
+        // A direct `<tr>` (no `thead`/`tbody`) is a row; leaving the separator
+        // plain keeps it from inheriting the bold of the cells around it.
+        val row = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table><tr><th>Lift</th><th>Load</th></tr></table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        row.kind shouldBe BlockKind.TABLE_ROW
+        row.runs shouldContainExactly listOf(
+            TextRun("Lift", setOf(InlineStyle.STRONG)),
+            TextRun(" · "),
+            TextRun("Load", setOf(InlineStyle.STRONG)),
+        )
+    }
+
+    @Test
+    fun aCellWrappingParagraphsKeepsEveryWord() {
+        // A cell whose content is block markup is read flattened, or its words
+        // would be dropped: real programme tables write each cell as a `<p>`.
+        val row = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table><tr><td>Day</td><td><p>5×5</p><p>squat</p></td></tr></table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        row.text shouldBe "Day · 5×5\n\nsquat"
+    }
+
+    @Test
+    fun aRowWithoutWordsEmitsNoBlock() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table><tr><td></td><td> </td></tr><tr><td>kept</td></tr></table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.text } shouldContainExactly listOf("kept")
     }
 
     @Test

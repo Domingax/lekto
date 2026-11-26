@@ -173,15 +173,25 @@ private fun appendBlock(
         return
     }
     builder.append(block.text)
-    val blockEnd = blockStart + block.text.length
-    styles.appendInlineBlockStyle(builder, block, blockStart, blockEnd)
-    styles.appendParagraphStyle(builder, block, blockStart, blockEnd)
+    appendKindStyle(builder, block, blockStart, styles)
     var runStart = blockStart
     block.runs.forEach { run ->
         val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
         if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
         runStart += run.text.length
     }
+}
+
+/** Appends the paragraph and span styles a block's kind adds beyond the body. */
+private fun appendKindStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    styles: ReaderStyles,
+) {
+    val blockEnd = blockStart + block.text.length
+    styles.appendInlineBlockStyle(builder, block, blockStart, blockEnd)
+    styles.appendParagraphStyle(builder, block, blockStart, blockEnd)
 }
 
 /** Adds the span style a whole block carries: a heading's type or preformatted text's face. */
@@ -193,6 +203,9 @@ private fun ReaderStyles.appendInlineBlockStyle(
 ) {
     when (block.kind) {
         BlockKind.HEADING -> builder.addStyle(heading.asSpanStyle(), blockStart, blockEnd)
+
+        // A caption is set apart from the rows: italic and centred (#264).
+        BlockKind.CAPTION -> builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), blockStart, blockEnd)
 
         BlockKind.PREFORMATTED ->
             builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace), blockStart, blockEnd)
@@ -231,10 +244,25 @@ private fun ReaderStyles.appendParagraphStyle(
             blockEnd,
         )
 
+        // A caption is set apart from the rows: italic and centred (#264).
+        BlockKind.CAPTION -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Center, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
         // Preformatted text keeps the source's line breaks, so it is drawn from
         // the start edge: justifying it would stretch each line across the
         // measure and destroy the shape it was written in.
         BlockKind.PREFORMATTED -> builder.addStyle(
+            ParagraphStyle(textAlign = TextAlign.Start, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
+        // A row is held to the start edge: justification would stretch its
+        // cells apart, and the row already reads as one line (#264).
+        BlockKind.TABLE_ROW -> builder.addStyle(
             ParagraphStyle(textAlign = TextAlign.Start, textIndent = quoteIndent),
             blockStart,
             blockEnd,
