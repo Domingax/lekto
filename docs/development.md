@@ -32,6 +32,10 @@ and rerun only the failing task after a failure.
 Two Gradle builds on one machine start two daemons, each with its own heap. Run
 one build at a time across worktrees and do not enable `--parallel`.
 
+Agent builds go through `scripts/gradlew-locked`: it takes the machine-wide
+lock, nices the build, caps workers at two and uses 2 GB for Gradle and 1.5 GB
+for Kotlin. Do not call `./gradlew` directly from an agent.
+
 ## Quality gates
 
 `./gradlew check` fails the build on any formatting or static-analysis violation;

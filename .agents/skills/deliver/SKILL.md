@@ -22,8 +22,10 @@ glue, bug — and for every level that table demands, show a red → green. *Don
 every surface is classified and every demanded level has its red → green; "some
 tests were added" is not done.*
 
-Run typechecking regularly, single test files regularly, and the full test suite
-once at the end. *Done when `./gradlew check` is green.*
+Run builds through `scripts/gradlew-locked`; the loop and budget are in
+[`docs/development.md#commands`](../../../docs/development.md#commands). Run
+typechecking regularly, single test files regularly, and the full test suite once
+at the end. *Done when `./gradlew check` is green.*
 
 Once done, use `/code-review` to review the work. *Done when both axes have
 reported and each finding is fixed or explicitly accepted.*
