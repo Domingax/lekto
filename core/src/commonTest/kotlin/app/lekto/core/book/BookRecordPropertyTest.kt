@@ -11,7 +11,7 @@ import io.kotest.property.forAll
 import kotlin.time.Instant
 
 /**
- * The book record's serialise/parse invariant (ADR-0003; docs/testing.md, "Test
+ * The book record's serialise/parse invariant (ADR-0003; docs/development.md, "Test
  * levels": a serialise/parse domain invariant is a property over generated
  * data). Every book field, its **Author** included, survives encode → decode
  * whatever the title and author, so an import never loses what it read

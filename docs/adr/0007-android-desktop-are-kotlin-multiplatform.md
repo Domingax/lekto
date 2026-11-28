@@ -111,7 +111,7 @@ The substrate and the own-EPUB-pipeline decisions do not change.
 parser, the ICU4J segmenter, the directory-backed vault — is shared by the JVM
 and Android targets in a `jvmSharedMain` source set instead of being a JVM-only
 artifact Android happened to consume. The target exists so a **Robolectric host
-lane** can run that code on a simulated Android runtime (`docs/testing.md#android-host-lane`);
+lane** can run that code on a simulated Android runtime (`docs/development.md#android-host-lane`);
 it is applied only when an Android SDK is available, so a JVM-only checkout still
 builds and tests without one.
 

@@ -1,5 +1,7 @@
 # The user guide is a VitePress site on GitHub Pages
 
+> Renumbered from the duplicate ADR-0024 on 2026-11-28; the decision is unchanged.
+
 Lekto documents itself for agents and developers — `CONTEXT.md`, the ADRs, and the
 build and test docs — but a person who installs the app has nowhere to learn it. We
 need an end-user guide at a web address a user can reach, describing the product as it

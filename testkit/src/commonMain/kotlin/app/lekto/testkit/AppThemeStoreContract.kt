@@ -9,7 +9,7 @@ import app.lekto.core.theme.AppThemeStore
  * the in-memory fake runs it in `core/commonTest` and the JSON document store runs
  * the same cases over an in-memory filesystem there and over a real directory in
  * `core/jvmTest` — the two implementations cannot silently differ
- * (docs/testing.md, "Test levels").
+ * (docs/development.md, "Test levels").
  */
 class AppThemeStoreContract(private val newStore: () -> AppThemeStore) {
 

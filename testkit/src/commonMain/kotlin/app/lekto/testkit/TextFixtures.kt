@@ -10,7 +10,7 @@ import app.lekto.core.text.TextBlock
  *
  * It is a fixture rather than a helper in one test file, because the reader's
  * chapter tests run on both lanes and must measure the same text the same way
- * (docs/testing.md, "Naming and placement").
+ * (docs/development.md, "Naming and placement").
  */
 fun blockStartOffset(blocks: List<TextBlock>, blockIndex: Int): Int =
     blocks.take(blockIndex).sumOf { block -> block.text.length + BLOCK_SEPARATOR.length }

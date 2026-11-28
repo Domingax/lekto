@@ -24,7 +24,7 @@ import java.util.UUID
  * Android transport — OkHttp — so the first-class client cannot quietly drift
  * from the desktop one. The in-process [FakeWebDavServer] speaks the same subset
  * over the loopback interface, so the transport is proved **without a network**
- * and without Docker, exactly as the JVM fast lane is (docs/testing.md).
+ * and without Docker, exactly as the JVM fast lane is (docs/development.md).
  *
  * Robolectric runs the test on the host JVM, so the fake's
  * `com.sun.net.httpserver` server is available, and OkHttp speaks plain HTTP to

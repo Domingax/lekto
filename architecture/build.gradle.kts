@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // `src/test` (only `*Test.kt` lives in a test source set), which is the naming
 // convention the suite asserts. See AGENTS.md, "Module boundaries".
 //
-// `kotlin.test` + Kotest, exactly as the domain suite (docs/testing.md).
+// `kotlin.test` + Kotest, exactly as the domain suite (docs/development.md).
 plugins {
     alias(libs.plugins.kotlinJvm)
 }

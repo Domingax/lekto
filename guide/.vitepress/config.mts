@@ -1,4 +1,4 @@
-// The Lekto user guide: a VitePress site published on GitHub Pages (ADR-0024).
+// The Lekto user guide: a VitePress site published on GitHub Pages (ADR-0051).
 //
 // The content root is this directory (`guide/`), never the repository's internal
 // `docs/` tree, so an ADR, `CONTEXT.md` or a research report can never be

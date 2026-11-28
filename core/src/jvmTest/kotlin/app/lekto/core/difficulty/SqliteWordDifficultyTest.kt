@@ -12,7 +12,7 @@ import java.nio.file.Files
  * The real **Difficulty table** reader on the JVM: the shared [WordDifficultyContract]
  * against the SQLite artifact the pipeline actually produces
  * (`tools/dictionaries` output committed as a test fixture), plus the wordfreq
- * attribution the screen renders (ADR-0029; docs/testing.md, "Test levels").
+ * attribution the screen renders (ADR-0029; docs/development.md, "Test levels").
  */
 class SqliteWordDifficultyTest :
     FunSpec({

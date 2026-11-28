@@ -46,7 +46,7 @@ data class LanguagesUiState(
  *
  * The [dispatcher] is injected because a hard-coded one cannot be driven by
  * virtual time, and the [books] accessor is a function because the library's
- * list changes as books are imported (docs/testing.md, "Deterministic seams").
+ * list changes as books are imported (docs/development.md, "Deterministic seams").
  * The [roster] defaults to the samples this build ships; a test passes its own.
  */
 class LanguageController(

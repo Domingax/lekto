@@ -4,7 +4,7 @@
 #
 # Security alerts come from the repository's vulnerability-alerts setting, not
 # from this file; this file is what turns a dependency bump into a pull request.
-# `docs/build.md`, "Alert triage", says what happens to the alerts themselves.
+# `docs/dependencies.md#vulnerability-alerts` says what happens to the alerts themselves.
 version: 2
 
 updates:
@@ -25,7 +25,7 @@ updates:
         patterns:
           - "*"
 
-  # The end-user guide's toolchain (ADR-0024). Development-only, but VitePress is
+  # The end-user guide's toolchain (ADR-0051). Development-only, but VitePress is
   # what pins the Vite and esbuild that carry the dev-server advisories.
   - package-ecosystem: "npm"
     directory: "/guide"

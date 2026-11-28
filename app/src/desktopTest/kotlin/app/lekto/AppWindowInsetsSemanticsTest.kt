@@ -25,7 +25,7 @@ import kotlin.test.assertTrue
  *
  * The inset is injected rather than read from the platform, because a test
  * window reports none: [App] takes it as a parameter, the deterministic seam
- * (docs/testing.md, "Deterministic seams"). Its same-named Android twin proves
+ * (docs/development.md, "Deterministic seams"). Its same-named Android twin proves
  * the same layout on the runtime Android uses.
  */
 @OptIn(ExperimentalTestApi::class)

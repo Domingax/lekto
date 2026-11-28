@@ -21,7 +21,7 @@ private val SAFE_IDS = arrayOf("a", "b", "c", "vocabulary-1", "progress_2", "boo
 
 /**
  * The vault's serialisation round-trips, over generated data (ticket #12;
- * docs/testing.md, "Test levels"): a record survives encode → decode whatever
+ * docs/development.md, "Test levels"): a record survives encode → decode whatever
  * its text, and a whole vault survives export → import whatever its records.
  *
  * The second property is the portability guarantee stated as an invariant: an

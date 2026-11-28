@@ -29,7 +29,7 @@ data class DifficultyUiState(
  * The **Difficulty table**'s state holder, one state per **Reading language**
  * (ADR-0029; issue #148): it reports what is installed for each offered language
  * and runs the on-demand download off the UI thread. The [dispatcher] is injected
- * because a hard-coded one cannot be driven by virtual time (docs/testing.md,
+ * because a hard-coded one cannot be driven by virtual time (docs/development.md,
  * "Deterministic seams").
  */
 class DifficultyController(
@@ -74,7 +74,7 @@ class DifficultyController(
         val base = baseLanguage(language)
         if (stateOf(base).installing) return
         // Resolve the installer on this thread, so its per-language cache is only
-        // ever written from the surface's own thread (docs/testing.md, "Deterministic seams").
+        // ever written from the surface's own thread (docs/development.md, "Deterministic seams").
         val installer = services.installer(base)
         update(base) { current -> current.copy(installing = true, error = null) }
         downloads[base] = scope.launch {

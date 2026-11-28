@@ -138,7 +138,7 @@ data class SyncUiState(
  *
  * The [dispatcher] is injected because testing a connection and syncing block,
  * and a hard-coded one cannot be driven by virtual time; the [scope] carries that
- * work (docs/testing.md, "Deterministic seams").
+ * work (docs/development.md, "Deterministic seams").
  */
 @Suppress("TooManyFunctions", "LongParameterList") // One state holder; its constructor threads the injected seams.
 class SyncController(
@@ -155,7 +155,7 @@ class SyncController(
     private val changes: LocalChanges,
     /** The automatic-run cadence and its backoff (issue #121; ADR-0028). */
     private val schedule: SyncSchedule = SyncSchedule(),
-    /** The clock the last run's time is stamped with; tests pass a [TestClock] (docs/testing.md). */
+    /** The clock the last run's time is stamped with; tests pass a [TestClock] (docs/development.md). */
     private val clock: Clock = Clock.System,
 ) {
 
@@ -165,7 +165,7 @@ class SyncController(
     /**
      * The same clock the run times are stamped with, so the screen's "2 minutes
      * ago" and the stored time cannot come from two different clocks
-     * (docs/testing.md, "Deterministic seams").
+     * (docs/development.md, "Deterministic seams").
      */
     internal val now: Instant get() = clock.now()
 

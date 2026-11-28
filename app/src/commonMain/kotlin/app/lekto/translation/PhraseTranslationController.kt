@@ -59,7 +59,7 @@ data class PhraseTranslationUiState(
  * rather than offering a dead action.
  *
  * The [dispatcher] is injected because the transport blocks and a hard-coded one
- * cannot be driven by virtual time (docs/testing.md, "Deterministic seams"); the
+ * cannot be driven by virtual time (docs/development.md, "Deterministic seams"); the
  * [scope] carries the streaming work.
  */
 class PhraseTranslationController(

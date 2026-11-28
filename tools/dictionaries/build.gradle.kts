@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // The offline dictionary-pack pipeline (ticket #17): a standalone JVM CLI that
 // turns the raw Wiktextract extract into a trimmed, read-only SQLite pack and
 // publishes it as a release artifact. It is deliberately off the application CI
-// path (`docs/build.md#dictionary-pipeline`) and depends on no Lekto module, so
+// path (`docs/dictionary-pipeline.md`) and depends on no Lekto module, so
 // the architecture policy keeps it a leaf.
 plugins {
     alias(libs.plugins.kotlinJvm)

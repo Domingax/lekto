@@ -12,7 +12,7 @@ import io.kotest.property.forAll
 /**
  * **Reading progress** is the share of a book's rendered text before its
  * **Reading position**, shown as a whole percentage rounded down (issue #196;
- * docs/testing.md, "Test levels": a derivation over generated data).
+ * docs/development.md, "Test levels": a derivation over generated data).
  */
 @OptIn(ExperimentalKotest::class)
 class ReadingProgressTest :

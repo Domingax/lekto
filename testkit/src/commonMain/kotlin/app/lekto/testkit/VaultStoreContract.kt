@@ -13,7 +13,7 @@ import app.lekto.core.vault.VaultStore
  * The contract is framework-free on purpose: `testkit` is a plain KMP library,
  * so each consumer registers [cases] with whatever runner its module uses. The
  * in-memory store runs it in `commonTest`, the JVM file store in `jvmTest` —
- * the same nine behaviours, so a driver cannot silently differ (docs/testing.md,
+ * the same nine behaviours, so a driver cannot silently differ (docs/development.md,
  * "Test levels").
  *
  * Each case builds a fresh store from [newStore], so cases cannot leak state

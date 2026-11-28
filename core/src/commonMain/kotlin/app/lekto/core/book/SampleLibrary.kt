@@ -41,7 +41,7 @@ data class SampleBookRow(val book: Book, val progress: BookProgress, val state: 
  * @param catalogue the **Sample catalogue** this build ships; a language it does
  *   not carry materialises nothing.
  * @param clock the clock the reader's finished declaration is stamped with; a
- *   deterministic seam in tests (docs/testing.md, "Deterministic seams").
+ *   deterministic seam in tests (docs/development.md, "Deterministic seams").
  */
 class SampleLibrary(
     private val catalogue: SampleCatalogContent,

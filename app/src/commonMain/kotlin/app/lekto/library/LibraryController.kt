@@ -133,7 +133,7 @@ data class LibraryUiState(
  * Import and delete are occasional actions that must not block the app, so each
  * launches on an injected [dispatcher], reports its outcome, and lands a failure
  * in [LibraryUiState.error] rather than throwing. The [dispatcher] is injected
- * because a hard-coded one cannot be driven by virtual time (docs/testing.md,
+ * because a hard-coded one cannot be driven by virtual time (docs/development.md,
  * "Deterministic seams").
  *
  * A book with a **Reading position** whose rendered length is still missing is

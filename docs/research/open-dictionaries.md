@@ -16,7 +16,7 @@
 > about 94% of the `translations` rows. The raw file is also the non-deprecated
 > one. Build the pack by streaming the **raw** file and filtering
 > `lang_code == "en"` with `translations[].lang_code == "fr"`; see ticket #17 and
-> `docs/build.md#dictionary-pipeline`.
+> `docs/dictionary-pipeline.md`.
 
 ---
 

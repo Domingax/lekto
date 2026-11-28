@@ -4,10 +4,10 @@ An open-source, local-first immersive reading app for language learning. Android
 first, desktop second. All user data lives on the device in a vault; there is no
 server behind the product.
 
-This repository is at the engineering-foundation stage. The Kotlin
-Multiplatform skeleton is in place; the test harness (#5) and the CI that runs
-it (#7) come next, and feature work is written against that loop. See issue #1
-for the plan and `docs/` for the product and architecture decisions.
+The Kotlin Multiplatform skeleton, the test harness and the CI lanes are in
+place; feature work is written against that loop. The internal documentation
+starts at [`ARCHITECTURE.md`](ARCHITECTURE.md) and
+[`docs/development.md`](docs/development.md); decisions are in [`docs/adr/`](docs/adr/).
 
 ## Build and test
 
@@ -15,37 +15,25 @@ for the plan and `docs/` for the product and architecture decisions.
 ./gradlew check
 ```
 
-This builds every module and runs the JVM test suites (the domain suite today;
-the full harness lands with ticket #5). The Gradle wrapper is committed and the
-JDK is provisioned by the build, so a clean checkout needs only a JVM to run the
-wrapper. Android additionally needs the
-Android SDK; without one the project builds as a desktop/JVM project. See
-[`docs/build.md`](docs/build.md) for the pinned toolchain and the platform
-commands.
+This builds every module, runs the JVM suites and enforces ktlint and detekt. The
+Gradle wrapper is committed and the JDK is provisioned by the build, so a clean
+checkout needs only a JVM to run the wrapper. The Android SDK is optional;
+without one the project builds as a desktop/JVM project. See
+[`docs/development.md`](docs/development.md) for the pinned toolchain, the test
+harness and the quality gates.
 
-Run the desktop client with `./gradlew :app:run`, build the Android debug
-APK with `./gradlew :app:assembleDebug`, and package the desktop client for the
-machine you are on: `./gradlew :app:packageDistributionForCurrentOS
--Plekto.android=false` produces the Windows MSI and EXE or the macOS DMG; on
-Linux, `./gradlew :app:createDistributable -Plekto.android=false` then
-`tools/packaging/appimage.sh` builds the portable AppImage. jpackage does not
-cross-compile, and the tagged release lane builds every artefact. The desktop's
-screen-reader limitation is documented in [the user guide](guide/desktop.md).
+Run the desktop client with `./gradlew :app:run`, and build the Android debug APK
+with `./gradlew :app:assembleDebug`. Packaging for Windows, macOS and Linux is in
+[`docs/platforms.md`](docs/platforms.md); the desktop's screen-reader limitation
+is in [the user guide](guide/desktop.md).
 
 ## Where things live
 
-| Path                    | What it is                                                       |
-| ----------------------- | ---------------------------------------------------------------- |
-| `core`                  | The domain — vault, records, merge, parsers, tokenisation, word identity, sync engine, dictionary reader. |
-| `testkit`               | Contract suites and in-memory fakes for the other modules' tests.|
-| `integrations/webdav`   | The first sync driver (JVM + Android).                            |
-| `app`                   | The Compose Multiplatform application (Android + desktop).        |
-| `tools/dictionaries`    | The offline dictionary-pack pipeline and the sample catalogue built from its packs. |
-| `architecture`          | The architecture tests: module boundaries and naming conventions.|
-| `guide`                 | The end-user guide: a VitePress site published on GitHub Pages.  |
-| `docs/adr/`             | Architecture decisions (authoritative).                           |
-| `docs/research/`        | Research reports behind the decisions.                            |
-| `CONTEXT.md`            | The domain glossary.                                             |
+Modules and their allowed dependencies: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+The end-user guide is the `guide/` VitePress site; its commands and feature→page
+map are in [`guide/AGENTS.md`](guide/AGENTS.md). Decisions are in
+[`docs/adr/`](docs/adr/), investigations in [`docs/research/`](docs/research/),
+and the domain vocabulary in [`CONTEXT.md`](CONTEXT.md).
 
 ## Language-model providers (BYOK)
 
@@ -73,4 +61,4 @@ checked before you read.
 ## Licence
 
 AGPL-3.0. The dictionary pack is a separate CC BY-SA 4.0 artifact and is never
-committed here (ADR-0011).
+committed here (ADR-0011). See [`docs/dependencies.md`](docs/dependencies.md).

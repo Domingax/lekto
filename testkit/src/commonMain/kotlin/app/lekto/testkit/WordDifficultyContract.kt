@@ -11,7 +11,7 @@ import app.lekto.core.text.WordKey
  * It is framework-free, so the in-memory table runs it in `commonTest` and the
  * real SQLite reader runs the same cases against a built artifact in `jvmTest`
  * (and its Android twin in `androidHostTest`) — the same behaviours, so a reader
- * cannot silently differ (docs/testing.md, "Test levels"). Each case opens a
+ * cannot silently differ (docs/development.md, "Test levels"). Each case opens a
  * fresh table from [newTable] and closes it, so cases cannot leak state.
  */
 class WordDifficultyContract(private val newTable: () -> WordDifficulty) {

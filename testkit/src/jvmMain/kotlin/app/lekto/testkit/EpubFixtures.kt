@@ -17,7 +17,7 @@ import java.util.zip.ZipOutputStream
  * entities, a `<br/>`, whitespace runs, nested inline markup, a container element
  * around a paragraph, non-linear spine items, subdirectory hrefs, a CJK chapter
  * and non-content manifest items. It lives in `testkit` rather than a test source
- * set so the parser's tests share one fixture (docs/testing.md).
+ * set so the parser's tests share one fixture (docs/development.md).
  */
 @Suppress("LargeClass", "TooManyFunctions") // One fixture per shape the parser must handle.
 object EpubFixtures {

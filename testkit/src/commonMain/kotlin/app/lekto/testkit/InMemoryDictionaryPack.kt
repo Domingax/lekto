@@ -8,7 +8,7 @@ import app.lekto.core.dictionary.PackMetadata
  * An in-memory [DictionaryPack] for tests: the pack's behaviour without a SQLite
  * file, so the domain's lookup and mastery keying are proved in `commonTest`,
  * while the real reader is proved against a built pack in `jvmTest`
- * (docs/testing.md, "Test levels").
+ * (docs/development.md, "Test levels").
  *
  * A surface the map does not name has no lemma, so keying falls back to the
  * normalised surface form exactly as the production pack does (ADR-0006).

@@ -5,7 +5,7 @@ import java.io.InputStream
 /**
  * Reads a committed test resource — a golden, an EPUB fixture — off the test
  * classpath. It lives in `testkit` because a test source set may hold only
- * `*Test.kt` files (docs/testing.md#naming-and-placement), so a helper shared by
+ * `*Test.kt` files (docs/development.md#naming-and-placement), so a helper shared by
  * two or more tests has nowhere else to go.
  */
 object TestResources {

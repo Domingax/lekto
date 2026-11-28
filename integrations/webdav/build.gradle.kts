@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // lives in `jvmSharedMain`, shared by both; only the HTTP transport differs —
 // `java.net.http` on the JVM, OkHttp on Android — behind the `WebDavTransport`
 // seam (ADR-0026). The Android target is applied only when an Android SDK is
-// discoverable, the same rule as `core` (docs/build.md#prerequisites).
+// discoverable, the same rule as `core` (docs/development.md#prerequisites).
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
@@ -34,7 +34,7 @@ kotlin {
         }
         // The WebDAV integration lane (ticket #7) drives a real server through
         // Testcontainers' JUnit 5 support, so the JVM test run uses the JUnit
-        // Platform. See docs/testing.md.
+        // Platform. See docs/development.md.
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
         }
@@ -47,7 +47,7 @@ kotlin {
             minSdk = libs.versions.android.minSdk.get().toInt()
             // Enables the `androidHostTest` source set, where the driver contract
             // runs against the in-process fake server under Robolectric
-            // (docs/testing.md#android-host-lane).
+            // (docs/development.md#android-host-lane).
             withHostTest {
                 isIncludeAndroidResources = true
             }

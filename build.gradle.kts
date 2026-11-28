@@ -13,7 +13,7 @@ import org.gradle.maven.MavenPomArtifact
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
-// The six modules of Lekto. See docs/build.md and docs/adr/0007.
+// The six modules of Lekto. See docs/development.md and docs/adr/0007.
 // core      — the domain (vault, records, merge, tokenisation, sync engine, parsers)
 // testkit   — contract suites and in-memory fakes, shared by the other modules' tests
 // integrations/webdav — the first sync driver, isolated from the domain
@@ -44,7 +44,7 @@ plugins {
 // complexity and function size, no dead code, no orphaned TODO — in
 // config/detekt/detekt.yml; the code style lives in .editorconfig. ktlint is MIT
 // and detekt Apache-2.0, so both are AGPL-compatible (ADR-0011). See
-// docs/build.md.
+// docs/development.md.
 //
 // `allprojects`, not `subprojects`: the root `build.gradle.kts` and
 // `settings.gradle.kts` are scripts too, and ktlint lints them.
@@ -233,7 +233,7 @@ tasks.named("check") {
 // triggers those modules' tests first. `testkit` and `tools/dictionaries` are
 // deliberately not aggregated: the first is test scaffolding and never ships,
 // the second is standalone and off the application CI path. See
-// docs/build.md#coverage-and-the-quality-gate.
+// docs/development.md#coverage-and-the-quality-gate.
 dependencies {
     kover(project(":core"))
     kover(project(":integrations:webdav"))
@@ -261,7 +261,7 @@ kover {
 // in config/dependency-licences.txt. It needs dependency metadata at execution
 // time, which the configuration cache cannot store, so it is a task of its own
 // (run without the cache) rather than part of `check`; CI runs it as the
-// `licences` job. See docs/build.md.
+// `licences` job. See docs/development.md.
 //
 // The policy is data, not code: config/dependency-licences.txt holds the allowed
 // ids and the hand-reviewed overrides for components whose POMs declare none.
@@ -419,23 +419,5 @@ val checkDependencyLicences by tasks.registering {
                     "Full verdicts: ${licenceReportFile.get().asFile}",
             )
         }
-    }
-}
-
-// --- Git hooks -----------------------------------------------------------------
-// The commit-msg hook lives in .githooks/ so it is reviewed and versioned like
-// any other file. Git only runs it once core.hooksPath points there; `check`
-// installs it, so a fresh clone is guarded from its first build. See AGENTS.md,
-// "Commits". A source tarball with no git metadata skips the task entirely.
-if (rootDir.resolve(".git").exists()) {
-    val installGitHooks by tasks.registering(Exec::class) {
-        group = "setup"
-        description = "Point git at the committed .githooks so non-conforming commits are rejected."
-        workingDir(rootDir)
-        commandLine("git", "config", "--local", "core.hooksPath", ".githooks")
-    }
-
-    tasks.named("check") {
-        dependsOn(installGitHooks)
     }
 }

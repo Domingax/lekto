@@ -12,7 +12,7 @@ chapter.
 **Method:** Build the smallest reader that proves the claim on the fast JVM
 loop, driven by the `StructuredText`/`WordToken`/`TextSegmenter` seams ticket #10
 landed, and pin it with a semantics test and a screenshot golden
-(`docs/testing.md`). The paginator and the word layer are real code, not
+(`docs/development.md`). The paginator and the word layer are real code, not
 sketches.
 
 > **Headline:** The word-token layer works, and it lands on first-party Compose

@@ -9,7 +9,7 @@ import app.lekto.core.dictionary.DictionaryPack
  * It is framework-free, so the in-memory pack runs it in `commonTest` and the
  * real SQLite reader runs the same cases against a built pack in `jvmTest` (and
  * its Android twin in `androidHostTest`) — the same behaviours, so a reader
- * cannot silently differ (docs/testing.md, "Test levels"). Each case opens a
+ * cannot silently differ (docs/development.md, "Test levels"). Each case opens a
  * fresh pack from [newPack] and closes it, so cases cannot leak state.
  */
 class DictionaryPackContract(private val newPack: () -> DictionaryPack) {

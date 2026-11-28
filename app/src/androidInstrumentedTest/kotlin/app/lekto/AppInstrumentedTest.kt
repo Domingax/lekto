@@ -16,8 +16,8 @@ import org.junit.runner.RunWith
 /**
  * The app launches and navigates on a **real Android runtime** (issue #71), the
  * nightly-lane smoke test that the fast Robolectric host lane cannot replace: it
- * starts the real [MainActivity] on an emulator, where the platform
- * integrations (SAF, TTS, Keystore) actually run.
+ * starts the real [MainActivity] on an emulator. Device-only platform
+ * integrations (SAF, TTS, Keystore) are not covered by an instrumented test.
  */
 @RunWith(AndroidJUnit4::class)
 class AppInstrumentedTest {

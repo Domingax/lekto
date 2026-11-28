@@ -1,4 +1,4 @@
-# The user-guide lane (ADR-0024).
+# The user-guide lane (ADR-0051).
 #
 # It builds the VitePress site under `guide/` on every pull request, so a page
 # that does not compile or an internal link that does not resolve fails before
@@ -8,7 +8,7 @@
 # and the `push` trigger is path-filtered so an unrelated change does not
 # redeploy the site. The guide's npm dependencies are checked for
 # AGPL-3.0-compatibility in the same job, because the Gradle licence gate cannot
-# see the Node toolchain (ADR-0011). See docs/build.md#ci-lanes.
+# see the Node toolchain (ADR-0011). See docs/development.md#ci-lanes.
 name: guide
 
 on:

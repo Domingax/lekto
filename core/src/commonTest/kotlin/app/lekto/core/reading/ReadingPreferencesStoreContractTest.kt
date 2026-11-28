@@ -8,7 +8,7 @@ import io.kotest.core.spec.style.FunSpec
 /**
  * The shared [ReadingPreferencesStoreContract] run against both implementations
  * that live in `commonMain`: the in-memory fake and the JSON document store over
- * an in-memory filesystem (ADR-0035; docs/testing.md, "Test levels"). The document
+ * an in-memory filesystem (ADR-0035; docs/development.md, "Test levels"). The document
  * store runs the same cases over a real directory in `jvmTest`, so the
  * bytes-on-disk path is proved too.
  */

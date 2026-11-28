@@ -13,7 +13,7 @@ import kotlin.test.assertFailsWith
  * The real dictionary reader on the JVM: the shared [DictionaryPackContract]
  * against the SQLite pack the pipeline actually produces
  * (`tools/dictionaries` output committed as a test fixture), plus the attribution
- * the screen reads (issue #18; docs/testing.md, "Test levels").
+ * the screen reads (issue #18; docs/development.md, "Test levels").
  */
 class SqliteDictionaryPackTest :
     FunSpec({

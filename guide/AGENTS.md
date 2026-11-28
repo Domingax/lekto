@@ -1,9 +1,9 @@
 # Lekto user guide — agent guide
 
 This directory is the **end-user guide**: a VitePress site published to GitHub
-Pages (ADR-0024). It is a **documented surface**, so a change to a user-visible
+Pages (ADR-0051). It is a **documented surface**, so a change to a user-visible
 behaviour updates the page(s) named below in the same pull request, the way
-`/sync-docs` reconciles `CONTEXT.md`, the ADRs and the build and test docs.
+`/sync-docs` reconciles `CONTEXT.md`, the ADRs and the reference docs.
 
 ## Rules
 

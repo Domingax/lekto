@@ -238,7 +238,7 @@ class LibraryControllerTest {
         controller.delete("b1")
 
         // The blocking vault write is launched on the injected dispatcher, not
-        // run on the caller's thread (docs/testing.md, "Deterministic seams").
+        // run on the caller's thread (docs/development.md, "Deterministic seams").
         assertEquals(listOf("b1"), library.books().map { stored -> stored.id })
         advanceUntilIdle()
         assertEquals(emptyList(), library.books())

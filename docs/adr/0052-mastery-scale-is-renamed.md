@@ -1,5 +1,7 @@
 # The mastery scale reads recognized < familiar < learned, and its persisted names break without a shim
 
+> Renumbered from the duplicate ADR-0029 on 2026-11-28; the decision is unchanged.
+
 CONTEXT.md's five-point **Mastery level** had its middle names out of order: level 1
 was `FAMILIAR` and level 2 was `RECOGNIZED`, but one recognises a word before it
 becomes familiar to them. Issue #140 renames the ladder so it reads in the order a

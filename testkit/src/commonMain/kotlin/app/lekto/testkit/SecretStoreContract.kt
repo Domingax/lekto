@@ -11,7 +11,7 @@ import app.lekto.core.secret.SecretStore
  * consumer registers [cases] with whatever runner its module uses. The in-memory
  * fake runs it in `core/commonTest`, the desktop store in `core/jvmTest`, and the
  * Android store in `core/androidHostTest`, so the three cannot silently differ
- * (docs/testing.md, "Test levels").
+ * (docs/development.md, "Test levels").
  *
  * Each case builds a fresh store from [newStore], so cases cannot leak state.
  */

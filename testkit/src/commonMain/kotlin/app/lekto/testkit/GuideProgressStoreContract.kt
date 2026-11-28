@@ -9,7 +9,7 @@ import app.lekto.core.guide.GuideProgressStore
  * contracts, so the in-memory fake runs it in `core/commonTest` and the JSON
  * document store runs the same cases there and over a real directory in
  * `core/jvmTest` — the two implementations cannot silently differ
- * (docs/testing.md, "Test levels"). Each case builds a fresh store from
+ * (docs/development.md, "Test levels"). Each case builds a fresh store from
  * [newStore], so cases cannot leak state.
  */
 class GuideProgressStoreContract(private val newStore: () -> GuideProgressStore) {

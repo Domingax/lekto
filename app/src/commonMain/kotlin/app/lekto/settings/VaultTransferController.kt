@@ -35,7 +35,7 @@ data class VaultUiState(
  * The [scope] carries the file actions, because choosing a file opens a platform
  * dialog that must run on the UI thread; the [dispatcher] carries the vault's
  * bytes, which may be large, off that thread. Both are injected because a
- * hard-coded one cannot be driven by virtual time (docs/testing.md,
+ * hard-coded one cannot be driven by virtual time (docs/development.md,
  * "Deterministic seams").
  */
 class VaultTransferController(
