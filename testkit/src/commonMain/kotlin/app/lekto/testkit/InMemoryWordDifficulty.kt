@@ -10,7 +10,7 @@ import app.lekto.core.text.baseLanguage
  * An in-memory [WordDifficulty] for tests: the table's
  * behaviour without a SQLite file, so the default-mastery composition is proved
  * in `core/commonTest`, while the real reader is proved against a built artifact
- * in `jvmTest` (docs/testing.md, "Test levels").
+ * in `jvmTest` (docs/development.md, "Test levels").
  *
  * A key the map does not name has no band, so it reads as unknown exactly as a
  * word absent from the production table does (ADR-0029).

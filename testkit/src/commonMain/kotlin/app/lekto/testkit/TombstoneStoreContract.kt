@@ -6,7 +6,7 @@ import app.lekto.core.sync.TombstoneStore
  * The specification of the [TombstoneStore] seam, as executable cases (ticket
  * #26; ADR-0015). It is framework-free, so the in-memory store runs it in
  * `core/commonTest` and the JSON store runs the same cases over an in-memory
- * filesystem — the same behaviours, so the two cannot drift (docs/testing.md,
+ * filesystem — the same behaviours, so the two cannot drift (docs/development.md,
  * "Test levels").
  *
  * Each case builds a fresh store from [newStore], so cases cannot leak state.

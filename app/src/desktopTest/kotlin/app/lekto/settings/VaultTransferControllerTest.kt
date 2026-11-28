@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
  * transfer off the UI thread, treats a cancelled file dialog as a no-op, and
  * turns a bad file into an honest message rather than a crash. The dispatcher is
  * the test dispatcher, so the asynchronous work runs on virtual time
- * (docs/testing.md, "Deterministic seams").
+ * (docs/development.md, "Deterministic seams").
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class VaultTransferControllerTest {

@@ -8,7 +8,7 @@ import kotlin.random.Random
 import kotlin.test.fail
 
 /**
- * The extraction golden the TXT parser's level demands (docs/testing.md#test-levels):
+ * The extraction golden the TXT parser's level demands (docs/development.md#test-levels):
  * the structure inferred from a generated corpus and from one awkward real book is
  * pinned in `resources/golden/`, so a change that silently drops a chapter, splits
  * a heading or accepts a stray line fails here until the golden is deliberately

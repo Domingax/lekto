@@ -296,7 +296,7 @@ data class LlmServices(
  * Parsing, opening and downloading are blocking, so they run on
  * [AppEnvironment.dispatcher] rather than the composition thread; it is injected
  * because a hard-coded dispatcher cannot be driven by virtual time
- * (docs/testing.md, "Deterministic seams").
+ * (docs/development.md, "Deterministic seams").
  *
  * [windowInsets] is the space the window's system UI occupies — the status and
  * navigation bars and any display cutout on Android — and it is a parameter
@@ -1266,7 +1266,7 @@ private fun derivedTranslations(
         // Each Reading language's pack is resolved here, on the composition thread
         // where the reader resolves its own, so the services' per-pair installer
         // cache is only ever written from one thread; only the blocking query moves
-        // off it (docs/testing.md, "Deterministic seams").
+        // off it (docs/development.md, "Deterministic seams").
         val dictionary = environment.dictionary
         val lookups = all.map { entry -> entry.key.language }.distinct()
             .associateWith { reading -> dictionary?.lookup(reading, translationLanguage) }

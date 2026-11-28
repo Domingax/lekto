@@ -8,7 +8,7 @@ import io.kotest.core.spec.style.FunSpec
  * The shared [DictionaryPackContract] run against the in-memory pack: the seam's
  * specification, proved without a SQLite file in the fast lane. The real reader
  * runs the same cases against a built pack in `jvmTest` and `androidHostTest`
- * (issue #18; docs/testing.md, "Test levels").
+ * (issue #18; docs/development.md, "Test levels").
  */
 class DictionaryPackContractTest :
     FunSpec({

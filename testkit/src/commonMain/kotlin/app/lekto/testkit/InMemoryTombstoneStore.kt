@@ -5,7 +5,7 @@ import app.lekto.core.vault.Tombstone
 
 /**
  * The in-memory [TombstoneStore]: the fake the engine's deletion tests run
- * against, so a deletion can be propagated without a disk (docs/testing.md,
+ * against, so a deletion can be propagated without a disk (docs/development.md,
  * "Test levels"). The real [app.lekto.core.sync.JsonTombstoneStore] runs the
  * same contract in `core/commonTest`, so the two cannot drift.
  */

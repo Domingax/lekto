@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The guide's npm dependency-licence gate (ADR-0011, ADR-0024).
+// The guide's npm dependency-licence gate (ADR-0011, ADR-0051).
 //
 // `./gradlew checkDependencyLicences` reads only the Gradle dependency graph, so
 // it cannot see the Node toolchain VitePress brings. This script closes that gap:

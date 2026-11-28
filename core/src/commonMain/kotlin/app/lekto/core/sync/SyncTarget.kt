@@ -100,7 +100,7 @@ sealed interface WriteOutcome {
  * Every method is `suspend` and switches no dispatcher of its own, so a driver
  * and the engine built on it run on the caller's context. The engine therefore
  * runs under `runTest`'s virtual time rather than a hard-coded background
- * dispatcher (docs/testing.md, "Deterministic seams").
+ * dispatcher (docs/development.md, "Deterministic seams").
  */
 interface SyncTarget {
 

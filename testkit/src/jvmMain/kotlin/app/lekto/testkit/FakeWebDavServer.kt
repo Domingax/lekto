@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Docker.
  *
  * It lives in `testkit` because a test source set may hold only `*Test.kt` files
- * (docs/testing.md#naming-and-placement). The containerised `mod_dav` run is the
+ * (docs/development.md#naming-and-placement). The containerised `mod_dav` run is the
  * real integration lane (ticket #27); this is the fast twin.
  */
 class FakeWebDavServer(username: String = "lekto", password: String = "lekto") : AutoCloseable {

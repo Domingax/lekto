@@ -6,7 +6,7 @@
 # request for the same commit, so an unfiltered `push` would run every lane twice
 # — and would also fire on a release tag, which `release.yml` already covers. The
 # nightly emulator lane lives in nightly.yml and never touches the critical path.
-# See docs/build.md#ci-lanes.
+# See docs/development.md#ci-lanes.
 name: ci
 
 on:

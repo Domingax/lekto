@@ -5,7 +5,7 @@
 # them. The Android APK is built once, on Linux, and signed with the project key.
 # A tag is what publishes; `workflow_dispatch` builds the artefacts without
 # publishing, so a packaging change can be exercised without cutting a release.
-# See docs/build.md#desktop and docs/build.md#android.
+# See docs/platforms.md#desktop and docs/platforms.md#android.
 name: release
 
 on:

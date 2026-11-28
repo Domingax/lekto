@@ -9,7 +9,7 @@ it does in the DOM. The value of a spike is the written outcome as much as the
 code, so this report records what worked, what is missing, and what
 productionising it will cost.
 **Method:** Build the smallest pipeline that proves the claim, behind the seams
-`core` already owns, and pin it with tests (`docs/testing.md`). The parser and
+`core` already owns, and pin it with tests (`docs/development.md`). The parser and
 segmenter are real code on the fast JVM loop, not sketches.
 
 > **Headline:** The pipeline works. A genuinely awkward EPUB — stored `mimetype`,

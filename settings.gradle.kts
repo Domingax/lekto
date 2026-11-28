@@ -37,7 +37,7 @@ plugins {
 // --- Android target detection -------------------------------------------------
 // The fast JVM loop must build with nothing installed beyond the pinned JDK.
 // The Android target only activates when an Android SDK is discoverable, or when
-// it is forced explicitly with -Plekto.android=true|false. See docs/build.md.
+// it is forced explicitly with -Plekto.android=true|false. See docs/development.md.
 val androidOverride: Boolean? =
     providers.gradleProperty("lekto.android").orNull?.toBooleanStrictOrNull()
 

@@ -6,7 +6,7 @@
 # bounded function size, no dead code and no orphaned TODO. Detekt's own config
 # validation stays on; a finding fails the build via the task's `failOnSeverity`
 # and `ignoreFailures`, set in the root `build.gradle.kts`. Formatting is
-# ktlint's job, not detekt's. See docs/build.md.
+# ktlint's job, not detekt's. See docs/development.md.
 complexity:
   # An agent's first draft is a long, deeply nested function; bound both.
   CyclomaticComplexMethod:

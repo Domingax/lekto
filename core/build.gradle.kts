@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The domain: vault, records, merge, tokenisation, word identity, sync engine,
 // parsers and provider adapters. Pure Kotlin in commonMain, so it runs on the
-// JVM in seconds with no emulator and no Docker (see docs/build.md).
+// JVM in seconds with no emulator and no Docker (see docs/development.md).
 //
 // The platform-backed implementation (the EPUB parser, the ICU segmenter, the
 // directory-backed vault) lives in `jvmSharedMain`, shared by the JVM target and
@@ -25,9 +25,9 @@ plugins {
 
 // The Android target is only applied when an Android SDK is discoverable (or
 // forced with -Plekto.android=true|false); see settings.gradle.kts and
-// docs/build.md. The KMP Android library plugin gives the module the
+// docs/development.md. The KMP Android library plugin gives the module the
 // `androidHostTest` source set AGP's built-in KMP support does not create until
-// `withHostTest` is called (docs/testing.md#android-host-lane).
+// `withHostTest` is called (docs/development.md#android-host-lane).
 val androidEnabled: Boolean =
     gradle.extensions.extraProperties.get("lekto.androidEnabled") as Boolean
 
@@ -53,7 +53,7 @@ kotlin {
             compileSdk = libs.versions.android.compileSdk.get().toInt()
             minSdk = libs.versions.android.minSdk.get().toInt()
             // Enables the `androidHostTest` source set and runs it on the host
-            // JVM through Robolectric (docs/testing.md#android-host-lane).
+            // JVM through Robolectric (docs/development.md#android-host-lane).
             withHostTest {
                 isIncludeAndroidResources = true
             }

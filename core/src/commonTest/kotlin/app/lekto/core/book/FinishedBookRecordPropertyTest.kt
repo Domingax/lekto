@@ -13,7 +13,7 @@ import kotlin.time.Instant
 
 /**
  * The finished-declaration record's serialise/parse invariant (issue #200;
- * ADR-0038; docs/testing.md, "Test levels": a serialise/parse domain invariant is
+ * ADR-0038; docs/development.md, "Test levels": a serialise/parse domain invariant is
  * a property over generated data). A declaration survives encode → decode
  * whatever the book and instant, and its identity stays derived from the book so
  * every device merges the same record instead of duplicating it.

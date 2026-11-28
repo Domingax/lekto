@@ -8,7 +8,7 @@ import app.lekto.core.sync.SyncSettingsStore
  * #28). Framework-free like [LlmSettingsStoreContract], so the in-memory fake
  * runs it in `core/commonTest` and the JSON document store runs the same cases
  * over an in-memory filesystem there and over a real directory in `core/jvmTest`
- * — the two implementations cannot silently differ (docs/testing.md, "Test
+ * — the two implementations cannot silently differ (docs/development.md, "Test
  * levels"). Each case builds a fresh store from [newStore], so cases cannot leak
  * state.
  */

@@ -31,7 +31,7 @@ The merge reads no clock and writes nothing, so the properties the product needs
 fall out of the comparison being a total order over versions with distinct
 device ids: merging is idempotent, commutative when the device ids differ, and a
 fold in any order converges. Keeping it pure is what makes those properties
-testable as properties (ticket #14; `docs/testing.md`), and it keeps the engine
+testable as properties (ticket #14; `docs/development.md`), and it keeps the engine
 that moves bytes — `SyncTarget`, conditional writes, cursors — a separate concern
 behind its own seam. When the same device wrote both versions (equal `updatedAt`
 and equal `deviceId`), the comparison is not a strict order — the two are

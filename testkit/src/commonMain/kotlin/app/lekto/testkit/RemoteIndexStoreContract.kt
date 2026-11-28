@@ -11,7 +11,7 @@ import kotlin.time.Instant
  * (ADR-0027). It is framework-free, so the in-memory fake runs it in
  * `core/commonTest` and the JSON document store runs the same cases over an
  * in-memory filesystem — the same behaviours, so the two cannot drift
- * (docs/testing.md, "Test levels").
+ * (docs/development.md, "Test levels").
  *
  * Each case builds a fresh store from [newStore], so cases cannot leak state.
  */

@@ -1,6 +1,6 @@
 [versions]
 # Toolchain. These are pinned deliberately: every agent and every machine must
-# build against exactly these versions. See docs/build.md before changing them.
+# build against exactly these versions. See docs/development.md before changing them.
 agp = "8.13.2"
 kotlin = "2.4.20"
 gradle = "8.14.4"
@@ -10,7 +10,7 @@ compose-material3 = "1.11.0-alpha07"
 
 # Android platform levels. The pinned SDK in CI provides platform 36.
 android-compileSdk = "36"
-# 27 (Android 8.1) — the floor and its reasons live in docs/build.md (issue #125).
+# 27 (Android 8.1) — the floor and its reasons live in docs/development.md (issue #125).
 android-minSdk = "27"
 android-targetSdk = "36"
 
@@ -18,7 +18,7 @@ android-targetSdk = "36"
 androidx-activity = "1.12.4"
 
 # Test harness (ticket #5). Every entry is test-scope and AGPL-compatible
-# (Apache-2.0); see docs/testing.md and docs/research/testing-harness.md.
+# (Apache-2.0); see docs/development.md and docs/research/testing-harness.md.
 kotest = "6.2.5"
 turbine = "1.2.1"
 kotlinx-coroutines = "1.11.0"
@@ -26,7 +26,7 @@ kotlinx-coroutines = "1.11.0"
 # Android host tests (ticket #49). Robolectric (MIT) runs Android platform code on
 # a simulated Android runtime on the JVM, with no emulator. It is test-scope only
 # and never ships; 4.16.1 is the release whose built-with Gradle/AGP line matches
-# this repository's, and it covers API 36. See docs/testing.md#android-host-lane.
+# this repository's, and it covers API 36. See docs/development.md#android-host-lane.
 robolectric = "4.16.1"
 # Robolectric's runner is JUnit 4; declared explicitly so the host test compiles
 # against it rather than borrowing a transitive. JUnit 4 is EPL-1.0, test-only
@@ -54,7 +54,7 @@ testcontainers = "2.0.5"
 # Quality gates (ticket #6). ktlint formats and lints (MIT); detekt is the
 # static analyser (Apache-2.0). Both are AGPL-compatible (ADR-0011). detekt is
 # on the 2.0 line because that is the one built against Kotlin 2.4; see
-# docs/build.md.
+# docs/development.md.
 ktlint-gradle = "14.2.0"
 ktlint = "1.8.0"
 detekt = "2.0.0-alpha.6"
@@ -77,14 +77,14 @@ kotlinx-serialization = "1.9.0"
 # (ADR-0021). Desktop-only: Android backs the seam with its own Keystore code, so
 # KSafe never reaches the Android classpath. Its transitive dependencies
 # (kotlinx.serialization, kotlinx-coroutines, androidx.datastore, okio) are all
-# permissive; the licence gate is the authority. See docs/testing.md.
+# permissive; the licence gate is the authority. See docs/development.md.
 ksafe = "3.3.0"
 
 # Measurement (ticket #8). Kover (Apache-2.0) is JetBrains' Kotlin coverage
 # engine and the KMP-native alternative to JaCoCo; it writes a
 # JaCoCo-compatible XML report. SonarCloud is a hosted service, not a build
 # dependency, so it does not appear here. See ADR-0012 and
-# docs/build.md#coverage-and-the-quality-gate.
+# docs/development.md#coverage-and-the-quality-gate.
 kover = "0.9.9"
 
 # Dictionary-pack pipeline (ticket #17). xerial sqlite-jdbc (Apache-2.0,

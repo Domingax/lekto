@@ -20,7 +20,7 @@ import kotlin.time.Instant
 
 /**
  * The vocabulary record's serialisation round-trip and its deterministic id
- * (issue #22; docs/testing.md, "Test levels"): an entry survives encode → decode
+ * (issue #22; docs/development.md, "Test levels"): an entry survives encode → decode
  * whatever its text, and the same word key always yields the same,
  * filename-safe id so two devices' records for one word merge rather than
  * duplicate (ADR-0004, ADR-0006).

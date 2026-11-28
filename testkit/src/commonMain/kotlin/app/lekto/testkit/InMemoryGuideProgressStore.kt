@@ -6,7 +6,7 @@ import app.lekto.core.guide.GuideProgressStore
 /**
  * An in-memory [GuideProgressStore] for tests (ADR-0023's pattern; issue #277):
  * the app's composition and UI are proved without a file, while the JSON-backed
- * implementation is proved in `core/commonTest` (docs/testing.md, "Test levels").
+ * implementation is proved in `core/commonTest` (docs/development.md, "Test levels").
  * A store starts at [GuideProgress.NOT_SEEN] — exactly what a fresh install
  * holds — so a test that wants an existing reader passes [GuideProgress.SEEN].
  */

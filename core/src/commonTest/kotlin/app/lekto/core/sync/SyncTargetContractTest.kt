@@ -9,7 +9,7 @@ import io.kotest.core.spec.style.FunSpec
  * capability combination (ticket #26; ADR-0009). Both gated branches — a change
  * cursor and a compare-and-swap — are exercised, and the no-capability target
  * proves the degraded path, so the contract documents what each capability adds
- * (docs/testing.md, "Test levels").
+ * (docs/development.md, "Test levels").
  */
 class SyncTargetContractTest :
     FunSpec({

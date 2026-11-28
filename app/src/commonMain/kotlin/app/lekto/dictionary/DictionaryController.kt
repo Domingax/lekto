@@ -32,7 +32,7 @@ data class DictionaryUiState(
  * each pair the **Language manifest** publishes, runs the on-demand download off
  * the UI thread, and answers a word query on a background dispatcher. The
  * [dispatcher] is injected because a hard-coded one cannot be driven by virtual
- * time (docs/testing.md, "Deterministic seams").
+ * time (docs/development.md, "Deterministic seams").
  *
  * States are keyed by the artifact name the manifest published, which names the
  * pair uniquely; the query itself resolves its pack by the book's language.
@@ -79,7 +79,7 @@ class DictionaryController(
     fun install(readingLanguage: String, translationLanguage: String, artifact: OfferedArtifact) {
         if (stateOf(artifact.name).installing) return
         // Resolve the installer on this thread, so its per-pair cache is only
-        // ever written from the surface's own thread (docs/testing.md, "Deterministic seams").
+        // ever written from the surface's own thread (docs/development.md, "Deterministic seams").
         val installer = services.installer(readingLanguage, translationLanguage)
         update(artifact.name) { current -> current.copy(installing = true, error = null) }
         downloads[artifact.name] = scope.launch {

@@ -6,7 +6,7 @@ import io.kotest.property.PropTestConfig
 import io.kotest.property.forAll
 
 /**
- * The tokenisation invariant as a property (ticket #10; docs/testing.md, "Test
+ * The tokenisation invariant as a property (ticket #10; docs/development.md, "Test
  * levels"): whatever the text, a [WordSpan] is a non-blank, in-bounds slice
  * that matches the text it offsets, and the words stay in reading order and do
  * not overlap. Example tests pin the interesting cases; this pins the contract

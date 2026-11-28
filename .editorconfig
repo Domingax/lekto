@@ -1,6 +1,6 @@
 # The editor contract for every file in the repository. ktlint reads this as its
 # source of truth for Kotlin style, and an editor that understands EditorConfig
-# matches it without per-editor configuration (ticket #6). See docs/build.md.
+# matches it without per-editor configuration (ticket #6). See docs/development.md.
 root = true
 
 [*]

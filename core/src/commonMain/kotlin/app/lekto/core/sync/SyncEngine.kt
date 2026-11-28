@@ -79,7 +79,7 @@ data class SyncReport(
  *
  * The engine reads no wall clock and pins no dispatcher: [sync] takes its time
  * from the injected [clock] and runs on the caller's context, so the whole engine
- * is exercised under `runTest`'s virtual time (docs/testing.md, "Deterministic
+ * is exercised under `runTest`'s virtual time (docs/development.md, "Deterministic
  * seams").
  */
 @Suppress("TooManyFunctions") // Each method is one step of the sync.

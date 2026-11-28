@@ -9,7 +9,7 @@ import io.kotest.core.spec.style.FunSpec
  * The shared [TombstoneStoreContract] run against both implementations (ticket
  * #26; ADR-0015): the in-memory fake and the JSON store over an in-memory
  * filesystem, so the engine's deletion memory cannot drift between them
- * (docs/testing.md, "Test levels").
+ * (docs/development.md, "Test levels").
  */
 class TombstoneStoreContractTest :
     FunSpec({

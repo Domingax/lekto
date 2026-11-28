@@ -6,7 +6,7 @@ import app.lekto.core.reading.ReadingPreferencesStore
 /**
  * An in-memory [ReadingPreferencesStore] for tests (ADR-0035; ADR-0023's
  * pattern): the app's composition and UI are proved without a file, while the
- * JSON-backed implementation is proved in `core/commonTest` (docs/testing.md,
+ * JSON-backed implementation is proved in `core/commonTest` (docs/development.md,
  * "Test levels"). A store starts at [ReadingPreferences.DEFAULT] — exactly what a
  * fresh install holds.
  */

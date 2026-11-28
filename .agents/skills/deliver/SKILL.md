@@ -17,7 +17,7 @@ Use `/tdd` where possible, at pre-agreed seams. *Done when each seam has a test
 that goes red for the right reason, then green.*
 
 Prove the tests at the repo's levels: classify every change surface against
-[the test levels](docs/testing.md#test-levels) — domain, seam, driver, parser, UI,
+[the test levels](../../../docs/development.md#test-levels) — domain, seam, driver, parser, UI,
 glue, bug — and for every level that table demands, show a red → green. *Done when
 every surface is classified and every demanded level has its red → green; "some
 tests were added" is not done.*

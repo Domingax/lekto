@@ -1,6 +1,6 @@
 # The lanes that are too slow for every change, run on a schedule so they never
 # sit on the critical path (ticket #7). Nothing here gates a merge; a failure is
-# a signal to fix before the next release. See docs/build.md#ci-lanes.
+# a signal to fix before the next release. See docs/development.md#ci-lanes.
 name: nightly
 
 on:

@@ -1,7 +1,7 @@
 <!--
 Keep the change small and single-purpose. Use the vocabulary in CONTEXT.md and
-link the issue this closes. `./gradlew check` must be green. See AGENTS.md,
-"Pull requests".
+link the issue this closes. `./gradlew check` must be green. See
+docs/contributing.md.
 -->
 
 ## Summary

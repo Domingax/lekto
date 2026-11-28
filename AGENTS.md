@@ -2,180 +2,32 @@
 
 Lekto is an open-source, local-first immersive reading app for language learning:
 import a book, read it with words coloured by mastery, tap a word to look it up,
-save vocabulary. Android is the first-class client and a desktop client is second.
-There is no backend, and all user data lives on the device in a **Vault**
-(ADR-0002).
+save vocabulary. Android is the first-class client and desktop is second; there
+is no backend and all user data lives on the device in a **Vault** (ADR-0002).
 
-This file is the entry point for any agent arriving cold. It says where things
-live, the one command that builds and tests, and the conventions a change must
-satisfy. Read the sources below before changing behaviour.
+The build is Gradle: `./gradlew`.
 
-## Required reading
+## Start here
 
-- **`CONTEXT.md`** — the domain glossary. Use its terms exactly; do not invent
-  synonyms. `Vault`, `Book`, `Word token`, `Mastery level`, `Vocabulary entry`,
-  `Lemma`, `Derived asset` mean what it says they mean.
-- **`docs/adr/`** — the architecture decisions. Each is authoritative: where code
-  or a plan disagrees with an ADR, the ADR wins and the other one is wrong.
-- **`docs/build.md`** — the pinned toolchain, the platform commands, and the
-  Android-SDK detection rules.
-
-## Where each module lives
-
-`core/` (the domain), `testkit/` (contract suites and fakes, shared by tests),
-`integrations/webdav/` (the first sync driver), `app/` (the Compose Multiplatform
-application, Android + desktop), `tools/dictionaries/` (the offline dictionary-pack
-pipeline) and `architecture/` (the architecture tests, test-only). Each module's
-responsibility is tabled in
-[`docs/build.md`](docs/build.md#modules); what follows is the boundary between them,
-which that table does not state.
-
-## Build and test — one command
-
-```sh
-./gradlew check
-```
-
-It builds every module, runs the JVM test suites — the domain suite in `core`
-and the UI-semantics suite in `app` — and enforces formatting (ktlint) and
-static analysis (detekt), so a code-style or rule violation fails the build.
-The dependency-licence gate (ADR-0011) is a sibling task, `./gradlew
-checkDependencyLicences`, because it resolves metadata the configuration cache
-cannot store; CI runs it in its own lane. Coverage is its own task,
-`./gradlew koverXmlReport` (Kover), and SonarCloud gates the change's new code in
-the `sonar` CI lane (ADR-0012). See [`docs/testing.md`](docs/testing.md)
-for the harness, the deterministic seams and the test levels, and
-[`docs/build.md`](docs/build.md#quality-gates) for the gates themselves, including
-the [CI lanes](docs/build.md#ci-lanes). A clean checkout needs only a JVM to run the wrapper
-— Gradle, the pinned JDK and all dependencies are provisioned by the build. The
-Android SDK is optional; without one the project builds as a desktop/JVM
-project. See `docs/build.md` for the pinned versions, the Android/desktop
-commands, and the dictionary pipeline.
-
-`./gradlew check` also installs the git hooks that enforce the commit convention
-below, so a fresh clone is guarded from its first build.
-
-## Module boundaries you must not cross
-
-Dependencies point inward. Reversing an arrow is an architectural change and needs
-an ADR.
-
-```
-app ──────────────► core
-integrations/* ───► core
-testkit ──────────► core        (shared contract surface)
-architecture                    (test-only; reads the tree, depends on nothing)
-tools/dictionaries              (standalone)
-core ─────────────► nothing     (no app module, no Android)
-```
-
-- `core` depends on no other Lekto module. Its model and seams are pure Kotlin
-  in `commonMain`; the platform-backed implementations behind those seams (the
-  EPUB parser, the ICU segmenter) live in a JVM source set and still depend on
-  no other Lekto module (ADR-0007, "Update — EPUB→tokens spike").
-- `integrations/*` depend on `core` through its published seams; `core` never
-  names an integration.
-- Everything may depend on `core`; nothing depends on `app`.
-- `testkit` exists because a KMP `commonTest` set cannot be shared by any other
-  means; it is test-scoped and must never reach production code.
-- `architecture` is the test-only module that turns these boundaries into tests
-  (ticket #9); it reads the working tree and depends on no module, so it sits
-  outside the graph it polices.
-- `tools/dictionaries` is standalone and never blocks application CI: the
-  reusable dictionary-data workflow (called by the data repository) builds and
-  publishes the pack, while its fast unit tests run in `check` and the
-  architecture suite pins that workflow's layers.
-- `tools/icons` is not a module: it is the build-time scripts that fetch the
-  pinned Lucide SVGs and regenerate the committed icon set, and that render the
-  brand mark into the desktop installers' PNG, ICO and ICNS
-  ([`docs/build.md#icon-pipeline`](docs/build.md#icon-pipeline)). Nothing it
-  produces is generated at build time.
-- `tools/packaging` is not a module either: `appimage.sh` turns the jpackage
-  application image into the portable Linux `.AppImage` the release lane ships
-  ([`docs/build.md#desktop`](docs/build.md#desktop)).
-
-`guide/` is not a module: it is the end-user guide's content root, a VitePress
-site built by its own npm toolchain and published to GitHub Pages (ADR-0024). It
-sits outside `docs/` on purpose, so the internal material is never published; it
-is a documented surface, so a feature change updates its page in the same pull
-request (see `guide/AGENTS.md` for the feature→page map). Its commands are in
-[`docs/build.md#user-guide`](docs/build.md#user-guide).
-
-Architecture tests enforce these rules, and the naming and placement conventions
-in [`docs/testing.md#naming-and-placement`](docs/testing.md#naming-and-placement).
-
-## Contributing
-
-### Commits — Conventional Commits
-
-Every commit subject is `<type>(<scope>): <description>` — imperative, lower-case,
-no trailing period:
-
-```
-feat(reader): colour word tokens by mastery
-fix(core): keep the tombstone on delete
-docs(adr): record the sync seam
-```
-
-Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`,
-`ci`, `chore`, `revert`. The scope is optional and names the module or area (`core`,
-`testkit`, `webdav`, `app`, `dictionaries`, `architecture`, `guide`, `build`, `ci`,
-`docs`). A breaking change
-takes a `!` before the colon and a `BREAKING CHANGE:` footer.
-
-**Enforced** by `.githooks/commit-msg`, which checks the shape above: type, optional
-lower-case scope, colon, non-empty description. The imperative, lower-case and
-no-trailing-period rules are review points, not machine checks — a human or the PR
-review holds those. `./gradlew check` installs the hook, as does, by hand:
-
-```sh
-git config --local core.hooksPath .githooks
-```
-
-### Pull requests
-
-Keep the change small and single-purpose, link its issue with `Closes #<n>`, and
-get `./gradlew check` green first. The body follows
-`.github/pull_request_template.md` and has three parts:
-
-- **Summary** — the smallest view that makes the change clear: a diff sketch, a
-  call tree, or a decision list.
-- **Evidence** — the red → green: the failing test/output before, the passing one
-  after.
-- **Merge Danger** — is this a one-way or a two-way door, and how wide is the
-  blast radius?
-
-### When an ADR is required
-
-Write an ADR in `docs/adr/NNNN-slug.md` when the decision is hard to reverse,
-surprising without context, and the result of a real trade-off. In this repo that
-covers a module boundary, the on-disk record format, the sync contract, the reader
-substrate, the licence, or any change that reverses an existing ADR. Number ADRs
-in sequence; supersede a merged ADR rather than editing it.
-
-### When `CONTEXT.md` must be updated
-
-Update `CONTEXT.md` in the same change that resolves or renames a domain term. The
-glossary is the single source of truth for domain vocabulary: if code uses a term
-the glossary does not define, one of the two is wrong. `CONTEXT.md` holds
-definitions only, never implementation detail.
+| Document | Answers | Normative |
+| -------- | ------- | --------- |
+| [`README.md`](README.md) | What is the project, and how do I build and run it? | Yes, for the landing page |
+| [`CONTEXT.md`](CONTEXT.md) | What does this domain term mean? | Yes, for vocabulary |
+| [`docs/adr/`](docs/adr/) | Why was this decision made, and what did we reject? | Yes, for decisions |
+| [`docs/research/`](docs/research/) | What did we investigate? | No |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Which modules exist and which dependencies are allowed? | Yes |
+| [`docs/development.md`](docs/development.md) | How is the project built, tested and gated? | Yes |
+| [`docs/platforms.md`](docs/platforms.md) | How are the Android and desktop clients built and packaged? | Yes |
+| [`docs/dictionary-pipeline.md`](docs/dictionary-pipeline.md) | How are dictionary packs and the sample catalogue produced? | Yes |
+| [`docs/contributing.md`](docs/contributing.md) | How do commits, pull requests, ADRs and `CONTEXT.md` work? | Yes |
+| [`docs/dependencies.md`](docs/dependencies.md) | Which licences are allowed, and how are alerts triaged? | Yes |
+| [`docs/design.md`](docs/design.md) | What does the product look and feel like? | Yes |
+| [`guide/AGENTS.md`](guide/AGENTS.md) | How do agents update the end-user guide? | Yes, for the guide |
 
 ## Agent skills
 
-### Issue tracker
-
-Issues and specs live in this repo's GitHub Issues. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Five canonical roles, default strings. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
-## Licence
-
-Source is **AGPL-3.0** (ADR-0011). Every dependency, including test-scope, must be
-AGPL-compatible. The dictionary pack is a separate CC BY-SA 4.0 artifact and is
-never committed here; the shipped **Sample catalogue** carries only a small
-attributed excerpt of it, not the pack (ADR-0049).
+- **Issue tracker** — issues and specs live in GitHub Issues:
+  `docs/agents/issue-tracker.md`.
+- **Triage labels** — five canonical roles: `docs/agents/triage-labels.md`.
+- **Domain docs** — single-context, one `CONTEXT.md` and `docs/adr/`:
+  `docs/agents/domain.md`.

@@ -50,7 +50,7 @@ import org.robolectric.annotation.Config
  * the app from anywhere, from Settings, from the **Languages** surface, from the
  * reader — so it is proved here, on the platform runtime, through the activity's
  * `OnBackPressedDispatcher`: a host test is the fast lane that catches it
- * (docs/testing.md, "Android host lane").
+ * (docs/development.md, "Android host lane").
  *
  * The semantics of the stack itself are `BackStackTest`'s; this file proves the
  * seam the stack is wired to.

@@ -7,7 +7,7 @@ import app.lekto.core.text.baseLanguage
 /**
  * An in-memory [LanguageSettingsStore] for tests: the app's composition and UI are
  * proved without a file, while the JSON-backed implementation is proved in
- * `core/commonTest` (docs/testing.md, "Test levels").
+ * `core/commonTest` (docs/development.md, "Test levels").
  */
 class InMemoryLanguageSettingsStore(settings: LanguageSettings = LanguageSettings.NONE) : LanguageSettingsStore {
 

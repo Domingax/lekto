@@ -171,7 +171,7 @@ The scale actually used, and nothing else:
   as a scribble; `bookmark` is. An icon that only works large belongs in a sheet, not in the bar.
 - `arrow-left` must mirror in right-to-left layouts; the generator must set `autoMirror` and the
   regeneration script must keep it.
-- **The launcher mark is the letter** (issue #177): the `L` of the reading serif, and it is the
+- **The launcher mark is the letter**: the `L` of the reading serif, and it is the
   whole mark. There is no page beside it and no tile behind it — the ground is the theme's paper —
   so the icon, the launch screen and the guide's tab all show the same drawing.
 - **The letter carries the four Mastery level colours that have one**, and the letter's ink for
@@ -221,9 +221,9 @@ Three sections, and no fourth:
 - **A bar's controls reach the window's edge.** The reader's top band and every sub-screen header
   inset what sits at the edge by `BarInset` (4 dp), Material's app-bar inset, while the screen's
   text and rows keep `ScreenEdge` (24 dp). The reader's bottom band keeps the content margin, so
-  its chevrons stay where they were (issue #245).
+  its chevrons stay where they were.
 - **Languages and Appearance are entries inside Settings**, not sections (ADR-0034, ADR-0036).
-- **The back stack is real**, and Android's back button walks it (issue #185). Opening a section or
+- **The back stack is real**, and Android's back button walks it. Opening a section or
   a screen pushes it, and Back drops it: back from Settings returns to the section it came from, and
   a bar item already behind the current place unwinds to it rather than stacking a second copy.
   Tapping the section the reader is already in — marked current while one of its own screens is open
@@ -375,14 +375,14 @@ chapter is current.
 
 Both bands inset their controls by 4 dp — Material's app-bar inset, not the screen's 24 dp
 edge — so the back arrow and the **Aa** control sit near the window's edge instead of floating
-inward (issue #245). The bottom band keeps the content margin, so the two chevrons stay where they
+inward. The bottom band keeps the content margin, so the two chevrons stay where they
 were. Each control keeps its 48 × 48 dp target (§9).
 
 Tapping the position opens the chapter list, which is why the position is a control rather than a
 label. A book with one chapter has no list, so its position stays a label (ADR-0037).
 
 The `←` and `→` keys turn the page on a keyboard, through the same two calls the chevrons make.
-They stand down while a panel or the end state is open, so the keys stay theirs (issue #246).
+They stand down while a panel or the end state is open, so the keys stay theirs.
 
 The chapter list is a bottom sheet over the page on a phone, up to about 60 % of the height, and
 the reserved context column on desktop (§6). It keeps the book's hierarchy, highlights the current
@@ -453,7 +453,7 @@ suggestion rings no chip, so the numbers never need a legend and a suggestion ne
 refused write reads `Couldn't save` in the muted ink and the word stays unsaved — there is no toast and no
 undo; a wrong tap is corrected by tapping the right chip, and the line always states the current fact.
 
-A **phrase** is the word panel's sibling on the same shell (issue #211): the phrase in the serif with
+A **phrase** is the word panel's sibling on the same shell: the phrase in the serif with
 the close icon, then the answer in the body size. **With a provider**, the translation stands first
 and the disclosure beneath it — `What's sent?` — names the provider and says the selection and its
 sentence leave the device. **Without a provider**, the sheet says that a phrase needs an AI while a
@@ -681,14 +681,14 @@ the page behind it.
   `app/src/desktopMain/resources/app-icon/`. `AppIconTest`'s golden pins the geometry and
   `LauncherIconTest` the wiring.
 - The screens — one file per screen, as today, with each list's row beside it: the Library's in
-  `library/LibraryRow.kt` (issue #208) and the Vocabulary list's in `vocabulary/VocabularyRow.kt`
-  (issue #212), whose level sheet and desktop column are `vocabulary/VocabularyLevelSheet.kt`
-  (issue #178). A new screen follows §7's shape and §4's spacing.
+  `library/LibraryRow.kt` and the Vocabulary list's in `vocabulary/VocabularyRow.kt`, whose level
+  sheet and desktop column are `vocabulary/VocabularyLevelSheet.kt`. A new screen follows §7's
+  shape and §4's spacing.
 - The first-launch guide — `app/src/commonMain/kotlin/app/lekto/guide/`: `GuideScreen` draws
   the screens from the reader's own page and lookup sheet, `GuideController` owns the flow,
   `GuideSample` builds that page, its notes and the sheet's answer from the sample's own maps
   and glossary, `GuideDownloadController` the background download, and `GuideProgressController`
-  the device-local `guide.json` (§7.8; issue #277).
+  the device-local `guide.json` (§7.8).
 
 - The hand cursor — `app/src/commonMain/kotlin/app/lekto/ui/HandCursor.kt`: the one modifier
   (`Modifier.handCursor(enabled)`) every clickable surface applies, and the architecture rule that

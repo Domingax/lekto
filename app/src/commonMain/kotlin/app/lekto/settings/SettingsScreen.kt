@@ -73,7 +73,7 @@ internal const val SETTINGS_TITLE_TAG: String = "settings-title"
  *
  * [now] is the clock the **Vault and sync** row's "Synced 2 minutes ago" is read
  * against; it is a parameter because a hard-coded clock cannot be driven by a test
- * (docs/testing.md, "Deterministic seams").
+ * (docs/development.md, "Deterministic seams").
  */
 @Composable
 fun SettingsScreen(

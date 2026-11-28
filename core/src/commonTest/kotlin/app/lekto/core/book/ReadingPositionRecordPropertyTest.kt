@@ -13,7 +13,7 @@ import kotlin.time.Instant
 
 /**
  * The reading-position record's serialise/parse invariant (issue #16;
- * docs/testing.md, "Test levels": a serialise/parse domain invariant is a
+ * docs/development.md, "Test levels": a serialise/parse domain invariant is a
  * property over generated data). A position survives encode → decode whatever
  * the book id and offset, and a record's id stays derived from the book so a
  * reopened book looks its position up without scanning.

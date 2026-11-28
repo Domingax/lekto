@@ -1,9 +1,9 @@
 #!/bin/sh
 # Reject a commit whose subject is not a Conventional Commit.
 #
-# Git passes the path to the pending message as $1. This hook is installed by
-# `git config --local core.hooksPath .githooks`, which `./gradlew check` runs on
-# a fresh clone. See AGENTS.md, "Commits".
+# Git passes the path to the pending message as $1. Install it once per clone
+# with `./scripts/setup.sh`, which runs
+# `git config --local core.hooksPath .githooks`. See docs/contributing.md.
 
 message_file=${1:?commit-msg hook needs the message file as its first argument}
 
@@ -40,6 +40,6 @@ Expected:
     scope: optional, names the module or area, e.g. (core), (webdav), (reader)
     e.g.   feat(reader): colour word tokens by mastery
 
-See AGENTS.md, "Commits".
+See docs/contributing.md.
 EOF
 exit 1

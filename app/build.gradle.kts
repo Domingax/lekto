@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // Android and on desktop; only the entry points differ.
 //
 // The Android Gradle plugin is only applied when an Android SDK is available
-// (see settings.gradle.kts and docs/build.md). Without one the module still
+// (see settings.gradle.kts and docs/development.md). Without one the module still
 // builds and runs as a desktop application, which keeps the fast loop
 // JDK-only.
 plugins {
@@ -110,7 +110,7 @@ kotlin {
         // Compose Multiplatform common test API cannot run under Android's local
         // (host) test configuration; the Android-specific `androidUnitTest` lane
         // below runs the same screens under Robolectric, and instrumented coverage
-        // is a separate, slower nightly lane. See docs/testing.md and
+        // is a separate, slower nightly lane. See docs/development.md and
         // docs/research/testing-harness.md §6.
         getByName("desktopTest").dependencies {
             implementation(project(":testkit"))
@@ -119,10 +119,10 @@ kotlin {
             implementation(compose.desktop.currentOs)
             // kotlinx-coroutines-test supplies runTest and virtual time, so the
             // library controller's asynchronous import is driven deterministically
-            // (docs/testing.md, "Deterministic seams").
+            // (docs/development.md, "Deterministic seams").
             implementation(libs.kotlinx.coroutines.test)
             // UI screenshot goldens (ticket #7); recorded and verified by the
-            // Roborazzi desktop tasks. See docs/testing.md.
+            // Roborazzi desktop tasks. See docs/development.md.
             implementation(libs.roborazzi.core)
             implementation(libs.roborazzi.compose.desktop)
         }

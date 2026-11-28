@@ -92,7 +92,7 @@ data class ProviderUiState(
  *
  * The [dispatcher] is injected because the connection test blocks, and a
  * hard-coded one cannot be driven by virtual time; the [scope] carries that work
- * (docs/testing.md, "Deterministic seams").
+ * (docs/development.md, "Deterministic seams").
  */
 @Suppress("LongParameterList", "TooManyFunctions") // Each seam and each one-step action is its own public method.
 class ProviderController(

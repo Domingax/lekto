@@ -7,7 +7,7 @@ import app.lekto.core.text.baseLanguage
 /**
  * An in-memory [ReaderLevels] for tests: the app's composition and UI are proved
  * without a vault, while the vault-backed implementation is proved in
- * `core/commonTest` (docs/testing.md, "Test levels").
+ * `core/commonTest` (docs/development.md, "Test levels").
  */
 class InMemoryReaderLevels(levels: Map<String, CefrLevel> = emptyMap()) : ReaderLevels {
 
