@@ -29,9 +29,8 @@ Communication to and from subagents should be sparse. Communicate primarily thro
 4. Use a fresh **implementer subagent** for each ticket, each in its own worktree on its own branch. Each implementer subagent:
    - confirms its worktree is based on the integration branch before starting, and resets onto it if not;
    - calls the Skill tool with `tdd` and `clean-code` to build the ticket;
-   - follows `docs/development.md`: targeted tests while working, one full `check` on the final diff;
    - merges the integration branch tip into its own branch before reporting done
-5. Once an **implementer subagent** completes, merge its work to the integration branch with a **merger subagent**. The merger resolves conflicts and runs only the targeted suites for the touched modules; it does not re-run the full `check` on an unchanged tree. Push the integration branch and let the `fast` lane validate the result.
+5. Once an **implementer subagent** completes, merge its work to the integration branch with a **merger subagent**. The merger resolves conflicts and pushes the integration branch; the `fast` lane validates the result.
 6. If this changes the **frontier** of available tickets, kick off more **implementer subagents** to work on the new tickets. This allows for maximum concurrency.
 7. Once all tickets are complete, call the Skill tool with `code-review` and `sync-docs` and on the integration branch. Fix all issues raised by the code review in a single fresh **implementer subagent**.
 8. If a draft PR exists, mark it ready for review. Otherwise, resolve each ticket the way the issue tracker closes work, and report the integration branch. Then read the SonarQube report for the pull request — the detailed analysis, not just the check status — and fix or explicitly accept each finding.

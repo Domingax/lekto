@@ -27,7 +27,8 @@ the JDK; a clean checkout needs only a JVM. Change a version in the catalog.
 `check` builds every module, runs every JVM suite and enforces ktlint and detekt.
 The Android host lanes and `:app:lint` join when an Android SDK is present. Run
 `check` once on the final diff; use the targeted commands above while iterating,
-and rerun only the failing task after a failure.
+and rerun only the failing task after a failure. A merge or review of an unchanged
+tree does not rerun `check`; CI validates it.
 
 Two Gradle builds on one machine start two daemons, each with its own heap. Run
 one build at a time across worktrees and do not enable `--parallel`.
