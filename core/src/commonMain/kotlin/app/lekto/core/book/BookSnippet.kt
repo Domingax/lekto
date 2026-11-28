@@ -13,17 +13,23 @@ import app.lekto.core.text.TextBlock
  * rendered text's — blocks joined by [BLOCK_SEPARATOR], exactly as pagination
  * counts them — so the offset the reader saved and the block chosen here agree.
  *
- * Headings, list items and pictures are skipped: a heading alone is not a
- * reminder of where the reader was, and a bullet is not prose. A blank
- * paragraph is skipped too, so an empty line never becomes the snippet. An
- * offset past the last paragraph names nothing rather than the last one seen.
+ * A quote's paragraph and a term-and-definition pair are prose, so they are named
+ * like a paragraph (issue #265). Headings, list items, pictures, preformatted
+ * text and scene breaks are skipped: a heading alone is not a reminder of where
+ * the reader was, and a bullet is not prose. A blank paragraph is skipped too, so
+ * an empty line never becomes the snippet. An offset past the last paragraph
+ * names nothing rather than the last one seen.
  */
 fun List<TextBlock>.paragraphAt(offset: Int): TextBlock? {
     var start = 0
     for (block in this) {
         val end = start + block.text.length
-        if (block.kind == BlockKind.PARAGRAPH && block.text.isNotBlank() && end >= offset) return block
+        if (block.canNameResumeSnippet() && block.text.isNotBlank() && end >= offset) return block
         start = end + BLOCK_SEPARATOR.length
     }
     return null
 }
+
+/** Whether a block's words can stand as the **Resume snippet**. */
+private fun TextBlock.canNameResumeSnippet(): Boolean =
+    kind == BlockKind.PARAGRAPH || kind == BlockKind.QUOTE || kind == BlockKind.DEFINITION

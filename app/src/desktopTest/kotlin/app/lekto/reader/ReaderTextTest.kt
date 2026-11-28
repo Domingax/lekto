@@ -2,15 +2,19 @@ package app.lekto.reader
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.sp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.MasteryLookup
 import app.lekto.core.reading.ReadingPreferences
 import app.lekto.core.text.BlockKind
 import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.SCENE_BREAK_TEXT
 import app.lekto.core.text.StructuredText
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
@@ -21,6 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -29,7 +34,7 @@ import kotlin.test.assertTrue
  * property of the [androidx.compose.ui.text.AnnotatedString], and asserting it
  * here is exact and fast. The rendered screen has its own semantics test.
  */
-@Suppress("TooManyFunctions") // One layer, one test per property; splitting the class hides the layer's surface.
+@Suppress("TooManyFunctions", "LargeClass") // One layer, one test per property.
 class ReaderTextTest {
 
     private val renderer = ReaderRenderer(
@@ -49,6 +54,31 @@ class ReaderTextTest {
         title = "Chapter",
         language = "en",
         blocks = listOf(TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("the lantern glows")))),
+    )
+
+    /**
+     * A 20sp body, whose superscript/subscript ratio (0.75) and small ratio
+     * (0.85) land on whole points: 15sp and 17sp.
+     */
+    private val twentyPointStyles = ReaderStyles.of(ReadingPreferences(size = 20f), mastery = MasteryPalette.Light)
+
+    /** One paragraph carrying a superscript word, a subscript one and a small one. */
+    private val raisedAndLoweredChapter = ReaderText(
+        title = "Chapter",
+        language = "en",
+        blocks = listOf(
+            TextBlock(
+                BlockKind.PARAGRAPH,
+                listOf(
+                    TextRun("x "),
+                    TextRun("up", setOf(InlineStyle.SUPERSCRIPT)),
+                    TextRun(" "),
+                    TextRun("down", setOf(InlineStyle.SUBSCRIPT)),
+                    TextRun(" "),
+                    TextRun("small", setOf(InlineStyle.SMALL)),
+                ),
+            ),
+        ),
     )
 
     @Test
@@ -148,6 +178,54 @@ class ReaderTextTest {
     }
 
     @Test
+    fun superscriptSubscriptAndSmallRenderSmallerAndShifted() {
+        val tokens = buildReaderTokens(raisedAndLoweredChapter, renderer, twentyPointStyles)
+
+        assertEquals(BaselineShift.Superscript, styleOf(tokens, "up").baselineShift)
+        assertEquals(15.sp, styleOf(tokens, "up").fontSize)
+        assertEquals(BaselineShift.Subscript, styleOf(tokens, "down").baselineShift)
+        assertEquals(15.sp, styleOf(tokens, "down").fontSize)
+        assertEquals(17.sp, styleOf(tokens, "small").fontSize)
+        assertNull(styleOf(tokens, "small").baselineShift, "small print keeps the baseline")
+    }
+
+    @Test
+    fun aSmallSuperscriptTakesTheSuperscriptSize() {
+        val smallSuper = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.PARAGRAPH,
+                    listOf(TextRun("note "), TextRun("1", setOf(InlineStyle.SMALL, InlineStyle.SUPERSCRIPT))),
+                ),
+            ),
+        )
+
+        val tokens = buildReaderTokens(smallSuper, renderer, twentyPointStyles)
+
+        assertEquals(BaselineShift.Superscript, styleOf(tokens, "1").baselineShift)
+        assertEquals(15.sp, styleOf(tokens, "1").fontSize, "sup wins over small when a run is both")
+    }
+
+    @Test
+    fun aPageSliceKeepsTheInlineShiftThatMeasurementSaw() {
+        // buildChapterText and buildPageTokens share the run style, so a page's
+        // words are the size pagination measured (issue #267).
+        val chapterText = buildChapterText(raisedAndLoweredChapter, twentyPointStyles)
+        val page = ReaderPage(0, chapterText.length)
+        val upStart = chapterText.text.indexOf("up")
+        val upEnd = upStart + "up".length
+
+        val measured = chapterText.spanStyles.first { span -> span.start == upStart && span.end == upEnd }
+        val tokens = buildPageTokens(chapterText, page, renderer, raisedAndLoweredChapter, twentyPointStyles)
+
+        assertEquals(15.sp, measured.item.fontSize)
+        assertEquals(measured.item.fontSize, styleOf(tokens, "up").fontSize)
+        assertEquals(measured.item.baselineShift, styleOf(tokens, "up").baselineShift)
+    }
+
+    @Test
     fun aHeadingKeepsItsOwnStyle() {
         val heading = ReaderText(
             title = "Chapter",
@@ -233,6 +311,37 @@ class ReaderTextTest {
 
         assertEquals(TextAlign.Start, chapterText.paragraphStyles.single().item.textAlign)
         assertEquals(TextAlign.Justify, styles.body.textAlign)
+    }
+
+    @Test
+    fun aTableRowIsHeldToTheStartEdgeWhileTheBodyIsJustified() {
+        // Stretching a row to the margin would move its cells apart, so a row
+        // keeps its ragged end (issue #264).
+        val table = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(TextBlock(BlockKind.TABLE_ROW, listOf(TextRun("Day · Load")))),
+        )
+
+        val chapterText = buildChapterText(table, styles)
+
+        assertEquals(TextAlign.Start, chapterText.paragraphStyles.single().item.textAlign)
+        assertEquals(TextAlign.Justify, styles.body.textAlign)
+    }
+
+    @Test
+    fun aCaptionIsItalicAndCentred() {
+        val caption = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(TextBlock(BlockKind.CAPTION, listOf(TextRun("Weekly plan")))),
+        )
+
+        val chapterText = buildChapterText(caption, styles)
+
+        val captionSpan = chapterText.spanStyles.single()
+        assertEquals(FontStyle.Italic, captionSpan.item.fontStyle)
+        assertEquals(TextAlign.Center, chapterText.paragraphStyles.single().item.textAlign)
     }
 
     @Test
@@ -402,6 +511,65 @@ class ReaderTextTest {
     }
 
     @Test
+    fun aSceneBreakIsACentredOrnament() {
+        val broken = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("before"))),
+                TextBlock(BlockKind.SCENE_BREAK, listOf(TextRun(SCENE_BREAK_TEXT))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("after"))),
+            ),
+        )
+
+        val chapterText = buildChapterText(broken, styles)
+
+        assertEquals("before\n\n· · ·\n\nafter", chapterText.text)
+        val start = "before\n\n".length
+        val breakStyle = chapterText.paragraphStyles.single { range -> range.start == start }.item
+        assertEquals(TextAlign.Center, breakStyle.textAlign)
+    }
+
+    @Test
+    fun preformattedTextKeepsItsLinesAndRendersMonospaceFromTheStartEdge() {
+        val code = "def main():\n    return 0"
+        val preformatted = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("code follows"))),
+                TextBlock(BlockKind.PREFORMATTED, listOf(TextRun(code))),
+            ),
+        )
+
+        val chapterText = buildChapterText(preformatted, styles)
+
+        assertEquals("code follows\n\n$code", chapterText.text)
+        val start = "code follows\n\n".length
+        val codeSpan = chapterText.spanStyles.single { span -> span.start == start }.item
+        assertEquals(FontFamily.Monospace, codeSpan.fontFamily)
+        val codeParagraph = chapterText.paragraphStyles.single { range -> range.start == start }.item
+        assertEquals(TextAlign.Start, codeParagraph.textAlign)
+    }
+
+    @Test
+    fun aChapterWithPreformattedTextAndASceneBreakKeepsTheProgressDenominator() {
+        val text = StructuredText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("before"))),
+                TextBlock(BlockKind.SCENE_BREAK, listOf(TextRun(SCENE_BREAK_TEXT))),
+                TextBlock(BlockKind.PREFORMATTED, listOf(TextRun("one\n    two"))),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("after"))),
+            ),
+        )
+        val chapterWithStructure = ReaderText(text.title.orEmpty(), text.language, text.blocks)
+
+        assertEquals(text.renderedLength(), buildChapterText(chapterWithStructure, styles).length)
+    }
+
+    @Test
     fun aNestedItemIsIndentedOneStepDeeper() {
         val list = ReaderText(
             title = "Chapter",
@@ -441,6 +609,89 @@ class ReaderTextTest {
 
         assertEquals(0f, indent?.firstLine?.value)
         assertEquals(styles.listIndent, indent?.restLine)
+    }
+
+    @Test
+    fun aQuoteIndentsBothEdgesByItsDepth() {
+        val quoted = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.QUOTE, listOf(TextRun("quoted")), quoteDepth = 1),
+                TextBlock(BlockKind.QUOTE, listOf(TextRun("nested")), quoteDepth = 2),
+                TextBlock(BlockKind.PARAGRAPH, listOf(TextRun("body"))),
+            ),
+        )
+
+        val chapterText = buildChapterText(quoted, styles)
+        val indents = chapterText.paragraphStyles.map { range -> range.item.textIndent }
+
+        assertEquals(styles.quoteIndent, indents[0]?.firstLine)
+        assertEquals(styles.quoteIndent, indents[0]?.restLine)
+        assertEquals(styles.quoteIndent.value * 2, indents[1]?.firstLine?.value)
+        assertEquals(styles.quoteIndent.value * 2, indents[1]?.restLine?.value)
+        assertEquals(2, chapterText.paragraphStyles.size, "the body keeps the body style")
+    }
+
+    @Test
+    fun aQuotedListItemAddsTheQuoteIndentToItsHangingIndent() {
+        val quotedItem = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.LIST_ITEM,
+                    listOf(TextRun("• "), TextRun("quoted item")),
+                    listMarker = "• ",
+                    quoteDepth = 1,
+                ),
+            ),
+        )
+
+        val chapterText = buildChapterText(quotedItem, styles)
+        val indent = chapterText.paragraphStyles.single().item.textIndent
+
+        assertEquals(styles.quoteIndent, indent?.firstLine)
+        assertEquals(styles.listIndent.value + styles.quoteIndent.value, indent?.restLine?.value)
+    }
+
+    @Test
+    fun aHeadingInAQuoteKeepsItsStyleAndTakesTheIndent() {
+        val heading = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(BlockKind.HEADING, listOf(TextRun("Quoted title")), headingLevel = 2, quoteDepth = 1),
+            ),
+        )
+
+        val chapterText = buildChapterText(heading, styles)
+        val span = chapterText.spanStyles.single { range -> range.start == 0 }.item
+        val paragraph = chapterText.paragraphStyles.single().item
+
+        assertEquals(styles.heading.fontSize, span.fontSize)
+        assertEquals(TextAlign.Start, paragraph.textAlign)
+        assertEquals(styles.quoteIndent, paragraph.textIndent?.firstLine)
+    }
+
+    @Test
+    fun aDefinitionPairKeepsTheBodyStyle() {
+        val definition = ReaderText(
+            title = "Chapter",
+            language = "en",
+            blocks = listOf(
+                TextBlock(
+                    BlockKind.DEFINITION,
+                    listOf(TextRun("colour", setOf(InlineStyle.STRONG)), TextRun(" — the property of light")),
+                ),
+            ),
+        )
+
+        val chapterText = buildChapterText(definition, styles)
+
+        assertEquals("colour — the property of light", chapterText.text)
+        assertTrue(chapterText.paragraphStyles.isEmpty(), "a definition pair needs no paragraph style")
+        assertEquals(FontWeight.Bold, chapterText.spanStyles.single().item.fontWeight)
     }
 }
 

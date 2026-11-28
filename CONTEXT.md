@@ -210,15 +210,18 @@ when the position moved, not how far.
 _Avoid_: Percentage, completion, furthest read
 
 **Paragraph**:
-A block of a **Book**'s text that is not a heading, a list item or a picture: the
-unit the reader lays out, and the only kind of block a **Resume snippet** may name.
+A block of a **Book**'s text that is not a heading, a list item, a picture, a table
+row, a caption, preformatted text or a scene break, so a block quote and a
+definition pair are paragraphs. It is the unit the reader lays out, and the only
+kind of block a **Resume snippet** may name.
 _Avoid_: Line, section, chunk
 
 **Resume snippet**:
 The first **Paragraph** at or after a book's **Reading position**, captured when the
 position is saved and kept as a **Derived asset**. It reminds the reader where they
-were; a heading, a list item or a picture is never the snippet, and a position past
-the last paragraph holds none.
+were; a heading, a list item, a picture, a table row, a caption, preformatted text
+or a scene break is never the snippet, and a position past the last paragraph holds
+none.
 _Avoid_: Excerpt, preview, quote
 
 **Resume block**:

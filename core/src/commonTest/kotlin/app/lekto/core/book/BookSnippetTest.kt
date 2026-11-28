@@ -11,13 +11,17 @@ import io.kotest.matchers.shouldBe
 /**
  * Which paragraph the **Resume snippet** names (issue #258): the first
  * **Paragraph** at or after the saved **Reading position**, with headings, list
- * items and pictures skipped. The ranges are the rendered text's, so the
- * separator between two blocks counts exactly as it does for pagination.
+ * items, pictures, preformatted text and scene breaks skipped. A quote's
+ * paragraph and a term-and-definition pair are prose, so they are named like a
+ * paragraph (issue #265). The ranges are the rendered text's, so the separator
+ * between two blocks counts exactly as it does for pagination.
  */
 class BookSnippetTest :
     FunSpec({
 
         fun paragraph(text: String) = TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(text)))
+        fun quote(text: String) = TextBlock(BlockKind.QUOTE, listOf(TextRun(text)), quoteDepth = 1)
+        fun definition(text: String) = TextBlock(BlockKind.DEFINITION, listOf(TextRun(text)))
         fun heading(text: String) = TextBlock(BlockKind.HEADING, listOf(TextRun(text)), headingLevel = 1)
         fun item(text: String) = TextBlock(BlockKind.LIST_ITEM, listOf(TextRun(text)), listMarker = "• ")
         fun image() = TextBlock(BlockKind.IMAGE, listOf(TextRun("")), image = ImageRef("x", 1f))
@@ -47,6 +51,18 @@ class BookSnippetTest :
             val blocks = listOf(image(), paragraph("The text"))
 
             blocks.paragraphAt(0)?.text shouldBe "The text"
+        }
+
+        test("a quoted paragraph is a reminder") {
+            val blocks = listOf(heading("Chapter One"), quote("The quoted words"))
+
+            blocks.paragraphAt(0)?.text shouldBe "The quoted words"
+        }
+
+        test("a definition pair is a reminder") {
+            val blocks = listOf(definition("a term — its meaning"))
+
+            blocks.paragraphAt(0)?.text shouldBe "a term — its meaning"
         }
 
         test("a position between two paragraphs names the next one") {

@@ -4,6 +4,7 @@ import app.lekto.core.text.BlockKind
 import app.lekto.core.text.IMAGE_PLACEHOLDER
 import app.lekto.core.text.ImageRef
 import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.SCENE_BREAK_TEXT
 import app.lekto.core.text.TextBlock
 import app.lekto.core.text.TextRun
 import org.jsoup.Jsoup
@@ -33,10 +34,16 @@ internal data class XhtmlDocument(
  * and containers (`div`, `blockquote`, `table`, …) are descended into so their
  * child blocks keep their place in the reading order.
  *
- * Three pieces of structure the walk keeps rather than flattens: a `<br>` is an
+ * Pieces of structure the walk keeps rather than flattens: a `<br>` is an
  * `\n` inside its block (the author's own line break, not a new paragraph), a
  * `ul`/`ol` is walked as a list so every item keeps its marker, its rank and its
- * depth, and an `<img>` becomes a [BlockKind.IMAGE] block of its own.
+ * depth, an `<img>` becomes a [BlockKind.IMAGE] block of its own, a `<table>` is
+ * one block per row with its cells joined, a `<pre>` becomes a
+ * [BlockKind.PREFORMATTED] block that keeps its whitespace verbatim, an `<hr>`
+ * becomes a [BlockKind.SCENE_BREAK] block carrying [SCENE_BREAK_TEXT] so it is
+ * never dropped, a paragraph inside a `<blockquote>` becomes a
+ * [BlockKind.QUOTE] carrying its quote depth, and a `<dl>` keeps each term beside
+ * its definitions as one [BlockKind.DEFINITION] block (issues #264, #265).
  */
 @Suppress("TooManyFunctions") // The walk, its inline pass and its helpers are one parser.
 internal object XhtmlBlocks {
@@ -85,11 +92,24 @@ internal object XhtmlBlocks {
 
                 tag == IMAGE_TAG -> collectImage(element)
 
+                // A scene break is the author's own punctuation of the text.
+                tag == "hr" -> collectSceneBreak(element)
+
+                // A preformatted block keeps every whitespace character it holds.
+                tag == "pre" -> collectPreformatted(element)
+
+                // A definition list keeps each term beside its definition.
+                tag == "dl" -> collectDefinitionList(element)
+
                 // A list is walked as a whole, so its items keep their marker, their
                 // rank and their depth; a bare `<li>` (invalid markup) still gets one.
                 tag in LIST_TAGS -> collectList(element, depth = (list?.depth ?: -1) + 1)
 
                 tag == "li" -> collectItem(element, list ?: ListContext(ordered = false, depth = 0, ordinal = 1))
+
+                // A table is walked as a whole, so a row keeps its cells on one
+                // line instead of every cell becoming its own paragraph (#264).
+                tag == "table" -> collectTable(element)
 
                 tag in CONTAINERS -> descend(element)
 
@@ -106,7 +126,7 @@ internal object XhtmlBlocks {
         private fun collectLeaf(tag: String, element: Element) {
             runsOf(element, blocks.size)
                 .takeIf { runs -> runs.isNotEmpty() }
-                ?.let { runs -> blocks += block(tag, runs) }
+                ?.let { runs -> blocks += block(element, runs, tag) }
         }
 
         /**
@@ -119,7 +139,7 @@ internal object XhtmlBlocks {
             fun flush() {
                 val runs = toRuns(characters)
                 characters.clear()
-                if (runs.isNotEmpty()) blocks += block(tag, runs)
+                if (runs.isNotEmpty()) blocks += block(element, runs, tag)
             }
 
             for (node in element.childNodes()) {
@@ -154,8 +174,142 @@ internal object XhtmlBlocks {
             } else {
                 runsOf(element, blocks.size)
                     .takeIf { runs -> runs.isNotEmpty() }
-                    ?.let { runs -> blocks += TextBlock(BlockKind.PARAGRAPH, runs) }
+                    ?.let { runs -> blocks += block(element, runs) }
             }
+        }
+
+        /**
+         * An `<hr>` turned into a [BlockKind.SCENE_BREAK] block. It carries
+         * [SCENE_BREAK_TEXT] rather than no run at all, so the block has a length
+         * and **Reading progress** and chapter offsets stay coherent.
+         */
+        private fun collectSceneBreak(element: Element) {
+            blocks += TextBlock(
+                kind = BlockKind.SCENE_BREAK,
+                runs = listOf(TextRun(SCENE_BREAK_TEXT)),
+                quoteDepth = element.quoteDepth(),
+            )
+        }
+
+        /**
+         * A `<pre>` turned into a [BlockKind.PREFORMATTED] block whose whitespace is
+         * kept verbatim: no run is collapsed and nothing is trimmed. Inline styles
+         * still apply and `<br>` is still a line break.
+         *
+         * The HTML parser drops the one newline that follows the start tag (the
+         * spec's `<pre>` rule), so the walk must not drop a second one.
+         */
+        private fun collectPreformatted(element: Element) {
+            val runs = toVerbatimRuns(verbatimCharacters(element, blocks.size))
+            if (runs.isNotEmpty()) {
+                blocks += TextBlock(BlockKind.PREFORMATTED, runs, quoteDepth = element.quoteDepth())
+            }
+        }
+
+        /**
+         * A `<pre>`'s content as characters no whitespace rule may touch: every
+         * space, newline and `<br>` survives, so nested text keeps its shape too
+         * (issue #266). Inline styles still apply.
+         */
+        private fun verbatimCharacters(element: Element, blockIndex: Int): List<StyledChar> {
+            val characters = mutableListOf<StyledChar>()
+            collectInline(element, emptySet(), characters, blockIndex, flattenBlocks = true)
+            return characters.map { character -> character.copy(verbatim = true) }
+        }
+
+        /**
+         * A `<dl>` turned into one [BlockKind.DEFINITION] block per term: the term
+         * in strong, then its definitions, so a term and its meaning stay one
+         * unit (issue #265). A definition before any term, or a term with no
+         * definition, is still emitted — an incomplete pair is better than a
+         * dropped word.
+         *
+         * `dt`/`dd` content is flattened, so a definition wrapping `<p>` keeps
+         * every word, and a nested `dl` is read as part of its definition.
+         */
+        private fun collectDefinitionList(list: Element) {
+            val walker = DefinitionWalker(list)
+            walker.read(list)
+            walker.flush()
+        }
+
+        /**
+         * The pairing state of one `<dl>`: the open term, its definitions, and the
+         * blocks it emits. It walks through the `<div>` wrappers a real `<dl>`
+         * often carries, keeping the state across them (issue #265).
+         */
+        private inner class DefinitionWalker(private val list: Element) {
+            private var term: List<TextRun>? = null
+            private val definitions = mutableListOf<List<TextRun>>()
+
+            fun read(container: Element) {
+                for (child in container.children()) {
+                    when (child.normalName()) {
+                        "dt" -> readTerm(child)
+
+                        "dd" -> readDefinition(child)
+
+                        "div" -> {
+                            child.recordAnchors(blocks.size)
+                            read(child)
+                        }
+
+                        else -> readOther(child)
+                    }
+                }
+            }
+
+            fun flush() {
+                val runs = definitionRuns(term, definitions)
+                if (runs.isNotEmpty()) blocks += TextBlock(BlockKind.DEFINITION, runs, quoteDepth = list.quoteDepth())
+                term = null
+                definitions.clear()
+            }
+
+            private fun readTerm(child: Element) {
+                flush()
+                child.recordAnchors(blocks.size)
+                term = runsOf(child, blocks.size, flattenBlocks = true).takeIf { runs -> runs.isNotEmpty() }
+            }
+
+            private fun readDefinition(child: Element) {
+                child.recordAnchors(blocks.size)
+                val runs = runsOf(child, blocks.size, flattenBlocks = true)
+                // A definition before any term names nothing, so it stands alone
+                // rather than joining the next one.
+                if (term == null) {
+                    if (runs.isNotEmpty()) {
+                        blocks += TextBlock(BlockKind.DEFINITION, runs, quoteDepth = list.quoteDepth())
+                    }
+                } else {
+                    definitions += runs
+                }
+            }
+
+            private fun readOther(child: Element) {
+                flush()
+                collectBlock(child, list = null)
+            }
+        }
+
+        /**
+         * One definition block's runs: the term in strong, then `" — "` and each
+         * definition, definitions kept apart by a hard line break. A missing term
+         * or missing definition leaves the half that exists.
+         */
+        private fun definitionRuns(term: List<TextRun>?, definitions: List<List<TextRun>>): List<TextRun> {
+            val present = definitions.filter { runs -> runs.isNotEmpty() }
+            if (term == null && present.isEmpty()) return emptyList()
+            val runs = mutableListOf<TextRun>()
+            term?.forEach { run -> runs += TextRun(run.text, run.styles + InlineStyle.STRONG) }
+            if (present.isNotEmpty()) {
+                if (term != null) runs += TextRun(DEFINITION_SEPARATOR)
+                present.forEachIndexed { index, definition ->
+                    if (index > 0) runs += TextRun(LINE_BREAK.toString())
+                    runs += definition
+                }
+            }
+            return runs
         }
 
         /**
@@ -203,11 +357,74 @@ internal object XhtmlBlocks {
                     runs = if (keepsOwnMarker) runs else listOf(TextRun(marker)) + runs,
                     listMarker = if (keepsOwnMarker) "" else marker,
                     listDepth = list.depth,
+                    quoteDepth = item.quoteDepth(),
                 )
             }
             item.children()
                 .filter { child -> child.normalName() in LIST_TAGS }
                 .forEach { child -> collectList(child, depth = list.depth + 1) }
+        }
+
+        /**
+         * Walks a `<table>`: a caption keeps its own [BlockKind.CAPTION] block,
+         * and each row becomes one [BlockKind.TABLE_ROW] block whose cells are
+         * joined by [CELL_SEPARATOR], so the row/column relation stays visible
+         * without a layout pass (issue #264).
+         */
+        private fun collectTable(table: Element) {
+            for (child in table.children()) {
+                when (child.normalName()) {
+                    "caption" -> {
+                        child.recordAnchors(blocks.size)
+                        collectLeaf("caption", child)
+                    }
+
+                    in ROW_GROUPS -> child.children()
+                        .filter { row -> row.normalName() == "tr" }
+                        .forEach { row -> collectRow(row) }
+
+                    "tr" -> collectRow(child)
+
+                    else -> collectLoose(child)
+                }
+            }
+        }
+
+        /**
+         * One table row: every cell kept in place, each joined to the next by a
+         * plain [CELL_SEPARATOR] run, so an empty cell still holds its column. A
+         * header cell's runs carry [InlineStyle.STRONG], so the row's shape reads
+         * at a glance; a row with no words in any cell emits no block.
+         */
+        private fun collectRow(row: Element) {
+            row.recordAnchors(blocks.size)
+            val cells = row.children()
+                .filter { cell -> cell.normalName() in CELL_TAGS }
+                .map { cell -> cellRuns(cell, header = cell.normalName() == "th") }
+            if (cells.all { runs -> runs.isEmpty() }) return
+
+            val runs = mutableListOf<TextRun>()
+            cells.forEachIndexed { index, cell ->
+                if (index > 0) runs += TextRun(CELL_SEPARATOR)
+                runs += cell
+            }
+            blocks += TextBlock(BlockKind.TABLE_ROW, runs, quoteDepth = row.quoteDepth())
+        }
+
+        /**
+         * One cell's runs, read flat so a cell wrapping `<p>` keeps its words. A
+         * cell keeps one break at most, never a blank line, because a blank line
+         * is the separator between blocks and would split the row visually
+         * (#264). A header cell bolds every run it holds.
+         */
+        private fun cellRuns(cell: Element, header: Boolean): List<TextRun> {
+            cell.recordAnchors(blocks.size)
+            val runs = runsOf(cell, blocks.size, flattenBlocks = true).withoutBlankLines()
+            return if (header) {
+                runs.map { run -> run.copy(styles = run.styles + InlineStyle.STRONG) }
+            } else {
+                runs
+            }
         }
 
         /** The marker a list item starts with: a bullet, or its rank and a period. */
@@ -241,10 +458,11 @@ internal object XhtmlBlocks {
                         kind = BlockKind.IMAGE,
                         runs = listOf(TextRun(IMAGE_PLACEHOLDER)),
                         image = ImageRef(name = imageAssetName(image.path), ratio = image.size.ratio, alt = alt),
+                        quoteDepth = element.quoteDepth(),
                     )
                 }
 
-                alt.isNotEmpty() -> blocks += TextBlock(BlockKind.PARAGRAPH, listOf(TextRun(alt)))
+                alt.isNotEmpty() -> blocks += block(element, listOf(TextRun(alt)))
             }
         }
 
@@ -297,8 +515,19 @@ internal object XhtmlBlocks {
             element.recordAnchors(blockIndex)
             when (val tag = element.normalName()) {
                 in SKIPPED, in LIST_TAGS, IMAGE_TAG -> Unit
+
                 "br" -> into += StyledChar(LINE_BREAK, styles, hardBreak = true)
+
+                // A `<pre>` nested in a list item or a cell keeps its own shape:
+                // a line-break boundary around it, then every character verbatim.
+                "pre" -> {
+                    into += StyledChar(LINE_BREAK, styles, hardBreak = true)
+                    into += verbatimCharacters(element, blockIndex)
+                    into += StyledChar(LINE_BREAK, styles, hardBreak = true)
+                }
+
                 in CONTAINERS, in BLOCKS -> if (flattenBlocks) flattenInto(element, styles, into, blockIndex)
+
                 else -> collectInline(element, styles + styleOf(tag), into, blockIndex, flattenBlocks)
             }
         }
@@ -333,6 +562,12 @@ internal object XhtmlBlocks {
     /** An image the walk resolved: its archive path, its bytes and the size its header declares. */
     private class LoadedImage(val path: String, val bytes: ByteArray, val size: ImageSize)
 
+    /** The runs a block is being built from, each marked with whether it came from a verbatim span. */
+    private class RunBuffer {
+        val runs = mutableListOf<TextRun>()
+        val verbatim = mutableListOf<Boolean>()
+    }
+
     /**
      * Collapses every whitespace run — including the non-breaking space jsoup
      * decodes `&nbsp;` to — to a single space, trims the block's ends, and
@@ -342,78 +577,168 @@ internal object XhtmlBlocks {
      * the author's own break, and it is what keeps a list or a poem's lines apart.
      * The spaces around it are dropped, and a break at the block's end adds no
      * empty line — the blank line between blocks is already there.
+     *
+     * A verbatim character — the content of a `<pre>` nested in a flattened block
+     * — is appended as-is: no space collapses and no end is trimmed, so its line
+     * breaks and indentation stay the text itself (issue #266).
      */
     private fun toRuns(characters: List<StyledChar>): List<TextRun> {
-        val runs = mutableListOf<TextRun>()
+        val buffer = RunBuffer()
         var afterSpace = true
         for (character in characters) {
             when {
+                character.verbatim -> {
+                    append(buffer, character.value.toString(), character.styles, isVerbatim = true)
+                    afterSpace = character.isSpace()
+                }
+
                 character.hardBreak -> {
-                    trimTrailingSpace(runs)
-                    if (runs.isNotEmpty()) append(runs, LINE_BREAK.toString(), character.styles)
+                    trimTrailingSpace(buffer)
+                    if (buffer.runs.isNotEmpty()) append(buffer, LINE_BREAK.toString(), character.styles)
                     afterSpace = true
                 }
 
                 character.isSpace() -> {
-                    if (!afterSpace) append(runs, " ", character.styles)
+                    if (!afterSpace) append(buffer, " ", character.styles)
                     afterSpace = true
                 }
 
                 else -> {
-                    append(runs, character.value.toString(), character.styles)
+                    append(buffer, character.value.toString(), character.styles)
                     afterSpace = false
                 }
             }
         }
-        return withoutTrailingBreaks(withoutTrailingSpace(runs))
+        withoutTrailingSpace(buffer)
+        return withoutTrailingBreaks(buffer)
     }
 
-    /** Drops the spaces at the end of the block, so a break does not keep one. */
-    private fun trimTrailingSpace(runs: MutableList<TextRun>) {
-        val last = runs.lastOrNull() ?: return
-        if (!last.text.endsWith(" ")) return
+    /**
+     * Groups [characters] into runs of one style, keeping every one of them: no
+     * whitespace is collapsed and no end is trimmed. It is the shape a
+     * `<pre>` needs, where indentation and line breaks are the text itself
+     * (issue #266).
+     */
+    private fun toVerbatimRuns(characters: List<StyledChar>): List<TextRun> {
+        val buffer = RunBuffer()
+        for (character in characters) append(buffer, character.value.toString(), character.styles, isVerbatim = true)
+        return buffer.runs
+    }
+
+    /** Drops the spaces at the end of the block, so a break does not keep one. A verbatim end is never touched. */
+    private fun trimTrailingSpace(buffer: RunBuffer) {
+        val last = buffer.runs.lastOrNull() ?: return
+        if (buffer.verbatim.last() || !last.text.endsWith(" ")) return
         val text = last.text.trimEnd(' ')
-        if (text.isEmpty()) runs.removeAt(runs.lastIndex) else runs[runs.lastIndex] = last.copy(text = text)
+        if (text.isEmpty()) {
+            buffer.runs.removeAt(buffer.runs.lastIndex)
+            buffer.verbatim.removeAt(buffer.verbatim.lastIndex)
+        } else {
+            buffer.runs[buffer.runs.lastIndex] = last.copy(text = text)
+        }
     }
 
     /** Drops the hard line breaks at the end of the block: they add no line of their own. */
-    private fun withoutTrailingBreaks(runs: List<TextRun>): List<TextRun> {
-        var trimmed = runs
-        while (true) {
-            val last = trimmed.lastOrNull() ?: return trimmed
-            if (!last.text.endsWith(LINE_BREAK)) return trimmed
+    private fun withoutTrailingBreaks(buffer: RunBuffer): List<TextRun> {
+        var trimmed: List<TextRun> = buffer.runs
+        var flags: List<Boolean> = buffer.verbatim
+        var last = trimmed.lastOrNull()
+        while (last != null && !flags.last() && last.text.endsWith(LINE_BREAK)) {
             val text = last.text.trimEnd(LINE_BREAK)
-            trimmed = if (text.isEmpty()) trimmed.dropLast(1) else trimmed.dropLast(1) + last.copy(text = text)
+            if (text.isEmpty()) {
+                trimmed = trimmed.dropLast(1)
+                flags = flags.dropLast(1)
+            } else {
+                trimmed = trimmed.dropLast(1) + last.copy(text = text)
+            }
+            last = trimmed.lastOrNull()
         }
+        return trimmed
     }
 
-    private fun append(runs: MutableList<TextRun>, text: String, styles: Set<InlineStyle>) {
-        val last = runs.lastOrNull()
-        if (last != null && last.styles == styles) {
-            runs[runs.lastIndex] = last.copy(text = last.text + text)
+    /** Appends [text] to [buffer], merging only when the previous run shares its style and its verbatim-ness. */
+    private fun append(buffer: RunBuffer, text: String, styles: Set<InlineStyle>, isVerbatim: Boolean = false) {
+        val last = buffer.runs.lastOrNull()
+        if (last != null && last.styles == styles && buffer.verbatim.last() == isVerbatim) {
+            buffer.runs[buffer.runs.lastIndex] = last.copy(text = last.text + text)
         } else {
-            runs += TextRun(text, styles)
+            buffer.runs += TextRun(text, styles)
+            buffer.verbatim += isVerbatim
         }
     }
 
-    private fun withoutTrailingSpace(runs: List<TextRun>): List<TextRun> {
-        val last = runs.lastOrNull() ?: return runs
-        return when {
-            !last.text.endsWith(" ") -> runs
-            last.text.isBlank() -> runs.dropLast(1)
-            else -> runs.dropLast(1) + last.copy(text = last.text.trimEnd())
+    /**
+     * Drops the spaces at the end of the block, so a break does not keep one. A
+     * verbatim end keeps every character it holds.
+     */
+    private fun withoutTrailingSpace(buffer: RunBuffer) {
+        val last = buffer.runs.lastOrNull() ?: return
+        if (buffer.verbatim.last() || !last.text.endsWith(" ")) return
+        if (last.text.isBlank()) {
+            buffer.runs.removeAt(buffer.runs.lastIndex)
+            buffer.verbatim.removeAt(buffer.verbatim.lastIndex)
+        } else {
+            buffer.runs[buffer.runs.lastIndex] = last.copy(text = last.text.trimEnd())
         }
     }
 
-    private fun block(tag: String, runs: List<TextRun>): TextBlock = when {
-        tag in HEADINGS -> TextBlock(BlockKind.HEADING, runs, headingLevel = tag.substring(1).toInt())
-        else -> TextBlock(BlockKind.PARAGRAPH, runs)
+    /**
+     * Collapses each run of newlines to one break, so a table cell that wraps
+     * blocks never holds a blank line — the separator between blocks, which would
+     * split its row. Single line breaks are untouched, so a nested `<pre>` keeps
+     * its shape (issue #264).
+     */
+    private fun List<TextRun>.withoutBlankLines(): List<TextRun> {
+        val buffer = RunBuffer()
+        val collapser = BlankLineCollapser()
+        for (run in this) {
+            val text = collapser.collapse(run.text)
+            if (text.isNotEmpty()) append(buffer, text, run.styles)
+        }
+        return buffer.runs
+    }
+
+    /** Collapses every run of newlines to one break, keeping the state across a run boundary. */
+    private class BlankLineCollapser {
+        private var afterBreak = false
+
+        fun collapse(text: String): String = buildString {
+            for (character in text) {
+                if (character == LINE_BREAK) {
+                    if (!afterBreak) append(character)
+                    afterBreak = true
+                } else {
+                    append(character)
+                    afterBreak = false
+                }
+            }
+        }
+    }
+
+    /**
+     * The block a leaf element contributes: a heading keeps its level, a caption
+     * keeps its kind, a paragraph inside a quote becomes a [BlockKind.QUOTE], and
+     * every block carries the quote depth its element sits at (issues #264, #265).
+     */
+    private fun block(element: Element, runs: List<TextRun>, tag: String = ""): TextBlock {
+        val depth = element.quoteDepth()
+        val kind = when {
+            tag in HEADINGS -> BlockKind.HEADING
+            tag == "caption" -> BlockKind.CAPTION
+            depth > 0 -> BlockKind.QUOTE
+            else -> BlockKind.PARAGRAPH
+        }
+        val headingLevel = if (tag in HEADINGS) tag.substring(1).toInt() else 0
+        return TextBlock(kind, runs, headingLevel = headingLevel, quoteDepth = depth)
     }
 
     private fun styleOf(tag: String): Set<InlineStyle> = when (tag) {
         "em", "i" -> setOf(InlineStyle.EMPHASIS)
         "strong", "b" -> setOf(InlineStyle.STRONG)
         "code", "kbd", "samp", "tt" -> setOf(InlineStyle.CODE)
+        "sup" -> setOf(InlineStyle.SUPERSCRIPT)
+        "sub" -> setOf(InlineStyle.SUBSCRIPT)
+        "small" -> setOf(InlineStyle.SMALL)
         else -> emptySet()
     }
 
@@ -421,12 +746,18 @@ internal object XhtmlBlocks {
     private val Element.wrapsBlocks: Boolean
         get() = children().any { child -> child.isBlockTag || child.normalName() in LIST_TAGS }
 
+    /**
+     * How many `<blockquote>` elements enclose this one: the depth a block inside
+     * a quote carries, `0` outside one (issue #265).
+     */
+    private fun Element.quoteDepth(): Int = parents().count { parent -> parent.normalName() == "blockquote" }
+
     /** Whether the element holds an image anywhere below it, so it must be split around one. */
     private val Element.holdsImage: Boolean
         get() = getElementsByTag(IMAGE_TAG).isNotEmpty()
 
     private val Element.isBlockTag: Boolean
-        get() = normalName() in BLOCKS || normalName() in CONTAINERS
+        get() = normalName() in BLOCKS || normalName() in CONTAINERS || normalName() == "pre"
 
     /** Elements descended into so their child blocks keep the reading order. */
     private val CONTAINERS = setOf(
@@ -439,9 +770,18 @@ internal object XhtmlBlocks {
 
     /** Leaf blocks: one [TextBlock] each. */
     private val BLOCKS = setOf(
-        "p", "li", "dt", "dd", "pre", "figcaption", "td", "th",
+        "p", "li", "dt", "dd", "figcaption", "td", "th",
         "h1", "h2", "h3", "h4", "h5", "h6",
     )
+
+    /** The cells a table row carries, in the order they are joined. */
+    private val CELL_TAGS = setOf("td", "th")
+
+    /** The groups a table wraps its rows in; a `<tr>` may also sit directly in the table. */
+    private val ROW_GROUPS = setOf("thead", "tbody", "tfoot")
+
+    /** What separates a row's cells: a middle dot, so the row reads as one line. */
+    private const val CELL_SEPARATOR = " · "
 
     private val HEADINGS = setOf("h1", "h2", "h3", "h4", "h5", "h6")
 
@@ -462,11 +802,16 @@ internal object XhtmlBlocks {
     /** What a `<br>` leaves in a block: a hard line break, never a block boundary. */
     private const val LINE_BREAK = '\n'
 
+    /** Between a definition's term and its meaning: a space, an em dash, a space. */
+    private const val DEFINITION_SEPARATOR = " \u2014 "
+
     private data class StyledChar(
         val value: Char,
         val styles: Set<InlineStyle>,
         /** Whether the character is a hard break the source asked for, not whitespace it happened to contain. */
         val hardBreak: Boolean = false,
+        /** Whether the character belongs to a verbatim span, so no whitespace rule may change it. */
+        val verbatim: Boolean = false,
     ) {
         fun isSpace(): Boolean = value.isWhitespace() || Character.isSpaceChar(value)
     }

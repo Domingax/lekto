@@ -1,7 +1,10 @@
 package app.lekto.core.epub
 
 import app.lekto.core.text.BlockKind
+import app.lekto.core.text.InlineStyle
+import app.lekto.core.text.SCENE_BREAK_TEXT
 import app.lekto.core.text.TextBlock
+import app.lekto.core.text.TextRun
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
@@ -14,10 +17,12 @@ import kotlin.test.Test
  * The HTML parser cannot know it closes, so it leaves the `<a>` open and the
  * rest of the chapter lands inside it. The walk must still read that chapter.
  *
- * Two pieces of structure the walk keeps rather than flattens: a `<br>` is a
- * hard line break inside its block, and a `ul`/`ol` keeps each item's marker,
- * rank and depth.
+ * Pieces of structure the walk keeps rather than flattens: a `<br>` is a hard
+ * line break inside its block, a `ul`/`ol` keeps each item's marker, rank and
+ * depth, a `<pre>` keeps its whitespace verbatim, and an `<hr>` becomes a
+ * scene-break block instead of disappearing.
  */
+@Suppress("LargeClass") // The parser's whole structural walk is one suite.
 class XhtmlBlocksTest {
 
     @Test
@@ -218,6 +223,222 @@ class XhtmlBlocksTest {
     }
 
     @Test
+    fun aPreformattedBlockKeepsItsLineBreaksAndIndentation() {
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>def main():\n    return 0</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.PREFORMATTED
+        block.text shouldBe "def main():\n    return 0"
+    }
+
+    @Test
+    fun aPreformattedBlockDropsOnlyTheNewlineTheHtmlSpecDrops() {
+        // The spec ignores exactly one newline after the start tag, so a second
+        // one is content: the pretty-printer's blank first line goes, a real one stays.
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>\n\nkept blank line</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.text shouldBe "\nkept blank line"
+    }
+
+    @Test
+    fun aPreformattedBlockKeepsItsBlankLinesAndTrailingWhitespace() {
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>one\n\ntwo  \n</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.text shouldBe "one\n\ntwo  \n"
+    }
+
+    @Test
+    fun aPreformattedBlocksInlineStylesAndBreaksSurvive() {
+        val block = XhtmlBlocks.of(
+            "<html><body><pre>plain <em>soft</em><br/>next</pre></body></html>".toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.PREFORMATTED
+        block.text shouldBe "plain soft\nnext"
+        block.runs.single { run -> run.text == "soft" }.styles shouldBe setOf(InlineStyle.EMPHASIS)
+    }
+
+    @Test
+    fun aPreformattedBlockInsideAListItemKeepsItsLineBreaksAndIndentation() {
+        // A list item flattens the blocks it wraps, so a `<pre>` inside one must
+        // still keep every space and newline verbatim (issue #266).
+        val block = XhtmlBlocks.of(
+            "<html><body><ul><li><p>Run:</p><pre>def f():\n    return 0</pre></li></ul></body></html>"
+                .toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.LIST_ITEM
+        block.text shouldBe "• Run:\n\ndef f():\n    return 0"
+    }
+
+    @Test
+    fun aSceneBreakKeepsTheAuthorsOrnament() {
+        val blocks = XhtmlBlocks.of(
+            "<html><body><p>before</p><hr/><p>after</p></body></html>".toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(
+            BlockKind.PARAGRAPH,
+            BlockKind.SCENE_BREAK,
+            BlockKind.PARAGRAPH,
+        )
+        blocks.map { block -> block.text } shouldContainExactly listOf("before", SCENE_BREAK_TEXT, "after")
+        SCENE_BREAK_TEXT shouldBe "· · ·"
+    }
+
+    @Test
+    fun aSceneBreakInsideAQuoteTakesItsDepth() {
+        val blocks = XhtmlBlocks.of(
+            "<html><body><blockquote><p>quoted</p><hr/></blockquote></body></html>".toByteArray(),
+        )
+
+        blocks.single { block -> block.kind == BlockKind.SCENE_BREAK }.quoteDepth shouldBe 1
+    }
+
+    @Test
+    fun superscriptSubscriptAndSmallCarryTheirInlineStyle() {
+        // A footnote marker, an exponent and a formula read flat without their
+        // styles: `<sup>`/`<sub>`/`<small>` are the common inline tags for them.
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <p>H<sub>2</sub>O, 2<sup>nd</sup> and <small>fine print</small>.</p>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.text shouldBe "H2O, 2nd and fine print."
+        block.runs shouldContainExactly listOf(
+            TextRun("H"),
+            TextRun("2", setOf(InlineStyle.SUBSCRIPT)),
+            TextRun("O, 2"),
+            TextRun("nd", setOf(InlineStyle.SUPERSCRIPT)),
+            TextRun(" and "),
+            TextRun("fine print", setOf(InlineStyle.SMALL)),
+            TextRun("."),
+        )
+    }
+
+    @Test
+    fun aSmallSuperscriptKeepsBothStyles() {
+        val run = XhtmlBlocks.of(
+            """
+            <html><body><p><small>note<sup>1</sup></small></p></body></html>
+            """.trimIndent().toByteArray(),
+        ).single().runs.last()
+
+        run shouldBe TextRun("1", setOf(InlineStyle.SMALL, InlineStyle.SUPERSCRIPT))
+    }
+
+    @Test
+    fun aTableKeepsOneBlockPerRowWithItsCellsJoined() {
+        // A caption and each row stay whole: the cells sit on one line, so the
+        // row/column relation is visible without a layout pass (issue #264).
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table>
+                <caption>Weekly plan</caption>
+                <thead><tr><th>Day</th><th>Load</th></tr></thead>
+                <tbody>
+                  <tr><td>Monday</td><td>Squat</td></tr>
+                  <tr><td>Tuesday</td><td>Rest</td></tr>
+                </tbody>
+              </table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.text } shouldContainExactly listOf(
+            "Weekly plan",
+            "Day · Load",
+            "Monday · Squat",
+            "Tuesday · Rest",
+        )
+        blocks.map { block -> block.kind } shouldContainExactly listOf(
+            BlockKind.CAPTION,
+            BlockKind.TABLE_ROW,
+            BlockKind.TABLE_ROW,
+            BlockKind.TABLE_ROW,
+        )
+    }
+
+    @Test
+    fun aHeaderCellIsStrongAndTheCellSeparatorIsPlain() {
+        // A direct `<tr>` (no `thead`/`tbody`) is a row; leaving the separator
+        // plain keeps it from inheriting the bold of the cells around it.
+        val row = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table><tr><th>Lift</th><th>Load</th></tr></table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        row.kind shouldBe BlockKind.TABLE_ROW
+        row.runs shouldContainExactly listOf(
+            TextRun("Lift", setOf(InlineStyle.STRONG)),
+            TextRun(" · "),
+            TextRun("Load", setOf(InlineStyle.STRONG)),
+        )
+    }
+
+    @Test
+    fun aCellWrappingParagraphsKeepsEveryWord() {
+        // A cell whose content is block markup is read flattened, or its words
+        // would be dropped: real programme tables write each cell as a `<p>`.
+        val row = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table><tr><td>Day</td><td><p>5×5</p><p>squat</p></td></tr></table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        row.text shouldBe "Day · 5×5\nsquat"
+    }
+
+    @Test
+    fun aRowKeepsAnEmptyCellSoItsColumnsStayAligned() {
+        // Dropping an empty cell would shift every column after it (#264).
+        val row = XhtmlBlocks.of(
+            "<html><body><table><tr><td>a</td><td></td><td>c</td></tr></table></body></html>".toByteArray(),
+        ).single()
+
+        row.text shouldBe "a ·  · c"
+    }
+
+    @Test
+    fun aCellWithNestedPreformattedTextKeepsItsSingleLineBreaks() {
+        // A cell never carries a blank line — that is the block separator — but a
+        // nested `<pre>`'s own single breaks and indentation survive (#264, #266).
+        val row = XhtmlBlocks.of(
+            "<html><body><table><tr><td><p>run:</p><pre>one\n    two</pre></td><td>left</td></tr></table></body></html>"
+                .toByteArray(),
+        ).single()
+
+        row.text shouldBe "run:\none\n    two · left"
+    }
+
+    @Test
+    fun aRowWithoutWordsEmitsNoBlock() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <table><tr><td></td><td> </td></tr><tr><td>kept</td></tr></table>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.text } shouldContainExactly listOf("kept")
+    }
+
+    @Test
     fun aBookWithoutStructureKeepsPlainParagraphs() {
         val blocks: List<TextBlock> = XhtmlBlocks.of(
             """
@@ -227,5 +448,143 @@ class XhtmlBlocksTest {
 
         blocks.single().listMarker shouldBe ""
         blocks.single().markerRange.isEmpty() shouldBe true
+    }
+
+    @Test
+    fun aParagraphInAQuoteBecomesAQuoteBlockWithItsDepth() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <p>before</p>
+              <blockquote><p>quoted</p></blockquote>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.PARAGRAPH, BlockKind.QUOTE)
+        blocks.map { block -> block.text } shouldContainExactly listOf("before", "quoted")
+        blocks.map { block -> block.quoteDepth } shouldContainExactly listOf(0, 1)
+    }
+
+    @Test
+    fun aLooseParagraphInsideAQuoteBecomesAQuoteBlock() {
+        val block = XhtmlBlocks.of(
+            "<html><body><blockquote><span>loose words</span></blockquote></body></html>".toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.QUOTE
+        block.quoteDepth shouldBe 1
+        block.text shouldBe "loose words"
+    }
+
+    @Test
+    fun aHeadingAndAListItemInsideAQuoteKeepTheirKindAndTakeTheDepth() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <blockquote>
+                <h2>A quoted title</h2>
+                <ul><li>a quoted item</li></ul>
+              </blockquote>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.HEADING, BlockKind.LIST_ITEM)
+        blocks.map { block -> block.headingLevel } shouldContainExactly listOf(2, 0)
+        blocks.map { block -> block.quoteDepth } shouldContainExactly listOf(1, 1)
+        blocks.map { block -> block.text } shouldContainExactly listOf("A quoted title", "• a quoted item")
+    }
+
+    @Test
+    fun nestedQuotesDeepenTheDepth() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <blockquote><p>outer</p><blockquote><p>inner</p></blockquote></blockquote>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.text } shouldContainExactly listOf("outer", "inner")
+        blocks.map { block -> block.quoteDepth } shouldContainExactly listOf(1, 2)
+        blocks.forEach { block -> block.kind shouldBe BlockKind.QUOTE }
+    }
+
+    @Test
+    fun aDefinitionListPairsEachTermWithItsDefinitions() {
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl>
+                <dt>colour</dt>
+                <dd>the property of light</dd>
+                <dd>a hue</dd>
+              </dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.DEFINITION
+        block.text shouldBe "colour — the property of light\na hue"
+        block.runs.first() shouldBe TextRun("colour", setOf(InlineStyle.STRONG))
+        block.runs.drop(1).none { run -> InlineStyle.STRONG in run.styles } shouldBe true
+    }
+
+    @Test
+    fun aDefinitionListWrappedInDivsKeepsThePairingAcrossTheWrappers() {
+        // A real `<dl>` may wrap its items in `<div>`s; the term and its
+        // definition are still one pair (#265).
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl><div><dt>colour</dt></div><div><dd>the property of light</dd></div></dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.kind shouldBe BlockKind.DEFINITION
+        block.text shouldBe "colour — the property of light"
+    }
+
+    @Test
+    fun eachOrphanDefinitionBeforeATermIsItsOwnBlock() {
+        // Two `<dd>`s before any term are two unrelated definitions, not one
+        // block joined by a line break (#265).
+        val blocks = XhtmlBlocks.of(
+            "<html><body><dl><dd>a</dd><dd>b</dd></dl></body></html>".toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.DEFINITION, BlockKind.DEFINITION)
+        blocks.map { block -> block.text } shouldContainExactly listOf("a", "b")
+    }
+
+    @Test
+    fun aDefinitionWithoutATermAndATermWithoutADefinitionAreStillVisible() {
+        val blocks = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl><dd>an orphan definition</dd><dt>a lonely term</dt></dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        )
+
+        blocks.map { block -> block.kind } shouldContainExactly listOf(BlockKind.DEFINITION, BlockKind.DEFINITION)
+        blocks.map { block -> block.text } shouldContainExactly listOf("an orphan definition", "a lonely term")
+        blocks.first().runs.none { run -> InlineStyle.STRONG in run.styles } shouldBe true
+        blocks.last().runs.single().styles shouldBe setOf(InlineStyle.STRONG)
+    }
+
+    @Test
+    fun aDefinitionWrappingParagraphsKeepsEveryWord() {
+        val block = XhtmlBlocks.of(
+            """
+            <html><body>
+              <dl><dt>term</dt><dd><p>first line</p><p>second line</p></dd></dl>
+            </body></html>
+            """.trimIndent().toByteArray(),
+        ).single()
+
+        block.text shouldBe "term — first line\n\nsecond line"
     }
 }

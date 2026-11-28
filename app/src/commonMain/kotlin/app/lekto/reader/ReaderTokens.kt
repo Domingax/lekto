@@ -9,7 +9,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import app.lekto.core.MasteryLevel
 import app.lekto.core.text.BLOCK_SEPARATOR
@@ -170,52 +173,148 @@ private fun appendBlock(
         return
     }
     builder.append(block.text)
-    if (block.kind == BlockKind.HEADING) {
-        builder.addStyle(styles.heading.asSpanStyle(), blockStart, blockStart + block.text.length)
-        // The body is justified, but a heading is not: a title that wraps keeps
-        // its ragged end, as a printed book's heading does.
-        builder.addStyle(
-            ParagraphStyle(textAlign = styles.heading.textAlign),
-            blockStart,
-            blockStart + block.text.length,
-        )
-    }
-    if (block.kind == BlockKind.LIST_ITEM) {
-        builder.addStyle(styles.listParagraphOf(block.listDepth), blockStart, blockStart + block.text.length)
-    }
+    val blockEnd = blockStart + block.text.length
+    styles.appendInlineBlockStyle(builder, block, blockStart, blockEnd)
+    styles.appendParagraphStyle(builder, block, blockStart, blockEnd)
     var runStart = blockStart
     block.runs.forEach { run ->
-        val runStyle = run.styles.toSpanStyle()
+        val runStyle = run.styles.toSpanStyle(styles.body.fontSize)
         if (runStyle != SpanStyle()) builder.addStyle(runStyle, runStart, runStart + run.text.length)
         runStart += run.text.length
     }
 }
 
+/** Adds the span style a whole block carries: a heading's type or preformatted text's face. */
+private fun ReaderStyles.appendInlineBlockStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    blockEnd: Int,
+) {
+    when (block.kind) {
+        BlockKind.HEADING -> builder.addStyle(heading.asSpanStyle(), blockStart, blockEnd)
+
+        // A caption is set apart from the rows: italic and centred (#264).
+        BlockKind.CAPTION -> builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), blockStart, blockEnd)
+
+        BlockKind.PREFORMATTED ->
+            builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace), blockStart, blockEnd)
+
+        else -> Unit
+    }
+}
+
+/**
+ * Adds a block's paragraph-level style: its alignment and the indent its kind and
+ * quote depth ask for. A quote moves its lines one step per level; a definition
+ * keeps the body style, since its strong term and em dash are the whole mark.
+ */
+private fun ReaderStyles.appendParagraphStyle(
+    builder: AnnotatedString.Builder,
+    block: TextBlock,
+    blockStart: Int,
+    blockEnd: Int,
+) {
+    val quoteIndent = quoteTextIndent(block.quoteDepth)
+    if (block.kind == BlockKind.LIST_ITEM) {
+        builder.addStyle(listParagraphOf(block), blockStart, blockEnd)
+        return
+    }
+    val textAlign = textAlignOf(block)
+    when {
+        textAlign != null -> builder.addStyle(
+            ParagraphStyle(textAlign = textAlign, textIndent = quoteIndent),
+            blockStart,
+            blockEnd,
+        )
+
+        quoteIndent != null -> builder.addStyle(ParagraphStyle(textIndent = quoteIndent), blockStart, blockEnd)
+    }
+}
+
+/**
+ * The alignment a block's kind asks for, or `null` when it keeps the body's
+ * justification: a heading keeps its own edge, an ornament and a caption are
+ * centred, and preformatted text and a table row are held to the start edge.
+ */
+private fun ReaderStyles.textAlignOf(block: TextBlock): TextAlign? = when (block.kind) {
+    // The body is justified, but a heading is not: a title that wraps keeps its
+    // ragged end, as a printed book's heading does.
+    BlockKind.HEADING -> heading.textAlign
+
+    // The author's own ornament and a table's caption sit on a line of their own.
+    BlockKind.SCENE_BREAK, BlockKind.CAPTION -> TextAlign.Center
+
+    // Preformatted text keeps the source's line breaks, so it is drawn from the
+    // start edge: justifying it would stretch each line across the measure and
+    // destroy the shape it was written in. A row is held there too, because
+    // justification would stretch its cells apart (#264, #266).
+    BlockKind.PREFORMATTED, BlockKind.TABLE_ROW -> TextAlign.Start
+
+    else -> null
+}
+
 /**
  * A list item's hanging indent: its marker starts at its level's indent, and the
  * lines it wraps to align one step further in, so the text of a multi-line item
- * lines up under the first word rather than under the bullet.
+ * lines up under the first word rather than under the bullet. An item inside a
+ * quote carries that quote's indent on both edges too (issue #265).
  */
-private fun ReaderStyles.listParagraphOf(depth: Int): ParagraphStyle = ParagraphStyle(
-    textIndent = TextIndent(
-        firstLine = listIndent * depth.toFloat(),
-        restLine = listIndent * (depth + 1).toFloat(),
-    ),
-)
+private fun ReaderStyles.listParagraphOf(block: TextBlock): ParagraphStyle {
+    val quote = quoteIndent.value * block.quoteDepth
+    return ParagraphStyle(
+        textIndent = TextIndent(
+            firstLine = (listIndent.value * block.listDepth + quote).sp,
+            restLine = (listIndent.value * (block.listDepth + 1) + quote).sp,
+        ),
+    )
+}
+
+/** A quoted block's indent: one step per quote level, or `null` outside a quote. */
+private fun ReaderStyles.quoteTextIndent(depth: Int): TextIndent? = if (depth == 0) {
+    null
+} else {
+    val step = quoteIndent * depth.toFloat()
+    TextIndent(
+        firstLine = step,
+        restLine = step,
+    )
+}
+
+/** A superscript or subscript's size, as a share of the body's. */
+private const val SUPERSCRIPT_RATIO: Float = 0.75f
+
+/** Small print's size, as a share of the body's. */
+private const val SMALL_RATIO: Float = 0.85f
 
 /** The emphasis a run carries, as a span the reader renders. */
-private fun Set<InlineStyle>.toSpanStyle(): SpanStyle = buildSpanStyle(
-    italic = InlineStyle.EMPHASIS in this,
-    bold = InlineStyle.STRONG in this,
-    monospace = InlineStyle.CODE in this,
+private fun Set<InlineStyle>.toSpanStyle(bodySize: TextUnit): SpanStyle = SpanStyle(
+    fontStyle = if (InlineStyle.EMPHASIS in this) FontStyle.Italic else null,
+    fontWeight = if (InlineStyle.STRONG in this) FontWeight.Bold else null,
+    fontFamily = if (InlineStyle.CODE in this) FontFamily.Monospace else null,
+    fontSize = fontSizeOf(bodySize),
+    baselineShift = baselineShift(),
 )
 
-private fun buildSpanStyle(italic: Boolean, bold: Boolean, monospace: Boolean): SpanStyle {
-    var style = SpanStyle()
-    if (italic) style = style.copy(fontStyle = FontStyle.Italic)
-    if (bold) style = style.copy(fontWeight = FontWeight.Bold)
-    if (monospace) style = style.copy(fontFamily = FontFamily.Monospace)
-    return style
+/**
+ * The baseline a run sits on: a superscript or a subscript moves it, and a run
+ * that is both takes the superscript — an overlap no book means literally.
+ */
+private fun Set<InlineStyle>.baselineShift(): BaselineShift? = when {
+    InlineStyle.SUPERSCRIPT in this -> BaselineShift.Superscript
+    InlineStyle.SUBSCRIPT in this -> BaselineShift.Subscript
+    else -> null
+}
+
+/**
+ * The size a run renders at: superscript and subscript at [SUPERSCRIPT_RATIO]
+ * of the body, small print at [SMALL_RATIO]. A small superscript keeps the
+ * smaller ratio, so the two never multiply into unreadable type.
+ */
+private fun Set<InlineStyle>.fontSizeOf(bodySize: TextUnit): TextUnit = when {
+    InlineStyle.SUPERSCRIPT in this || InlineStyle.SUBSCRIPT in this -> bodySize * SUPERSCRIPT_RATIO
+    InlineStyle.SMALL in this -> bodySize * SMALL_RATIO
+    else -> TextUnit.Unspecified
 }
 
 /**
